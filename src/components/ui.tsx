@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import type { ActionItem, AIResponse, AlertItem, Level, Profile, RiskCardData, RoadmapStep, StepStatus, Verification } from '../types'
 import { STEP_STATUSES, dirInfo, levelBar, levelChip, levelIconName, stepChip, stepNode, verifyChip } from '../utils/labels'
 import { getReg, lastVerifiedText, regText } from '../data/regulations'
@@ -32,6 +32,24 @@ export function PageHead({ title, sub, children }: { title: string; sub?: string
 export function Warn({ children, tone = 'warn' }: { children: ReactNode; tone?: 'warn' | 'danger' | 'info' }) {
   const c = { warn: 'bg-warn-bg border-warn-line text-warn-fg', danger: 'bg-danger-bg border-danger-line text-danger-fg', info: 'bg-info-bg border-info-line text-info-fg' }[tone]
   return <div role="note" className={`border rounded-xl px-4 py-3 text-sm flex gap-2.5 ${c}`}><Icon name={tone === 'info' ? 'info' : 'warn'} size={18} className="mt-0.5" /><div className="min-w-0">{children}</div></div>
+}
+
+/** Accessible tab list: roving tabindex, ArrowLeft/Right, Home/End. */
+export function TabBar({ items, value, onChange, label }: { items: { id: string; label: ReactNode }[]; value: string; onChange: (id: string) => void; label: string }) {
+  const refs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const move = (e: KeyboardEvent, i: number) => {
+    const n = items.length
+    const j = e.key === 'ArrowRight' ? (i + 1) % n : e.key === 'ArrowLeft' ? (i - 1 + n) % n : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1
+    if (j < 0) return
+    e.preventDefault(); onChange(items[j].id); refs.current[items[j].id]?.focus()
+  }
+  return (
+    <div role="tablist" aria-label={label} className="flex gap-2 flex-wrap">
+      {items.map((it, i) => (
+        <button key={it.id} ref={(el) => { refs.current[it.id] = el }} role="tab" aria-selected={value === it.id} tabIndex={value === it.id ? 0 : -1} onClick={() => onChange(it.id)} onKeyDown={(e) => move(e, i)} className={`tab !whitespace-normal text-left ${value === it.id ? 'tab-on' : ''}`}>{it.label}</button>
+      ))}
+    </div>
+  )
 }
 
 /** Progressive disclosure: level 4 details stay behind one calm button. */

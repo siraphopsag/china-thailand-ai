@@ -136,4 +136,5 @@ export const ux = {
   'own.slider': ['สัดส่วนของ{holder}', '{holder}的比例', 'Share of {holder}'],
   // ---- stale documents
   'docs.stale': ['ข้อมูลเปลี่ยนแล้ว — สร้างใหม่เพื่ออัปเดต', '数据已变更 —— 请重新生成以更新', 'Data changed — regenerate to update'],
+  'c.loading': ['กำลังโหลด...', '加载中…', 'Loading…'],
 } as const satisfies Record<string, Msg>

@@ -1,7 +1,6 @@
 import type { Msg } from './common.js'
 export const intake = {
   // ---- landing
-  'land.kicker': ['🇹🇭 ↔ 🇨🇳 แพลตฟอร์ม AI Cross-Border Business Entry & Compliance', '🇹🇭 ↔ 🇨🇳 AI 跨境商业拓展与合规平台', '🇹🇭 ↔ 🇨🇳 AI Cross-Border Business Entry & Compliance Platform'],
   'land.h1': ['AI ผู้ช่วยวางแผนการขยายธุรกิจระหว่างไทย–จีน', '泰中跨境业务拓展 AI 规划助手', 'Your AI planner for Thailand–China business expansion'],
   'land.sub': ['วิเคราะห์ข้อกำหนด ความเสี่ยง ภาษา และขั้นตอนที่เกี่ยวข้องกับการขยายธุรกิจข้ามประเทศในระบบเดียว', '在同一系统中分析跨境拓展涉及的规定、风险、语言与流程。', 'Analyse requirements, risks, language and steps of cross-border expansion in one system.'],
   'land.how': ['ดูวิธีการทำงาน', '了解工作方式', 'See how it works'],
@@ -187,6 +186,5 @@ export const intake = {
   'prof.e.req': ['กรุณาระบุชื่อธุรกิจและกิจกรรมหลัก', '请填写企业名称和主要业务', 'Please enter the business name and main activity'],
   'prof.e.emp': ['จำนวนพนักงานต้องเป็นตัวเลขที่ไม่ติดลบ', '员工人数必须为非负数', 'Employees must be a non-negative number'],
   'prof.unknown': ['ข้อมูลยังไม่เพียงพอสำหรับบางหัวข้อ:', '部分事项信息不足：', 'Information is incomplete for some topics:'],
-  'prof.startAi': ['เริ่มให้ AI วิเคราะห์ →', '开始 AI 分析 →', 'Start AI analysis →'],
   'prof.toDash': ['ไปที่ภาพรวม', '前往总览', 'Go to overview'],
 } as const satisfies Record<string, Msg>

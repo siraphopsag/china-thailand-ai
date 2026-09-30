@@ -29,7 +29,9 @@
 }
 
 html { scroll-behavior: smooth }
-body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif; line-height: 1.65;
+/* grid children may shrink below their content width (prevents horizontal overflow with long Thai/CJK lines) */
+.grid > * { min-width: 0 }
+body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif; line-height: 1.65; overflow-wrap: break-word;
   background: rgb(var(--page)); color: rgb(var(--ink)); transition: background-color .25s ease, color .25s ease }
 :focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: 2px }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important } }

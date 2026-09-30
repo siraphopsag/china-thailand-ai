@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { AlertItem, RoadmapStep, StepStatus } from '../types'
 import { fingerprint, go, useStore } from '../store'
-import { ActionList, AlertCard, Checklist, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, Ok, PageHead, RiskCard, RoadmapTimeline, SampleTag, SourceCard, StatusBadge, VerifyBadge, Warn, WorkflowStrip } from '../components/ui'
+import { ActionList, AlertCard, Checklist, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, Ok, PageHead, RiskCard, RoadmapTimeline, SampleTag, SourceCard, StatusBadge, VerifyBadge, Warn } from '../components/ui'
 import { AICommandCenter, AITimeline } from '../components/ai'
 import { CountryBadge, Icon } from '../components/icons'
 import { assessRisks, buildDocument, contractKeys, contractLabel, deriveActions, detectNomineeRisk, docDesc, docIds, docTitle, docToHtml, generateRoadmap, hasCompany, riskRoute, type DocType } from '../services/engines'
@@ -79,7 +79,7 @@ export function Dashboard() {
           {issues.length ? <ul className="space-y-2">{issues.map((r) => (
             <li key={r.id}><button className="w-full text-left card-i hover:bg-surface3 transition flex flex-col gap-1" onClick={() => go('risk')}>
               <span className="flex items-center justify-between gap-2 flex-wrap"><span className="font-medium text-sm">{r.category}</span><StatusBadge level={r.level} /></span>
-              <span className="text-xs text-muted line-clamp-2">{r.why}</span></button></li>))}</ul> : <p className="text-sm text-ok-fg"><Ok>{t('dash.noIssues')}</Ok></p>}
+              <span className="block text-xs text-muted line-clamp-2">{r.why}</span></button></li>))}</ul> : <p className="text-sm text-ok-fg"><Ok>{t('dash.noIssues')}</Ok></p>}
           <button className="btn-ghost mt-3 !min-h-[40px] text-sm" onClick={() => go('risk')}><Go>{t('dash.seeAll')}</Go></button></section>
         <section className="card" aria-labelledby="doc-h"><h2 id="doc-h" className="h2">{t('dash.docsNeeded')}</h2><p className="text-xs text-muted mb-3">{t('dash.docsSub')}</p>
           <ul className="space-y-2">{needed.map((x) => (

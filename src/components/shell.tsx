@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { LANGS, dv, tk, useI18n } from '../i18n'
 import { useTheme } from '../theme'
 import { go, useStore } from '../store'
@@ -58,13 +58,28 @@ export function ThemeSwitcher() {
   )
 }
 
-function Menu({ label, icon, children, align = 'right', buttonClass = '' }: { label: ReactNode; icon?: IconName; children: (close: () => void) => ReactNode; align?: 'left' | 'right'; buttonClass?: string }) {
+/** Dropdown: Escape closes and returns focus, ArrowUp/Down/Home/End move between items, Tab leaves the menu. */
+function Menu({ label, icon, children, align = 'right', buttonClass = '', kind = 'menu' }: { label: ReactNode; icon?: IconName; children: (close: () => void) => ReactNode; align?: 'left' | 'right'; buttonClass?: string; kind?: 'menu' | 'disclosure' }) {
   const [open, setOpen] = useState(false)
-  const ref = useOutside(open, () => setOpen(false))
+  const close = useCallback(() => setOpen(false), [])
+  const ref = useOutside(open, close)
+  const btn = useRef<HTMLButtonElement>(null)
+  useEffect(() => { if (open) ref.current?.querySelector<HTMLElement>('[data-menu-panel] button')?.focus() }, [open, ref])
+  const onKey = (e: React.KeyboardEvent) => {
+    if (!open) return
+    const items = [...(ref.current?.querySelectorAll<HTMLElement>('[data-menu-panel] button') ?? [])]
+    const i = items.indexOf(document.activeElement as HTMLElement)
+    if (e.key === 'Escape') { e.preventDefault(); close(); btn.current?.focus() }
+    else if (e.key === 'Tab') close()
+    else if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length]?.focus() }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus() }
+    else if (e.key === 'Home') { e.preventDefault(); items[0]?.focus() }
+    else if (e.key === 'End') { e.preventDefault(); items[items.length - 1]?.focus() }
+  }
   return (
-    <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} aria-haspopup="true" aria-expanded={open} className={`${ctrl} px-3 ${buttonClass}`}>{icon && <Icon name={icon} size={17} />}{label}<Icon name="down" size={14} /></button>
-      {open && <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-56 bg-surface text-ink border border-line rounded-xl shadow-lg p-1 z-50`}>{children(() => setOpen(false))}</div>}
+    <div ref={ref} className="relative" onKeyDown={onKey}>
+      <button ref={btn} onClick={() => setOpen(!open)} aria-haspopup={kind === 'menu' ? 'menu' : undefined} aria-expanded={open} className={`${ctrl} px-3 ${buttonClass}`}>{icon && <Icon name={icon} size={17} />}{label}<Icon name="down" size={14} /></button>
+      {open && <div data-menu-panel className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-56 bg-surface text-ink border border-line rounded-xl shadow-lg p-1 z-50`}>{children(close)}</div>}
     </div>
   )
 }
@@ -77,10 +92,10 @@ export function LanguageSwitcher() {
     <div role="group" aria-label={t('lang.choose')}>
       <Menu icon="language" label={<span aria-label={t('lang.choose')}>{cur.short}</span>}>
         {(close) => (
-          <ul role="listbox" aria-label={t('lang.choose')}>
+          <ul role="menu" aria-label={t('lang.choose')}>
             {LANGS.map((l) => (
-              <li key={l.id} role="option" aria-selected={l.id === lang}>
-                <button onClick={() => { setLang(l.id); close() }} className={`${item} ${l.id === lang ? 'bg-brand text-brandfg font-semibold' : ''}`}>{l.label}{l.id === lang && <Icon name="check" size={16} className="ml-auto" />}</button>
+              <li key={l.id} role="none">
+                <button role="menuitemradio" aria-checked={l.id === lang} lang={l.html} onClick={() => { setLang(l.id); close() }} className={`${item} ${l.id === lang ? 'bg-brand text-brandfg font-semibold' : ''}`}>{l.label}{l.id === lang && <Icon name="check" size={16} className="ml-auto" />}</button>
               </li>))}
           </ul>)}
       </Menu>
@@ -92,6 +107,13 @@ export function Header({ route }: { route: string }) {
   const { t } = useI18n()
   const { startDemo } = useStore()
   const [menu, setMenu] = useState(false)
+  const menuBtn = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!menu) return
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setMenu(false); menuBtn.current?.focus() } }
+    document.addEventListener('keydown', esc)
+    return () => document.removeEventListener('keydown', esc)
+  }, [menu])
   return (
     <header className="bg-header text-onheader sticky top-0 z-40 border-b border-white/10">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
@@ -101,14 +123,14 @@ export function Header({ route }: { route: string }) {
         <nav aria-label={t('nav.main')} className="hidden xl:flex gap-0.5 ml-3 flex-1 min-w-0">
           {PRIMARY.map((n) => (
             <button key={n.route} onClick={() => go(n.route)} aria-current={isActive(route, n) ? 'page' : undefined} className={`px-2.5 py-2 rounded-lg text-sm min-h-[40px] whitespace-nowrap transition-colors flex items-center gap-1.5 ${isActive(route, n) ? 'bg-white/15 font-semibold' : 'hover:bg-white/10'}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</button>))}
-          <Menu label={t('nav.more')} buttonClass="border-transparent">
+          <Menu label={t('nav.more')} buttonClass="border-transparent" kind="disclosure">
             {(close) => <ul>{MORE.map((m) => <li key={m.route}><button className={`${item} ${route === m.route ? 'bg-brand text-brandfg font-semibold' : ''}`} onClick={() => { go(m.route); close() }}><Icon name={m.icon} size={17} />{t(m.key as never)}</button></li>)}</ul>}
           </Menu>
         </nav>
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <LanguageSwitcher /><ThemeSwitcher />
           <button className="btn-accent !py-1.5 !min-h-[40px] text-sm hidden sm:inline-flex" onClick={() => { startDemo(); go('profile') }}>{t('cta.startDemo')}</button>
-          <button className={`xl:hidden ${ctrl} w-10`} aria-expanded={menu} aria-label={t('nav.menu')} onClick={() => setMenu(!menu)}><Icon name={menu ? 'close' : 'menu'} /></button>
+          <button ref={menuBtn} className={`xl:hidden ${ctrl} w-10`} aria-expanded={menu} aria-label={t('nav.menu')} onClick={() => setMenu(!menu)}><Icon name={menu ? 'close' : 'menu'} /></button>
         </div>
       </div>
       {menu && (

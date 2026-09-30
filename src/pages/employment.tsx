@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ContractInput, EmploymentInput } from '../types'
 import { go, useStore } from '../store'
-import { Disclaimer, Disclosure, EmptyState, GuideStrip, Go, Ok, PageHead, SectionTabs, SourceCard, StatusBadge, VerifyBadge, Warn, ExtLink } from '../components/ui'
+import { Disclaimer, Disclosure, EmptyState, GuideStrip, Go, Ok, PageHead, SectionTabs, SourceCard, StatusBadge, TabBar, VerifyBadge, Warn, ExtLink } from '../components/ui'
 import { Icon } from '../components/icons'
 import { analyzeEmployment, contractKeys, contractLabel, draftNote, generateContract } from '../services/engines'
 import { aiService } from '../services/aiService'
@@ -87,7 +87,7 @@ export function ContractPage() {
           <div className="card"><h2 className="h2 mb-2">{t('ctr.checksT')}</h2><ul className="space-y-2 text-sm">{shown.checks.map((c) => <li key={c.t}>{c.t}<br /><VerifyBadge v={c.v} /> <span className="text-xs text-muted">{t('c.sample')}</span></li>)}</ul></div>
         </div>
         <div className="card"><div className="flex flex-wrap justify-between gap-2 mb-2"><h2 className="h2">{t('ctr.draftT')}</h2>
-          <div className="flex gap-2 flex-wrap" role="tablist" aria-label={t('ctr.versions')}>{LANGS.map((l) => <button key={l.id} role="tab" aria-selected={showLang === l.id} className={`tab !py-1.5 !min-h-[40px] ${showLang === l.id ? 'tab-on' : ''}`} onClick={() => setVLang(l.id)}>{l.label}</button>)}</div></div>
+          <TabBar label={t('ctr.versions')} value={showLang} onChange={(id) => setVLang(id as Lang)} items={LANGS.map((l) => ({ id: l.id, label: l.label }))} /></div>
           <pre lang={LANGS.find((l) => l.id === showLang)!.html} className="whitespace-pre-wrap text-sm bg-surface2 border border-line rounded-lg p-4 font-sans">{shown.text[showLang]}</pre>
           <p className="text-sm mt-2"><b>{t('ctr.explainT')}</b> {t('ctr.explain')}</p><p className="text-xs text-muted mt-1">{t('ctr.sameData')}</p>
           <p className="text-xs font-semibold mt-2">{draftNote()}</p></div>
@@ -103,7 +103,7 @@ function CultureSituations() {
   const [i, setI] = useState(0)
   return (
     <div className="mt-3">
-      <div className="flex gap-2 flex-wrap mb-3" role="tablist" aria-label={t('cul.pick')}>{situations.map((k) => <button key={k} role="tab" aria-selected={k === i} onClick={() => setI(k)} className={`tab !whitespace-normal text-left ${k === i ? 'tab-on' : ''}`}>{tk('sit', `${k}.t`)}</button>)}</div>
+      <div className="mb-3"><TabBar label={t('cul.pick')} value={String(i)} onChange={(id) => setI(Number(id))} items={situations.map((k) => ({ id: String(k), label: tk('sit', `${k}.t`) }))} /></div>
       <div className="card-i !p-4 space-y-3"><p className="font-semibold">{tk('sit', `${i}.i`)}</p>
         <div className="grid md:grid-cols-2 gap-3">{situationPoints.map((p) => <div key={p}><b>{tk('sit', `${i}.p.${p}.t`)}</b><p className="text-sm text-muted">{tk('sit', `${i}.p.${p}.d`)}</p></div>)}</div>
         <div className="rounded-lg bg-brand text-brandfg px-3 py-2 text-sm flex gap-2"><Icon name="ai" size={16} className="mt-0.5" />{tk('sit', `${i}.a`)}</div></div>
