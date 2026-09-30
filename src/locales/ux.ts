@@ -34,8 +34,6 @@ export const ux = {
   'risk.sub': ['ประเด็นสำคัญที่ AI พบ พร้อมเหตุผลและสิ่งที่ควรทำต่อ ไม่มีคะแนนความถูกต้องทางกฎหมาย', 'AI 发现的重点事项，附理由和下一步建议；不提供“合法性评分”。', 'The main points the AI found, with reasons and next steps. There is no “legal score”.'],
   'an.title': ['วิเคราะห์ธุรกิจของฉัน', '分析我的企业', 'Analyse my business'],
   'an.sub': ['AI จะทำความเข้าใจธุรกิจของคุณ แล้วตรวจเรื่องที่เกี่ยวข้อง', 'AI 会先了解您的企业，再检查相关事项。', 'The AI first understands your business, then checks what is relevant.'],
-  'an.verify': ['AI ตรวจทานผลอีกรอบ', 'AI 再次复核结果', 'The AI double-checks its results'],
-  'an.verifySub': ['ก่อนแสดงผล AI จะตรวจแหล่งข้อมูล ความสอดคล้อง และข้อมูลที่ขาด หากไม่ผ่านจะตรวจใหม่', '展示结果前，AI 会检查来源、一致性和缺失信息；未通过则重新检查。', 'Before showing results, the AI checks sources, consistency and missing information, and re-checks if something fails.'],
   'docs.title': ['เอกสาร', '文件', 'Documents'],
   'rm.title': ['แผนดำเนินงาน', '行动计划', 'Action plan'],
   'mon.title': ['ติดตามข้อกำหนด', '合规跟踪', 'Rule tracking'],
@@ -116,4 +114,26 @@ export const ux = {
   'err.reset': ['ล้างข้อมูลที่บันทึกไว้แล้วเริ่มใหม่', '清除已保存的数据并重新开始', 'Clear saved data and start over'],
   'err.resetNote': ['หากข้อผิดพลาดเกิดซ้ำ อาจเกิดจากข้อมูลเก่าที่บันทึกไว้ในเบราว์เซอร์นี้', '如果错误反复出现，可能是本浏览器中保存的旧数据所致。', 'If this keeps happening, old data saved in this browser may be the cause.'],
   'foot.confirm': ['ล้างข้อมูลที่บันทึกไว้ในโหมดนี้ของเบราว์เซอร์นี้?', '清除此浏览器中本模式已保存的数据？', 'Clear the data saved for this mode in this browser?'],
+  // ---- educational answer (not a refusal, not advice)
+  'orch.edu.a': ['การถือหุ้นแทน (นอมินี) คือการให้ผู้อื่นถือหุ้นแทนผู้ลงทุนจริง ซึ่งในหลายประเทศอาจถูกมองว่าเป็นการหลีกเลี่ยงข้อจำกัดด้านการลงทุนของต่างชาติ', '代持（nominee）是指由他人代替实际投资人持有股份，在许多国家可能被视为规避外资限制。', 'A nominee arrangement means someone else holds shares on behalf of the real investor; in many countries it may be treated as circumventing foreign-investment restrictions.'],
+  'orch.edu.r': ['ความถูกต้องของแต่ละกรณีขึ้นกับข้อเท็จจริงและกฎหมายของประเทศนั้น ระบบจึงไม่ตัดสินแทน และไม่ให้คำแนะนำในการจัดโครงสร้างลักษณะนี้', '具体情形是否合规取决于事实和当地法律，因此系统不作判断，也不提供搭建此类结构的建议。', 'Whether a specific case is acceptable depends on the facts and the country’s law, so the system does not decide and does not advise on setting up such structures.'],
+  'orch.edu.n': ['ให้ระบบตรวจโครงสร้างการถือหุ้นจริงของคุณ (หุ้น เงินลงทุน อำนาจควบคุม) และปรึกษาผู้เชี่ยวชาญหากพบประเด็น', '请让系统检查您的实际持股结构（股份、出资、控制权），如发现问题请咨询专家。', 'Let the system check your real shareholding structure (shares, funding, control) and consult an expert if points are found.'],
+  // ---- API errors
+  'err.badRequest': ['ข้อมูลที่ส่งมาไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง', '提交的数据格式不正确，请重试。', 'The submitted data is not valid. Please try again.'],
+  'err.badProfile': ['โปรไฟล์ธุรกิจที่ส่งมาไม่สมบูรณ์ กรุณารีเฟรชหน้าแล้วลองใหม่', '提交的企业档案不完整，请刷新页面后重试。', 'The business profile is incomplete. Please refresh the page and try again.'],
+  'err.rate': ['มีการส่งคำถามถี่เกินไป กรุณารอสักครู่แล้วลองใหม่', '提问过于频繁，请稍候再试。', 'Too many questions in a short time. Please wait a moment and try again.'],
+  'err.origin': ['ไม่สามารถรับคำขอจากเว็บไซต์อื่นได้', '无法接受来自其他网站的请求。', 'Requests from other websites are not accepted.'],
+  // ---- honesty about what is simulated
+  'sim.tag': ['ระบบจำลอง', '模拟系统', 'Simulated'],
+  'sim.note': ['ผลนี้มาจากชุดกฎที่กำหนดไว้ในต้นแบบ ยังไม่ใช่ LLM และข้อมูลกฎหมายเป็นข้อมูลตัวอย่างที่ผู้เชี่ยวชาญยังไม่ได้ตรวจ', '此结果来自原型中预设的规则，并非大语言模型；法规数据为尚未经专家核查的示例。', 'This result comes from fixed rules in the prototype — not an LLM — and the regulatory data is sample data not yet reviewed by an expert.'],
+  'an.verify': ['ตรวจทานผลอีกรอบ', '再次复核结果', 'Double-check of the results'],
+  'an.verifySub': ['ระบบรันชุดตรวจเบื้องต้น ได้แก่ แหล่งข้อมูล ความสอดคล้อง และข้อมูลที่ขาด (เป็นกฎที่กำหนดไว้ ไม่ใช่ AI ตรวจเอง) หากไม่ผ่านจะตรวจใหม่', '系统运行初步检查：来源、一致性和缺失信息（为预设规则，并非 AI 自行核查）；未通过则重新检查。', 'The system runs preliminary checks on sources, consistency and missing information (fixed rules, not the AI checking itself) and re-checks if one fails.'],
+  'an.finalWhy': ['ยังไม่เป็น “ตรวจสอบแล้ว” เพราะข้อมูลกฎหมายยังเป็นข้อมูลตัวอย่างที่ผู้เชี่ยวชาญยังไม่ได้ตรวจ', '尚不能标为“已核实”，因为法规数据仍是未经专家核查的示例。', 'Not “verified” yet because the regulatory data is still sample data not reviewed by an expert.'],
+  'an.result': ['ผลที่ตรวจได้', '检查结果', 'Result'],
+  // ---- ownership editor
+  'own.split': ['{a} {x}% · {b} {y}%', '{a} {x}% · {b} {y}%', '{a} {x}% · {b} {y}%'],
+  'own.sumWarn': ['ตัวเลขทั้งสองฝ่ายรวมไม่เท่ากับ 100%', '双方数字合计不等于 100%', 'The two sides do not add up to 100%'],
+  'own.slider': ['สัดส่วนของ{holder}', '{holder}的比例', 'Share of {holder}'],
+  // ---- stale documents
+  'docs.stale': ['ข้อมูลเปลี่ยนแล้ว — สร้างใหม่เพื่ออัปเดต', '数据已变更 —— 请重新生成以更新', 'Data changed — regenerate to update'],
 } as const satisfies Record<string, Msg>

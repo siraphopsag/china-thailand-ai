@@ -12,6 +12,7 @@ import { CountryBadge, Icon } from './icons'
 export const StatusBadge = ({ level }: { level: Level }) => { useI18n(); return <span className={`chip ${levelChip[level]}`}><Icon name={levelIconName[level]} size={13} />{tk('level', level)}</span> }
 export const VerifyBadge = ({ v }: { v: Verification }) => { useI18n(); return <span className={`chip font-medium ${verifyChip[v]}`}>{tk('verify', v)}</span> }
 export const StepBadge = ({ s }: { s: StepStatus }) => { useI18n(); return <span className={`chip font-medium ${stepChip[s]}`}>{tk('step', s)}</span> }
+export const SimTag = () => { const { t } = useI18n(); return <span title={t('sim.note')} className="chip bg-surface3 text-muted border-line font-medium cursor-help"><Icon name="info" size={12} />{t('sim.tag')}</span> }
 export const SampleTag = ({ text }: { text?: string }) => { const { t } = useI18n(); return <span className="inline-block text-[11px] bg-surface3 text-muted rounded px-1.5 py-0.5">{text ?? t('c.sample')}</span> }
 export const Disclaimer = () => { const { t } = useI18n(); return <p className="text-xs text-muted border-t border-line pt-3 mt-6">{t('c.disclaimer')}</p> }
 export const ExtLink = ({ href, children }: { href?: string; children: ReactNode }) => (
@@ -119,8 +120,8 @@ export function SectionTabs({ group, active }: { group: 'ownership' | 'employmen
 export function AIMessage({ r }: { r: AIResponse }) {
   const { t } = useI18n()
   return (
-    <div className={`rounded-xl border p-4 space-y-3 text-sm ${r.blocked ? 'border-danger-line bg-danger-bg' : 'border-line bg-brand'}`} aria-live="polite">
-      <div className="flex flex-wrap gap-1.5 items-center text-xs text-muted"><span className="font-semibold inline-flex items-center gap-1"><Icon name="ai" size={14} />{t('ai.modules')}:</span>{r.modules.map((m) => <span key={m} className="bg-surface border border-line rounded px-2 py-0.5">{m}</span>)}</div>
+    <div className={`rounded-xl border p-4 space-y-3 text-sm ${r.blocked ? 'border-danger-line bg-danger-bg' : r.kind === 'educational' ? 'border-info-line bg-info-bg' : 'border-line bg-brand'}`} aria-live="polite">
+      <div className="flex flex-wrap gap-1.5 items-center text-xs text-muted"><span className="font-semibold inline-flex items-center gap-1"><Icon name="ai" size={14} />{t('ai.modules')}:</span>{r.modules.map((m) => <span key={m} className="bg-surface border border-line rounded px-2 py-0.5">{m}</span>)}<span className="ml-auto"><SimTag /></span></div>
       <div><div className="text-xs font-semibold text-muted">{t('ai.answer')}</div><p className="text-base font-semibold">{r.answer}</p></div>
       <div className="grid sm:grid-cols-2 gap-3">
         <div><div className="text-xs font-semibold text-muted">{t('ai.reason')}</div><p>{r.reason}</p></div>
@@ -231,7 +232,7 @@ export function ControlBars({ p }: { p: Profile }) {
       <ul className="space-y-3">
         {rows.map((r) => (
           <li key={r.key}>
-            <div className="flex justify-between gap-2 text-sm"><span className="font-medium">{tk('row', r.key)}</span>{r.mismatch && <span className="text-review-fg font-semibold inline-flex items-center gap-1"><Icon name="warn" size={14} />{t('own.mismatch')}</span>}</div>
+            <div className="flex justify-between gap-2 text-sm"><span className="font-medium">{tk('row', r.key)}</span>{r.mismatch && <span className="text-review-fg font-semibold inline-flex items-center gap-1"><Icon name="warn" size={14} />{t('own.mismatch')}</span>}{r.origin !== null && r.partner !== null && r.origin + r.partner !== 100 && <span className="text-danger-fg text-xs font-semibold">{t('own.sumWarn')}</span>}</div>
             {r.origin === null || r.partner === null ? <div className="h-5 rounded bg-surface3 text-xs text-muted grid place-items-center">{t('own.unknownVal')}</div> : (
               <div className={`flex h-6 rounded-md overflow-hidden text-xs font-semibold ${r.mismatch ? 'ring-2 ring-review-fg' : ''}`} role="img" aria-label={`${r.origin}% / ${r.partner}%`}>
                 <div className="bg-primary grid place-items-center text-onprimary transition-all duration-500" style={{ width: r.origin + '%' }}>{r.origin >= 12 ? r.origin + '%' : ''}</div>
@@ -305,13 +306,13 @@ export function ActionList({ actions, onStatus }: { actions: ActionItem[]; onSta
 }
 
 export function AlertCard({ a, profileName }: { a: AlertItem; profileName: string }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const g = getReg(a.sourceId)
   const k = (x: string) => t(x as never)
   return (
     <article className={`card border-l-4 ${levelBar[a.severity]} text-sm space-y-1`}>
       <div className="flex flex-wrap justify-between gap-2"><h3 className="font-semibold inline-flex items-center gap-1.5"><Icon name="warn" size={16} />{t('alert.head')}</h3>{a.isSample && <SampleTag text={t('alert.tag')} />}</div>
-      <p><b>{t('alert.changed')}:</b> {k(a.titleKey)}</p><p><b>{t('alert.when')}:</b> {a.when === 'sample' ? t('alert.sampleWhen') : a.when}</p>
+      <p><b>{t('alert.changed')}:</b> {k(a.titleKey)}</p><p><b>{t('alert.when')}:</b> {a.when === 'sample' ? t('alert.sampleWhen') : Number.isNaN(Date.parse(a.when)) ? a.when : new Date(a.when).toLocaleString(lang === 'th' ? 'th-TH' : lang === 'zh' ? 'zh-CN' : 'en-GB')}</p>
       <p className="flex items-center gap-1.5 flex-wrap"><b>{t('alert.countryTopic')}:</b> <CountryBadge c={a.country} /> {tk('country', a.country)} · {k(a.topicKey)}</p>
       <p><b>{t('alert.profile')}:</b> {profileName}</p>
       <p><b>{t('alert.source')}:</b> {g ? <ExtLink href={g.sourceUrl}>{regText(a.sourceId, 'auth')}</ExtLink> : '-'}</p>

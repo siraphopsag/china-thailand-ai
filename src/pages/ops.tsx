@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { AlertItem, RoadmapStep, StepStatus } from '../types'
-import { go, useStore } from '../store'
+import { fingerprint, go, useStore } from '../store'
 import { ActionList, AlertCard, Checklist, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, Ok, PageHead, RiskCard, RoadmapTimeline, SampleTag, SourceCard, StatusBadge, VerifyBadge, Warn, WorkflowStrip } from '../components/ui'
 import { AICommandCenter, AITimeline } from '../components/ai'
 import { CountryBadge, Icon } from '../components/icons'
@@ -16,10 +16,17 @@ function useRoadmap() {
   const { profile, stepOverrides } = useStore()
   return useMemo<RoadmapStep[]>(() => (profile ? generateRoadmap(profile).map((s) => ({ ...s, status: stepOverrides[s.id] ?? s.status })) : []), [profile, stepOverrides, lang])
 }
+/** Current actions from the risk analysis + finished actions whose risk has since disappeared (so progress never goes backwards). */
 function useActions() {
   const { lang } = useI18n()
-  const { profile, employment, actionStatus } = useStore()
-  return useMemo(() => (profile ? deriveActions(profile, employment).map((a) => ({ ...a, status: actionStatus[a.id] ?? a.status })) : []), [profile, employment, actionStatus, lang])
+  const { profile, employment, actionStatus, actionSnap } = useStore()
+  return useMemo(() => {
+    if (!profile) return []
+    const live = deriveActions(profile, employment).map((a) => ({ ...a, status: actionStatus[a.id] ?? a.status }))
+    const ids = new Set(live.map((a) => a.id))
+    const kept = Object.entries(actionSnap).filter(([id]) => !ids.has(id) && actionStatus[id] === 'done').map(([id, s]) => ({ id, riskId: s.riskId, riskLabel: s.riskLabel, title: s.title, owner: s.owner, status: 'done' as StepStatus }))
+    return [...live, ...kept]
+  }, [profile, employment, actionStatus, actionSnap, lang])
 }
 
 /* ================= DASHBOARD (business · status · issues · next action · documents · AI activity) ================= */
@@ -89,11 +96,11 @@ export function Dashboard() {
 /* ================= RISK (found → why it matters → what to verify → next action) ================= */
 export function RiskPage() {
   const { t } = useI18n()
-  const { profile, employment, actionStatus, set } = useStore()
+  const { profile, employment, setActionStatus } = useStore()
   const actions = useActions()
   if (!profile) return <div><PageHead title={t('risk.title')} /><EmptyState /></div>
   const risks = assessRisks(profile, employment)
-  const setAct = (id: string, s: StepStatus) => set({ actionStatus: { ...actionStatus, [id]: s } })
+  const setAct = (id: string, s: StepStatus) => { const a = actions.find((x) => x.id === id); if (a) setActionStatus(a, s) }
   return (
     <div className="space-y-5">
       <PageHead title={t('risk.title')} sub={t('risk.sub')} />
@@ -117,7 +124,7 @@ export function RiskPage() {
 /* ================= ROADMAP ================= */
 export function RoadmapPage() {
   const { t } = useI18n()
-  const { profile, stepOverrides, actionStatus, checks, set } = useStore()
+  const { profile, stepOverrides, setActionStatus, checks, set } = useStore()
   const steps = useRoadmap()
   const actions = useActions()
   const [lockMsg, setLockMsg] = useState('')
@@ -136,7 +143,7 @@ export function RoadmapPage() {
         setLockMsg(''); set({ stepOverrides: { ...stepOverrides, [id]: s } })
       }} />
       <div className="card"><h2 className="h2 mb-1">{t('rm.actionsT')}</h2><p className="text-sm text-muted mb-3">{t('rm.actionsD')}</p>
-        <ActionList actions={actions} onStatus={(id, s) => set({ actionStatus: { ...actionStatus, [id]: s } })} /></div>
+        <ActionList actions={actions} onStatus={(id, s) => { const a = actions.find((x) => x.id === id); if (a) setActionStatus(a, s) }} /></div>
       <Disclosure title={t('rm.checklist')}><Checklist done={checks} onToggle={(id) => set({ checks: { ...checks, [id]: !checks[id] } })} /></Disclosure>
       <Disclaimer />
     </div>
@@ -148,20 +155,21 @@ const DOC_EDIT: Record<DocType, string> = { business: 'roadmap', ownership: 'own
 const MULTI_LANG: DocType[] = ['contract', 'translation']
 export function DocumentsPage() {
   const { t, lang } = useI18n()
-  const { profile, employment, contract, docs, docLang, checks, set, log } = useStore()
+  const { profile, employment, contract, docs, docLang, docStamp, checks, set, log } = useStore()
   const [sel, setSel] = useState<DocType | null>(null)
   const [genLang, setGenLang] = useState<Partial<Record<DocType, Lang>>>({})
   const [busy, setBusy] = useState<DocType | null>(null)
   const [err, setErr] = useState('')
   const [cache, setCache] = useState<Record<string, { title: string; text: string; lang: Lang }>>({})
   if (!profile) return <div><PageHead title={t('docs.title')} /><EmptyState /></div>
+  const fp = fingerprint(profile, employment, contract)
   const langOf = (x: DocType): Lang => (MULTI_LANG.includes(x) ? genLang[x] ?? docLang[x] ?? lang : docLang[x] ?? lang)
   const key = (x: DocType, l: Lang) => `${x}|${l}`
   const get = (x: DocType, l: Lang) => cache[key(x, l)] ?? buildDocument(x, profile, employment, contract, l)
   const create = async (x: DocType) => {
     const l = MULTI_LANG.includes(x) ? langOf(x) : lang
     setBusy(x); setErr('')
-    try { const r = await aiService.generateDocument(x, profile, employment, contract, l); setCache((c) => ({ ...c, [key(x, l)]: r })); set({ docs: { ...docs, [x]: true }, docLang: { ...docLang, [x]: l } }); log('hist.doc', { title: r.title }); setSel(x) } catch { setErr(t('err.generic')) }
+    try { const r = await aiService.generateDocument(x, profile, employment, contract, l); setCache((c) => ({ ...c, [key(x, l)]: r })); set({ docs: { ...docs, [x]: true }, docLang: { ...docLang, [x]: l }, docStamp: { ...docStamp, [x]: fp } }); log('hist.doc', { title: r.title }); setSel(x) } catch { setErr(t('err.generic')) }
     setBusy(null)
   }
   const download = (x: DocType) => {
@@ -187,6 +195,7 @@ export function DocumentsPage() {
           <article key={x} className={`card flex flex-col gap-2 !p-4 transition ${sel === x ? 'ring-2 ring-primary' : ''}`}>
             <div className="flex items-start justify-between gap-2"><h3 className="font-semibold leading-snug flex items-start gap-2"><Icon name="documents" size={18} className="mt-0.5 text-primary" />{docTitle(x)}</h3><span className={`chip shrink-0 ${gen ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface3 text-muted border-line'}`}>{gen ? t('docs.draftMade') : t('docs.notMade')}</span></div>
             <p className="text-sm text-muted">{docDesc(x)}</p>
+            {gen && docStamp[x] !== undefined && docStamp[x] !== fp && <p className="text-xs text-warn-fg flex items-center gap-1.5"><Icon name="alert" size={14} />{t('docs.stale')}</p>}
             <div className="flex gap-1.5 items-center" role="group" aria-label={t('docs.langLabel')}>
               {MULTI_LANG.includes(x) ? LANGS.map((l) => <button key={l.id} aria-pressed={langOf(x) === l.id} onClick={() => setGenLang({ ...genLang, [x]: l.id })} className={`px-2.5 py-1 rounded-md border text-xs min-h-[32px] transition ${langOf(x) === l.id ? 'bg-primary text-onprimary border-primary' : 'border-line hover:bg-surface3'}`}>{l.short}</button>) : <span className="chip bg-surface2 border-line text-muted">{LANGS.find((l) => l.id === (gen ? docLang[x] ?? lang : lang))!.short}</span>}
             </div>
@@ -221,7 +230,7 @@ export function MonitoringPage() {
   const { profile, alerts, extraAlerts, regChanged, set, log } = useStore()
   if (!profile) return <div><PageHead title={t('mon.title')} /><EmptyState /></div>
   const simulate = () => {
-    const a: AlertItem = { id: 'sim' + Date.now(), titleKey: 'alert.sim.title', when: new Date().toLocaleString(), country: 'CN', topicKey: 'alert.a1.topic', sourceId: 'cn-neglist-next', impactKey: 'alert.sim.impact', nextKey: 'alert.sim.next', isSample: true, severity: 'NEEDS_REVIEW' }
+    const a: AlertItem = { id: 'sim' + Date.now(), titleKey: 'alert.sim.title', when: new Date().toISOString(), country: 'CN', topicKey: 'alert.a1.topic', sourceId: 'cn-neglist-next', impactKey: 'alert.sim.impact', nextKey: 'alert.sim.next', isSample: true, severity: 'NEEDS_REVIEW' }
     set({ extraAlerts: [a, ...extraAlerts], regChanged: true }); log('hist.regsim')
   }
   return (

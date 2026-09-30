@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Direction, Holder, Profile, Side } from '../types'
 import { go, useStore } from '../store'
 import { BusinessProfile, Disclaimer, EmptyState, Go, PageHead, ProgressStepper, Warn, WorkflowStrip } from '../components/ui'
 import { CountryBadge, Icon, type IconName } from '../components/icons'
 import { dirInfo } from '../utils/labels'
 import { dv, tk, useI18n } from '../i18n'
+import { KEYS, safeGet, safeSet } from '../storage'
+import { isObj } from '../profileSchema'
 
 /* ================= LANDING ================= */
 function CrossBorderVisual() {
@@ -63,7 +65,7 @@ export function Landing() {
 export function DirectionPage() {
   const { t } = useI18n()
   const { set, direction, profile } = useStore()
-  const pick = (d: Direction) => { set({ direction: d, profile: profile && profile.direction === d ? profile : null }); go('interview') }
+  const pick = (d: Direction) => { try { localStorage.removeItem(KEYS.interview) } catch { /* ignore */ } set({ direction: d, profile: profile && profile.direction === d ? profile : null }); go('interview') }
   return (
     <div>
       <PageHead title={t('dir.title')} sub={t('dir.sub')} />
@@ -147,14 +149,25 @@ function buildProfile(a: A, d: Direction): { profile: Profile; mode: string } {
   return { profile, mode }
 }
 
+/** The interview survives a refresh: answers + position are kept until the profile is created. */
+function loadDraft(d: Direction): { answers: A; idx: number } {
+  try {
+    const x = JSON.parse(safeGet(KEYS.interview) ?? 'null') as unknown
+    if (isObj(x) && x.direction === d && isObj(x.answers) && typeof x.idx === 'number') return { answers: x.answers as A, idx: Math.max(0, Math.floor(x.idx)) }
+  } catch { /* ignore */ }
+  return { answers: {}, idx: 0 }
+}
+const emptyFor = (q: Q) => (q.type === 'multi' ? [] : '')
+
 export function InterviewPage() {
   const { t } = useI18n()
   const { direction, set, log, startDemo } = useStore()
-  const [answers, setAnswers] = useState<A>({})
-  const [idx, setIdx] = useState(0)
-  const [val, setVal] = useState<string | string[]>('')
-  const [err, setErr] = useState('')
   const d: Direction = direction ?? 'TH_CN'
+  const [answers, setAnswers] = useState<A>(() => loadDraft(d).answers)
+  const [idx, setIdx] = useState(() => { const dr = loadDraft(d); return Math.min(dr.idx, Math.max(0, QS.filter((q) => !q.when || q.when(dr.answers)).length - 1)) })
+  const [val, setVal] = useState<string | string[]>(() => { const dr = loadDraft(d); const vis = QS.filter((q) => !q.when || q.when(dr.answers)); const q0 = vis[Math.min(dr.idx, vis.length - 1)]; return (dr.answers[q0.id] as string | string[] | undefined) ?? emptyFor(q0) })
+  const [err, setErr] = useState('')
+  useEffect(() => { if (direction) safeSet(KEYS.interview, JSON.stringify({ direction, answers, idx })) }, [direction, answers, idx])
   const info = dirInfo(d)
   const vars = { from: tk('country', info.from), to: tk('country', info.to) }
   const visible = useMemo(() => QS.filter((q) => !q.when || q.when(answers)), [answers])
@@ -172,9 +185,12 @@ export function InterviewPage() {
       v = String(Math.round(n))
     }
     if (q.type === 'text' && String(v).trim().length < 2) return setErr(t('intv.e.short'))
-    const next = { ...answers, [q.id]: q.type === 'text' ? String(v).trim() : v }
+    const raw = { ...answers, [q.id]: q.type === 'text' ? String(v).trim() : v }
+    const nv = QS.filter((x) => !x.when || x.when(raw))
+    // drop answers of questions that are no longer relevant (e.g. after going back and changing a choice)
+    const visibleIds = new Set(nv.map((x) => x.id))
+    const next = Object.fromEntries(Object.entries(raw).filter(([k]) => visibleIds.has(k))) as A
     setAnswers(next); setErr('')
-    const nv = QS.filter((x) => !x.when || x.when(next))
     const nextIdx = nv.findIndex((x) => x.id === q.id) + 1
     if (nextIdx >= nv.length) {
       const { profile, mode } = buildProfile(next, d)
@@ -182,6 +198,7 @@ export function InterviewPage() {
         profile, analysisDone: false, stepOverrides: {}, actionStatus: {}, docs: {}, tour: null,
         employment: { mode, nationality: next.empNat ? `@opt.empNat.${next.empNat}` : '', location: profile.location, duration: next.empDuration ? `@opt.empDuration.${next.empDuration}` : '', salary: String(next.empSalary ?? ''), hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' },
       })
+      try { localStorage.removeItem(KEYS.interview) } catch { /* ignore */ }
       log('hist.profile'); return go('profile')
     }
     setIdx(nextIdx); setVal(nv[nextIdx].type === 'multi' ? [] : '')

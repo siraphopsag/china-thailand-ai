@@ -259,7 +259,25 @@ export const docToHtml = (title: string, text: string, lang: Lang) =>
   `<!doctype html><html lang="${lang === 'zh' ? 'zh-CN' : lang}"><meta charset="utf-8"><title>${escapeHtml(title)}</title><body style="font-family:'Noto Sans Thai','Microsoft YaHei',sans-serif;max-width:800px;margin:2rem auto;line-height:1.7"><pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(text)}</pre></body></html>`
 
 /* ---------- Orchestrator ---------- */
-const EVASION = /(ปกปิด|ซ่อน.*(เจ้าของ|ผู้ถือหุ้น|ผู้ลงทุน)|หลบ|เลี่ยง.*(กฎหมาย|ข้อจำกัด|สัดส่วน)|ผู้ถือหุ้นปลอม|หาคน.*ถือหุ้นแทน|ถือหุ้นแทน|สัญญาลับ|สัญญาหลอก|hide.*(owner|shareholder)|bypass|circumvent|evade|fake shareholder|nominee.*(set ?up|create|find|arrange)|代持|隐瞒|隐藏.*(股东|所有)|规避|绕过|假股东|阴阳合同)/i
+/**
+ * Intent screening for the free-text assistant. This is a keyword/pattern heuristic, NOT a safety system:
+ * the engines below only return templated, lawful guidance, so they cannot produce concealment instructions.
+ * When a real LLM is connected, it needs its own policy + a proper classifier (see README).
+ */
+const LAWFUL = /(legally|lawful|lawfully|in compliance|compliant|ถูกกฎหมาย|โดยชอบด้วยกฎหมาย|合法|合规)/i
+const CONCEAL = /(hide|conceal|disguise|mask|cover up|keep (it )?secret|ซ่อน|ปกปิด|อำพราง|ปิดบัง|隐瞒|隐藏|掩盖)/i
+const EVADE_VERB = /(avoid|bypass|circumvent|evade|get around|sidestep|work around|หลบ|เลี่ยง|หลีกเลี่ยง|规避|绕过|绕开|避开)/i
+const OWN_NOUN = /(owner|ownership|shareholder|shares?|stake|investor|foreign (ownership|investment)|restriction|limit|threshold|negative list|เจ้าของ|ผู้ถือหุ้น|หุ้น|ผู้ลงทุน|ข้อจำกัด|สัดส่วน|股|所有|投资|限制|比例)/i
+const NOMINEE = /(nominee|straw ?(man|person)|fake shareholder|dummy shareholder|proxy shareholder|นอมินี|ถือหุ้นแทน|คนถือหุ้นแทน|ผู้ถือหุ้นปลอม|代持|假股东|挂名|名义股东)/i
+const SETUP = /(set ?up|create|arrange|find|get|hire|use|appoint|recruit|need|want|หา|จัดตั้ง|จัดหา|ใช้|อยากได้|ต้องการ|找|安排|设立|需要|想)/i
+const NAME_TRICK = /((in|under)\s+(a\s+|my\s+)?(friend|relative|cousin|someone|another person|somebody|employee)('s)?\s+name|ใช้ชื่อ(คน|เพื่อน|ญาติ|ลูกน้อง)|ใส่ชื่อ(คน|เพื่อน|ญาติ)|借.{0,4}名)/i
+const EDU = /(what is|what are|explain|meaning|define|is it (legal|illegal|allowed)|risk|why|คืออะไร|หมายความว่า|อธิบาย|ผิดกฎหมายไหม|ผิดไหม|ทำได้ไหม|เสี่ยง|什么是|是什么|是否合法|违法吗|风险|为什么)/i
+export type Intent = 'evade' | 'educate' | 'normal'
+export function classifyIntent(q: string): Intent {
+  if ((CONCEAL.test(q) && OWN_NOUN.test(q)) || (EVADE_VERB.test(q) && OWN_NOUN.test(q) && !LAWFUL.test(q)) || NAME_TRICK.test(q)) return 'evade'
+  if (NOMINEE.test(q)) return EDU.test(q) ? 'educate' : SETUP.test(q) ? 'evade' : 'educate'
+  return 'normal'
+}
 const MODS: [RegExp, string][] = [
   [/พนักงาน|จ้าง|แรงงาน|สัญญาจ้าง|ส่งไป|employ|staff|hire|worker|secon|员工|雇|用工|派/i, 'Employment AI'], [/ภาษี|tax|税/i, 'Tax Analysis AI'], [/หุ้น|ผู้ถือหุ้น|เจ้าของ|ควบคุม|share|owner|control|股|控制/i, 'Ownership Analysis AI'],
   [/นอมินี|ผู้ลงทุนจริง|แหล่งเงิน|nominee|real investor|source of fund|代持|实际投资/i, 'Nominee Risk AI'], [/สัญญา|เอกสาร|ร่าง|contract|document|draft|合同|文件|草案/i, 'Document AI'],
@@ -267,16 +285,19 @@ const MODS: [RegExp, string][] = [
   [/กฎหมาย|ลงทุน|ใบอนุญาต|ข้อจำกัด|เปิดบริษัท|law|invest|licen|restrict|company|法|投资|许可|公司/i, 'Legal Analysis AI'],
 ]
 export function orchestrate(q: string, p: Profile | null, lang?: Lang): AIResponse {
-  const run = () => {
-    if (EVASION.test(q))
-      return { blocked: true, modules: ['Legal Analysis AI', 'Nominee Risk AI'], risk: 'HIGH' as Level, answer: tr('orch.block.a'), reason: tr('orch.block.r'), sources: ['th-fba', 'cn-neglist-2024'], next: tr('orch.block.n') }
+  const run = (): AIResponse => {
+    const intent = classifyIntent(q)
+    if (intent === 'evade')
+      return { blocked: true, kind: 'blocked', modules: ['Legal Analysis AI', 'Nominee Risk AI'], risk: 'HIGH', answer: tr('orch.block.a'), reason: tr('orch.block.r'), sources: ['th-fba', 'cn-neglist-2024'], next: tr('orch.block.n') }
+    if (intent === 'educate')
+      return { kind: 'educational', modules: ['Legal Analysis AI', 'Nominee Risk AI'], risk: 'NEEDS_REVIEW', answer: tr('orch.edu.a'), reason: tr('orch.edu.r'), sources: ['th-fba', 'cn-neglist-2024'], next: tr('orch.edu.n') }
     const modules = MODS.filter(([r]) => r.test(q)).map(([, n]) => n)
     const isStaff = /ส่ง.*พนักงาน|พนักงาน.*(ไป|ข้าม)|send.*(staff|employee)|secon|派.*员工|外派/i.test(q)
     if (/พนักงาน|จ้าง|ส่งไป|staff|employ|hire|员工|雇|外派/i.test(q) && !modules.includes('Legal Analysis AI')) modules.push('Legal Analysis AI')
     if (isStaff) for (const x of ['Tax Analysis AI', 'Document AI']) if (!modules.includes(x)) modules.push(x)
     if (/สัญญา|contract|合同/i.test(q) && !modules.includes('Language AI')) modules.push('Language AI')
-    if (!p) return { modules: ['Business Intake AI'], risk: 'NEEDS_REVIEW' as Level, answer: tr('orch.nop.a'), reason: tr('orch.nop.r'), sources: [], next: tr('orch.nop.n') }
-    if (!modules.length) return { modules: ['Business Intake AI'], risk: 'NEEDS_REVIEW' as Level, answer: tr('orch.noq.a'), reason: tr('orch.noq.r'), sources: [], next: tr('orch.noq.n') }
+    if (!p) return { modules: ['Business Intake AI'], risk: 'NEEDS_REVIEW', answer: tr('orch.nop.a'), reason: tr('orch.nop.r'), sources: [], next: tr('orch.nop.n') }
+    if (!modules.length) return { modules: ['Business Intake AI'], risk: 'NEEDS_REVIEW', answer: tr('orch.noq.a'), reason: tr('orch.noq.r'), sources: [], next: tr('orch.noq.n') }
     const tc = targetCountry(p)
     const nom = detectNomineeRisk(p)
     const hit = modules.includes('Nominee Risk AI') || modules.includes('Ownership Analysis AI')

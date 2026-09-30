@@ -111,5 +111,5 @@ export interface ChecklistItem { id: string; group: 'business' | 'ownership' | '
 
 export interface AIResponse {
   answer: string; reason: string; sources: string[]; risk: Level; next: string
-  modules: string[]; blocked?: boolean
+  modules: string[]; blocked?: boolean; kind?: 'blocked' | 'educational'
 }

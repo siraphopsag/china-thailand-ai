@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Holder, Profile } from '../types'
 import { go, useStore } from '../store'
-import { ControlBars, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, OwnershipMap, PageHead, SectionTabs, SourceCard, StatusBadge, VerifyBadge, Warn, WorkflowStrip } from '../components/ui'
+import { ControlBars, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, OwnershipMap, PageHead, SectionTabs, SimTag, SourceCard, StatusBadge, VerifyBadge, Warn, WorkflowStrip } from '../components/ui'
 import { AICommandCenter } from '../components/ai'
 import { Icon, type IconName } from '../components/icons'
-import { compliantOptions, consequences, detectNomineeRisk, holderName, holdersSum, indicatorCategory, ownershipDims, targetCountry, verifyAnalysis, hasCompany, type IndicatorCategory } from '../services/engines'
+import { assessRisks, compliantOptions, consequences, detectNomineeRisk, holderName, holdersSum, indicatorCategory, ownershipDims, targetCountry, verifyAnalysis, hasCompany, type IndicatorCategory } from '../services/engines'
 import { getReg } from '../data/regulations'
-import { levelPanel } from '../utils/labels'
+import { levelChip, levelPanel } from '../utils/labels'
+import type { Level } from '../types'
 import { tk, useI18n } from '../i18n'
 
 const MODULES = ['legal', 'invest', 'ownership', 'nominee', 'employment', 'tax', 'language', 'culture'] as const
@@ -20,6 +21,10 @@ export function AnalysisCenter() {
   useEffect(() => () => window.clearInterval(timer.current), [])
   if (!profile) return <div><PageHead title={t('an.title')} /><EmptyState /></div>
   const vr = verifyAnalysis(profile, employment)
+  // Each module's chip is its real result (from the same engines the other pages use).
+  const byId = Object.fromEntries(assessRisks(profile, employment).map((r) => [r.id, r.level])) as Record<string, Level>
+  const fund = ownershipDims(profile).find((d) => d.key === 'fund')!.status
+  const res = (m: (typeof MODULES)[number]): Level => ({ legal: byId.legal, invest: fund, ownership: byId.ownership, nominee: byId.nominee, employment: byId.employment, tax: byId.tax, language: byId.language, culture: byId.culture }[m])
   const run = () => {
     setStep(0); window.clearInterval(timer.current)
     let i = 0
@@ -37,16 +42,16 @@ export function AnalysisCenter() {
           <h2 className="h2 mb-3">{t('an.modules')}</h2>
           {step < 0 ? <p className="text-muted text-sm">{t('an.hint')}</p> : (
             <ul className="space-y-2.5" aria-live="polite">{MODULES.map((m, i) => (
-              <li key={m} className="flex items-center gap-3 text-sm"><Icon name={i < step ? 'ok' : i === step ? 'ai' : 'circle'} className={i < step ? 'text-ok-fg' : i === step ? 'text-primary animate-pulse' : 'text-muted'} /><span className="font-medium w-32 shrink-0">{tk('an.m', m)}</span><span className="text-muted">{i === step ? tk('an.msg', m) : i < step ? t('an.done') : t('an.queued')}</span></li>))}</ul>)}
+              <li key={m} className="flex items-center gap-3 text-sm"><Icon name={i < step ? 'ok' : i === step ? 'ai' : 'circle'} className={i < step ? 'text-ok-fg' : i === step ? 'text-primary animate-pulse' : 'text-muted'} /><span className="font-medium w-32 shrink-0">{tk('an.m', m)}</span><span className="text-muted">{i === step ? tk('an.msg', m) : i < step ? t('an.done') : t('an.queued')}</span>{i < step && <span className={`chip ml-auto ${levelChip[res(m)]}`}>{tk('lvl', res(m))}</span>}</li>))}</ul>)}
           {done && <div className="mt-4 flex flex-wrap gap-2"><button className="btn-primary" onClick={() => go('ownership')}><Go>{t('an.toOwner')}</Go></button><button className="btn-ghost" onClick={() => go('risk')}>{t('an.toRisk')}</button></div>}
         </div>
         <div className="card">
-          <h2 className="h2 mb-1">{t('an.verify')}</h2>
+          <h2 className="h2 mb-1 flex flex-wrap items-center gap-2">{t('an.verify')}<SimTag /></h2>
           <p className="text-sm text-muted mb-3">{t('an.verifySub')}</p>
           {!done ? <p className="text-sm text-muted">{t('an.verifyWait')}</p> : <>
             <ul className="space-y-2">{vr.steps.map((s) => <li key={s.name} className="text-sm flex gap-2"><Icon name={s.ok ? 'ok' : 'alert'} size={17} className={`mt-0.5 ${s.ok ? 'text-ok-fg' : 'text-warn-fg'}`} /><span><b>{s.name}</b><br /><span className="text-muted">{s.note}</span></span></li>)}</ul>
             {vr.recheck && <div className="mt-3"><Warn tone="danger">{t('an.recheck')}</Warn></div>}
-            <div className="mt-3 flex items-center gap-2 text-sm flex-wrap">{t('an.final')}: <VerifyBadge v={vr.final} /></div></>}
+            <div className="mt-3 flex items-center gap-2 text-sm flex-wrap">{t('an.final')}: <VerifyBadge v={vr.final} /></div><p className="text-xs text-muted mt-1">{t('an.finalWhy')}</p></>}
         </div>
       </div>
       <AICommandCenter profile={profile} />
@@ -61,11 +66,9 @@ export function OwnershipPage() {
   const { t } = useI18n()
   const { profile, set, log } = useStore()
   if (!profile) return <div><PageHead title={t('own.title')} /><EmptyState /></div>
-  const upd = (id: Holder['id'], k: keyof Holder, v: number) => {
-    const hs = profile.holders.map((h) => (h.id === id ? { ...h, [k]: v } : h))
-    if (k === 'percent') { const o = hs.find((h) => h.id !== id)!; o.percent = 100 - v }
-    set({ profile: { ...profile, holders: hs }, analysisDone: false })
-  }
+  // One value per dimension: the partner's side is always 100 minus the other side, so the numbers can never be inconsistent.
+  const setDim = (k: 'percent' | 'capital' | 'voting' | 'board' | 'economic', v: number) =>
+    set({ profile: { ...profile, holders: profile.holders.map((h: Holder) => ({ ...h, [k]: h.id === 'origin' ? v : 100 - v })) }, analysisDone: false })
   const dims = ownershipDims(profile)
   const sum = holdersSum(profile)
   const chg = (patch: Partial<Profile>) => { set({ profile: { ...profile, ...patch } }); log('hist.control') }
@@ -87,10 +90,14 @@ export function OwnershipPage() {
       </Disclosure>
       <Disclosure title={t('own.adjust')}>
         <p className="text-sm text-muted">{t('own.adjustSub')}</p>
-        <div className="grid md:grid-cols-2 gap-4">{profile.holders.map((h) => (
-          <fieldset key={h.id} className="border border-line rounded-lg p-3"><legend className="font-semibold px-1">{holderName(h)}</legend>
-            <div className="grid grid-cols-2 gap-2">{(['percent', 'capital', 'voting', 'board', 'economic'] as const).map((k) => (
-              <div key={k}><label className="label" htmlFor={h.id + k}>{tk('own.f', k)}</label><input id={h.id + k} type="number" min={0} max={100} className="input" value={h[k]} onChange={(e) => upd(h.id, k, num(e.target.value))} /></div>))}</div></fieldset>))}</div>
+        <div className="space-y-4">{(['percent', 'capital', 'voting', 'board', 'economic'] as const).map((k) => (
+          <div key={k}>
+            <div className="flex flex-wrap justify-between gap-2 text-sm"><label htmlFor={'dim-' + k} className="font-medium">{tk('own.f', k)}</label><span className="text-muted">{t('own.split', { a: holderName(o), x: o[k], b: holderName(pa), y: pa[k] })}</span></div>
+            <div className="flex items-center gap-3">
+              <input id={'dim-' + k} type="range" min={0} max={100} step={1} value={o[k]} onChange={(e) => setDim(k, num(e.target.value))} aria-label={t('own.slider', { holder: holderName(o) })} className="flex-1 h-8 accent-[rgb(var(--primary))]" />
+              <input type="number" min={0} max={100} className="input !w-20" aria-label={t('own.slider', { holder: holderName(o) })} value={o[k]} onChange={(e) => setDim(k, num(e.target.value))} />
+            </div>
+          </div>))}</div>
         <h3 className="font-semibold pt-2">{t('own.ctlTitle')}</h3>
         <div className="grid md:grid-cols-2 gap-4">
           {sel(t('own.q.investor'), profile.realInvestor, 'realInvestor')}{sel(t('own.q.operator'), profile.operator, 'operator')}
