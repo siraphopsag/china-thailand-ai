@@ -1,4 +1,5 @@
 import type { Direction, Level, StepStatus, Verification } from '../types'
+import type { IconName } from '../components/icons'
 
 /** Status → semantic token classes (defined in index.css, switch with light/dark theme). */
 export const levelChip: Record<Level, string> = {
@@ -7,7 +8,7 @@ export const levelChip: Record<Level, string> = {
 }
 export const levelBar: Record<Level, string> = { LOW: 'border-l-ok-fg', MEDIUM: 'border-l-warn-fg', HIGH: 'border-l-danger-fg', NEEDS_REVIEW: 'border-l-review-fg' }
 export const levelPanel: Record<Level, string> = { LOW: 'border-ok-line bg-ok-bg', MEDIUM: 'border-warn-line bg-warn-bg', HIGH: 'border-danger-line bg-danger-bg', NEEDS_REVIEW: 'border-review-line bg-review-bg' }
-export const levelIcon: Record<Level, string> = { LOW: '✓', MEDIUM: '!', HIGH: '⚠', NEEDS_REVIEW: '?' }
+export const levelIconName: Record<Level, IconName> = { LOW: 'ok', MEDIUM: 'alert', HIGH: 'warn', NEEDS_REVIEW: 'help' }
 export const levelOrder: Level[] = ['HIGH', 'NEEDS_REVIEW', 'MEDIUM', 'LOW']
 
 export const verifyChip: Record<Verification, string> = {
@@ -24,8 +25,7 @@ export const stepNode: Record<StepStatus, string> = {
 }
 export const STEP_STATUSES: StepStatus[] = ['todo', 'doing', 'review', 'done', 'fix']
 
-export const dirInfo = (d: Direction) =>
-  d === 'TH_CN' ? { from: 'TH' as const, to: 'CN' as const, fromFlag: '🇹🇭', toFlag: '🇨🇳' } : { from: 'CN' as const, to: 'TH' as const, fromFlag: '🇨🇳', toFlag: '🇹🇭' }
+export const dirInfo = (d: Direction) => (d === 'TH_CN' ? { from: 'TH' as const, to: 'CN' as const } : { from: 'CN' as const, to: 'TH' as const })
 
 export const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string))

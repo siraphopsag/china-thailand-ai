@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { Direction, Holder, Profile, Side } from '../types'
 import { go, useStore } from '../store'
-import { BusinessProfile, Disclaimer, EmptyState, PageHead, ProgressStepper, Warn, WorkflowStrip } from '../components/ui'
+import { BusinessProfile, Disclaimer, EmptyState, Go, PageHead, ProgressStepper, Warn, WorkflowStrip } from '../components/ui'
+import { CountryBadge, Icon, type IconName } from '../components/icons'
 import { dirInfo } from '../utils/labels'
 import { dv, tk, useI18n } from '../i18n'
 
@@ -10,9 +11,9 @@ function CrossBorderVisual() {
   const { t } = useI18n()
   return (
     <div className="flex items-center justify-center gap-2 sm:gap-3 select-none" aria-hidden>
-      <div className="rounded-2xl bg-white/10 border border-white/20 px-3 py-3 text-center w-24 sm:w-28"><div className="text-3xl">🇹🇭</div><div className="text-xs mt-1">{tk('country', 'TH')}</div></div>
-      <div className="flex-1 max-w-[140px] flex items-center"><span className="flex-1 border-t-2 border-dashed border-white/40" /><span className="mx-1 rounded-full bg-accent text-onaccent text-xs font-bold px-2 py-1 animate-pulse">AI</span><span className="flex-1 border-t-2 border-dashed border-white/40" /></div>
-      <div className="rounded-2xl bg-white/10 border border-white/20 px-3 py-3 text-center w-24 sm:w-28"><div className="text-3xl">🇨🇳</div><div className="text-xs mt-1">{tk('country', 'CN')}</div></div>
+      <div className="rounded-xl bg-white/10 border border-white/20 px-3 py-3 text-center w-24 sm:w-28"><div className="text-2xl font-bold tracking-wide">TH</div><div className="text-xs mt-1">{tk('country', 'TH')}</div></div>
+      <div className="flex-1 max-w-[140px] flex items-center"><span className="flex-1 border-t-2 border-dashed border-white/40" /><span className="mx-1 rounded-full bg-accent text-onaccent px-2 py-1 animate-pulse"><Icon name="ai" size={16} /></span><span className="flex-1 border-t-2 border-dashed border-white/40" /></div>
+      <div className="rounded-xl bg-white/10 border border-white/20 px-3 py-3 text-center w-24 sm:w-28"><div className="text-2xl font-bold tracking-wide">CN</div><div className="text-xs mt-1">{tk('country', 'CN')}</div></div>
       <span className="sr-only">{t('dir.TH_CN')}</span>
     </div>
   )
@@ -20,16 +21,16 @@ function CrossBorderVisual() {
 export function Landing() {
   const { t } = useI18n()
   const { startDemo } = useStore()
-  const steps = [['1', '📝'], ['2', '🧠'], ['3', '🛡️'], ['4', '🗺️'], ['5', '📡']]
+  const steps: [string, IconName][] = [['1', 'business'], ['2', 'ai'], ['3', 'risk'], ['4', 'plan'], ['5', 'monitor']]
   return (
     <div className="space-y-12">
-      <section className="rounded-3xl bg-hero text-onheader px-6 py-10 md:px-12 md:py-14 grid md:grid-cols-[1.3fr_1fr] gap-8 items-center">
+      <section className="rounded-2xl bg-hero text-onheader px-6 py-10 md:px-12 md:py-14 grid md:grid-cols-[1.3fr_1fr] gap-8 items-center">
         <div>
           <p className="text-sm opacity-75 mb-3">{t('land.kicker')}</p>
           <h1 className="text-3xl md:text-5xl font-bold leading-tight">{t('land.h1')}</h1>
           <p className="mt-4 text-lg opacity-90 max-w-2xl">{t('land.sub')}</p>
           <div className="flex flex-wrap gap-3 mt-8">
-            <button className="btn-accent" onClick={() => go('direction')}>{t('cta.start')}</button>
+            <button className="btn-accent" onClick={() => go('direction')}><Go>{t('cta.start')}</Go></button>
             <button className="btn border border-white/50 text-onheader hover:bg-white/10" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>{t('land.how')}</button>
             <button className="btn border border-white/50 text-onheader hover:bg-white/10" onClick={() => { startDemo(); go('profile') }}>{t('cta.demo')}</button>
           </div>
@@ -39,7 +40,7 @@ export function Landing() {
       </section>
       <section id="how" aria-labelledby="how-h">
         <h2 id="how-h" className="h1 text-center mb-6">{t('land.h2')}</h2>
-        <ol className="grid grid-cols-2 md:grid-cols-5 gap-3">{steps.map(([n, i]) => <li key={n} className="card text-center !p-4"><div className="text-3xl" aria-hidden>{i}</div><div className="text-xs text-muted mt-1">{t('land.stepN', { n })}</div><div className="font-semibold">{tk('land', 's' + n)}</div></li>)}</ol>
+        <ol className="grid grid-cols-2 md:grid-cols-5 gap-3">{steps.map(([n, i]) => <li key={n} className="card text-center !p-4"><div className="mx-auto w-10 h-10 rounded-lg bg-brand text-brandfg grid place-items-center"><Icon name={i} size={20} /></div><div className="text-xs text-muted mt-1">{t('land.stepN', { n })}</div><div className="font-semibold">{tk('land', 's' + n)}</div></li>)}</ol>
         <div className="card mt-6"><p className="text-sm text-muted mb-3">{t('land.notChat')}</p><WorkflowStrip /></div>
       </section>
       <section aria-labelledby="ba-h">
@@ -67,10 +68,10 @@ export function DirectionPage() {
     <div>
       <PageHead title={t('dir.title')} sub={t('dir.sub')} />
       <div className="grid md:grid-cols-2 gap-5">{(['TH_CN', 'CN_TH'] as Direction[]).map((d) => { const i = dirInfo(d); return (
-        <button key={d} onClick={() => pick(d)} className={`card text-left hover:border-primary hover:shadow-md transition p-8 ${direction === d ? 'ring-2 ring-primary' : ''}`}>
-          <div className="text-5xl mb-3" aria-hidden>{i.fromFlag} ⟶ {i.toFlag}</div>
+        <button key={d} onClick={() => pick(d)} className={`card text-left hover:border-primary hover:shadow-md transition p-6 md:p-8 ${direction === d ? 'ring-2 ring-primary' : ''}`}>
+          <div className="mb-3 flex items-center gap-2 text-primary" aria-hidden><CountryBadge c={i.from} className="!text-sm !px-2.5 !py-1" /><Icon name="next" size={22} /><CountryBadge c={i.to} className="!text-sm !px-2.5 !py-1" /></div>
           <div className="text-2xl font-bold">{tk('country', i.from)} → {tk('country', i.to)}</div><div className="text-muted">{tk('dir', d)}</div>
-          <p className="mt-3">{tk('dir', d + '.text')}</p><span className="btn-primary mt-4">{t('dir.choose')}</span>
+          <p className="mt-3">{tk('dir', d + '.text')}</p><span className="btn-primary mt-4"><Go>{t('dir.choose')}</Go></span>
         </button>) })}</div>
     </div>
   )
@@ -190,23 +191,23 @@ export function InterviewPage() {
   const cats = [0, 1, 2, 3, 4, 5, 6].map((c) => tk('cat', String(c)))
   return (
     <div>
-      <PageHead title={t('intv.title')} sub={t('intv.sub', { dir: `${info.fromFlag} ${tk('dir', d)} ${info.toFlag}` })}><button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>{t('intv.useDemo')}</button></PageHead>
+      <PageHead title={t('intv.title')} sub={t('intv.sub', { dir: tk('dir', d) })}><button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>{t('intv.useDemo')}</button></PageHead>
       <div className="grid lg:grid-cols-[260px_1fr] gap-6">
         <aside className="card h-fit"><ProgressStepper steps={cats} current={q.cat} label={t('intv.aria')} /></aside>
         <section className="space-y-3" aria-live="polite">
-          {visible.slice(0, idx).map((pq) => <div key={pq.id} className="space-y-1"><div className="bg-brand text-brandfg border border-line rounded-2xl px-4 py-2 text-sm max-w-xl">🤖 {qText(pq)}</div><div className="bg-primary text-onprimary rounded-2xl px-4 py-2 text-sm ml-auto max-w-md w-fit">{shown(pq)}</div></div>)}
+          {visible.slice(0, idx).map((pq) => <div key={pq.id} className="space-y-1"><div className="bg-brand text-brandfg border border-line rounded-xl px-4 py-2 text-sm max-w-xl flex gap-2 items-start"><Icon name="ai" size={16} className="mt-0.5" />{qText(pq)}</div><div className="bg-primary text-onprimary rounded-xl px-4 py-2 text-sm ml-auto max-w-md w-fit">{shown(pq)}</div></div>)}
           <div className="card border-primary/40">
             <div className="text-xs text-primary mb-1">{t('intv.cat', { letter: String.fromCharCode(65 + q.cat), cat: cats[q.cat], n: idx + 1 })}</div>
-            <label className="text-lg font-semibold block" htmlFor="ans" id="q-label">🤖 {qText(q)}</label>
+            <label className="text-lg font-semibold flex gap-2 items-start" htmlFor="ans" id="q-label"><Icon name="ai" size={20} className="mt-1 text-primary" />{qText(q)}</label>
             {q.help && <p className="text-sm text-muted mb-2">{t(`q.${q.id}.h` as never)}</p>}
             <div className="mt-3">
               {(q.type === 'choice' || q.type === 'multi') && <div className="grid sm:grid-cols-2 gap-2" role={q.type === 'choice' ? 'radiogroup' : 'group'} aria-labelledby="q-label">{q.opts!.map((o) => { const sel = q.type === 'multi' ? (val as string[]).includes(o) : val === o; return (
-                <button type="button" key={o} aria-pressed={sel} onClick={() => { setErr(''); setVal(q.type === 'multi' ? (sel ? (val as string[]).filter((x) => x !== o) : [...(val as string[]), o]) : o) }} className={`text-left px-4 py-3 rounded-xl border min-h-[44px] transition ${sel ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line hover:bg-surface3'}`}>{q.type === 'multi' ? (sel ? '☑ ' : '☐ ') : sel ? '◉ ' : '○ '}{label(q, o)}</button>) })}</div>}
+                <button type="button" key={o} aria-pressed={sel} onClick={() => { setErr(''); setVal(q.type === 'multi' ? (sel ? (val as string[]).filter((x) => x !== o) : [...(val as string[]), o]) : o) }} className={`text-left px-4 py-3 rounded-lg border min-h-[44px] transition ${sel ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line hover:bg-surface3'}`}><span className="flex items-center gap-2.5"><Icon name={q.type === 'multi' ? (sel ? 'squareCheck' : 'square') : sel ? 'circleDot' : 'circle'} className={sel ? 'text-primary' : 'text-muted'} />{label(q, o)}</span></button>) })}</div>}
               {q.type === 'text' && <input id="ans" className="input" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
               {(q.type === 'number' || q.type === 'pct') && <input id="ans" type="number" inputMode="numeric" className="input max-w-[180px]" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
             </div>
             {err && <p role="alert" className="text-danger-fg text-sm mt-2">{err}</p>}
-            <div className="flex gap-2 mt-4"><button className="btn-ghost" onClick={back} disabled={idx === 0}>{t('c.back')}</button><button className="btn-primary" onClick={submit}>{idx + 1 >= visible.length ? t('intv.submit') : t('c.next')}</button></div>
+            <div className="flex gap-2 mt-4"><button className="btn-ghost" onClick={back} disabled={idx === 0}><Icon name="back" size={16} />{t('c.back')}</button><button className="btn-primary" onClick={submit}>{idx + 1 >= visible.length ? t('intv.submit') : t('c.next')}<Icon name="next" size={16} /></button></div>
           </div>
           <p className="text-xs text-muted">{t('intv.answered', { n: idx })}</p>
         </section>
@@ -247,7 +248,7 @@ export function ProfilePage() {
         </div>
       ) : <BusinessProfile p={profile} onEdit={() => { setF(profile); setEdit(true) }} />}
       {profile.unknownFacts && profile.unknownFacts.length > 0 && <Warn>{t('prof.unknown')} {profile.unknownFacts.map((u) => tk('unk', u)).join(' · ')}</Warn>}
-      <div className="flex gap-2 flex-wrap"><button className="btn-primary" onClick={() => go('analysis')}>{t('prof.startAi')}</button><button className="btn-ghost" onClick={() => go('dashboard')}>{t('prof.toDash')}</button></div>
+      <div className="flex gap-2 flex-wrap"><button className="btn-primary" onClick={() => go('analysis')}><Icon name="ai" size={16} />{t('prof.startAi')}</button><button className="btn-ghost" onClick={() => go('dashboard')}>{t('prof.toDash')}</button></div>
       <Disclaimer />
     </div>
   )

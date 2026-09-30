@@ -6,12 +6,13 @@ import { analyzeEmployment, detectNomineeRisk, hasCompany, ownershipDims } from 
 import { dirInfo } from '../utils/labels'
 import { go } from '../store'
 import { AIMessage } from './ui'
+import { Icon, type IconName } from './icons'
 
-const TILES: [route: string, icon: string, key: string][] = [
-  ['analysis', '🧭', 'a1'], ['ownership', '🧩', 'a2'], ['risk', '🛡️', 'a3'], ['employment', '👥', 'a4'], ['contract', '📄', 'a5'], ['roadmap', '✅', 'a6'],
+const TILES: [route: string, icon: IconName, key: string][] = [
+  ['analysis', 'business', 'a1'], ['ownership', 'ownership', 'a2'], ['employment', 'employment', 'a3'], ['risk', 'risk', 'a4'], ['roadmap', 'plan', 'a5'],
 ]
 
-/** AI Command Center: action tiles wired to the modules + a free-text ask that goes through the orchestrator. */
+/** AI Command Center: five plain actions wired to the existing modules + a free-text ask through the orchestrator. */
 export function AICommandCenter({ profile }: { profile: Profile | null }) {
   const { t, lang } = useI18n()
   const [q, setQ] = useState('')
@@ -27,20 +28,22 @@ export function AICommandCenter({ profile }: { profile: Profile | null }) {
   }
   return (
     <section className="card space-y-4" aria-labelledby="cc-h">
-      <div><h2 id="cc-h" className="h2">🤖 {t('cc.title')}</h2><p className="text-sm text-muted">{t('cc.sub')}</p></div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        {TILES.map(([route, icon, k]) => (
-          <button key={k} onClick={() => go(route)} className="card-i text-left flex items-center gap-2 min-h-[56px] hover:bg-surface3 hover:shadow-sm transition active:scale-[.98]">
-            <span className="text-xl" aria-hidden>{icon}</span><span className="text-sm font-medium">{tk('cc', k)}</span>
+      <div><h2 id="cc-h" className="text-xl font-semibold">{t('cc.title')}</h2><p className="text-sm text-muted">{t('cc.sub')}</p></div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {TILES.map(([route, icon, k], i) => (
+          <button key={k} onClick={() => go(route)} className={`group text-left rounded-xl border border-line bg-surface2 p-4 flex gap-3 items-start hover:border-primary hover:bg-surface3 transition active:scale-[.99] ${i === 0 ? 'sm:col-span-2 lg:col-span-1 ring-1 ring-primary/40' : ''}`}>
+            <span className="w-10 h-10 rounded-lg bg-brand text-brandfg grid place-items-center shrink-0"><Icon name={icon} size={20} /></span>
+            <span className="min-w-0"><span className="block font-semibold leading-snug">{tk('cc', k)}</span><span className="block text-sm text-muted mt-0.5">{tk('cc', k + 'd')}</span></span>
           </button>))}
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2 pt-1">
         <label htmlFor="cc-q" className="label">{t('cc.askLabel')}</label>
         <div className="flex gap-2 flex-wrap">
-          <input id="cc-q" className="input flex-1 min-w-[200px]" value={q} placeholder={t('cc.ph')} onChange={(e) => { setQ(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && ask()} maxLength={500} />
+          <div className="relative flex-1 min-w-[200px]"><Icon name="ai" size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+            <input id="cc-q" className="input !pl-10" value={q} placeholder={t('cc.ph')} onChange={(e) => { setQ(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && ask()} maxLength={500} /></div>
           <button className="btn-primary" disabled={busy} onClick={ask}>{busy ? t('cc.busy') : t('cc.ask')}</button>
         </div>
-        <div className="flex gap-2 flex-wrap text-sm">{(['s1', 's2', 's3'] as const).map((k) => <button key={k} className="px-3 py-1.5 rounded-full border border-line bg-surface hover:bg-surface3 min-h-[36px] transition" onClick={() => setQ(t(`cc.${k}` as never))}>{tk('cc', k)}</button>)}</div>
+        <div className="flex gap-2 flex-wrap text-sm">{(['s1', 's2', 's3'] as const).map((k) => <button key={k} className="px-3 py-1.5 rounded-lg border border-line bg-surface hover:bg-surface3 min-h-[36px] transition text-left" onClick={() => setQ(t(`cc.${k}` as never))}>{tk('cc', k)}</button>)}</div>
         {err && <p role="alert" className="text-danger-fg text-sm">{err}</p>}
         {busy && <p className="text-sm text-muted animate-pulse">{t('cc.loading')}</p>}
         {resp && !busy && <AIMessage r={resp} />}
@@ -67,13 +70,13 @@ export function AITimeline({ p, emp }: { p: Profile; emp: EmploymentInput }) {
     [miss ? 'warn' : 'ok', miss ? t('tl.empWarn', { n: miss }) : t('tl.emp')],
     ['active', t('tl.roadmap')],
   ]
-  const icon: Record<TlState, string> = { ok: '✓', warn: '⚠', active: '→', na: '–' }
-  const cls: Record<TlState, string> = { ok: 'bg-ok-bg text-ok-fg', warn: 'bg-warn-bg text-warn-fg', active: 'bg-info-bg text-info-fg', na: 'bg-surface3 text-muted' }
+  const icon: Record<TlState, IconName> = { ok: 'ok', warn: 'warn', active: 'next', na: 'dash' }
+  const cls: Record<TlState, string> = { ok: 'text-ok-fg', warn: 'text-warn-fg', active: 'text-info-fg', na: 'text-muted' }
   return (
-    <ol className="space-y-2" aria-label={t('tl.title')}>
+    <ol className="space-y-2.5" aria-label={t('tl.title')}>
       {items.map(([s, text], i) => (
-        <li key={i} className="flex items-start gap-3 text-sm">
-          <span className={`w-6 h-6 shrink-0 rounded-full grid place-items-center text-xs font-bold ${cls[s]} ${s === 'active' ? 'animate-pulse' : ''}`} aria-hidden>{icon[s]}</span>
+        <li key={i} className="flex items-start gap-2.5 text-sm">
+          <Icon name={icon[s]} size={18} className={`mt-0.5 ${cls[s]} ${s === 'active' ? 'animate-pulse' : ''}`} />
           <span className={s === 'warn' ? 'font-medium' : ''}>{text}</span>
         </li>))}
     </ol>

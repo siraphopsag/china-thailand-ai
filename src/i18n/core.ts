@@ -2,10 +2,10 @@
 import { messages, type MsgKey } from '../locales/index.js'
 
 export type Lang = 'th' | 'zh' | 'en'
-export const LANGS: { id: Lang; flag: string; label: string; html: string }[] = [
-  { id: 'th', flag: '🇹🇭', label: 'ไทย', html: 'th' },
-  { id: 'zh', flag: '🇨🇳', label: '中文', html: 'zh-CN' },
-  { id: 'en', flag: '🇬🇧', label: 'English', html: 'en' },
+export const LANGS: { id: Lang; label: string; short: string; html: string }[] = [
+  { id: 'th', label: 'ไทย', short: 'TH', html: 'th' },
+  { id: 'zh', label: '中文', short: '中', html: 'zh-CN' },
+  { id: 'en', label: 'English', short: 'EN', html: 'en' },
 ]
 const IDX: Record<Lang, number> = { th: 0, zh: 1, en: 2 }
 
