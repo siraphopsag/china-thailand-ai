@@ -3,7 +3,8 @@ import { go, StoreProvider, useRoute, useStore } from './store'
 import { Landing, DirectionPage, InterviewPage, ProfilePage } from './pages/intake'
 import { AnalysisCenter, OwnershipPage, NomineePage } from './pages/analysis'
 import { EmploymentPage, ContractPage, LanguagePage } from './pages/employment'
-import { Dashboard, RiskPage, RoadmapPage, DocumentsPage, MonitoringPage, SourcesPage, AdminPage, PricingPage } from './pages/ops'
+import { Dashboard, RiskPage, RoadmapPage, DocumentsPage, MonitoringPage, SourcesPage, AdminPage, PricingPage, PrivacyPage } from './pages/ops'
+import { tourSteps } from './data/tour'
 
 const nav: [string, string, string, string[]][] = [
   ['', 'หน้าแรก', '🏠', []],
@@ -12,12 +13,12 @@ const nav: [string, string, string, string[]][] = [
   ['risk', 'ความเสี่ยง', '🛡️', []],
   ['roadmap', 'แผนดำเนินงาน', '🗺️', []],
   ['documents', 'เอกสาร', '📄', []],
-  ['monitoring', 'ติดตาม Compliance', '📡', []],
+  ['monitoring', 'ติดตามข้อกำหนด', '📡', []],
   ['sources', 'แหล่งข้อมูล', '🔗', ['admin']],
 ]
 
 function Shell({ route, children }: { route: string; children: ReactNode }) {
-  const { startDemo, profile, reset } = useStore()
+  const { startDemo, profile, reset, tour, set } = useStore()
   const [menu, setMenu] = useState(false)
   const active = (k: string, sub: string[]) => route === k || sub.includes(route)
   return (
@@ -28,17 +29,30 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
           <button onClick={() => go('')} className="font-bold text-left leading-tight"><span className="block text-sm md:text-base">ไทย–จีน AI</span><span className="block text-[11px] text-navy-200 font-normal">Business Entry & Compliance</span></button>
           <nav aria-label="เมนูหลัก" className="hidden lg:flex gap-1 ml-4 flex-1">{nav.map(([k, t, , sub]) => <button key={k} onClick={() => go(k)} aria-current={active(k, sub) ? 'page' : undefined} className={`px-3 py-2 rounded-lg text-sm min-h-[44px] ${active(k, sub) ? 'bg-white/15 font-semibold' : 'hover:bg-white/10'}`}>{t}</button>)}</nav>
           <div className="ml-auto flex items-center gap-2">
-            <button className="btn bg-amber-400 text-navy-900 hover:bg-amber-300 !py-1.5 text-sm" onClick={() => { startDemo(); go('dashboard') }}>เริ่ม Demo</button>
+            <button className="btn bg-amber-400 text-navy-900 hover:bg-amber-300 !py-1.5 text-sm" onClick={() => { startDemo(); go('profile') }}>เริ่ม Demo</button>
             <button className="lg:hidden btn border border-white/40 !py-1.5 text-sm" aria-expanded={menu} onClick={() => setMenu(!menu)}>เมนู</button>
           </div>
         </div>
         {menu && <div className="lg:hidden bg-navy-800 px-4 pb-3 grid grid-cols-2 gap-1">{[...nav.map(([k, t]) => [k, t]), ['pricing', 'แพ็กเกจ'], ['admin', 'จัดการกฎระเบียบ']].map(([k, t]) => <button key={k} onClick={() => { go(k); setMenu(false) }} className="text-left px-3 py-3 rounded hover:bg-white/10">{t}</button>)}</div>}
       </header>
+      {tour !== null && tour < tourSteps.length && (
+        <div role="region" aria-label="โหมดนำเสนอ" className="bg-amber-50 border-b border-amber-300 sticky top-16 z-30">
+          <div className="max-w-7xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            <span className="font-semibold">โหมดนำเสนอ · ขั้นที่ {tour + 1}/{tourSteps.length}: {tourSteps[tour].title}</span>
+            <span className="text-slate-700 flex-1 min-w-[220px]">{tourSteps[tour].caption}</span>
+            <span className="flex gap-2">
+              <button className="btn-ghost !py-1 !min-h-[36px]" disabled={tour === 0} onClick={() => { set({ tour: tour - 1 }); go(tourSteps[tour - 1].route) }}>ก่อนหน้า</button>
+              <button className="btn-primary !py-1 !min-h-[36px]" onClick={() => { if (tour + 1 < tourSteps.length) { set({ tour: tour + 1 }); go(tourSteps[tour + 1].route) } else set({ tour: null }) }}>{tour + 1 < tourSteps.length ? 'ถัดไป' : 'จบการนำเสนอ'}</button>
+              <button className="btn-ghost !py-1 !min-h-[36px]" onClick={() => set({ tour: null })}>ออก</button>
+            </span>
+          </div>
+        </div>
+      )}
       <main id="main" className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 pb-28 lg:pb-10">{children}</main>
       <footer className="bg-white border-t border-slate-200 text-xs text-slate-500 px-4 py-6 mb-16 lg:mb-0">
         <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-1 items-center">
           <span>Prototype สำหรับสาธิต — ข้อมูลกฎหมายเป็นข้อมูลตัวอย่าง ไม่ใช่ข้อมูลเรียลไทม์</span>
-          <button className="underline" onClick={() => go('pricing')}>แพ็กเกจ</button><button className="underline" onClick={() => go('admin')}>จัดการกฎระเบียบ</button>
+          <button className="underline" onClick={() => go('privacy')}>ความเป็นส่วนตัว</button><button className="underline" onClick={() => go('pricing')}>แพ็กเกจ</button><button className="underline" onClick={() => go('admin')}>จัดการกฎระเบียบ</button>
           {profile && <button className="underline" onClick={() => { if (confirm('ล้างข้อมูลโปรไฟล์ที่บันทึกในเบราว์เซอร์นี้?')) { reset(); go('') } }}>ล้างข้อมูลในเบราว์เซอร์</button>}
         </div>
       </footer>
@@ -54,7 +68,7 @@ function Router() {
   const pages: Record<string, ReactNode> = {
     '': <Landing />, direction: <DirectionPage />, interview: <InterviewPage />, profile: <ProfilePage />, dashboard: <Dashboard />, analysis: <AnalysisCenter />,
     ownership: <OwnershipPage />, nominee: <NomineePage />, employment: <EmploymentPage />, contract: <ContractPage />, language: <LanguagePage />, risk: <RiskPage />,
-    roadmap: <RoadmapPage />, documents: <DocumentsPage />, monitoring: <MonitoringPage />, sources: <SourcesPage />, pricing: <PricingPage />, admin: <AdminPage />,
+    roadmap: <RoadmapPage />, documents: <DocumentsPage />, monitoring: <MonitoringPage />, sources: <SourcesPage />, pricing: <PricingPage />, privacy: <PrivacyPage />, admin: <AdminPage />,
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">ไม่พบหน้าที่ต้องการ</h1><button className="btn-primary mt-4" onClick={() => go('')}>กลับหน้าแรก</button></div>}</Shell>
 }

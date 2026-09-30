@@ -33,6 +33,7 @@ export interface Profile {
   regulatedGoods: string
   location: string
   crossBorder: string[]
+  targetMarket?: string
   unknownFacts?: string[] // ข้อเท็จจริงที่ผู้ใช้ตอบว่ายังไม่ทราบ
   isDemo?: boolean
 }
@@ -56,7 +57,8 @@ export interface Regulation {
   supersededBy?: string
 }
 
-export interface RiskIndicator { key: string; text: string; why: string; verify: string }
+export interface RiskIndicator { key: string; text: string; why: string; verify: string; missing: string; next: string }
+export interface ActionItem { id: string; riskId: string; riskLabel: string; title: string; owner: string; status: StepStatus }
 export interface NomineeResult {
   level: Level
   indicators: RiskIndicator[]
@@ -105,7 +107,7 @@ export interface RoadmapStep {
 }
 
 export interface AlertItem {
-  id: string; changed: string; when: string; profile: string; sourceId: string
+  id: string; changed: string; when: string; country: 'TH' | 'CN'; topic: string; profile: string; sourceId: string
   impact: string; next: string; isSample: boolean; severity: Level
 }
 

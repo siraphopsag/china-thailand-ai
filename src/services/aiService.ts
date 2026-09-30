@@ -11,7 +11,7 @@ export const aiService = {
   detectNomineeRisk: (p: Profile) => delay(E.detectNomineeRisk(p)),
   analyzeEmployment: (e: EmploymentInput, p: Profile | null) => delay(E.analyzeEmployment(e, p)),
   generateRoadmap: (p: Profile) => delay(E.generateRoadmap(p)),
-  generateContract: (c: ContractInput) => delay(E.generateContract(c), 600),
+  generateContract: (c: ContractInput, mode = '') => delay(E.generateContract(c, mode), 600),
   generateDocument: (t: E.DocType, p: Profile, e: EmploymentInput, c: ContractInput) => delay(E.buildDocument(t, p, e, c, terms), 400),
   /** เรียก serverless endpoint ก่อน หากไม่พร้อมใช้งานจะใช้ตัวจำลองในเบราว์เซอร์ เพื่อให้ Demo ทำงานได้เสมอ */
   orchestrate: async (q: string, p: Profile | null) => {

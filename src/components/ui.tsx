@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
-import type { AIResponse, AlertItem, Level, Profile, RiskCardData, RoadmapStep, StepStatus, Verification, Holder } from '../types'
+import type { AIResponse, ActionItem, AlertItem, Level, Profile, RiskCardData, RoadmapStep, StepStatus, Verification, Holder } from '../types'
 import { DISCLAIMER, SAMPLE_NOTE, dirInfo, levelBar, levelIcon, levelLabel, levelStyle, stepLabel, stepStyle, verifyLabel, verifyStyle } from '../utils/labels'
 import { getReg } from '../data/regulations'
 import { go, useStore } from '../store'
 
 export const StatusBadge = ({ level }: { level: Level }) => (
-  <span className={`inline-flex items-center gap-1 border rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${levelStyle[level]}`}><span aria-hidden>{levelIcon[level]}</span>{levelLabel[level]}</span>
+  <span className={`inline-flex items-center gap-1 border rounded-full px-2.5 py-0.5 text-xs font-semibold max-w-full ${levelStyle[level]}`}><span aria-hidden>{levelIcon[level]}</span>{levelLabel[level]}</span>
 )
 export const VerifyBadge = ({ v }: { v: Verification }) => (
   <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${verifyStyle[v]}`}>{verifyLabel[v]}</span>
@@ -32,7 +32,7 @@ export function EmptyState({ title = 'ไม่พบข้อมูล', text =
       <h2 className="h2">{title}</h2><p className="text-slate-600 mt-2">{text}</p>
       <div className="flex gap-2 justify-center mt-5 flex-wrap">
         <button className="btn-primary" onClick={() => go('direction')}>เริ่มวิเคราะห์ธุรกิจ</button>
-        <button className="btn-ghost" onClick={() => { startDemo(); go('dashboard') }}>ทดลอง Demo</button>
+        <button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>ทดลอง Demo</button>
       </div>
     </div>
   )
@@ -77,7 +77,7 @@ export function AIMessage({ r, compact }: { r: AIResponse; compact?: boolean }) 
       <div className="flex flex-wrap gap-1.5 items-center text-xs text-slate-600"><span className="font-semibold">🤖 โมดูลที่ถูกเรียก:</span>{r.modules.map((m) => <span key={m} className="bg-white border border-slate-200 rounded px-2 py-0.5">{m}</span>)}</div>
       <p><b>คำตอบ:</b> {r.answer}</p>
       {!compact && <p><b>เหตุผล:</b> {r.reason}</p>}
-      <p><b>แหล่งข้อมูล:</b> {r.sources.length ? r.sources.map((s) => getReg(s)?.authority).filter(Boolean).join(' / ') + ' (' + SAMPLE_NOTE + ')' : 'ยังไม่พบแหล่งข้อมูลที่เกี่ยวข้อง'}</p>
+      <p><b>แหล่งข้อมูล:</b> {r.sources.length ? r.sources.map((s) => { const g = getReg(s); return g ? `${g.authority}: ${g.title}` : '' }).filter(Boolean).join(' / ') + ' (' + SAMPLE_NOTE + ')' : 'ยังไม่พบแหล่งข้อมูลที่เกี่ยวข้อง'}</p>
       <p><b>ความเสี่ยง:</b> <StatusBadge level={r.risk} /></p>
       <p><b>สิ่งที่ควรทำต่อ:</b> {r.next}</p>
     </div>
@@ -120,7 +120,7 @@ export function BusinessProfile({ p, onEdit }: { p: Profile; onEdit?: () => void
     ['ชื่อธุรกิจ', p.companyName], ['ประเทศต้นทาง', `${d.fromFlag} ประเทศ${d.from}`], ['ประเทศเป้าหมาย', `${d.toFlag} ประเทศ${d.to}`], ['ประเภทธุรกิจ', p.businessType],
     ['กิจกรรมหลัก', p.activity], ['รูปแบบการขยาย', p.forms.join(', ') || '-'], ['วงเงินลงทุนโดยประมาณ', p.investmentRange || '-'], ['จำนวนพนักงาน', String(p.employees)],
     ['มีการจ้างแรงงานข้ามประเทศ', p.crossBorderWorkers ? 'ใช่' : 'ไม่ใช่'], ['โครงสร้างผู้ถือหุ้น', p.holders.map((h) => `${h.nationality === 'TH' ? 'ไทย' : 'จีน'} ${h.percent}%`).join(' / ')],
-    ['สินค้า/บริการ', p.products || '-'], ['สินค้าควบคุม', p.regulatedGoods || '-'], ['พื้นที่ดำเนินงาน', p.location || '-'], ['กิจกรรมข้ามพรมแดน', p.crossBorder.join(', ') || '-'],
+    ['สินค้า/บริการ', p.products || '-'], ['ตลาดเป้าหมาย', p.targetMarket || '-'], ['สินค้าควบคุม', p.regulatedGoods || '-'], ['พื้นที่ดำเนินงาน', p.location || '-'], ['กิจกรรมข้ามพรมแดน', p.crossBorder.join(', ') || '-'],
   ]
   return (
     <div className="card">
@@ -190,8 +190,8 @@ export function AlertCard({ a }: { a: AlertItem }) {
   const g = getReg(a.sourceId)
   return (
     <article className={`card border-l-8 ${levelBar[a.severity]} text-sm space-y-1`}>
-      <div className="flex flex-wrap justify-between gap-2"><h3 className="font-semibold">⚠ พบข้อมูลใหม่ที่เกี่ยวข้องกับธุรกิจของคุณ</h3>{a.isSample && <SampleTag text="ตัวอย่างการทำงานระบบ Monitoring" />}</div>
-      <p><b>สิ่งที่เปลี่ยน:</b> {a.changed}</p><p><b>เมื่อไร:</b> {a.when}</p><p><b>โปรไฟล์ที่ได้รับผลกระทบ:</b> {a.profile}</p>
+      <div className="flex flex-wrap justify-between gap-2"><h3 className="font-semibold">⚠ พบข้อมูลใหม่ที่เกี่ยวข้องกับธุรกิจของคุณ</h3>{a.isSample && <SampleTag text="ตัวอย่างการทำงานระบบติดตาม (ไม่ใช่ข้อมูลสด)" />}</div>
+      <p><b>สิ่งที่เปลี่ยน:</b> {a.changed}</p><p><b>เมื่อไร:</b> {a.when}</p><p><b>ประเทศ / หัวข้อ:</b> {a.country === 'TH' ? '🇹🇭 ไทย' : '🇨🇳 จีน'} · {a.topic}</p><p><b>โปรไฟล์ที่ได้รับผลกระทบ:</b> {a.profile}</p>
       <p><b>แหล่งข้อมูล:</b> {g ? <a href={g.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-navy-600 underline">{g.authority} ↗</a> : '-'}</p>
       <p><b>ผลกระทบที่อาจเกิดขึ้น:</b> {a.impact}</p><p><b>สิ่งที่ควรทำต่อ:</b> {a.next}</p>
     </article>
@@ -204,5 +204,17 @@ export function AnalysisTabs({ active }: { active: string }) {
     <nav aria-label="หมวดการวิเคราะห์" className="flex gap-2 overflow-x-auto pb-2 mb-4">
       {tabs.map(([k, t]) => <button key={k} onClick={() => go(k)} aria-current={active === k ? 'page' : undefined} className={`px-4 py-2 rounded-full border whitespace-nowrap min-h-[44px] ${active === k ? 'bg-navy-800 text-white border-navy-800' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}>{t}</button>)}
     </nav>
+  )
+}
+
+export function ActionList({ actions, onStatus }: { actions: ActionItem[]; onStatus: (id: string, s: StepStatus) => void }) {
+  if (!actions.length) return <div className="card text-sm text-green-700">✓ ไม่มีงานที่เกิดจากความเสี่ยงในขณะนี้</div>
+  return (
+    <ul className="space-y-2">{actions.map((a) => (
+      <li key={a.id} className="card !p-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm"><div className={a.status === 'done' ? 'line-through text-slate-500' : 'font-medium'}>{a.title}</div><div className="text-xs text-slate-500">เกิดจากความเสี่ยง: {a.riskLabel} · ผู้รับผิดชอบ: {a.owner}</div></div>
+        <div className="flex items-center gap-2"><StepBadge s={a.status} />
+          <select aria-label={'สถานะงาน ' + a.title} className="input !w-auto !py-1.5 text-sm" value={a.status} onChange={(e) => onStatus(a.id, e.target.value as StepStatus)}>{(Object.keys(stepLabel) as StepStatus[]).map((k) => <option key={k} value={k}>{stepLabel[k]}</option>)}</select></div>
+      </li>))}</ul>
   )
 }

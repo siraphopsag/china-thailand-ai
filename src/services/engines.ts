@@ -1,5 +1,5 @@
 import type {
-  AIResponse, ContractInput, EmploymentArea, EmploymentInput, Holder, Level, NomineeResult, Profile, RiskCardData, RoadmapStep, Verification,
+  ActionItem, RiskIndicator, AIResponse, ContractInput, EmploymentArea, EmploymentInput, Holder, Level, NomineeResult, Profile, RiskCardData, RoadmapStep, Verification,
 } from '../types'
 import { dirInfo, DISCLAIMER, escapeHtml } from '../utils/labels.js'
 
@@ -28,8 +28,16 @@ export function ownershipDims(p: Profile): OwnershipDim[] {
 }
 
 /* ---------- Nominee risk ---------- */
+const INDICATOR_EXTRA: Record<string, { missing: string; next: string }> = {
+  fund: { missing: 'หลักฐานการโอนเงินลงทุน ที่มาของเงิน และเอกสารชำระค่าหุ้นของผู้ถือหุ้นแต่ละราย', next: 'รวบรวมหลักฐานแหล่งเงินทุนและหลักฐานการชำระค่าหุ้นก่อนดำเนินการต่อ' },
+  eco: { missing: 'ข้อบังคับบริษัท ข้อตกลงผู้ถือหุ้น และนโยบายการจ่ายเงินปันผล', next: 'ตรวจว่าการแบ่งผลประโยชน์สอดคล้องกับหุ้นและมีเอกสารรองรับ' },
+  ctl: { missing: 'ข้อบังคับบริษัท รายชื่อกรรมการและผู้แต่งตั้ง รวมถึงหุ้นที่มีสิทธิพิเศษ', next: 'จัดทำแผนผังการควบคุมและตรวจกับผู้เชี่ยวชาญ' },
+  investor: { missing: 'เอกสารระบุผู้ลงทุนและเจ้าของผลประโยชน์ที่แท้จริง', next: 'ยืนยันตัวผู้ลงทุนจริงและเปิดเผยในเอกสารที่ยื่น' },
+  operator: { missing: 'หนังสือแต่งตั้งผู้มีอำนาจและขอบเขตการมอบอำนาจ', next: 'ตรวจว่าอำนาจบริหารจริงสอดคล้องกับเอกสารจดทะเบียน' },
+  agr: { missing: 'สำเนาข้อตกลงทั้งหมดระหว่างผู้ถือหุ้น', next: 'เปิดเผยข้อตกลงต่อผู้เชี่ยวชาญเพื่อตรวจสอบ' },
+}
 export function detectNomineeRisk(p: Profile): NomineeResult {
-  const ind: NomineeResult['indicators'] = []
+  const raw: Omit<RiskIndicator, 'missing' | 'next'>[] = []
   const unknowns: string[] = []
   if (!hasCompany(p)) {
     return { level: 'LOW', indicators: [], unknowns: [], stop: false, headline: 'ยังไม่เข้าข่ายการตรวจโครงสร้างผู้ถือหุ้น', answer: 'รูปแบบการขยายธุรกิจที่เลือกยังไม่เกี่ยวข้องกับการถือหุ้นในนิติบุคคลท้องถิ่น', reason: 'ไม่มีข้อมูลการจัดตั้งบริษัทหรือการลงทุนในโปรไฟล์', next: ['หากเปลี่ยนแผนเป็นการจัดตั้งบริษัทหรือร่วมลงทุน ให้กลับมาตรวจอีกครั้ง'] }
@@ -37,24 +45,25 @@ export function detectNomineeRisk(p: Profile): NomineeResult {
   const fmt = (h: Holder, v: number, name: string) => `${h.label} ถือหุ้น ${h.percent}% แต่${name} ${v}%`
   p.holders.forEach((h) => {
     if (Math.abs(h.capital - h.percent) >= GAP)
-      ind.push({ key: 'fund-' + h.id, text: `พบข้อมูลว่าแหล่งเงินลงทุนอาจไม่สอดคล้องกับผู้ถือหุ้น (${fmt(h, h.capital, 'จัดหาเงินลงทุน')})`, why: 'โดยปกติสัดส่วนเงินลงทุนมักสัมพันธ์กับสัดส่วนหุ้น หากต่างกันมากควรมีคำอธิบายและหลักฐานที่ตรวจสอบได้ เช่น สัญญาเงินกู้ที่เปิดเผยและถูกต้อง', verify: 'หลักฐานการโอนเงินลงทุน ที่มาของเงิน และเอกสารการชำระค่าหุ้น' })
+      raw.push({ key: 'fund-' + h.id, text: `พบข้อมูลว่าแหล่งเงินลงทุนอาจไม่สอดคล้องกับผู้ถือหุ้น (${fmt(h, h.capital, 'จัดหาเงินลงทุน')})`, why: 'โดยปกติสัดส่วนเงินลงทุนมักสัมพันธ์กับสัดส่วนหุ้น หากต่างกันมากควรมีคำอธิบายและหลักฐานที่ตรวจสอบได้ เช่น สัญญาเงินกู้ที่เปิดเผยและถูกต้อง', verify: 'หลักฐานการโอนเงินลงทุน ที่มาของเงิน และเอกสารการชำระค่าหุ้น' })
     if (Math.abs(h.economic - h.percent) >= GAP)
-      ind.push({ key: 'eco-' + h.id, text: `พบข้อมูลที่ต้องตรวจสอบเพิ่มเติมเกี่ยวกับสิทธิทางเศรษฐกิจ (${fmt(h, h.economic, 'ได้รับสิทธิประโยชน์ทางเศรษฐกิจ')})`, why: 'สิทธิรับเงินปันผลหรือผลกำไรที่ไม่สอดคล้องกับหุ้น อาจสะท้อนว่าผลประโยชน์จริงไปอยู่กับอีกฝ่าย', verify: 'ข้อบังคับบริษัท ข้อตกลงผู้ถือหุ้น และนโยบายการจ่ายเงินปันผล' })
+      raw.push({ key: 'eco-' + h.id, text: `พบข้อมูลที่ต้องตรวจสอบเพิ่มเติมเกี่ยวกับสิทธิทางเศรษฐกิจ (${fmt(h, h.economic, 'ได้รับสิทธิประโยชน์ทางเศรษฐกิจ')})`, why: 'สิทธิรับเงินปันผลหรือผลกำไรที่ไม่สอดคล้องกับหุ้น อาจสะท้อนว่าผลประโยชน์จริงไปอยู่กับอีกฝ่าย', verify: 'ข้อบังคับบริษัท ข้อตกลงผู้ถือหุ้น และนโยบายการจ่ายเงินปันผล' })
     if (Math.abs(h.voting - h.percent) >= GAP || Math.abs(h.board - h.percent) >= GAP)
-      ind.push({ key: 'ctl-' + h.id, text: `พบความไม่ชัดเจนเกี่ยวกับผู้ควบคุมกิจการ (สิทธิออกเสียง/การแต่งตั้งกรรมการของ${h.label}ไม่สอดคล้องกับหุ้น)`, why: 'อำนาจควบคุมจริงอาจต่างจากที่ปรากฏในสัดส่วนหุ้น', verify: 'ข้อบังคับบริษัท หุ้นบุริมสิทธิ์ และรายชื่อกรรมการพร้อมผู้แต่งตั้ง' })
+      raw.push({ key: 'ctl-' + h.id, text: `พบความไม่ชัดเจนเกี่ยวกับผู้ควบคุมกิจการ (สิทธิออกเสียง/การแต่งตั้งกรรมการของ${h.label}ไม่สอดคล้องกับหุ้น)`, why: 'อำนาจควบคุมจริงอาจต่างจากที่ปรากฏในสัดส่วนหุ้น', verify: 'ข้อบังคับบริษัท หุ้นบุริมสิทธิ์ และรายชื่อกรรมการพร้อมผู้แต่งตั้ง' })
   })
   const maj = [...p.holders].sort((a, b) => b.percent - a.percent)[0]
   ;(p.unknownFacts ?? []).forEach((u) => unknowns.push(u))
   if (p.realInvestor === 'unknown') unknowns.push('ยังไม่ทราบว่าใครเป็นผู้ลงทุนจริง')
   else if (p.realInvestor !== 'shared' && p.realInvestor !== maj.id && maj.percent > 50)
-    ind.push({ key: 'investor', text: 'พบข้อมูลว่าผู้ลงทุนจริงไม่ใช่ผู้ถือหุ้นรายใหญ่ที่ปรากฏในทะเบียน', why: 'ผู้ที่ถือหุ้นส่วนใหญ่แต่ไม่ใช่ผู้ลงทุนจริง เป็นปัจจัยที่หน่วยงานมักพิจารณาเพิ่มเติม', verify: 'เอกสารแสดงผู้ลงทุนและเจ้าของผลประโยชน์ที่แท้จริง' })
+    raw.push({ key: 'investor', text: 'พบข้อมูลว่าผู้ลงทุนจริงไม่ใช่ผู้ถือหุ้นรายใหญ่ที่ปรากฏในทะเบียน', why: 'ผู้ที่ถือหุ้นส่วนใหญ่แต่ไม่ใช่ผู้ลงทุนจริง เป็นปัจจัยที่หน่วยงานมักพิจารณาเพิ่มเติม', verify: 'เอกสารแสดงผู้ลงทุนและเจ้าของผลประโยชน์ที่แท้จริง' })
   if (p.operator === 'unknown') unknowns.push('ยังไม่ทราบว่าใครมีอำนาจบริหารจริง')
   else if (p.operator !== 'joint' && p.operator !== maj.id && maj.percent > 50)
-    ind.push({ key: 'operator', text: 'พบข้อมูลว่าผู้บริหารจริงไม่ใช่ผู้ถือหุ้นรายใหญ่', why: 'อำนาจบริหารที่อยู่กับอีกฝ่ายควรถูกอธิบายและสอดคล้องกับเอกสารจดทะเบียน', verify: 'หนังสือแต่งตั้งผู้มีอำนาจ อำนาจกรรมการ และขอบเขตการมอบอำนาจ' })
-  if (p.sideAgreement === 'yes') ind.push({ key: 'agr', text: 'พบข้อตกลงระหว่างผู้ถือหุ้นที่อยู่นอกเอกสารจดทะเบียน', why: 'ข้อตกลงที่กระทบอำนาจหรือผลประโยชน์ต้องเปิดเผยและต้องได้รับการตรวจสอบทางกฎหมาย', verify: 'สำเนาข้อตกลงทั้งหมดเพื่อให้ผู้เชี่ยวชาญตรวจ' })
+    raw.push({ key: 'operator', text: 'พบข้อมูลว่าผู้บริหารจริงไม่ใช่ผู้ถือหุ้นรายใหญ่', why: 'อำนาจบริหารที่อยู่กับอีกฝ่ายควรถูกอธิบายและสอดคล้องกับเอกสารจดทะเบียน', verify: 'หนังสือแต่งตั้งผู้มีอำนาจ อำนาจกรรมการ และขอบเขตการมอบอำนาจ' })
+  if (p.sideAgreement === 'yes') raw.push({ key: 'agr', text: 'พบข้อตกลงระหว่างผู้ถือหุ้นที่อยู่นอกเอกสารจดทะเบียน', why: 'ข้อตกลงที่กระทบอำนาจหรือผลประโยชน์ต้องเปิดเผยและต้องได้รับการตรวจสอบทางกฎหมาย', verify: 'สำเนาข้อตกลงทั้งหมดเพื่อให้ผู้เชี่ยวชาญตรวจ' })
   if (p.sideAgreement === 'unknown') unknowns.push('ยังไม่ทราบว่ามีข้อตกลงอื่นระหว่างผู้ถือหุ้นหรือไม่')
   if (Math.round(holdersSum(p)) !== 100) unknowns.push(`สัดส่วนหุ้นรวมเป็น ${holdersSum(p)}% (ควรเท่ากับ 100%)`)
 
+  const ind: RiskIndicator[] = raw.map((i) => ({ ...i, ...(INDICATOR_EXTRA[i.key.split('-')[0]] ?? { missing: 'ข้อมูลประกอบเพิ่มเติม', next: 'ตรวจสอบกับผู้เชี่ยวชาญ' }) }))
   const types = new Set(ind.map((i) => i.key.split('-')[0]))
   const level: Level = types.size >= 3 ? 'HIGH' : types.size >= 1 ? 'MEDIUM' : unknowns.length ? 'NEEDS_REVIEW' : 'LOW'
   const stop = level === 'HIGH'
@@ -71,15 +80,16 @@ export function detectNomineeRisk(p: Profile): NomineeResult {
   }
 }
 
-/** ผลกระทบที่อาจเกี่ยวข้อง — ไม่ระบุโทษเฉพาะเจาะจงเพราะข้อมูลข้อเท็จจริงยังไม่พอ */
+/** ผลกระทบที่อาจเกี่ยวข้อง — ไม่ระบุโทษเฉพาะเจาะจงเพราะข้อเท็จจริงยังไม่พอ */
+export const NO_PENALTY = 'ยังไม่สามารถระบุผลทางกฎหมายที่เฉพาะเจาะจงได้จากข้อมูลปัจจุบัน'
 export function consequences(p: Profile) {
   const th = targetCountry(p) === 'TH'
   return [
-    { topic: 'ความเป็นคนต่างด้าวตามกฎหมายการลงทุน', law: th ? 'พ.ร.บ.การประกอบธุรกิจของคนต่างด้าว พ.ศ. 2542' : 'กฎหมายการลงทุนจากต่างประเทศของจีน / Negative List 2024', regId: th ? 'th-fba' : 'cn-neglist-2024',
-      effect: 'การประกอบธุรกิจอาจถูกตรวจสอบโดยหน่วยงานที่เกี่ยวข้อง', reason: 'ข้อมูลเงินลงทุนและการควบคุมยังไม่สอดคล้องกับสัดส่วนหุ้นที่แจ้ง', v: 'EXPERT' as Verification },
-    { topic: 'ความถูกต้องของข้อมูลการจดทะเบียน', law: th ? 'ข้อกำหนดการจดทะเบียนของ DBD' : 'ระบบรายงานข้อมูลการลงทุนของ MOFCOM', regId: th ? 'th-dbd-reg' : 'cn-fil',
-      effect: 'ข้อมูลที่ยื่นอาจต้องถูกแก้ไขหรือชี้แจงเพิ่มเติม', reason: 'ผู้ถือหุ้นและผู้ควบคุมที่แท้จริงต้องสอดคล้องกับข้อมูลที่ยื่น', v: 'NEED_INFO' as Verification },
-  ].map((c) => ({ ...c, penalty: 'ไม่แสดงโทษที่เฉพาะเจาะจง เนื่องจากข้อมูลข้อเท็จจริงยังไม่เพียงพอ' }))
+    { issue: 'โครงสร้างการลงทุนต้องตรวจสอบเพิ่มเติม (ความเป็นคนต่างด้าว/การเข้าถึงตลาด)', law: th ? 'พ.ร.บ.การประกอบธุรกิจของคนต่างด้าว พ.ศ. 2542' : 'กฎหมายการลงทุนจากต่างประเทศของจีน / Negative List 2024', regId: th ? 'th-fba' : 'cn-neglist-2024',
+      consequence: NO_PENALTY, why: 'ข้อมูลเงินลงทุนและการควบคุมยังไม่สอดคล้องกับสัดส่วนหุ้นที่แจ้ง อาจถูกหน่วยงานที่เกี่ยวข้องขอให้ชี้แจงหรือตรวจสอบ', v: 'EXPERT' as Verification, next: 'ตรวจหลักฐานเงินลงทุนและโครงสร้างควบคุม แล้วขอความเห็นผู้เชี่ยวชาญ' },
+    { issue: 'ความถูกต้องของข้อมูลผู้ถือหุ้นและผู้ควบคุมที่ยื่นจดทะเบียน', law: th ? 'ข้อกำหนดการจดทะเบียนของ DBD' : 'ระบบรายงานข้อมูลการลงทุนของ MOFCOM', regId: th ? 'th-dbd-reg' : 'cn-fil',
+      consequence: NO_PENALTY, why: 'ข้อมูลที่ยื่นควรตรงกับผู้ถือหุ้นและผู้ควบคุมจริง หากไม่ตรงอาจต้องแก้ไขข้อมูลหรือชี้แจงเพิ่มเติม', v: 'NEED_INFO' as Verification, next: 'ทบทวนข้อมูลก่อนยื่นจดทะเบียนให้ตรงกับข้อเท็จจริง' },
+  ]
 }
 
 export const compliantOptions = [
@@ -121,32 +131,50 @@ export function assessRisks(p: Profile, emp: EmploymentInput): RiskCardData[] {
   const ownLvl: Level = dims.some((d) => d.status === 'HIGH') ? 'HIGH' : dims.filter((d) => d.status === 'NEEDS_REVIEW').length >= 2 ? 'MEDIUM' : dims.some((d) => d.status === 'NEEDS_REVIEW') ? 'NEEDS_REVIEW' : 'LOW'
   const empAreas = analyzeEmployment(emp, p)
   const missEmp = empAreas.filter((a) => a.note.startsWith('ข้อมูลยังไม่เพียงพอ')).length
-  const empLvl: Level = missEmp >= 3 ? 'HIGH' : missEmp >= 1 ? 'MEDIUM' : 'NEEDS_REVIEW'
+  const empLvl: Level = 'NEEDS_REVIEW' // ข้อมูลไม่ครบ = ต้องตรวจสอบ ไม่ใช่ความเสี่ยงสูง
   const restricted = /ค้าปลีก|บริการ|สื่อ|การเงิน|ที่ปรึกษา|การศึกษา|สุขภาพ/.test(p.businessType)
   const regulated = p.regulatedGoods && p.regulatedGoods !== 'ไม่มี'
   return [
-    { id: 'legal', category: 'กฎหมาย/การเข้าถึงตลาด', level: restricted || regulated ? 'NEEDS_REVIEW' : 'MEDIUM', verification: 'PARTIAL',
+    { id: 'legal', category: 'กฎหมาย/การเข้าถึงตลาด', level: restricted || regulated ? 'NEEDS_REVIEW' : 'MEDIUM', verification: 'NEED_INFO',
       why: restricted || regulated ? 'กิจกรรมหรือสินค้าของคุณอาจอยู่ในสาขาที่มีเงื่อนไขพิเศษ ต้องตรวจเทียบรายการทางการ' : 'ยังไม่ได้ยืนยันกับรายการข้อจำกัดการลงทุนฉบับจริง แม้ประเภทธุรกิจผลิตโดยทั่วไปมีข้อจำกัดน้อยกว่า',
       sourceIds: [tc === 'CN' ? 'cn-neglist-2024' : 'th-fba'], check: ['ตรวจกิจกรรมธุรกิจเทียบรายการข้อจำกัดฉบับล่าสุด', 'ตรวจว่าต้องขออนุญาตเฉพาะหรือไม่'], next: 'เปิดแหล่งข้อมูลทางการและยืนยันประเภทกิจกรรมก่อนยื่นจัดตั้ง' },
     { id: 'ownership', category: 'โครงสร้างผู้ถือหุ้น', level: ownLvl, verification: 'NEED_INFO',
       why: 'โครงสร้างควรพิจารณาจากเงินลงทุน อำนาจควบคุม และผลประโยชน์ ไม่ใช่สัดส่วนหุ้นอย่างเดียว', sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-fba'],
       check: dims.filter((d) => d.status !== 'LOW').map((d) => d.title), next: 'เปิดหน้า “วิเคราะห์โครงสร้างผู้ถือหุ้น” และตอบคำถามเรื่องการควบคุม' },
-    { id: 'nominee', category: 'ความเสี่ยงด้านนอมินี', level: nom.level, verification: nom.level === 'LOW' ? 'PARTIAL' : 'EXPERT',
+    { id: 'nominee', category: 'ความเสี่ยงด้านนอมินี', level: nom.level, verification: nom.level === 'LOW' ? 'NEED_INFO' : 'EXPERT',
       why: nom.reason, sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-fba'], check: nom.indicators.map((i) => i.verify).slice(0, 3), next: nom.next[0] },
     { id: 'employment', category: 'การจ้างงาน', level: empLvl, verification: 'NEED_INFO',
-      why: missEmp ? `ข้อมูลการจ้างงานยังขาด ${missEmp} หัวข้อ จึงยังสรุปไม่ได้` : 'ข้อมูลครบเบื้องต้น แต่ต้องตรวจเงื่อนไขท้องถิ่น', sourceIds: [tc === 'CN' ? 'cn-labor' : 'th-labour', tc === 'CN' ? 'cn-immigration' : 'th-labour'],
+      why: missEmp ? `ข้อมูลการจ้างงานยังขาด ${missEmp} หัวข้อ จึงยังสรุปไม่ได้ (เป็นเรื่องข้อมูลไม่ครบ ไม่ใช่ข้อสรุปว่ามีความเสี่ยงสูง)` : 'ข้อมูลครบเบื้องต้น แต่ต้องตรวจเงื่อนไขท้องถิ่น', sourceIds: [tc === 'CN' ? 'cn-labor' : 'th-labour', tc === 'CN' ? 'cn-immigration' : 'th-labour'],
       check: empAreas.filter((a) => a.status !== 'LOW').slice(0, 4).map((a) => a.area), next: 'กรอกข้อมูลในหน้า “การจ้างงาน” ให้ครบ' },
     { id: 'tax', category: 'ภาษี', level: p.crossBorderWorkers ? 'MEDIUM' : 'NEEDS_REVIEW', verification: 'NEED_INFO',
       why: p.crossBorderWorkers ? 'มีพนักงานทำงานข้ามประเทศ สถานะภาษีและภาษีซ้อนต้องตรวจสอบ' : 'ยังไม่มีข้อมูลโครงสร้างภาษีเพียงพอ', sourceIds: [tc === 'CN' ? 'cn-tax' : 'th-tax'],
       check: ['จำนวนวันพำนักของพนักงาน', 'การหักภาษี ณ ที่จ่าย', 'ภาษีซ้อนระหว่างไทย–จีน'], next: 'ปรึกษานักบัญชี/ที่ปรึกษาภาษีที่รู้กฎของประเทศเป้าหมาย' },
-    { id: 'language', category: 'ภาษา', level: 'MEDIUM', verification: 'PARTIAL',
+    { id: 'language', category: 'ภาษา', level: 'MEDIUM', verification: 'NEED_INFO',
       why: 'สัญญาและเอกสารทางการควรมีฉบับภาษาท้องถิ่นและต้องกำหนดว่าฉบับใดใช้ตีความ', sourceIds: [tc === 'CN' ? 'cn-labor' : 'th-labour'],
       check: ['ภาษาที่ใช้ตีความสัญญา', 'ศัพท์กฎหมายที่แปลตรงตัวไม่ได้'], next: 'จัดทำฉบับสองภาษาและให้ผู้เชี่ยวชาญตรวจ' },
-    { id: 'culture', category: 'วัฒนธรรมองค์กร', level: 'LOW', verification: 'PARTIAL',
+    { id: 'culture', category: 'วัฒนธรรมองค์กร', level: 'LOW', verification: 'NEED_INFO',
       why: 'มีแนวโน้มด้านการสื่อสารที่ควรคำนึงถึง แต่ความแตกต่างรายบุคคลและรายองค์กรมีอยู่เสมอ', sourceIds: [], check: ['ความคาดหวังการประชุมและการตัดสินใจ'], next: 'อ่านคู่มือสื่อสารในหน้า “ภาษาและวัฒนธรรม”' },
     { id: 'documents', category: 'เอกสาร', level: 'MEDIUM', verification: 'NEED_INFO',
       why: 'เอกสารหลายรายการยังไม่พร้อม เช่น หลักฐานเงินลงทุน ข้อบังคับบริษัท และสัญญาจ้าง', sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-dbd-reg'], check: ['หลักฐานเงินลงทุน', 'เอกสารผู้ถือหุ้น', 'สัญญาจ้าง'], next: 'ไปที่ศูนย์จัดการเอกสารและสร้างรายการเอกสารที่ต้องเตรียม' },
   ]
+}
+
+/* ---------- Risk → Action ---------- */
+export function deriveActions(p: Profile, emp: EmploymentInput): ActionItem[] {
+  const out: ActionItem[] = []
+  const nom = detectNomineeRisk(p)
+  for (const r of assessRisks(p, emp)) {
+    if (r.level === 'LOW') continue
+    if (r.id === 'nominee') {
+      const seen = new Set<string>()
+      nom.indicators.forEach((i) => { const k = i.key.split('-')[0]; if (seen.has(k)) return; seen.add(k); out.push({ id: 'act-nominee-' + k, riskId: r.id, riskLabel: r.category, title: i.next, owner: 'ผู้ประกอบการ', status: 'todo' }) })
+      if (nom.stop || nom.level === 'MEDIUM') out.push({ id: 'act-nominee-expert', riskId: r.id, riskLabel: r.category, title: 'ขอความเห็นจากผู้เชี่ยวชาญ/หน่วยงานที่เกี่ยวข้อง', owner: 'ผู้เชี่ยวชาญ', status: 'todo' })
+      if (!nom.indicators.length) out.push({ id: 'act-nominee-info', riskId: r.id, riskLabel: r.category, title: nom.next[0], owner: 'ผู้ประกอบการ', status: 'todo' })
+      continue
+    }
+    out.push({ id: 'act-' + r.id, riskId: r.id, riskLabel: r.category, title: r.next, owner: r.id === 'tax' ? 'ที่ปรึกษาภาษี' : r.id === 'employment' ? 'ผู้ประกอบการ / ฝ่ายบุคคล' : 'ผู้ประกอบการ', status: 'todo' })
+  }
+  return out
 }
 
 /* ---------- Roadmap ---------- */
@@ -173,7 +201,7 @@ export const contractRequired: { k: keyof ContractInput; label: string }[] = [
   { k: 'location', label: 'สถานที่ทำงาน' }, { k: 'startDate', label: 'วันเริ่มงาน' }, { k: 'duration', label: 'ระยะเวลาสัญญา' }, { k: 'salary', label: 'ค่าตอบแทน' },
   { k: 'hours', label: 'เวลาทำงาน' }, { k: 'leave', label: 'วันลา' }, { k: 'probation', label: 'ระยะทดลองงาน' },
 ]
-export function generateContract(c: ContractInput) {
+export function generateContract(c: ContractInput, mode = '') {
   const missing = contractRequired.filter((r) => !c[r.k].trim()).map((r) => r.label)
   const v = (x: string, cn = false) => (x.trim() ? x.trim() : cn ? '【待补充】' : '[ยังไม่ระบุ]')
   const th = `ร่างสัญญาจ้างแรงงานเบื้องต้น (DRAFT)
@@ -206,13 +234,18 @@ ${DISCLAIMER_DRAFT}
 第十一条 适用法律及文本解释：【需专业人士确认】
 第十二条 合同解除、经济补偿及争议解决：【需依当地法律核查】`
   const checks = [
-    { t: 'สัญญาต้องทำเป็นลายลักษณ์อักษรและให้ทั้งสองฝ่ายลงนาม', id: 'cn-labor', v: 'PARTIAL' as Verification },
+    { t: 'สัญญาต้องทำเป็นลายลักษณ์อักษรและให้ทั้งสองฝ่ายลงนาม', id: 'cn-labor', v: 'NEED_INFO' as Verification },
     { t: 'ระยะทดลองงาน วันลา และชั่วโมงทำงานต้องไม่ต่ำกว่าเกณฑ์ตามกฎหมายท้องถิ่น', id: 'cn-labor', v: 'NEED_INFO' as Verification },
     { t: 'พนักงานต่างชาติต้องมีใบอนุญาตทำงาน/สถานะพำนักที่ถูกต้องก่อนเริ่มงาน', id: 'cn-immigration', v: 'NEED_INFO' as Verification },
     { t: 'ประกันสังคมและภาษีเงินได้ต้องตรวจตามสถานะพำนักของลูกจ้าง', id: 'cn-tax', v: 'NEED_INFO' as Verification },
     { t: 'กำหนดภาษาที่ใช้ตีความสัญญาและให้ผู้เชี่ยวชาญตรวจฉบับสองภาษา', id: 'cn-labor', v: 'EXPERT' as Verification },
   ]
-  return { missing, th, cn, checks, ready: !!(c.employer.trim() && c.employee.trim() && c.job.trim()) }
+  const cross = /ส่ง|ข้าม/.test(mode)
+  const extra = cross
+    ? [{ t: 'สัญญาส่งไปทำงานต่างประเทศ: ควรระบุว่านายจ้างคือบริษัทใด ระยะเวลาส่งไป และเงื่อนไขกลับประเทศต้นทาง', id: 'cn-labor', v: 'NEED_INFO' as Verification },
+       { t: 'สถานะภาษีและประกันสังคมของลูกจ้างที่ทำงานข้ามประเทศ (จำนวนวันพำนัก ภาษีซ้อน) ต้องตรวจสอบ', id: 'cn-tax', v: 'EXPERT' as Verification }]
+    : mode ? [{ t: 'จ้างในพื้นที่: ตรวจสิทธิประโยชน์ขั้นต่ำและประกันสังคมตามกฎหมายท้องถิ่น', id: 'cn-labor', v: 'NEED_INFO' as Verification }] : []
+  return { missing, th, cn, checks: [...checks, ...extra], ready: !!(c.employer.trim() && c.employee.trim() && c.job.trim()) }
 }
 const DISCLAIMER_DRAFT = 'เอกสารนี้เป็นร่างเพื่อประกอบการตรวจสอบ ไม่ใช่การรับรองทางกฎหมาย'
 export { DISCLAIMER_DRAFT }
@@ -278,13 +311,15 @@ export function orchestrate(q: string, p: Profile | null): AIResponse {
 export interface VerifyStep { name: string; ok: boolean; note: string }
 export function verifyAnalysis(p: Profile, emp: EmploymentInput): { steps: VerifyStep[]; recheck: boolean; final: Verification } {
   const risks = assessRisks(p, emp)
+  const srcIds = new Set(risks.flatMap((r) => r.sourceIds))
   const steps: VerifyStep[] = [
+    { name: 'ดึงแหล่งข้อมูลที่เกี่ยวข้อง (Source Retrieval)', ok: srcIds.size > 0, note: `พบระเบียนแหล่งข้อมูลที่เกี่ยวข้อง ${srcIds.size} รายการ (ข้อมูลตัวอย่างสำหรับ Prototype ยังไม่ผ่านการตรวจโดยผู้เชี่ยวชาญ)` },
     { name: 'ตรวจแหล่งข้อมูล (Source Check)', ok: risks.filter((r) => r.category !== 'วัฒนธรรมองค์กร').every((r) => r.sourceIds.length > 0), note: 'ทุกประเด็นกฎหมายมีระเบียนแหล่งข้อมูลอ้างอิง (เป็นข้อมูลตัวอย่าง)' },
     { name: 'ตรวจความสอดคล้อง (Consistency Check)', ok: Math.round(holdersSum(p)) === 100, note: Math.round(holdersSum(p)) === 100 ? 'สัดส่วนหุ้นรวม 100%' : 'สัดส่วนหุ้นรวมไม่เท่ากับ 100% — ต้องแก้ไข' },
     { name: 'ตรวจข้อมูลที่ขาด (Missing Information Check)', ok: analyzeEmployment(emp, p).every((a) => !a.note.startsWith('ข้อมูลยังไม่เพียงพอ')), note: 'ข้อมูลการจ้างงานบางหัวข้อยังไม่ครบ — ระบบจะไม่สรุปเกินข้อมูล' },
     { name: 'ตรวจความเสี่ยง (Risk Check)', ok: !detectNomineeRisk(p).stop, note: detectNomineeRisk(p).stop ? 'พบประเด็นเสี่ยงสูง — แนะนำให้ผู้เชี่ยวชาญตรวจก่อนดำเนินการ' : 'ไม่พบประเด็นเสี่ยงสูง' },
   ]
-  const recheck = !steps[1].ok
-  const final: Verification = steps.some((s) => !s.ok) ? (detectNomineeRisk(p).stop ? 'EXPERT' : 'NEED_INFO') : 'PARTIAL'
+  const recheck = !steps[2].ok
+  const final: Verification = steps.some((s) => !s.ok) ? (detectNomineeRisk(p).stop ? 'EXPERT' : 'NEED_INFO') : 'NEED_INFO'
   return { steps, recheck, final }
 }

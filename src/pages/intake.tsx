@@ -17,7 +17,7 @@ export function Landing() {
         <div className="flex flex-wrap gap-3 mt-8">
           <button className="btn bg-white text-navy-900 hover:bg-navy-50" onClick={() => go('direction')}>เริ่มวิเคราะห์ธุรกิจ</button>
           <button className="btn border border-white/60 text-white hover:bg-white/10" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>ดูวิธีการทำงาน</button>
-          <button className="btn bg-amber-400 text-navy-900 hover:bg-amber-300" onClick={() => { startDemo(); go('dashboard') }}>ทดลอง Demo</button>
+          <button className="btn bg-amber-400 text-navy-900 hover:bg-amber-300" onClick={() => { startDemo(); go('profile') }}>ทดลอง Demo</button>
         </div>
         <p className="text-xs text-navy-300 mt-4">Demo ไม่ต้องลงทะเบียน ใช้ข้อมูลสมมติของบริษัทตัวอย่างเท่านั้น</p>
       </section>
@@ -25,6 +25,14 @@ export function Landing() {
         <h2 id="how-h" className="h1 text-center mb-6">วิธีการทำงาน 5 ขั้นตอน</h2>
         <ol className="grid grid-cols-2 md:grid-cols-5 gap-3">{steps.map(([n, t, i]) => <li key={n} className="card text-center"><div className="text-3xl" aria-hidden>{i}</div><div className="text-xs text-slate-500 mt-1">ขั้นที่ {n}</div><div className="font-semibold">{t}</div></li>)}</ol>
         <div className="card mt-6"><p className="text-sm text-slate-600 mb-3">ไม่ใช่แชตบอตถามตอบทั่วไป แต่เป็นขั้นตอนที่ใช้โปรไฟล์ธุรกิจเดียวกันตลอดทั้งระบบ:</p><WorkflowStrip /></div>
+      </section>
+      <section aria-labelledby="ba-h">
+        <h2 id="ba-h" className="h1 text-center mb-6">ก่อนและหลังใช้แพลตฟอร์ม</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="card border-red-200"><div className="text-sm font-semibold text-red-700 mb-2">ก่อน</div><p className="text-slate-700">Google + ผู้แปลภาษา + ทนายความ + ฝ่ายบุคคล + ที่ปรึกษา + เช็กลิสต์ที่ทำเอง</p><p className="text-sm text-slate-500 mt-2">ข้อมูลกระจัดกระจาย ไม่รู้ว่าต้องทำอะไรก่อนหลัง และไม่รู้ว่าความเสี่ยงอยู่ตรงไหน</p></div>
+          <div className="card border-green-300"><div className="text-sm font-semibold text-green-700 mb-2">หลัง</div><p className="text-slate-700">ข้อมูลธุรกิจ → AI วิเคราะห์ → ความเสี่ยง → แผนปฏิบัติ → เอกสาร → ติดตาม</p><p className="text-sm text-slate-500 mt-2">กรอกข้อมูลครั้งเดียว ระบบใช้บริบทนั้นตลอดทั้งกระบวนการ และส่งต่อผู้เชี่ยวชาญเมื่อจำเป็น</p></div>
+        </div>
+        <p className="text-center text-navy-900 font-semibold mt-6 max-w-3xl mx-auto">เราไม่ได้สร้าง AI ที่แค่ตอบคำถามกฎหมาย เราใช้ AI เพื่อช่วยผู้ประกอบการเข้าใจความเสี่ยง วางแผนขั้นตอน และเตรียมการขยายธุรกิจระหว่างไทย–จีนอย่างเป็นระบบ</p>
       </section>
       <section className="grid md:grid-cols-3 gap-4">
         {[['ปัญหา', 'ข้อมูลกระจัดกระจาย ภาษาและกฎหมายต่างกัน ต้องใช้ผู้ให้บริการหลายราย SME จึงไม่รู้ว่าต้องทำอะไรก่อนหลัง'], ['แนวทางของเรา', 'AI ทำงานส่วนที่ทำซ้ำได้: เก็บข้อมูล จัดหมวด ตรวจความเสี่ยง สร้างเช็กลิสต์และร่างเอกสาร ส่วนกรณีเสี่ยงสูงส่งต่อผู้เชี่ยวชาญ (AI-first + human exception)'], ['หลักความโปร่งใส', 'ทุกข้อกำหนดแสดงแหล่งข้อมูลและสถานะการตรวจสอบ ไม่สร้างกฎหมาย โทษ หรือค่าธรรมเนียมขึ้นเอง และไม่ช่วยเลี่ยงกฎหมาย']].map(([t, d]) => <div key={t} className="card"><h3 className="h2">{t}</h3><p className="text-sm text-slate-600 mt-1">{d}</p></div>)}
@@ -55,6 +63,10 @@ type A = Record<string, string | string[]>
 interface Q { id: string; cat: number; text: (d: Direction) => string; type: 'text' | 'choice' | 'multi' | 'number' | 'pct'; options?: (d: Direction) => string[]; when?: (a: A, d: Direction) => boolean; help?: string; min?: number }
 const cats = ['ข้อมูลธุรกิจ', 'การลงทุน', 'โครงสร้างผู้ถือหุ้น', 'การจ้างงาน', 'สินค้า/บริการ', 'พื้นที่ดำเนินงาน', 'กิจกรรมข้ามพรมแดน']
 const T = (d: Direction) => dirInfo(d)
+const send = (a: A) => (a.forms as string[] | undefined)?.some((f) => f.startsWith('ส่งพนักงาน')) ?? false
+const hires = (a: A) => (a.forms as string[] | undefined)?.includes('จ้างพนักงาน') ?? false
+const wantsStaff = (a: A) => send(a) || hires(a) || a.hire === 'ต้องการ' || a.hire === 'ยังไม่แน่ใจ'
+const goods = (a: A) => ((a.forms as string[] | undefined)?.includes('ส่งสินค้า') ?? false) || /ผลิต|ค้าปลีก/.test(String(a.btype ?? ''))
 const company = (a: A) => (a.forms as string[] | undefined)?.some((f) => f === 'เปิดบริษัท' || f === 'ลงทุน') ?? false
 const sideOpts = (d: Direction) => [`ฝั่ง${T(d).from} (ผู้ถือหุ้นต่างชาติในประเทศเป้าหมาย)`, `ฝั่ง${T(d).to} (ผู้ถือหุ้นท้องถิ่น)`, 'ร่วมกัน', 'ยังไม่ทราบ']
 const QS: Q[] = [
@@ -69,15 +81,22 @@ const QS: Q[] = [
   { id: 'funding', cat: 2, type: 'choice', when: company, text: () => 'เงินลงทุนมาจากใคร?', options: (d) => ['ตามสัดส่วนหุ้นของแต่ละฝ่าย', `ผู้ถือหุ้นฝั่ง${T(d).from}เป็นผู้จัดหาเกือบทั้งหมด`, `ผู้ถือหุ้นฝั่ง${T(d).to}เป็นผู้จัดหาเกือบทั้งหมด`, 'ยังไม่ทราบ'] },
   { id: 'realInvestor', cat: 2, type: 'choice', when: company, text: () => 'ใครเป็นผู้ลงทุนจริง?', options: sideOpts },
   { id: 'operator', cat: 2, type: 'choice', when: company, text: () => 'ใครจะเป็นผู้บริหารหรือผู้มีอำนาจควบคุมกิจการจริง?', options: sideOpts },
+  { id: 'board', cat: 2, type: 'choice', when: company, text: () => 'ใครเป็นผู้แต่งตั้งกรรมการส่วนใหญ่?', options: sideOpts },
+  { id: 'voting', cat: 2, type: 'choice', when: company, text: () => 'ใครมีสิทธิออกเสียงชี้ขาดในเรื่องสำคัญ?', options: sideOpts },
   { id: 'economic', cat: 2, type: 'choice', when: (a) => company(a) && typeof a.funding === 'string' && !a.funding.startsWith('ตามสัดส่วน') && a.funding !== 'ยังไม่ทราบ', text: () => 'จากที่เงินลงทุนไม่ได้มาตามสัดส่วนหุ้น ผลกำไร/เงินปันผลแบ่งกันอย่างไร?', options: () => ['ตามสัดส่วนหุ้น', 'ฝ่ายที่ออกเงินได้ส่วนแบ่งมากกว่าสัดส่วนหุ้น', 'ยังไม่ทราบ'] },
   { id: 'side', cat: 2, type: 'choice', when: company, text: () => 'มีข้อตกลงอื่นระหว่างผู้ถือหุ้นที่ไม่ได้ระบุในเอกสารจดทะเบียนหรือไม่?', options: () => ['ไม่มี', 'มี', 'ยังไม่ทราบ'], help: 'หากมี ระบบจะแนะนำให้เปิดเผยต่อผู้ตรวจสอบ ไม่ใช่ซ่อนไว้' },
-  { id: 'hire', cat: 3, type: 'choice', text: (d) => `คุณต้องการจ้างพนักงานใน${T(d).to}หรือไม่?`, options: () => ['ต้องการ', 'ไม่ต้องการ', 'ยังไม่แน่ใจ'] },
-  { id: 'employees', cat: 3, type: 'number', when: (a) => a.hire === 'ต้องการ' || a.hire === 'ยังไม่แน่ใจ', text: () => 'จำนวนพนักงานทั้งหมดที่วางแผนไว้ (คน)?', min: 0 },
-  { id: 'crossWorkers', cat: 3, type: 'choice', when: (a) => a.hire !== 'ไม่ต้องการ', text: (d) => `มีการส่งพนักงานจาก${T(d).from}ไปทำงาน หรือจ้างแรงงานต่างสัญชาติร่วมด้วยหรือไม่?`, options: () => ['มี', 'ไม่มี'] },
+  { id: 'hire', cat: 3, type: 'choice', when: (a) => !send(a) && !hires(a), text: (d) => `คุณต้องการจ้างพนักงานใน${T(d).to}หรือไม่?`, options: () => ['ต้องการ', 'ไม่ต้องการ', 'ยังไม่แน่ใจ'] },
+  { id: 'employees', cat: 3, type: 'number', when: wantsStaff, text: () => 'จำนวนพนักงานทั้งหมดที่วางแผนไว้ (คน)?', min: 0 },
+  { id: 'crossWorkers', cat: 3, type: 'choice', when: (a) => !send(a) && wantsStaff(a), text: (d) => `มีการส่งพนักงานจาก${T(d).from}ไปทำงาน หรือจ้างแรงงานต่างสัญชาติร่วมด้วยหรือไม่?`, options: () => ['มี', 'ไม่มี'] },
+  { id: 'empEmployer', cat: 3, type: 'choice', when: send, text: (d) => `พนักงานที่ส่งไปจะมีนายจ้างเป็นใครใน${T(d).to}?`, options: (d) => [`บริษัทต้นทางใน${T(d).from} (ส่งไปทำงาน)`, `บริษัทที่จัดตั้งใหม่ใน${T(d).to}`, 'ยังไม่แน่ใจ'] },
+  { id: 'empNat', cat: 3, type: 'choice', when: send, text: () => 'พนักงานที่จะส่งไปมีสัญชาติอะไร?', options: () => ['ไทย', 'จีน', 'หลายสัญชาติ'] },
+  { id: 'empDuration', cat: 3, type: 'choice', when: send, text: () => 'ระยะเวลาที่ส่งไปทำงานโดยประมาณ?', options: () => ['ไม่เกิน 6 เดือน', '6–12 เดือน', '1–3 ปี', 'มากกว่า 3 ปี', 'ยังไม่กำหนด'] },
+  { id: 'empSalary', cat: 3, type: 'text', when: send, text: () => 'เงินเดือนโดยประมาณและสกุลเงิน?', help: 'เช่น 28,000 หยวน/เดือน หรือพิมพ์ “ยังไม่กำหนด”' },
   { id: 'products', cat: 4, type: 'text', text: () => 'สินค้าหรือบริการหลักคืออะไร?' },
-  { id: 'regulated', cat: 4, type: 'choice', text: () => 'สินค้าหรือบริการอยู่ในกลุ่มที่อาจมีการควบคุมเป็นพิเศษหรือไม่?', options: () => ['ไม่มี', 'อาหาร/ยา/เครื่องสำอาง', 'อุปกรณ์ไฟฟ้า/อิเล็กทรอนิกส์', 'กลุ่มอื่นที่อาจต้องขออนุญาต'] },
+  { id: 'market', cat: 4, type: 'text', text: (d) => `ลูกค้าเป้าหมายใน${T(d).to}คือใคร?` },
+  { id: 'regulated', cat: 4, type: 'choice', when: goods, text: () => 'สินค้าหรือบริการอยู่ในกลุ่มที่อาจมีการควบคุมเป็นพิเศษหรือไม่?', options: () => ['ไม่มี', 'อาหาร/ยา/เครื่องสำอาง', 'อุปกรณ์ไฟฟ้า/อิเล็กทรอนิกส์', 'กลุ่มอื่นที่อาจต้องขออนุญาต'] },
   { id: 'location', cat: 5, type: 'text', text: (d) => `พื้นที่ดำเนินงานใน${T(d).to}คือที่ไหน? (เมือง/จังหวัด/มณฑล)` },
-  { id: 'cross', cat: 6, type: 'multi', text: () => 'มีกิจกรรมข้ามพรมแดนอะไรบ้าง?', options: () => ['นำเข้าวัตถุดิบ', 'ส่งออกสินค้า', 'โอนเงินข้ามประเทศ', 'ไม่มี'] },
+  { id: 'cross', cat: 6, type: 'multi', when: goods, text: () => 'มีกิจกรรมข้ามพรมแดนอะไรบ้าง?', options: () => ['นำเข้าวัตถุดิบ', 'ส่งออกสินค้า', 'โอนเงินข้ามประเทศ', 'ไม่มี'] },
 ]
 const pickIdx = (opts: string[], v: string) => opts.indexOf(v)
 function buildProfile(a: A, d: Direction): Profile {
@@ -92,19 +111,22 @@ function buildProfile(a: A, d: Direction): Profile {
   const funderIsOrigin = fo === 100
   const ecoOrigin = eco.startsWith('ฝ่ายที่ออกเงิน') ? (funderIsOrigin ? 80 : 20) : origin
   const side = (v: unknown): 'origin' | 'partner' | 'shared' | 'unknown' => { const s = String(v ?? ''); return s.startsWith('ฝั่ง' + i.from) ? 'origin' : s.startsWith('ฝั่ง' + i.to) ? 'partner' : s === 'ร่วมกัน' ? 'shared' : 'unknown' }
-  const mk = (id: 'origin' | 'partner', pct: number, cap: number, ecoV: number): Holder => ({ id, label: `ผู้ถือหุ้น${id === 'origin' ? i.from : i.to}`, nationality: (id === 'origin' ? (d === 'TH_CN' ? 'TH' : 'CN') : (d === 'TH_CN' ? 'CN' : 'TH')), percent: pct, capital: cap, voting: pct, board: pct, economic: ecoV })
+  const mk = (id: 'origin' | 'partner', pct: number, cap: number, ecoV: number, vot: number, brd: number): Holder => ({ id, label: `ผู้ถือหุ้น${id === 'origin' ? i.from : i.to}`, nationality: (id === 'origin' ? (d === 'TH_CN' ? 'TH' : 'CN') : (d === 'TH_CN' ? 'CN' : 'TH')), percent: pct, capital: cap, voting: vot, board: brd, economic: ecoV })
   const unknownFacts: string[] = []
   if (comp && fundingUnknown) unknownFacts.push('ยังไม่ทราบว่าเงินลงทุนมาจากใคร')
   if (comp && eco === 'ยังไม่ทราบ') unknownFacts.push('ยังไม่ทราบการแบ่งผลกำไร/เงินปันผล')
   const op = side(a.operator)
+  const ctl = (v: unknown, what: string) => { const s = side(v); if (s === 'unknown' && comp) unknownFacts.push(what); return s === 'origin' ? 100 : s === 'partner' ? 0 : origin }
+  const vo = ctl(a.voting, 'ยังไม่ทราบว่าใครมีสิทธิออกเสียงชี้ขาด')
+  const bo = ctl(a.board, 'ยังไม่ทราบว่าใครแต่งตั้งกรรมการส่วนใหญ่')
   return {
     companyName: String(a.name), direction: d, businessType: a.btype === 'อื่น ๆ' ? String(a.btypeOther) : String(a.btype),
     activity: [a.activity, a.activityMore].filter(Boolean).join(' — '), forms: a.forms as string[], investmentRange: String(a.invest ?? ''),
-    employees: Number(a.employees ?? 0), crossBorderWorkers: a.crossWorkers === 'มี',
-    holders: [mk('origin', origin, fo, ecoOrigin), mk('partner', partner, 100 - fo, 100 - ecoOrigin)],
+    employees: Number(a.employees ?? 0), crossBorderWorkers: a.crossWorkers === 'มี' || send(a),
+    holders: [mk('origin', origin, fo, ecoOrigin, vo, bo), mk('partner', partner, 100 - fo, 100 - ecoOrigin, 100 - vo, 100 - bo)],
     realInvestor: side(a.realInvestor), operator: op === 'shared' ? 'joint' : op,
     sideAgreement: a.side === 'มี' ? 'yes' : a.side === 'ไม่มี' ? 'no' : 'unknown',
-    products: String(a.products ?? ''), regulatedGoods: String(a.regulated ?? ''), location: String(a.location ?? ''), crossBorder: ((a.cross as string[]) ?? []).filter((x) => x !== 'ไม่มี'), unknownFacts,
+    products: String(a.products ?? ''), targetMarket: String(a.market ?? ''), regulatedGoods: String(a.regulated ?? ''), location: String(a.location ?? ''), crossBorder: ((a.cross as string[]) ?? []).filter((x) => x !== 'ไม่มี'), unknownFacts,
   }
 }
 
@@ -134,7 +156,7 @@ export function InterviewPage() {
     const nv = QS.filter((x) => !x.when || x.when(next, d))
     const nextIdx = nv.findIndex((x) => x.id === q.id) + 1
     if (nextIdx >= nv.length) {
-      const p = buildProfile(next, d); set({ profile: p, employment: { mode: next.hire === 'ไม่ต้องการ' ? '' : p.crossBorderWorkers ? `ส่งพนักงาน${T(d).from}ไป${T(d).to}` : `จ้างคน${T(d).to}ใน${T(d).to}`, nationality: '', location: p.location, duration: '', salary: '', hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' }, analysisDone: false, stepOverrides: {}, docs: {} }); log('สร้างโปรไฟล์ธุรกิจจากการสัมภาษณ์'); return go('profile')
+      const p = buildProfile(next, d); set({ profile: p, employment: { mode: !wantsStaff(next) ? '' : p.crossBorderWorkers ? `ส่งพนักงาน${T(d).from}ไป${T(d).to}` : `จ้างคน${T(d).to}ใน${T(d).to}`, nationality: String(next.empNat ?? ''), location: p.location, duration: String(next.empDuration ?? ''), salary: String(next.empSalary ?? ''), hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' }, analysisDone: false, stepOverrides: {}, docs: {} }); log('สร้างโปรไฟล์ธุรกิจจากการสัมภาษณ์'); return go('profile')
     }
     setIdx(nextIdx); setVal(nv[nextIdx].type === 'multi' ? [] : '')
   }
@@ -159,7 +181,7 @@ export function InterviewPage() {
             {err && <p role="alert" className="text-red-700 text-sm mt-2">{err}</p>}
             <div className="flex gap-2 mt-4"><button className="btn-ghost" onClick={back} disabled={idx === 0}>ย้อนกลับ</button><button className="btn-primary" onClick={submit}>{idx + 1 >= visible.length ? 'สร้างโปรไฟล์ธุรกิจ' : 'ถัดไป'}</button></div>
           </div>
-          {done.length > 0 && pickIdx([], '') < 0 && <p className="text-xs text-slate-500">ตอบแล้ว {idx} ข้อ — ข้อมูลที่ให้จะถูกเก็บในเบราว์เซอร์ของคุณเท่านั้นในเวอร์ชัน Prototype</p>}
+          {done.length > 0 && pickIdx([], '') < 0 && <p className="text-xs text-slate-500">ตอบแล้ว {idx} ข้อ — คำถามจะเปลี่ยนตามคำตอบของคุณ ข้อมูลเก็บในเบราว์เซอร์นี้เท่านั้น (ดู “ความเป็นส่วนตัว” ที่ท้ายหน้า)</p>}
         </section>
       </div>
     </div>

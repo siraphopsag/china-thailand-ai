@@ -4,10 +4,10 @@ import { go, useStore } from '../store'
 import { AnalysisTabs, Disclaimer, EmptyState, PageHead, SourceCard, StatusBadge, VerifyBadge, Warn } from '../components/ui'
 import { analyzeEmployment, contractRequired, DISCLAIMER_DRAFT, generateContract } from '../services/engines'
 import { aiService } from '../services/aiService'
-import { culture, terms } from '../data/culture'
+import { situations, terms } from '../data/culture'
 import { getReg } from '../data/regulations'
 
-const modes = ['จ้างคนจีนในจีน', 'จ้างคนไทยในไทย', 'ส่งพนักงานไทยไปจีน', 'ส่งพนักงานจีนมาไทย']
+const modes = ['จ้างคนจีนในจีน', 'จ้างคนไทยในไทย', 'ส่งพนักงานไทยไปจีน', 'ส่งพนักงานจีนมาไทย', 'นายจ้างอยู่ประเทศหนึ่ง ลูกจ้างทำงานอีกประเทศ']
 const empFields: [keyof EmploymentInput, string][] = [['nationality', 'สัญชาติลูกจ้าง'], ['location', 'สถานที่ทำงาน'], ['duration', 'ระยะเวลาจ้าง'], ['salary', 'เงินเดือน'], ['hours', 'ชั่วโมงทำงาน'], ['leave', 'วันลา'], ['socialSecurity', 'ประกันสังคม'], ['workAuth', 'สถานะใบอนุญาตทำงาน'], ['tax', 'ข้อพิจารณาด้านภาษี']]
 
 export function EmploymentPage() {
@@ -38,16 +38,16 @@ export function EmploymentPage() {
 /* ================= CONTRACT ================= */
 const cFields: [keyof ContractInput, string, boolean?][] = [['employer', 'นายจ้าง'], ['employee', 'ลูกจ้าง'], ['nationality', 'สัญชาติ'], ['job', 'ตำแหน่งงาน'], ['location', 'สถานที่ทำงาน'], ['startDate', 'วันเริ่มงาน'], ['duration', 'ระยะเวลาสัญญา'], ['salary', 'เงินเดือน/ค่าตอบแทน'], ['benefits', 'สวัสดิการ'], ['hours', 'เวลาทำงาน'], ['leave', 'วันลา'], ['probation', 'ระยะทดลองงาน'], ['other', 'เงื่อนไขอื่นที่ตกลงกัน', true]]
 export function ContractPage() {
-  const { profile, contract, set, log } = useStore()
+  const { profile, contract, employment, set, log } = useStore()
   const [out, setOut] = useState<ReturnType<typeof generateContract> | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [lang, setLang] = useState<'th' | 'cn'>('th')
   if (!profile) return <div><PageHead title="ผู้ช่วยสัญญาจ้างไทย–จีน" /><EmptyState /></div>
   const gen = async () => {
-    const pre = generateContract(contract)
+    const pre = generateContract(contract, employment.mode)
     if (!pre.ready) { setOut(null); return setErr('กรุณาระบุอย่างน้อย นายจ้าง ลูกจ้าง และตำแหน่งงาน ก่อนสร้างร่างสัญญา') }
-    setErr(''); setBusy(true); setOut(await aiService.generateContract(contract)); setBusy(false); log('สร้างร่างสัญญาจ้างเบื้องต้น')
+    setErr(''); setBusy(true); setOut(await aiService.generateContract(contract, employment.mode)); setBusy(false); log('สร้างร่างสัญญาจ้างเบื้องต้น')
   }
   return (
     <div className="space-y-5">
@@ -83,10 +83,22 @@ export function LanguagePage() {
       <div className="card overflow-x-auto"><h2 className="h2 mb-2">ตารางศัพท์ไทย · ต้นฉบับ · ความหมาย/บริบท</h2>
         <table className="w-full text-sm"><thead><tr className="bg-slate-100 text-left"><th className="p-2">คำอธิบายภาษาไทย</th><th className="p-2">ศัพท์ต้นฉบับ (จีน/อังกฤษ)</th><th className="p-2">ความหมาย/บริบท</th></tr></thead><tbody>{terms.map((t) => <tr key={t.th} className="border-b border-slate-100 align-top"><td className="p-2 font-medium">{t.th}</td><td className="p-2" lang="zh">{t.orig}</td><td className="p-2 text-slate-600">{t.mean}</td></tr>)}</tbody></table>
         <div className="mt-2 text-xs text-slate-500">ภาษาที่รองรับ: ไทย · จีน · อังกฤษ (ตัวอย่างคำศัพท์สำหรับ Prototype)</div></div>
-      <div className="card"><h2 className="h2">แนวโน้มที่ควรคำนึงถึงด้านการสื่อสารทางธุรกิจ</h2>
+      <div className="card"><h2 className="h2">แนวโน้มที่ควรคำนึงถึง ตามสถานการณ์ของคุณ</h2>
         <Warn tone="blue"><span className="block">ข้อมูลนี้เป็นเพียง “แนวโน้มที่ควรคำนึงถึง” ไม่ใช่ข้อสรุปเกี่ยวกับบุคคลหรือคนทั้งกลุ่ม ทุกองค์กรและทุกคนมีความแตกต่างกัน ควรสอบถามและปรับตามสถานการณ์จริง{profile ? ` (ธุรกิจของคุณ: ${profile.companyName})` : ''}</span></Warn>
-        <div className="grid md:grid-cols-2 gap-3 mt-3">{culture.map((c) => <div key={c.t} className="border border-slate-200 rounded-lg p-3"><b>{c.t}</b><p className="text-sm text-slate-600">{c.d}</p></div>)}</div></div>
+        <CultureSituations /></div>
       <Disclaimer />
+    </div>
+  )
+}
+
+function CultureSituations() {
+  const [i, setI] = useState(0)
+  const s = situations[i]
+  return (
+    <div className="mt-3">
+      <div className="flex gap-2 flex-wrap mb-3" role="tablist" aria-label="เลือกสถานการณ์">{situations.map((x, k) => <button key={x.title} role="tab" aria-selected={k === i} onClick={() => setI(k)} className={`px-4 py-2 rounded-full border min-h-[44px] ${k === i ? 'bg-navy-800 text-white border-navy-800' : 'bg-white border-slate-300'}`}>{x.title}</button>)}</div>
+      <div className="border border-slate-200 rounded-lg p-4"><p className="font-semibold mb-2">{s.intro}</p>
+        <div className="grid md:grid-cols-2 gap-3">{s.points.map((p) => <div key={p.t}><b>{p.t}</b><p className="text-sm text-slate-600">{p.d}</p></div>)}</div></div>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { AIMessage, AnalysisTabs, Disclaimer, EmptyState, OwnershipChart, PageHe
 import { aiService } from '../services/aiService'
 import { compliantOptions, consequences, detectNomineeRisk, ownershipDims, verifyAnalysis, targetCountry, holdersSum } from '../services/engines'
 import { levelStyle } from '../utils/labels'
+import { getReg } from '../data/regulations'
 
 const modules = [
   ['กฎหมาย', 'กำลังตรวจสอบประเภทธุรกิจ...'], ['การลงทุน', 'กำลังตรวจสอบข้อกำหนดการลงทุน...'], ['โครงสร้างผู้ถือหุ้น', 'กำลังวิเคราะห์โครงสร้างผู้ถือหุ้น...'],
@@ -95,6 +96,7 @@ export function OwnershipPage() {
       <AnalysisTabs active="ownership" />
       <div className="card"><h2 className="h2 mb-3">แผนผังผู้ถือหุ้น</h2><OwnershipChart holders={profile.holders} />
         {Math.round(sum) !== 100 && <div className="mt-3"><Warn tone="red">สัดส่วนหุ้นรวมเป็น {sum}% ข้อมูลยังไม่เพียงพอสำหรับการวิเคราะห์ (ควรรวมเป็น 100%)</Warn></div>}</div>
+      <Warn tone="blue"><b>แยกพิจารณา 4 เรื่อง:</b> ความเป็นเจ้าของ (หุ้น) · เงินลงทุน · อำนาจควบคุม · ความเสี่ยงด้านนอมินี — สัดส่วนหุ้นที่ดูเหมือนถูกต้อง (เช่น 51/49) ไม่ได้แปลว่าโครงสร้าง “ปลอดภัย” โดยอัตโนมัติ</Warn>
       <div className="card"><h2 className="h2 mb-1">ปรับข้อมูลเพื่อทดลองวิเคราะห์ใหม่</h2><p className="text-sm text-slate-500 mb-3">เปลี่ยนตัวเลขแล้วดูผลทันที เพื่อเข้าใจว่าปัจจัยใดทำให้สถานะเปลี่ยน</p>
         <div className="grid md:grid-cols-2 gap-4">{profile.holders.map((h) => (
           <fieldset key={h.id} className="border border-slate-200 rounded-lg p-3"><legend className="font-semibold px-1">{h.label}</legend>
@@ -126,17 +128,20 @@ export function NomineePage() {
       <div className={`card border-2 ${levelStyle[r.level]}`}>
         <div className="flex flex-wrap items-center gap-3"><StatusBadge level={r.level} /><h2 className="h2">{r.headline}</h2></div>
         <div className="mt-3 text-sm space-y-1"><p><b>คำตอบ:</b> {r.answer}</p><p><b>เหตุผล:</b> {r.reason}</p><p><b>แหล่งข้อมูล:</b> {tc === 'CN' ? 'NDRC / MOFCOM' : 'DBD'} (ข้อมูลตัวอย่างสำหรับ Prototype)</p></div>
+        <p className="text-xs text-slate-500 mt-3">หมายเหตุ: ผลนี้ไม่ได้ตัดสินจากสัดส่วนหุ้นอย่างเดียว และไม่ใช่การรับรองหรือการวินิจฉัยทางกฎหมาย</p>
         {r.stop && <div className="mt-3"><Warn tone="red"><b>ควรหยุดการดำเนินการในขั้นตอนนี้และตรวจสอบเพิ่มเติม</b> — แผนงานขั้นที่ 7 ถูกพักไว้ชั่วคราว</Warn></div>}
       </div>
       {r.indicators.length > 0 && <div className="space-y-3"><h2 className="h2">ปัจจัยที่ควรตรวจสอบเพิ่มเติม</h2>{r.indicators.map((i) => (
-        <div key={i.key} className="card border-l-8 border-l-orange-400 text-sm space-y-1"><p className="font-semibold">🚩 {i.text}</p><p><b>ทำไมจึงสำคัญ (WHY):</b> {i.why}</p><p><b>สิ่งที่ต้องตรวจสอบ (WHAT TO VERIFY):</b> {i.verify}</p></div>))}</div>}
+        <div key={i.key} className="card border-l-8 border-l-orange-400 text-sm space-y-1"><p className="font-semibold">🚩 ตรวจพบ: {i.text}</p><p><b>ทำไมจึงสำคัญ (WHY):</b> {i.why}</p><p><b>ข้อมูลที่ยังขาด:</b> {i.missing}</p><p><b>สิ่งที่ต้องตรวจสอบ:</b> {i.verify}</p><p><b>ผู้ใช้ควรทำต่อ:</b> {i.next}</p></div>))}</div>}
       {r.unknowns.length > 0 && <div className="card"><h2 className="h2 mb-1">ข้อมูลยังไม่เพียงพอสำหรับการวิเคราะห์</h2><ul className="list-disc ml-5 text-sm">{r.unknowns.map((u) => <li key={u}>{u}</li>)}</ul><p className="text-sm text-slate-500 mt-2">กรุณาตอบข้อมูลเหล่านี้ที่หน้า “โครงสร้างผู้ถือหุ้น” เพื่อให้ระบบประเมินได้ครบถ้วน</p></div>}
       <div className="card"><h2 className="h2 mb-2">สิ่งที่ควรทำต่อ (WHAT SHOULD YOU DO NEXT)</h2><ol className="list-decimal ml-5 text-sm space-y-1">{r.next.map((n) => <li key={n}>{n}</li>)}</ol></div>
-      {r.level !== 'LOW' && <div className="card"><h2 className="h2 mb-1">ผลกระทบที่อาจเกี่ยวข้อง</h2><p className="text-xs text-slate-500 mb-3">แสดงเฉพาะหัวข้อที่เกี่ยวข้อง ไม่ระบุโทษที่ยังตรวจสอบไม่ได้</p>
-        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-100 text-left"><th className="p-2">หัวข้อ</th><th className="p-2">กฎหมาย/ระเบียบที่เกี่ยวข้อง</th><th className="p-2">ผลกระทบที่อาจเกี่ยวข้อง</th><th className="p-2">เหตุผล</th><th className="p-2">สถานะ</th></tr></thead><tbody>
-          {conc.map((c) => <tr key={c.topic} className="border-b align-top border-slate-100"><td className="p-2 font-medium">{c.topic}</td><td className="p-2">{c.law}</td><td className="p-2">{c.effect}<br /><i className="text-slate-500">{c.penalty}</i></td><td className="p-2">{c.reason}</td><td className="p-2"><VerifyBadge v={c.v} /></td></tr>)}</tbody></table></div></div>}
+      {r.level !== 'LOW' && <div className="card"><h2 className="h2 mb-1">ผลกระทบที่อาจเกี่ยวข้อง</h2><p className="text-xs text-slate-500 mb-3">ระบบไม่ระบุโทษหรือบทลงโทษที่ยังตรวจสอบไม่ได้ และไม่เดาตัวเลขหรือระยะเวลา</p>
+        <div className="space-y-3">{conc.map((c) => (
+          <div key={c.issue} className="border border-slate-200 rounded-lg p-3 text-sm space-y-1">
+            <p className="font-semibold">ประเด็น: {c.issue}</p><p><b>กฎหมาย/ระเบียบที่เกี่ยวข้อง:</b> {c.law} (<a className="text-navy-600 underline" href={getReg(c.regId)?.sourceUrl} target="_blank" rel="noopener noreferrer">แหล่งทางการ ↗</a>)</p>
+            <p><b>ผลทางกฎหมายที่อาจเกี่ยวข้อง:</b> {c.consequence}</p><p><b>เหตุผลที่อาจเกี่ยวข้อง:</b> {c.why}</p><p><b>สถานะการตรวจสอบ:</b> <VerifyBadge v={c.v} /></p><p><b>ขั้นตอนที่แนะนำ:</b> {c.next}</p></div>))}</div></div>}
       {r.level !== 'LOW' && <div><h2 className="h2 mb-2">ทางเลือกที่ชอบด้วยกฎหมายเพื่อไปต่อ</h2><div className="grid sm:grid-cols-2 gap-3">{compliantOptions.map((o) => <div key={o.k} className="card"><div className="text-xs text-navy-600 font-bold">OPTION {o.k}</div><div className="font-semibold">{o.t}</div><p className="text-sm text-slate-600">{o.d}</p></div>)}</div>
-        <div className="mt-3"><Warn tone="blue">ระบบจะไม่ให้คำแนะนำเรื่องการปกปิดความเป็นเจ้าของหรือการเลี่ยงข้อจำกัดการลงทุน หากมีข้อสงสัยควรเปิดเผยข้อเท็จจริงทั้งหมดต่อผู้เชี่ยวชาญ/หน่วยงาน</Warn></div></div>}
+        <div className="mt-3"><Warn tone="blue">ระบบจะไม่ให้คำแนะนำเรื่องการปกปิดความเป็นเจ้าของหรือการเลี่ยงข้อจำกัดการลงทุน หากมีข้อสงสัยควรเปิดเผยข้อเท็จจริงทั้งหมดต่อผู้เชี่ยวชาญ/หน่วยงาน</Warn></div><div className="mt-3"><button className="btn-primary" onClick={() => go('documents')}>เตรียมเอกสารสรุปสำหรับผู้เชี่ยวชาญ</button></div></div>}
       <div><h2 className="h2 mb-2">แหล่งข้อมูลอ้างอิง</h2><div className="grid md:grid-cols-2 gap-3"><SourceCard id={tc === 'CN' ? 'cn-neglist-2024' : 'th-fba'} /><SourceCard id={tc === 'CN' ? 'cn-fil' : 'th-dbd-reg'} /></div></div>
       <div className="flex gap-2 flex-wrap"><button className="btn-primary" onClick={() => go('employment')}>ต่อไป: การจ้างงาน →</button><button className="btn-ghost" onClick={() => go('roadmap')}>ดูแผนการดำเนินงาน</button></div>
       <Disclaimer />
