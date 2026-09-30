@@ -1,0 +1,15 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+html{scroll-behavior:smooth}
+body{font-family:"Noto Sans Thai",system-ui,sans-serif;line-height:1.65}
+:focus-visible{outline:3px solid #3a639e;outline-offset:2px}
+@layer components{
+ .card{@apply bg-white border border-slate-200 rounded-xl shadow-sm p-5}
+ .btn{@apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-medium min-h-[44px] transition disabled:opacity-50 disabled:cursor-not-allowed}
+ .btn-primary{@apply btn bg-navy-800 text-white hover:bg-navy-700}
+ .btn-ghost{@apply btn border border-slate-300 bg-white text-navy-800 hover:bg-slate-100}
+ .btn-danger{@apply btn bg-red-600 text-white hover:bg-red-700}
+ .input{@apply w-full rounded-lg border border-slate-300 px-3 py-2.5 min-h-[44px] bg-white focus:border-navy-500}
+ .label{@apply block text-sm font-medium text-slate-700 mb-1}
+ .h1{@apply text-2xl md:text-3xl font-bold text-navy-900}
+ .h2{@apply text-lg font-semibold text-navy-900}
+}
