@@ -60,13 +60,13 @@ export function GuideStrip({ page, nextRoute }: { page: string; nextRoute: strin
 
 export function EmptyState({ title, text }: { title?: string; text?: string }) {
   const { t } = useI18n()
-  const { startDemo } = useStore()
+  const { startDemo, beginNew } = useStore()
   return (
     <div className="card text-center py-12 max-w-xl mx-auto">
       <div className="mx-auto w-12 h-12 rounded-full bg-brand text-brandfg grid place-items-center mb-3"><Icon name="business" size={24} /></div>
       <h2 className="h2">{title ?? t('empty.title')}</h2><p className="text-muted mt-2">{text ?? t('empty.text')}</p>
       <div className="flex gap-2 justify-center mt-5 flex-wrap">
-        <button className="btn-primary" onClick={() => go('direction')}><Go>{t('cta.start')}</Go></button>
+        <button className="btn-primary" onClick={beginNew}><Go>{t('cta.start')}</Go></button>
         <button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>{t('cta.demo')}</button>
       </div>
     </div>

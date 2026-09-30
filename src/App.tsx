@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { go, StoreProvider, useRoute, useStore } from './store'
 import { LanguageProvider, useI18n } from './i18n'
 import { ThemeProvider } from './theme'
+import { ErrorBoundary } from './ErrorBoundary'
 import { BottomNav, ContextStack, Header } from './components/shell'
 import { Landing, DirectionPage, InterviewPage, ProfilePage } from './pages/intake'
 import { AnalysisCenter, OwnershipPage, NomineePage } from './pages/analysis'
@@ -17,7 +18,7 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:bg-surface focus:text-ink focus:p-2 z-50">{t('nav.skip')}</a>
       <Header route={route} />
       <ContextStack route={route} />
-      <main id="main" className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-6 pb-28 xl:pb-10">{children}</main>
+      <main id="main" className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-6 pb-28 xl:pb-10"><ErrorBoundary key={route} compact>{children}</ErrorBoundary></main>
       <footer className="bg-surface border-t border-line text-xs text-muted px-4 py-6 mb-16 xl:mb-0">
         <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-1 items-center">
           <span>{t('foot.note')}</span>

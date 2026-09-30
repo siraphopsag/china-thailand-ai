@@ -29,5 +29,9 @@ export function withLang<T>(lang: Lang, fn: () => T): T {
 /** Dynamic key helper, e.g. tk('level', 'HIGH'). */
 export const tk = (prefix: string, id: string, vars?: Vars) => tr(`${prefix}.${id}` as MsgKey, vars)
 /** Resolve stored demo tokens like "@demo.activity" into the current language; plain text is returned as is. */
-export const dv = (s: string | undefined) => (s && s.startsWith('@') ? tr(s.slice(1) as MsgKey) : s ?? '')
+export const dv = (s: string | undefined) => {
+  if (!s || !s.startsWith('@')) return s ?? ''
+  const k = s.slice(1)
+  return k in messages ? tr(k as MsgKey) : s // user text that merely starts with @ stays untouched
+}
 export const isLang = (x: unknown): x is Lang => x === 'th' || x === 'zh' || x === 'en'

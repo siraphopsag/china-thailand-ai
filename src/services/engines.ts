@@ -80,8 +80,13 @@ export function detectNomineeRisk(p: Profile): NomineeResult {
   if (p.sideAgreement === 'unknown') unknowns.push(tr('unk.agreement'))
   if (Math.round(holdersSum(p)) !== 100) unknowns.push(tr('unk.sum'))
 
+  // Severity is not a plain count: some combinations are serious on their own.
+  //  - funding that does not match shareholding + any second indicator
+  //  - an undisclosed side agreement + a funding / control / real-investor / management mismatch
+  //  - three or more different kinds of indicators
   const types = new Set(ind.map((i) => i.key.split('-')[0]))
-  const level: Level = types.size >= 3 ? 'HIGH' : types.size >= 1 ? 'MEDIUM' : unknowns.length ? 'NEEDS_REVIEW' : 'LOW'
+  const critical = (types.has('fund') && types.size >= 2) || (types.has('agr') && ['fund', 'ctl', 'investor', 'operator'].some((x) => types.has(x)))
+  const level: Level = types.size >= 3 || critical ? 'HIGH' : types.size >= 1 ? 'MEDIUM' : unknowns.length ? 'NEEDS_REVIEW' : 'LOW'
   const stop = level === 'HIGH'
   const next =
     level === 'LOW' ? [tr('nom.next.low')]
@@ -109,10 +114,10 @@ export const compliantOptions = () => (['A', 'B', 'C', 'D'] as const).map((k) =>
 /* ---------- Employment ---------- */
 export function analyzeEmployment(e: EmploymentInput, p: Profile | null): EmploymentArea[] {
   const tc = p ? targetCountry(p) : 'CN'
-  const cross = /send|cross/.test(e.mode)
-  const miss = (v: string) => !v.trim()
+  const cross = /send|cross/.test(e.mode ?? '')
+  const miss = (v?: string) => !(v ?? '').trim()
   const sid = (th: string, cn: string) => (tc === 'TH' ? th : cn)
-  const row = (id: string, v: string, sourceId: string, forceReview = false): EmploymentArea => {
+  const row = (id: string, v: string | undefined, sourceId: string, forceReview = false): EmploymentArea => {
     const area = tr(K(`emp.a.${id}`))
     if (miss(v)) return { id, area, status: 'NEEDS_REVIEW', note: tr('emp.missing'), sourceId, missing: true }
     return { id, area, status: forceReview ? 'NEEDS_REVIEW' : 'LOW', note: tr(K(`emp.n.${id}`)), sourceId, missing: false }
@@ -220,7 +225,7 @@ function contractText(c: ContractInput): string {
 }
 export function generateContract(c: ContractInput, mode = '') {
   const missing = contractKeys.filter((k) => !dv(c[k]).trim())
-  const cross = /send|cross/.test(mode)
+  const cross = /send|cross/.test(mode ?? "")
   const checks: { t: string; id: string; v: Verification }[] = [
     { t: tr('ctr.chk.1'), id: 'cn-labor', v: 'NEED_INFO' }, { t: tr('ctr.chk.2'), id: 'cn-labor', v: 'NEED_INFO' }, { t: tr('ctr.chk.3'), id: 'cn-immigration', v: 'NEED_INFO' },
     { t: tr('ctr.chk.4'), id: 'cn-tax', v: 'NEED_INFO' }, { t: tr('ctr.chk.5'), id: 'cn-labor', v: 'EXPERT' },

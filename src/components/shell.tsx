@@ -125,13 +125,19 @@ export function Header({ route }: { route: string }) {
 /** Compact "which business is the AI analysing" bar + guided-demo strip. */
 export function ContextStack({ route }: { route: string }) {
   const { t } = useI18n()
-  const { profile, tour, set } = useStore()
+  const { profile, tour, set, mode, exitDemo } = useStore()
   const hideCtx = ['', 'direction', 'interview', 'privacy', 'pricing'].includes(route)
   const showTour = tour !== null && tour < tourRoutes.length
-  if ((hideCtx || !profile) && !showTour) return null
+  const demo = mode === 'demo'
+  if ((hideCtx || !profile) && !showTour && !demo) return null
   const d = profile ? dirInfo(profile.direction) : null
   return (
     <div className="md:sticky md:top-16 z-30">
+      {demo && (
+        <div className="bg-info-bg text-info-fg border-b border-info-line" role="status">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"><Icon name="info" size={14} /><span className="flex-1 min-w-[200px]">{t('demo.mode')}</span>
+            <button className="underline font-semibold" onClick={() => { exitDemo(); go('') }}>{t('demo.exit')}</button></div>
+        </div>)}
       {!hideCtx && profile && d && (
         <div className="bg-surface border-b border-line" role="region" aria-label={t('ctx.aria')}>
           <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center gap-x-4 gap-y-1 flex-wrap text-sm">

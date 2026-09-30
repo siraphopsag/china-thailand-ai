@@ -20,7 +20,7 @@ function CrossBorderVisual() {
 }
 export function Landing() {
   const { t } = useI18n()
-  const { startDemo } = useStore()
+  const { startDemo, beginNew } = useStore()
   const steps: [string, IconName][] = [['1', 'business'], ['2', 'ai'], ['3', 'risk'], ['4', 'plan'], ['5', 'monitor']]
   return (
     <div className="space-y-12">
@@ -30,7 +30,7 @@ export function Landing() {
           <h1 className="text-3xl md:text-5xl font-bold leading-tight">{t('land.h1')}</h1>
           <p className="mt-4 text-lg opacity-90 max-w-2xl">{t('land.sub')}</p>
           <div className="flex flex-wrap gap-3 mt-8">
-            <button className="btn-accent" onClick={() => go('direction')}><Go>{t('cta.start')}</Go></button>
+            <button className="btn-accent" onClick={beginNew}><Go>{t('cta.start')}</Go></button>
             <button className="btn border border-white/50 text-onheader hover:bg-white/10" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>{t('land.how')}</button>
             <button className="btn border border-white/50 text-onheader hover:bg-white/10" onClick={() => { startDemo(); go('profile') }}>{t('cta.demo')}</button>
           </div>

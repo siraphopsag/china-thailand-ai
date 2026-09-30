@@ -109,4 +109,11 @@ export const ux = {
   'emp.toContract': ['ไปที่สัญญาจ้าง', '前往劳动合同', 'Go to the contract'],
   'land.kicker': ['แพลตฟอร์ม AI สำหรับธุรกิจไทย–จีน', '泰中企业的 AI 平台', 'AI platform for Thailand–China business'],
   'dash.resetDemo': ['เริ่ม Demo ใหม่', '重新开始演示', 'Restart the demo'],
+  // ---- demo / real data separation, recovery
+  'demo.mode': ['โหมด Demo — ใช้ข้อมูลสมมติ ข้อมูลจริงของคุณถูกเก็บแยกไว้และไม่ถูกแก้ไข', '演示模式 —— 使用虚构数据，您的真实数据单独保存，不会被修改', 'Demo mode — fictional data; your real data is stored separately and untouched'],
+  'demo.exit': ['ออกจาก Demo', '退出演示', 'Exit demo'],
+  'start.confirm': ['มีโปรไฟล์ธุรกิจอยู่แล้ว การเริ่มใหม่จะแทนที่โปรไฟล์เดิม ต้องการดำเนินการต่อหรือไม่?', '已存在企业档案，重新开始将替换原档案。是否继续？', 'A business profile already exists. Starting over will replace it. Continue?'],
+  'err.reset': ['ล้างข้อมูลที่บันทึกไว้แล้วเริ่มใหม่', '清除已保存的数据并重新开始', 'Clear saved data and start over'],
+  'err.resetNote': ['หากข้อผิดพลาดเกิดซ้ำ อาจเกิดจากข้อมูลเก่าที่บันทึกไว้ในเบราว์เซอร์นี้', '如果错误反复出现，可能是本浏览器中保存的旧数据所致。', 'If this keeps happening, old data saved in this browser may be the cause.'],
+  'foot.confirm': ['ล้างข้อมูลที่บันทึกไว้ในโหมดนี้ของเบราว์เซอร์นี้?', '清除此浏览器中本模式已保存的数据？', 'Clear the data saved for this mode in this browser?'],
 } as const satisfies Record<string, Msg>
