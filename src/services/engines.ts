@@ -1,7 +1,7 @@
 import type {
   AIResponse, ContractInput, EmploymentArea, EmploymentInput, Holder, Level, NomineeResult, Profile, RiskCardData, RoadmapStep, Verification,
 } from '../types'
-import { dirInfo, DISCLAIMER, escapeHtml } from '../utils/labels'
+import { dirInfo, DISCLAIMER, escapeHtml } from '../utils/labels.js'
 
 const GAP = 25 // ส่วนต่าง (จุดเปอร์เซ็นต์) ที่ถือว่าควรตรวจสอบเพิ่มเติม
 

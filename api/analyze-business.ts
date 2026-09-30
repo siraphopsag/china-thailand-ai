@@ -1,6 +1,6 @@
 // Vercel serverless function (Node runtime). Secrets, if any, are read from server-side env only.
-import { orchestrate } from '../src/services/engines'
-import type { Profile } from '../src/types'
+import { orchestrate } from '../src/services/engines.js'
+import type { Profile } from '../src/types/index.js'
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } })
