@@ -1,75 +1,43 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { go, StoreProvider, useRoute, useStore } from './store'
+import { LanguageProvider, useI18n } from './i18n'
+import { ThemeProvider } from './theme'
+import { BottomNav, ContextStack, Header } from './components/shell'
 import { Landing, DirectionPage, InterviewPage, ProfilePage } from './pages/intake'
 import { AnalysisCenter, OwnershipPage, NomineePage } from './pages/analysis'
 import { EmploymentPage, ContractPage, LanguagePage } from './pages/employment'
 import { Dashboard, RiskPage, RoadmapPage, DocumentsPage, MonitoringPage, SourcesPage, AdminPage, PricingPage, PrivacyPage } from './pages/ops'
-import { tourSteps } from './data/tour'
-
-const nav: [string, string, string, string[]][] = [
-  ['', 'หน้าแรก', '🏠', []],
-  ['dashboard', 'ธุรกิจของฉัน', '🏢', ['profile', 'direction', 'interview']],
-  ['analysis', 'AI วิเคราะห์', '🧠', ['ownership', 'nominee', 'employment', 'contract', 'language']],
-  ['risk', 'ความเสี่ยง', '🛡️', []],
-  ['roadmap', 'แผนดำเนินงาน', '🗺️', []],
-  ['documents', 'เอกสาร', '📄', []],
-  ['monitoring', 'ติดตามข้อกำหนด', '📡', []],
-  ['sources', 'แหล่งข้อมูล', '🔗', ['admin']],
-]
 
 function Shell({ route, children }: { route: string; children: ReactNode }) {
-  const { startDemo, profile, reset, tour, set } = useStore()
-  const [menu, setMenu] = useState(false)
-  const active = (k: string, sub: string[]) => route === k || sub.includes(route)
+  const { t } = useI18n()
+  const { profile, reset } = useStore()
+  useEffect(() => { document.title = t('app.title') }, [t])
   return (
     <div className="min-h-screen flex flex-col">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:bg-white focus:p-2 z-50">ข้ามไปยังเนื้อหา</a>
-      <header className="bg-navy-900 text-white sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
-          <button onClick={() => go('')} className="font-bold text-left leading-tight"><span className="block text-sm md:text-base">ไทย–จีน AI</span><span className="block text-[11px] text-navy-200 font-normal">Business Entry & Compliance</span></button>
-          <nav aria-label="เมนูหลัก" className="hidden lg:flex gap-1 ml-4 flex-1">{nav.map(([k, t, , sub]) => <button key={k} onClick={() => go(k)} aria-current={active(k, sub) ? 'page' : undefined} className={`px-3 py-2 rounded-lg text-sm min-h-[44px] ${active(k, sub) ? 'bg-white/15 font-semibold' : 'hover:bg-white/10'}`}>{t}</button>)}</nav>
-          <div className="ml-auto flex items-center gap-2">
-            <button className="btn bg-amber-400 text-navy-900 hover:bg-amber-300 !py-1.5 text-sm" onClick={() => { startDemo(); go('profile') }}>เริ่ม Demo</button>
-            <button className="lg:hidden btn border border-white/40 !py-1.5 text-sm" aria-expanded={menu} onClick={() => setMenu(!menu)}>เมนู</button>
-          </div>
-        </div>
-        {menu && <div className="lg:hidden bg-navy-800 px-4 pb-3 grid grid-cols-2 gap-1">{[...nav.map(([k, t]) => [k, t]), ['pricing', 'แพ็กเกจ'], ['admin', 'จัดการกฎระเบียบ']].map(([k, t]) => <button key={k} onClick={() => { go(k); setMenu(false) }} className="text-left px-3 py-3 rounded hover:bg-white/10">{t}</button>)}</div>}
-      </header>
-      {tour !== null && tour < tourSteps.length && (
-        <div role="region" aria-label="โหมดนำเสนอ" className="bg-amber-50 border-b border-amber-300 sticky top-16 z-30">
-          <div className="max-w-7xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-            <span className="font-semibold">โหมดนำเสนอ · ขั้นที่ {tour + 1}/{tourSteps.length}: {tourSteps[tour].title}</span>
-            <span className="text-slate-700 flex-1 min-w-[220px]">{tourSteps[tour].caption}</span>
-            <span className="flex gap-2">
-              <button className="btn-ghost !py-1 !min-h-[36px]" disabled={tour === 0} onClick={() => { set({ tour: tour - 1 }); go(tourSteps[tour - 1].route) }}>ก่อนหน้า</button>
-              <button className="btn-primary !py-1 !min-h-[36px]" onClick={() => { if (tour + 1 < tourSteps.length) { set({ tour: tour + 1 }); go(tourSteps[tour + 1].route) } else set({ tour: null }) }}>{tour + 1 < tourSteps.length ? 'ถัดไป' : 'จบการนำเสนอ'}</button>
-              <button className="btn-ghost !py-1 !min-h-[36px]" onClick={() => set({ tour: null })}>ออก</button>
-            </span>
-          </div>
-        </div>
-      )}
-      <main id="main" className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 pb-28 lg:pb-10">{children}</main>
-      <footer className="bg-white border-t border-slate-200 text-xs text-slate-500 px-4 py-6 mb-16 lg:mb-0">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:bg-surface focus:text-ink focus:p-2 z-50">{t('nav.skip')}</a>
+      <Header route={route} />
+      <ContextStack route={route} />
+      <main id="main" className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-6 pb-28 lg:pb-10">{children}</main>
+      <footer className="bg-surface border-t border-line text-xs text-muted px-4 py-6 mb-16 lg:mb-0">
         <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-1 items-center">
-          <span>Prototype สำหรับสาธิต — ข้อมูลกฎหมายเป็นข้อมูลตัวอย่าง ไม่ใช่ข้อมูลเรียลไทม์</span>
-          <button className="underline" onClick={() => go('privacy')}>ความเป็นส่วนตัว</button><button className="underline" onClick={() => go('pricing')}>แพ็กเกจ</button><button className="underline" onClick={() => go('admin')}>จัดการกฎระเบียบ</button>
-          {profile && <button className="underline" onClick={() => { if (confirm('ล้างข้อมูลโปรไฟล์ที่บันทึกในเบราว์เซอร์นี้?')) { reset(); go('') } }}>ล้างข้อมูลในเบราว์เซอร์</button>}
+          <span>{t('foot.note')}</span>
+          <button className="underline" onClick={() => go('privacy')}>{t('nav.privacy')}</button><button className="underline" onClick={() => go('pricing')}>{t('nav.pricing')}</button><button className="underline" onClick={() => go('admin')}>{t('nav.admin')}</button>
+          {profile && <button className="underline" onClick={() => { if (confirm(t('foot.confirm'))) { reset(); go('') } }}>{t('foot.clear')}</button>}
         </div>
       </footer>
-      <nav aria-label="เมนูมือถือ" className="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 grid grid-cols-5 z-40">
-        {[nav[0], nav[1], nav[2], nav[3], nav[4]].map(([k, t, i, sub]) => <button key={k} onClick={() => go(k)} aria-current={active(k, sub) ? 'page' : undefined} className={`py-2 text-[11px] min-h-[56px] flex flex-col items-center ${active(k, sub) ? 'text-navy-800 font-bold' : 'text-slate-500'}`}><span className="text-lg" aria-hidden>{i}</span>{t}</button>)}
-      </nav>
+      <BottomNav route={route} />
     </div>
   )
 }
 
 function Router() {
   const r = useRoute()
+  const { t } = useI18n()
   const pages: Record<string, ReactNode> = {
     '': <Landing />, direction: <DirectionPage />, interview: <InterviewPage />, profile: <ProfilePage />, dashboard: <Dashboard />, analysis: <AnalysisCenter />,
     ownership: <OwnershipPage />, nominee: <NomineePage />, employment: <EmploymentPage />, contract: <ContractPage />, language: <LanguagePage />, risk: <RiskPage />,
     roadmap: <RoadmapPage />, documents: <DocumentsPage />, monitoring: <MonitoringPage />, sources: <SourcesPage />, pricing: <PricingPage />, privacy: <PrivacyPage />, admin: <AdminPage />,
   }
-  return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">ไม่พบหน้าที่ต้องการ</h1><button className="btn-primary mt-4" onClick={() => go('')}>กลับหน้าแรก</button></div>}</Shell>
+  return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>
 }
-export default function App() { return <StoreProvider><Router /></StoreProvider> }
+export default function App() { return <ThemeProvider><LanguageProvider><StoreProvider><Router /></StoreProvider></LanguageProvider></ThemeProvider> }

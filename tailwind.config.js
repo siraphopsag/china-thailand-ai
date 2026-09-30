@@ -1,8 +1,19 @@
+const v = (n) => `rgb(var(--${n}) / <alpha-value>)`
+const status = (n) => ({ bg: v(n + '-bg'), fg: v(n + '-fg'), line: v(n + '-line') })
+
+/** All colors come from CSS variables (src/index.css) so light/dark themes switch the whole UI. */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
-  theme: { extend: {
-    fontFamily: { sans: ['"Noto Sans Thai"', '"Sarabun"', 'system-ui', 'sans-serif'] },
-    colors: { navy: { 50:'#f1f5fb',100:'#dde6f3',200:'#b9cbe6',300:'#8aa8d2',400:'#5a82b9',500:'#3a639e',600:'#2b4c80',700:'#223d68',800:'#182c4f',900:'#0f1e38' } }
-  } },
+  theme: {
+    extend: {
+      fontFamily: { sans: ['"Noto Sans Thai"', '"Sarabun"', '"Microsoft YaHei"', '"PingFang SC"', '"Noto Sans SC"', 'system-ui', 'sans-serif'] },
+      colors: {
+        page: v('page'), surface: v('surface'), surface2: v('surface2'), surface3: v('surface3'), line: v('line'),
+        ink: v('ink'), muted: v('muted'), primary: v('primary'), onprimary: v('onprimary'), brand: v('brand'), brandfg: v('brandfg'),
+        header: v('header'), onheader: v('onheader'), hero: v('hero'), accent: v('accent'), onaccent: v('onaccent'),
+        ok: status('ok'), warn: status('warn'), danger: status('danger'), review: status('review'), info: status('info'),
+      },
+    },
+  },
   plugins: [],
 }

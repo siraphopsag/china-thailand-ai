@@ -1,15 +1,52 @@
 @tailwind base; @tailwind components; @tailwind utilities;
-html{scroll-behavior:smooth}
-body{font-family:"Noto Sans Thai",system-ui,sans-serif;line-height:1.65}
-:focus-visible{outline:3px solid #3a639e;outline-offset:2px}
-@layer components{
- .card{@apply bg-white border border-slate-200 rounded-xl shadow-sm p-5}
- .btn{@apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-medium min-h-[44px] transition disabled:opacity-50 disabled:cursor-not-allowed}
- .btn-primary{@apply btn bg-navy-800 text-white hover:bg-navy-700}
- .btn-ghost{@apply btn border border-slate-300 bg-white text-navy-800 hover:bg-slate-100}
- .btn-danger{@apply btn bg-red-600 text-white hover:bg-red-700}
- .input{@apply w-full rounded-lg border border-slate-300 px-3 py-2.5 min-h-[44px] bg-white focus:border-navy-500}
- .label{@apply block text-sm font-medium text-slate-700 mb-1}
- .h1{@apply text-2xl md:text-3xl font-bold text-navy-900}
- .h2{@apply text-lg font-semibold text-navy-900}
+
+/* ---------- Design tokens (RGB triplets) ---------- */
+:root, :root[data-theme='light'] {
+  color-scheme: light;
+  --page: 243 246 251; --surface: 255 255 255; --surface2: 247 249 252; --surface3: 232 238 247; --line: 214 222 235;
+  --ink: 15 30 56; --muted: 82 96 120;
+  --primary: 24 44 79; --onprimary: 255 255 255; --brand: 221 230 243; --brandfg: 34 61 104;
+  --header: 15 30 56; --onheader: 255 255 255; --hero: 15 30 56;
+  --accent: 251 191 36; --onaccent: 15 30 56;
+  --ok-bg: 220 252 231; --ok-fg: 22 101 52; --ok-line: 134 239 172;
+  --warn-bg: 254 243 199; --warn-fg: 146 64 14; --warn-line: 252 211 77;
+  --danger-bg: 254 226 226; --danger-fg: 153 27 27; --danger-line: 252 165 165;
+  --review-bg: 255 237 213; --review-fg: 154 52 18; --review-line: 253 186 116;
+  --info-bg: 224 242 254; --info-fg: 7 89 133; --info-line: 125 211 252;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --page: 10 16 29; --surface: 18 27 46; --surface2: 24 35 58; --surface3: 34 48 78; --line: 50 66 100;
+  --ink: 232 238 248; --muted: 160 174 198;
+  --primary: 96 140 212; --onprimary: 8 14 26; --brand: 30 46 80; --brandfg: 184 206 242;
+  --header: 13 21 38; --onheader: 240 244 251; --hero: 17 28 52;
+  --accent: 251 191 36; --onaccent: 15 30 56;
+  --ok-bg: 20 58 38; --ok-fg: 134 239 172; --ok-line: 34 110 66;
+  --warn-bg: 66 50 14; --warn-fg: 252 211 77; --warn-line: 130 96 20;
+  --danger-bg: 72 26 30; --danger-fg: 252 165 165; --danger-line: 140 50 56;
+  --review-bg: 70 40 18; --review-fg: 253 186 116; --review-line: 138 78 30;
+  --info-bg: 16 52 78; --info-fg: 125 211 252; --info-line: 30 100 150;
+}
+
+html { scroll-behavior: smooth }
+body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif; line-height: 1.65;
+  background: rgb(var(--page)); color: rgb(var(--ink)); transition: background-color .25s ease, color .25s ease }
+:focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: 2px }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important } }
+
+@layer components {
+  .card { @apply bg-surface border border-line rounded-2xl shadow-sm p-5 transition-colors duration-200 }
+  .card-i { @apply bg-surface2 border border-line rounded-xl p-3 }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-medium min-h-[44px] transition duration-150 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 }
+  .btn-primary { @apply btn bg-primary text-onprimary hover:opacity-90 }
+  .btn-accent { @apply btn bg-accent text-onaccent hover:opacity-90 font-semibold }
+  .btn-ghost { @apply btn border border-line bg-surface text-ink hover:bg-surface3 }
+  .input { @apply w-full rounded-xl border border-line px-3 py-2.5 min-h-[44px] bg-surface text-ink placeholder:text-muted focus:border-primary transition-colors }
+  .label { @apply block text-sm font-medium text-muted mb-1 }
+  .h1 { @apply text-2xl md:text-3xl font-bold text-ink }
+  .h2 { @apply text-lg font-semibold text-ink }
+  .chip { @apply inline-flex items-center gap-1 border rounded-full px-2.5 py-0.5 text-xs font-semibold max-w-full }
+  .tab { @apply px-4 py-2 rounded-full border border-line bg-surface text-ink whitespace-nowrap min-h-[44px] transition hover:bg-surface3 }
+  .tab-on { @apply bg-primary text-onprimary border-primary hover:bg-primary }
+  .ai-panel { @apply rounded-2xl border border-line bg-brand text-ink p-4 }
 }

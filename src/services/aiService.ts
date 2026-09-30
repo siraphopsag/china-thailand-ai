@@ -1,25 +1,24 @@
-import type { ContractInput, EmploymentInput, Profile } from '../types'
+import type { AIResponse, ContractInput, EmploymentInput, Profile } from '../types'
+import type { Lang } from '../i18n'
 import * as E from './engines'
-import { terms } from '../data/culture'
 
-/** ชั้นบริการ AI: เรียก /api/* (serverless) ส่วน API key ของผู้ให้บริการ AI ต้องอยู่ฝั่งเซิร์ฟเวอร์เท่านั้น */
+/**
+ * ชั้นบริการ AI: เรียก /api/* (serverless) พร้อมภาษาที่ผู้ใช้เลือก ถ้าเรียกไม่ได้จะใช้ตัวจำลองในเบราว์เซอร์
+ * API key ของผู้ให้บริการ AI ต้องอยู่ฝั่งเซิร์ฟเวอร์เท่านั้น (ไม่มีคีย์ใน frontend)
+ */
 const delay = <T,>(v: T, ms = 250) => new Promise<T>((r) => setTimeout(() => r(v), ms))
 
 export const aiService = {
   analyzeBusiness: (p: Profile, emp: EmploymentInput) => delay(E.assessRisks(p, emp)),
-  analyzeOwnership: (p: Profile) => delay(E.ownershipDims(p)),
   detectNomineeRisk: (p: Profile) => delay(E.detectNomineeRisk(p)),
-  analyzeEmployment: (e: EmploymentInput, p: Profile | null) => delay(E.analyzeEmployment(e, p)),
-  generateRoadmap: (p: Profile) => delay(E.generateRoadmap(p)),
-  generateContract: (c: ContractInput, mode = '') => delay(E.generateContract(c, mode), 600),
-  generateDocument: (t: E.DocType, p: Profile, e: EmploymentInput, c: ContractInput) => delay(E.buildDocument(t, p, e, c, terms), 400),
-  /** เรียก serverless endpoint ก่อน หากไม่พร้อมใช้งานจะใช้ตัวจำลองในเบราว์เซอร์ เพื่อให้ Demo ทำงานได้เสมอ */
-  orchestrate: async (q: string, p: Profile | null) => {
+  generateContract: (c: ContractInput, mode = '') => delay(E.generateContract(c, mode), 700),
+  generateDocument: (t: E.DocType, p: Profile, e: EmploymentInput, c: ContractInput, lang: Lang) => delay(E.buildDocument(t, p, e, c, lang), 450),
+  /** Source-aware orchestration: language is part of the AI request context. */
+  orchestrate: async (q: string, p: Profile | null, lang: Lang): Promise<AIResponse> => {
     try {
-      const res = await fetch('/api/analyze-business', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, profile: p }) })
-      if (res.ok) return (await res.json()) as ReturnType<typeof E.orchestrate>
+      const res = await fetch('/api/analyze-business', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, profile: p, lang }) })
+      if (res.ok) return (await res.json()) as AIResponse
     } catch { /* fall through to local simulation */ }
-    return delay(E.orchestrate(q, p), 700)
+    return delay(E.orchestrate(q, p, lang), 700)
   },
-  verify: (p: Profile, e: EmploymentInput) => delay(E.verifyAnalysis(p, e)),
 }

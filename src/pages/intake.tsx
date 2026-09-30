@@ -1,41 +1,57 @@
 import { useMemo, useState } from 'react'
-import type { Direction, Holder, Profile } from '../types'
+import type { Direction, Holder, Profile, Side } from '../types'
 import { go, useStore } from '../store'
 import { BusinessProfile, Disclaimer, EmptyState, PageHead, ProgressStepper, Warn, WorkflowStrip } from '../components/ui'
 import { dirInfo } from '../utils/labels'
+import { dv, tk, useI18n } from '../i18n'
 
 /* ================= LANDING ================= */
+function CrossBorderVisual() {
+  const { t } = useI18n()
+  return (
+    <div className="flex items-center justify-center gap-2 sm:gap-3 select-none" aria-hidden>
+      <div className="rounded-2xl bg-white/10 border border-white/20 px-3 py-3 text-center w-24 sm:w-28"><div className="text-3xl">🇹🇭</div><div className="text-xs mt-1">{tk('country', 'TH')}</div></div>
+      <div className="flex-1 max-w-[140px] flex items-center"><span className="flex-1 border-t-2 border-dashed border-white/40" /><span className="mx-1 rounded-full bg-accent text-onaccent text-xs font-bold px-2 py-1 animate-pulse">AI</span><span className="flex-1 border-t-2 border-dashed border-white/40" /></div>
+      <div className="rounded-2xl bg-white/10 border border-white/20 px-3 py-3 text-center w-24 sm:w-28"><div className="text-3xl">🇨🇳</div><div className="text-xs mt-1">{tk('country', 'CN')}</div></div>
+      <span className="sr-only">{t('dir.TH_CN')}</span>
+    </div>
+  )
+}
 export function Landing() {
+  const { t } = useI18n()
   const { startDemo } = useStore()
-  const steps = [['1', 'บอกข้อมูลธุรกิจ', '📝'], ['2', 'AI วิเคราะห์', '🧠'], ['3', 'ตรวจความเสี่ยง', '🛡️'], ['4', 'สร้างแผนดำเนินงาน', '🗺️'], ['5', 'ติดตาม Compliance', '📡']]
+  const steps = [['1', '📝'], ['2', '🧠'], ['3', '🛡️'], ['4', '🗺️'], ['5', '📡']]
   return (
     <div className="space-y-12">
-      <section className="rounded-2xl bg-navy-900 text-white px-6 py-12 md:px-12 md:py-16">
-        <p className="text-navy-200 text-sm mb-3">🇹🇭 ↔ 🇨🇳 แพลตฟอร์ม AI Cross-Border Business Entry & Compliance</p>
-        <h1 className="text-3xl md:text-5xl font-bold leading-tight max-w-3xl">AI ผู้ช่วยวางแผนการขยายธุรกิจระหว่างไทย–จีน</h1>
-        <p className="mt-4 text-lg text-navy-100 max-w-2xl">วิเคราะห์ข้อกำหนด ความเสี่ยง ภาษา และขั้นตอนที่เกี่ยวข้องกับการขยายธุรกิจข้ามประเทศในระบบเดียว</p>
-        <div className="flex flex-wrap gap-3 mt-8">
-          <button className="btn bg-white text-navy-900 hover:bg-navy-50" onClick={() => go('direction')}>เริ่มวิเคราะห์ธุรกิจ</button>
-          <button className="btn border border-white/60 text-white hover:bg-white/10" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>ดูวิธีการทำงาน</button>
-          <button className="btn bg-amber-400 text-navy-900 hover:bg-amber-300" onClick={() => { startDemo(); go('profile') }}>ทดลอง Demo</button>
+      <section className="rounded-3xl bg-hero text-onheader px-6 py-10 md:px-12 md:py-14 grid md:grid-cols-[1.3fr_1fr] gap-8 items-center">
+        <div>
+          <p className="text-sm opacity-75 mb-3">{t('land.kicker')}</p>
+          <h1 className="text-3xl md:text-5xl font-bold leading-tight">{t('land.h1')}</h1>
+          <p className="mt-4 text-lg opacity-90 max-w-2xl">{t('land.sub')}</p>
+          <div className="flex flex-wrap gap-3 mt-8">
+            <button className="btn-accent" onClick={() => go('direction')}>{t('cta.start')}</button>
+            <button className="btn border border-white/50 text-onheader hover:bg-white/10" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>{t('land.how')}</button>
+            <button className="btn border border-white/50 text-onheader hover:bg-white/10" onClick={() => { startDemo(); go('profile') }}>{t('cta.demo')}</button>
+          </div>
+          <p className="text-xs opacity-70 mt-4">{t('land.demoNote')}</p>
         </div>
-        <p className="text-xs text-navy-300 mt-4">Demo ไม่ต้องลงทะเบียน ใช้ข้อมูลสมมติของบริษัทตัวอย่างเท่านั้น</p>
+        <CrossBorderVisual />
       </section>
       <section id="how" aria-labelledby="how-h">
-        <h2 id="how-h" className="h1 text-center mb-6">วิธีการทำงาน 5 ขั้นตอน</h2>
-        <ol className="grid grid-cols-2 md:grid-cols-5 gap-3">{steps.map(([n, t, i]) => <li key={n} className="card text-center"><div className="text-3xl" aria-hidden>{i}</div><div className="text-xs text-slate-500 mt-1">ขั้นที่ {n}</div><div className="font-semibold">{t}</div></li>)}</ol>
-        <div className="card mt-6"><p className="text-sm text-slate-600 mb-3">ไม่ใช่แชตบอตถามตอบทั่วไป แต่เป็นขั้นตอนที่ใช้โปรไฟล์ธุรกิจเดียวกันตลอดทั้งระบบ:</p><WorkflowStrip /></div>
+        <h2 id="how-h" className="h1 text-center mb-6">{t('land.h2')}</h2>
+        <ol className="grid grid-cols-2 md:grid-cols-5 gap-3">{steps.map(([n, i]) => <li key={n} className="card text-center !p-4"><div className="text-3xl" aria-hidden>{i}</div><div className="text-xs text-muted mt-1">{t('land.stepN', { n })}</div><div className="font-semibold">{tk('land', 's' + n)}</div></li>)}</ol>
+        <div className="card mt-6"><p className="text-sm text-muted mb-3">{t('land.notChat')}</p><WorkflowStrip /></div>
       </section>
       <section aria-labelledby="ba-h">
-        <h2 id="ba-h" className="h1 text-center mb-6">ก่อนและหลังใช้แพลตฟอร์ม</h2>
+        <h2 id="ba-h" className="h1 text-center mb-6">{t('land.ba.h')}</h2>
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="card border-red-200"><div className="text-sm font-semibold text-red-700 mb-2">ก่อน</div><p className="text-slate-700">Google + ผู้แปลภาษา + ทนายความ + ฝ่ายบุคคล + ที่ปรึกษา + เช็กลิสต์ที่ทำเอง</p><p className="text-sm text-slate-500 mt-2">ข้อมูลกระจัดกระจาย ไม่รู้ว่าต้องทำอะไรก่อนหลัง และไม่รู้ว่าความเสี่ยงอยู่ตรงไหน</p></div>
-          <div className="card border-green-300"><div className="text-sm font-semibold text-green-700 mb-2">หลัง</div><p className="text-slate-700">ข้อมูลธุรกิจ → AI วิเคราะห์ → ความเสี่ยง → แผนปฏิบัติ → เอกสาร → ติดตาม</p><p className="text-sm text-slate-500 mt-2">กรอกข้อมูลครั้งเดียว ระบบใช้บริบทนั้นตลอดทั้งกระบวนการ และส่งต่อผู้เชี่ยวชาญเมื่อจำเป็น</p></div>
+          <div className="card border-danger-line"><div className="text-sm font-semibold text-danger-fg mb-2">{t('land.before')}</div><p>{t('land.beforeT')}</p><p className="text-sm text-muted mt-2">{t('land.beforeS')}</p></div>
+          <div className="card border-ok-line"><div className="text-sm font-semibold text-ok-fg mb-2">{t('land.after')}</div><p>{t('land.afterT')}</p><p className="text-sm text-muted mt-2">{t('land.afterS')}</p></div>
         </div>
-        <p className="text-center text-navy-900 font-semibold mt-6 max-w-3xl mx-auto">เราไม่ได้สร้าง AI ที่แค่ตอบคำถามกฎหมาย เราใช้ AI เพื่อช่วยผู้ประกอบการเข้าใจความเสี่ยง วางแผนขั้นตอน และเตรียมการขยายธุรกิจระหว่างไทย–จีนอย่างเป็นระบบ</p>
+        <p className="text-center font-semibold mt-6 max-w-3xl mx-auto">{t('land.quote')}</p>
       </section>
       <section className="grid md:grid-cols-3 gap-4">
-        {[['ปัญหา', 'ข้อมูลกระจัดกระจาย ภาษาและกฎหมายต่างกัน ต้องใช้ผู้ให้บริการหลายราย SME จึงไม่รู้ว่าต้องทำอะไรก่อนหลัง'], ['แนวทางของเรา', 'AI ทำงานส่วนที่ทำซ้ำได้: เก็บข้อมูล จัดหมวด ตรวจความเสี่ยง สร้างเช็กลิสต์และร่างเอกสาร ส่วนกรณีเสี่ยงสูงส่งต่อผู้เชี่ยวชาญ (AI-first + human exception)'], ['หลักความโปร่งใส', 'ทุกข้อกำหนดแสดงแหล่งข้อมูลและสถานะการตรวจสอบ ไม่สร้างกฎหมาย โทษ หรือค่าธรรมเนียมขึ้นเอง และไม่ช่วยเลี่ยงกฎหมาย']].map(([t, d]) => <div key={t} className="card"><h3 className="h2">{t}</h3><p className="text-sm text-slate-600 mt-1">{d}</p></div>)}
+        {(['1', '2', '3'] as const).map((k) => <div key={k} className="card"><h3 className="h2">{tk('land', `c${k}t`)}</h3><p className="text-sm text-muted mt-1">{tk('land', `c${k}d`)}</p></div>)}
       </section>
       <Disclaimer />
     </div>
@@ -44,144 +60,155 @@ export function Landing() {
 
 /* ================= DIRECTION ================= */
 export function DirectionPage() {
+  const { t } = useI18n()
   const { set, direction, profile } = useStore()
   const pick = (d: Direction) => { set({ direction: d, profile: profile && profile.direction === d ? profile : null }); go('interview') }
-  const cards: [Direction, string][] = [['TH_CN', 'สำหรับธุรกิจไทยที่ต้องการขยายธุรกิจ ลงทุน หรือจ้างงานในจีน'], ['CN_TH', 'สำหรับธุรกิจจีนที่ต้องการขยายธุรกิจ ลงทุน หรือจ้างงานในไทย']]
   return (
     <div>
-      <PageHead title="เลือกทิศทางการขยายธุรกิจ" sub="ระบบใช้กฎเกณฑ์ของแต่ละประเทศแยกกัน ไม่ใช้ตรรกะกลางแบบ “กฎหมายอาเซียน”" />
-      <div className="grid md:grid-cols-2 gap-5">{cards.map(([d, t]) => { const i = dirInfo(d); return (
-        <button key={d} onClick={() => pick(d)} className={`card text-left hover:border-navy-500 hover:shadow-md transition p-8 ${direction === d ? 'ring-2 ring-navy-600' : ''}`}>
-          <div className="text-5xl mb-3" aria-hidden>{i.fromFlag} → {i.toFlag}</div><div className="text-2xl font-bold text-navy-900">{i.from} → {i.to}</div><div className="text-slate-500">{i.text}</div><p className="mt-3 text-slate-700">{t}</p><span className="btn-primary mt-4">เลือกทิศทางนี้</span>
+      <PageHead title={t('dir.title')} sub={t('dir.sub')} />
+      <div className="grid md:grid-cols-2 gap-5">{(['TH_CN', 'CN_TH'] as Direction[]).map((d) => { const i = dirInfo(d); return (
+        <button key={d} onClick={() => pick(d)} className={`card text-left hover:border-primary hover:shadow-md transition p-8 ${direction === d ? 'ring-2 ring-primary' : ''}`}>
+          <div className="text-5xl mb-3" aria-hidden>{i.fromFlag} ⟶ {i.toFlag}</div>
+          <div className="text-2xl font-bold">{tk('country', i.from)} → {tk('country', i.to)}</div><div className="text-muted">{tk('dir', d)}</div>
+          <p className="mt-3">{tk('dir', d + '.text')}</p><span className="btn-primary mt-4">{t('dir.choose')}</span>
         </button>) })}</div>
     </div>
   )
 }
 
-/* ================= INTERVIEW ================= */
+/* ================= INTERVIEW (answers are language-neutral ids) ================= */
 type A = Record<string, string | string[]>
-interface Q { id: string; cat: number; text: (d: Direction) => string; type: 'text' | 'choice' | 'multi' | 'number' | 'pct'; options?: (d: Direction) => string[]; when?: (a: A, d: Direction) => boolean; help?: string; min?: number }
-const cats = ['ข้อมูลธุรกิจ', 'การลงทุน', 'โครงสร้างผู้ถือหุ้น', 'การจ้างงาน', 'สินค้า/บริการ', 'พื้นที่ดำเนินงาน', 'กิจกรรมข้ามพรมแดน']
-const T = (d: Direction) => dirInfo(d)
-const send = (a: A) => (a.forms as string[] | undefined)?.some((f) => f.startsWith('ส่งพนักงาน')) ?? false
-const hires = (a: A) => (a.forms as string[] | undefined)?.includes('จ้างพนักงาน') ?? false
-const wantsStaff = (a: A) => send(a) || hires(a) || a.hire === 'ต้องการ' || a.hire === 'ยังไม่แน่ใจ'
-const goods = (a: A) => ((a.forms as string[] | undefined)?.includes('ส่งสินค้า') ?? false) || /ผลิต|ค้าปลีก/.test(String(a.btype ?? ''))
-const company = (a: A) => (a.forms as string[] | undefined)?.some((f) => f === 'เปิดบริษัท' || f === 'ลงทุน') ?? false
-const sideOpts = (d: Direction) => [`ฝั่ง${T(d).from} (ผู้ถือหุ้นต่างชาติในประเทศเป้าหมาย)`, `ฝั่ง${T(d).to} (ผู้ถือหุ้นท้องถิ่น)`, 'ร่วมกัน', 'ยังไม่ทราบ']
+interface Q { id: string; cat: number; type: 'text' | 'choice' | 'multi' | 'number' | 'pct'; ns?: string; opts?: string[]; when?: (a: A) => boolean; help?: boolean; min?: number }
+const SIDE = ['origin', 'partner', 'shared', 'unknown']
+const send = (a: A) => (a.forms as string[] | undefined)?.includes('send') ?? false
+const hires = (a: A) => (a.forms as string[] | undefined)?.includes('hire') ?? false
+const wantsStaff = (a: A) => send(a) || hires(a) || a.hire === 'yes' || a.hire === 'unsure'
+const goods = (a: A) => ((a.forms as string[] | undefined)?.includes('goods') ?? false) || ['manufacturing', 'retail'].includes(String(a.btype ?? ''))
+const company = (a: A) => (a.forms as string[] | undefined)?.some((f) => f === 'company' || f === 'invest') ?? false
 const QS: Q[] = [
-  { id: 'name', cat: 0, type: 'text', text: () => 'ธุรกิจของคุณชื่ออะไร?', help: 'ใช้เป็นชื่อโปรไฟล์ ไม่จำเป็นต้องเป็นชื่อจดทะเบียนจริง' },
-  { id: 'btype', cat: 0, type: 'choice', text: () => 'ธุรกิจของคุณทำเกี่ยวกับอะไร?', options: () => ['ผลิต (Manufacturing)', 'ค้าปลีก/ค้าส่ง', 'บริการ', 'อาหารและเครื่องดื่ม', 'เทคโนโลยี/ซอฟต์แวร์', 'อื่น ๆ'] },
-  { id: 'btypeOther', cat: 0, type: 'text', when: (a) => a.btype === 'อื่น ๆ', text: () => 'ช่วยระบุประเภทธุรกิจให้ชัดขึ้นหน่อยได้ไหม?', help: 'ระบบต้องรู้ประเภทกิจกรรมก่อนจึงจะตรวจข้อกำหนดได้' },
-  { id: 'activity', cat: 0, type: 'text', text: () => 'กิจกรรมหลักของธุรกิจคืออะไร? (อธิบายสั้น ๆ)', help: 'เช่น ผลิตชิ้นส่วนพลาสติกสำหรับเครื่องใช้ไฟฟ้า' },
-  { id: 'activityMore', cat: 0, type: 'text', when: (a) => String(a.activity ?? '').trim().length < 20, text: () => 'ข้อมูลยังไม่เพียงพอสำหรับการวิเคราะห์ ลูกค้าหลักคือใคร และขายผ่านช่องทางใด?' },
-  { id: 'forms', cat: 1, type: 'multi', text: (d) => `คุณต้องการเข้าไปทำธุรกิจใน${T(d).to}ในรูปแบบใด? (เลือกได้หลายข้อ)`, options: (d) => ['เปิดบริษัท', 'ลงทุน', 'ส่งสินค้า', 'จ้างพนักงาน', `ส่งพนักงานจาก${T(d).from}ไปทำงาน`, 'หาพันธมิตรทางธุรกิจ', 'อื่น ๆ'] },
-  { id: 'invest', cat: 1, type: 'choice', when: company, text: () => 'วงเงินลงทุนโดยประมาณ?', options: () => ['ต่ำกว่า 10 ล้านบาท', '10–50 ล้านบาท', 'มากกว่า 50 ล้านบาท', 'ยังไม่ทราบ'] },
-  { id: 'ownOrigin', cat: 2, type: 'pct', when: company, text: (d) => `ผู้ถือหุ้นฝั่ง${T(d).from}ถือหุ้นกี่เปอร์เซ็นต์? (ที่เหลือเป็นผู้ถือหุ้นฝั่ง${T(d).to})`, help: 'กรอกตัวเลข 0–100' },
-  { id: 'funding', cat: 2, type: 'choice', when: company, text: () => 'เงินลงทุนมาจากใคร?', options: (d) => ['ตามสัดส่วนหุ้นของแต่ละฝ่าย', `ผู้ถือหุ้นฝั่ง${T(d).from}เป็นผู้จัดหาเกือบทั้งหมด`, `ผู้ถือหุ้นฝั่ง${T(d).to}เป็นผู้จัดหาเกือบทั้งหมด`, 'ยังไม่ทราบ'] },
-  { id: 'realInvestor', cat: 2, type: 'choice', when: company, text: () => 'ใครเป็นผู้ลงทุนจริง?', options: sideOpts },
-  { id: 'operator', cat: 2, type: 'choice', when: company, text: () => 'ใครจะเป็นผู้บริหารหรือผู้มีอำนาจควบคุมกิจการจริง?', options: sideOpts },
-  { id: 'board', cat: 2, type: 'choice', when: company, text: () => 'ใครเป็นผู้แต่งตั้งกรรมการส่วนใหญ่?', options: sideOpts },
-  { id: 'voting', cat: 2, type: 'choice', when: company, text: () => 'ใครมีสิทธิออกเสียงชี้ขาดในเรื่องสำคัญ?', options: sideOpts },
-  { id: 'economic', cat: 2, type: 'choice', when: (a) => company(a) && typeof a.funding === 'string' && !a.funding.startsWith('ตามสัดส่วน') && a.funding !== 'ยังไม่ทราบ', text: () => 'จากที่เงินลงทุนไม่ได้มาตามสัดส่วนหุ้น ผลกำไร/เงินปันผลแบ่งกันอย่างไร?', options: () => ['ตามสัดส่วนหุ้น', 'ฝ่ายที่ออกเงินได้ส่วนแบ่งมากกว่าสัดส่วนหุ้น', 'ยังไม่ทราบ'] },
-  { id: 'side', cat: 2, type: 'choice', when: company, text: () => 'มีข้อตกลงอื่นระหว่างผู้ถือหุ้นที่ไม่ได้ระบุในเอกสารจดทะเบียนหรือไม่?', options: () => ['ไม่มี', 'มี', 'ยังไม่ทราบ'], help: 'หากมี ระบบจะแนะนำให้เปิดเผยต่อผู้ตรวจสอบ ไม่ใช่ซ่อนไว้' },
-  { id: 'hire', cat: 3, type: 'choice', when: (a) => !send(a) && !hires(a), text: (d) => `คุณต้องการจ้างพนักงานใน${T(d).to}หรือไม่?`, options: () => ['ต้องการ', 'ไม่ต้องการ', 'ยังไม่แน่ใจ'] },
-  { id: 'employees', cat: 3, type: 'number', when: wantsStaff, text: () => 'จำนวนพนักงานทั้งหมดที่วางแผนไว้ (คน)?', min: 0 },
-  { id: 'crossWorkers', cat: 3, type: 'choice', when: (a) => !send(a) && wantsStaff(a), text: (d) => `มีการส่งพนักงานจาก${T(d).from}ไปทำงาน หรือจ้างแรงงานต่างสัญชาติร่วมด้วยหรือไม่?`, options: () => ['มี', 'ไม่มี'] },
-  { id: 'empEmployer', cat: 3, type: 'choice', when: send, text: (d) => `พนักงานที่ส่งไปจะมีนายจ้างเป็นใครใน${T(d).to}?`, options: (d) => [`บริษัทต้นทางใน${T(d).from} (ส่งไปทำงาน)`, `บริษัทที่จัดตั้งใหม่ใน${T(d).to}`, 'ยังไม่แน่ใจ'] },
-  { id: 'empNat', cat: 3, type: 'choice', when: send, text: () => 'พนักงานที่จะส่งไปมีสัญชาติอะไร?', options: () => ['ไทย', 'จีน', 'หลายสัญชาติ'] },
-  { id: 'empDuration', cat: 3, type: 'choice', when: send, text: () => 'ระยะเวลาที่ส่งไปทำงานโดยประมาณ?', options: () => ['ไม่เกิน 6 เดือน', '6–12 เดือน', '1–3 ปี', 'มากกว่า 3 ปี', 'ยังไม่กำหนด'] },
-  { id: 'empSalary', cat: 3, type: 'text', when: send, text: () => 'เงินเดือนโดยประมาณและสกุลเงิน?', help: 'เช่น 28,000 หยวน/เดือน หรือพิมพ์ “ยังไม่กำหนด”' },
-  { id: 'products', cat: 4, type: 'text', text: () => 'สินค้าหรือบริการหลักคืออะไร?' },
-  { id: 'market', cat: 4, type: 'text', text: (d) => `ลูกค้าเป้าหมายใน${T(d).to}คือใคร?` },
-  { id: 'regulated', cat: 4, type: 'choice', when: goods, text: () => 'สินค้าหรือบริการอยู่ในกลุ่มที่อาจมีการควบคุมเป็นพิเศษหรือไม่?', options: () => ['ไม่มี', 'อาหาร/ยา/เครื่องสำอาง', 'อุปกรณ์ไฟฟ้า/อิเล็กทรอนิกส์', 'กลุ่มอื่นที่อาจต้องขออนุญาต'] },
-  { id: 'location', cat: 5, type: 'text', text: (d) => `พื้นที่ดำเนินงานใน${T(d).to}คือที่ไหน? (เมือง/จังหวัด/มณฑล)` },
-  { id: 'cross', cat: 6, type: 'multi', when: goods, text: () => 'มีกิจกรรมข้ามพรมแดนอะไรบ้าง?', options: () => ['นำเข้าวัตถุดิบ', 'ส่งออกสินค้า', 'โอนเงินข้ามประเทศ', 'ไม่มี'] },
+  { id: 'name', cat: 0, type: 'text', help: true },
+  { id: 'btype', cat: 0, type: 'choice', ns: 'btype', opts: ['manufacturing', 'retail', 'service', 'food', 'tech', 'other'] },
+  { id: 'btypeOther', cat: 0, type: 'text', help: true, when: (a) => a.btype === 'other' },
+  { id: 'activity', cat: 0, type: 'text', help: true },
+  { id: 'activityMore', cat: 0, type: 'text', when: (a) => String(a.activity ?? '').trim().length < 20 },
+  { id: 'forms', cat: 1, type: 'multi', ns: 'forms', opts: ['company', 'invest', 'goods', 'hire', 'send', 'partner', 'other'] },
+  { id: 'invest', cat: 1, type: 'choice', ns: 'invest', opts: ['lt10', '10to50', 'gt50', 'unknown'], when: company },
+  { id: 'ownOrigin', cat: 2, type: 'pct', help: true, when: company },
+  { id: 'funding', cat: 2, type: 'choice', ns: 'funding', opts: ['prop', 'origin', 'partner', 'unknown'], when: company },
+  { id: 'realInvestor', cat: 2, type: 'choice', ns: 'side', opts: SIDE, when: company },
+  { id: 'operator', cat: 2, type: 'choice', ns: 'side', opts: SIDE, when: company },
+  { id: 'board', cat: 2, type: 'choice', ns: 'side', opts: SIDE, when: company },
+  { id: 'voting', cat: 2, type: 'choice', ns: 'side', opts: SIDE, when: company },
+  { id: 'economic', cat: 2, type: 'choice', ns: 'economic', opts: ['prop', 'funder', 'unknown'], when: (a) => company(a) && (a.funding === 'origin' || a.funding === 'partner') },
+  { id: 'side', cat: 2, type: 'choice', ns: 'agr', opts: ['no', 'yes', 'unknown'], help: true, when: company },
+  { id: 'hire', cat: 3, type: 'choice', ns: 'hire', opts: ['yes', 'no', 'unsure'], when: (a) => !send(a) && !hires(a) },
+  { id: 'employees', cat: 3, type: 'number', min: 0, when: wantsStaff },
+  { id: 'crossWorkers', cat: 3, type: 'choice', ns: 'cw', opts: ['yes', 'no'], when: (a) => !send(a) && wantsStaff(a) },
+  { id: 'empEmployer', cat: 3, type: 'choice', ns: 'empEmployer', opts: ['origin', 'new', 'unsure'], when: send },
+  { id: 'empNat', cat: 3, type: 'choice', ns: 'empNat', opts: ['TH', 'CN', 'multi'], when: send },
+  { id: 'empDuration', cat: 3, type: 'choice', ns: 'empDuration', opts: ['le6', '6to12', '1to3', 'gt3', 'tbd'], when: send },
+  { id: 'empSalary', cat: 3, type: 'text', help: true, when: send },
+  { id: 'products', cat: 4, type: 'text' },
+  { id: 'market', cat: 4, type: 'text' },
+  { id: 'regulated', cat: 4, type: 'choice', ns: 'regulated', opts: ['none', 'food', 'electrical', 'other'], when: goods },
+  { id: 'location', cat: 5, type: 'text' },
+  { id: 'cross', cat: 6, type: 'multi', ns: 'cross', opts: ['import', 'export', 'fx', 'none'], when: goods },
 ]
-const pickIdx = (opts: string[], v: string) => opts.indexOf(v)
-function buildProfile(a: A, d: Direction): Profile {
-  const i = T(d)
+const isSide = (v: unknown): v is 'origin' | 'partner' | 'shared' | 'unknown' => SIDE.includes(String(v))
+
+function buildProfile(a: A, d: Direction): { profile: Profile; mode: string } {
   const comp = company(a)
   const origin = comp ? Number(a.ownOrigin ?? 50) : 100
-  const partner = 100 - origin
-  const f = String(a.funding ?? '')
-  const fo = f.startsWith('ผู้ถือหุ้นฝั่ง' + i.from) ? 100 : f.startsWith('ผู้ถือหุ้นฝั่ง' + i.to) ? 0 : origin
-  const fundingUnknown = f === 'ยังไม่ทราบ'
-  const eco = String(a.economic ?? '')
-  const funderIsOrigin = fo === 100
-  const ecoOrigin = eco.startsWith('ฝ่ายที่ออกเงิน') ? (funderIsOrigin ? 80 : 20) : origin
-  const side = (v: unknown): 'origin' | 'partner' | 'shared' | 'unknown' => { const s = String(v ?? ''); return s.startsWith('ฝั่ง' + i.from) ? 'origin' : s.startsWith('ฝั่ง' + i.to) ? 'partner' : s === 'ร่วมกัน' ? 'shared' : 'unknown' }
-  const mk = (id: 'origin' | 'partner', pct: number, cap: number, ecoV: number, vot: number, brd: number): Holder => ({ id, label: `ผู้ถือหุ้น${id === 'origin' ? i.from : i.to}`, nationality: (id === 'origin' ? (d === 'TH_CN' ? 'TH' : 'CN') : (d === 'TH_CN' ? 'CN' : 'TH')), percent: pct, capital: cap, voting: vot, board: brd, economic: ecoV })
+  const fund = String(a.funding ?? 'prop')
+  const fo = fund === 'origin' ? 100 : fund === 'partner' ? 0 : origin
+  const ecoOrigin = a.economic === 'funder' ? (fo === 100 ? 80 : 20) : origin
   const unknownFacts: string[] = []
-  if (comp && fundingUnknown) unknownFacts.push('ยังไม่ทราบว่าเงินลงทุนมาจากใคร')
-  if (comp && eco === 'ยังไม่ทราบ') unknownFacts.push('ยังไม่ทราบการแบ่งผลกำไร/เงินปันผล')
-  const op = side(a.operator)
-  const ctl = (v: unknown, what: string) => { const s = side(v); if (s === 'unknown' && comp) unknownFacts.push(what); return s === 'origin' ? 100 : s === 'partner' ? 0 : origin }
-  const vo = ctl(a.voting, 'ยังไม่ทราบว่าใครมีสิทธิออกเสียงชี้ขาด')
-  const bo = ctl(a.board, 'ยังไม่ทราบว่าใครแต่งตั้งกรรมการส่วนใหญ่')
-  return {
-    companyName: String(a.name), direction: d, businessType: a.btype === 'อื่น ๆ' ? String(a.btypeOther) : String(a.btype),
+  if (comp && fund === 'unknown') unknownFacts.push('funding')
+  if (comp && a.economic === 'unknown') unknownFacts.push('economic')
+  const ctl = (v: unknown, what: string) => { const s = isSide(v) ? v : 'unknown'; if (s === 'unknown' && comp) unknownFacts.push(what); return s === 'origin' ? 100 : s === 'partner' ? 0 : origin }
+  const vo = ctl(a.voting, 'voting')
+  const bo = ctl(a.board, 'board')
+  const nat = (s: Side): 'TH' | 'CN' => (s === 'origin' ? (d === 'TH_CN' ? 'TH' : 'CN') : d === 'TH_CN' ? 'CN' : 'TH')
+  const mk = (id: Side, pct: number, cap: number, eco: number, vot: number, brd: number): Holder => ({ id, nationality: nat(id), percent: pct, capital: cap, voting: vot, board: brd, economic: eco })
+  const op = isSide(a.operator) ? a.operator : 'unknown'
+  const s = send(a)
+  const profile: Profile = {
+    companyName: String(a.name), direction: d, businessType: String(a.btype), businessTypeOther: a.btype === 'other' ? String(a.btypeOther ?? '') : undefined,
     activity: [a.activity, a.activityMore].filter(Boolean).join(' — '), forms: a.forms as string[], investmentRange: String(a.invest ?? ''),
-    employees: Number(a.employees ?? 0), crossBorderWorkers: a.crossWorkers === 'มี' || send(a),
-    holders: [mk('origin', origin, fo, ecoOrigin, vo, bo), mk('partner', partner, 100 - fo, 100 - ecoOrigin, 100 - vo, 100 - bo)],
-    realInvestor: side(a.realInvestor), operator: op === 'shared' ? 'joint' : op,
-    sideAgreement: a.side === 'มี' ? 'yes' : a.side === 'ไม่มี' ? 'no' : 'unknown',
-    products: String(a.products ?? ''), targetMarket: String(a.market ?? ''), regulatedGoods: String(a.regulated ?? ''), location: String(a.location ?? ''), crossBorder: ((a.cross as string[]) ?? []).filter((x) => x !== 'ไม่มี'), unknownFacts,
+    employees: Number(a.employees ?? 0), crossBorderWorkers: a.crossWorkers === 'yes' || s,
+    holders: [mk('origin', origin, fo, ecoOrigin, vo, bo), mk('partner', 100 - origin, 100 - fo, 100 - ecoOrigin, 100 - vo, 100 - bo)],
+    realInvestor: isSide(a.realInvestor) ? a.realInvestor : 'unknown', operator: op === 'shared' ? 'joint' : op,
+    sideAgreement: a.side === 'yes' ? 'yes' : a.side === 'no' ? 'no' : 'unknown',
+    products: String(a.products ?? ''), targetMarket: String(a.market ?? ''), regulatedGoods: String(a.regulated ?? ''), location: String(a.location ?? ''),
+    crossBorder: ((a.cross as string[]) ?? []).filter((x) => x !== 'none'), unknownFacts,
   }
+  const mode = !wantsStaff(a) ? '' : s ? (d === 'TH_CN' ? 'send_th_cn' : 'send_cn_th') : d === 'TH_CN' ? 'hire_cn' : 'hire_th'
+  return { profile, mode }
 }
 
 export function InterviewPage() {
+  const { t } = useI18n()
   const { direction, set, log, startDemo } = useStore()
   const [answers, setAnswers] = useState<A>({})
   const [idx, setIdx] = useState(0)
   const [val, setVal] = useState<string | string[]>('')
   const [err, setErr] = useState('')
-  const d = direction ?? 'TH_CN'
-  const visible = useMemo(() => QS.filter((q) => !q.when || q.when(answers, d)), [answers, d])
-  if (!direction) return <div><PageHead title="สัมภาษณ์ธุรกิจด้วย AI" /><EmptyState title="ยังไม่ได้เลือกทิศทาง" text="กรุณาเลือกทิศทางการขยายธุรกิจก่อนเริ่มสัมภาษณ์" /></div>
+  const d: Direction = direction ?? 'TH_CN'
+  const info = dirInfo(d)
+  const vars = { from: tk('country', info.from), to: tk('country', info.to) }
+  const visible = useMemo(() => QS.filter((q) => !q.when || q.when(answers)), [answers])
+  if (!direction) return <div><PageHead title={t('intv.title')} /><EmptyState title={t('intv.noDir.t')} text={t('intv.noDir.d')} /></div>
   const q = visible[Math.min(idx, visible.length - 1)]
-  const done = Object.keys(answers)
-  const curCat = q.cat
-  const opts = q.options?.(d) ?? []
+  const label = (x: Q, o: string) => tk(`opt.${x.ns}`, o, vars)
+  const qText = (x: Q) => t(`q.${x.id}` as never, vars)
   const submit = () => {
     let v = val
-    if (q.type === 'multi') { if (!(v as string[]).length) return setErr('กรุณาเลือกอย่างน้อย 1 ข้อ') }
-    else if (!String(v).trim()) return setErr('กรุณาระบุข้อมูลเพิ่มเติมก่อนไปต่อ')
+    if (q.type === 'multi') { if (!(v as string[]).length) return setErr(t('intv.e.pick')) }
+    else if (!String(v).trim()) return setErr(t('intv.e.required'))
     if (q.type === 'pct' || q.type === 'number') {
-      const n = Number(v); if (Number.isNaN(n) || n < (q.min ?? 0) || (q.type === 'pct' && n > 100)) return setErr(q.type === 'pct' ? 'กรุณากรอกตัวเลขระหว่าง 0 ถึง 100' : 'กรุณากรอกจำนวนเป็นตัวเลขที่ไม่ติดลบ'); v = String(Math.round(n))
+      const n = Number(v)
+      if (Number.isNaN(n) || n < (q.min ?? 0) || (q.type === 'pct' && n > 100)) return setErr(q.type === 'pct' ? t('intv.e.pct') : t('intv.e.num'))
+      v = String(Math.round(n))
     }
-    if (q.type === 'text' && String(v).trim().length < 2) return setErr('ข้อมูลยังไม่เพียงพอ กรุณาพิมพ์ให้ชัดเจนขึ้น')
+    if (q.type === 'text' && String(v).trim().length < 2) return setErr(t('intv.e.short'))
     const next = { ...answers, [q.id]: q.type === 'text' ? String(v).trim() : v }
     setAnswers(next); setErr('')
-    const nv = QS.filter((x) => !x.when || x.when(next, d))
+    const nv = QS.filter((x) => !x.when || x.when(next))
     const nextIdx = nv.findIndex((x) => x.id === q.id) + 1
     if (nextIdx >= nv.length) {
-      const p = buildProfile(next, d); set({ profile: p, employment: { mode: !wantsStaff(next) ? '' : p.crossBorderWorkers ? `ส่งพนักงาน${T(d).from}ไป${T(d).to}` : `จ้างคน${T(d).to}ใน${T(d).to}`, nationality: String(next.empNat ?? ''), location: p.location, duration: String(next.empDuration ?? ''), salary: String(next.empSalary ?? ''), hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' }, analysisDone: false, stepOverrides: {}, docs: {} }); log('สร้างโปรไฟล์ธุรกิจจากการสัมภาษณ์'); return go('profile')
+      const { profile, mode } = buildProfile(next, d)
+      set({
+        profile, analysisDone: false, stepOverrides: {}, actionStatus: {}, docs: {}, tour: null,
+        employment: { mode, nationality: next.empNat ? `@opt.empNat.${next.empNat}` : '', location: profile.location, duration: next.empDuration ? `@opt.empDuration.${next.empDuration}` : '', salary: String(next.empSalary ?? ''), hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' },
+      })
+      log('hist.profile'); return go('profile')
     }
     setIdx(nextIdx); setVal(nv[nextIdx].type === 'multi' ? [] : '')
   }
   const back = () => { if (idx > 0) { setIdx(idx - 1); const pq = visible[idx - 1]; setVal((answers[pq.id] as string | string[]) ?? (pq.type === 'multi' ? [] : '')); setErr('') } }
+  const shown = (x: Q) => { const a = answers[x.id]; return Array.isArray(a) ? a.map((o) => label(x, o)).join(', ') : x.type === 'choice' ? label(x, String(a)) : String(a ?? '') + (x.type === 'pct' ? '%' : '') }
+  const cats = [0, 1, 2, 3, 4, 5, 6].map((c) => tk('cat', String(c)))
   return (
     <div>
-      <PageHead title="สัมภาษณ์ธุรกิจด้วย AI" sub={`ทิศทาง: ${T(d).fromFlag} ${T(d).text} ${T(d).toFlag} — AI จะถามทีละหมวดและปรับคำถามตามคำตอบก่อนหน้า`}><button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>ใช้ข้อมูล Demo แทน</button></PageHead>
+      <PageHead title={t('intv.title')} sub={t('intv.sub', { dir: `${info.fromFlag} ${tk('dir', d)} ${info.toFlag}` })}><button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>{t('intv.useDemo')}</button></PageHead>
       <div className="grid lg:grid-cols-[260px_1fr] gap-6">
-        <aside className="card h-fit"><ProgressStepper steps={cats} current={curCat} /></aside>
+        <aside className="card h-fit"><ProgressStepper steps={cats} current={q.cat} label={t('intv.aria')} /></aside>
         <section className="space-y-3" aria-live="polite">
-          {visible.slice(0, idx).map((pq) => <div key={pq.id} className="space-y-1"><div className="bg-navy-50 border border-navy-100 rounded-xl px-4 py-2 text-sm max-w-xl">🤖 {pq.text(d)}</div><div className="bg-navy-800 text-white rounded-xl px-4 py-2 text-sm ml-auto max-w-md w-fit">{Array.isArray(answers[pq.id]) ? (answers[pq.id] as string[]).join(', ') : String(answers[pq.id] ?? '')}{pq.type === 'pct' ? '%' : ''}</div></div>)}
-          <div className="card border-navy-300">
-            <div className="text-xs text-navy-600 mb-1">หมวด {String.fromCharCode(65 + q.cat)} · {cats[q.cat]} · คำถามที่ {idx + 1}</div>
-            <label className="text-lg font-semibold text-navy-900 block" htmlFor="ans">🤖 {q.text(d)}</label>
-            {q.help && <p className="text-sm text-slate-500 mb-2">{q.help}</p>}
+          {visible.slice(0, idx).map((pq) => <div key={pq.id} className="space-y-1"><div className="bg-brand text-brandfg border border-line rounded-2xl px-4 py-2 text-sm max-w-xl">🤖 {qText(pq)}</div><div className="bg-primary text-onprimary rounded-2xl px-4 py-2 text-sm ml-auto max-w-md w-fit">{shown(pq)}</div></div>)}
+          <div className="card border-primary/40">
+            <div className="text-xs text-primary mb-1">{t('intv.cat', { letter: String.fromCharCode(65 + q.cat), cat: cats[q.cat], n: idx + 1 })}</div>
+            <label className="text-lg font-semibold block" htmlFor="ans" id="q-label">🤖 {qText(q)}</label>
+            {q.help && <p className="text-sm text-muted mb-2">{t(`q.${q.id}.h` as never)}</p>}
             <div className="mt-3">
-              {(q.type === 'choice' || q.type === 'multi') && <div className="grid sm:grid-cols-2 gap-2" role={q.type === 'choice' ? 'radiogroup' : 'group'} aria-labelledby="ans">{opts.map((o) => { const sel = q.type === 'multi' ? (val as string[]).includes(o) : val === o; return (
-                <button type="button" key={o} aria-pressed={sel} onClick={() => { setErr(''); setVal(q.type === 'multi' ? (sel ? (val as string[]).filter((x) => x !== o) : [...(val as string[]), o]) : o) }} className={`text-left px-4 py-3 rounded-lg border min-h-[44px] ${sel ? 'border-navy-700 bg-navy-100 font-semibold' : 'border-slate-300 hover:bg-slate-50'}`}>{q.type === 'multi' ? (sel ? '☑ ' : '☐ ') : sel ? '◉ ' : '○ '}{o}</button>) })}</div>}
-              {(q.type === 'text') && <input id="ans" className="input" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
+              {(q.type === 'choice' || q.type === 'multi') && <div className="grid sm:grid-cols-2 gap-2" role={q.type === 'choice' ? 'radiogroup' : 'group'} aria-labelledby="q-label">{q.opts!.map((o) => { const sel = q.type === 'multi' ? (val as string[]).includes(o) : val === o; return (
+                <button type="button" key={o} aria-pressed={sel} onClick={() => { setErr(''); setVal(q.type === 'multi' ? (sel ? (val as string[]).filter((x) => x !== o) : [...(val as string[]), o]) : o) }} className={`text-left px-4 py-3 rounded-xl border min-h-[44px] transition ${sel ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line hover:bg-surface3'}`}>{q.type === 'multi' ? (sel ? '☑ ' : '☐ ') : sel ? '◉ ' : '○ '}{label(q, o)}</button>) })}</div>}
+              {q.type === 'text' && <input id="ans" className="input" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
               {(q.type === 'number' || q.type === 'pct') && <input id="ans" type="number" inputMode="numeric" className="input max-w-[180px]" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
             </div>
-            {err && <p role="alert" className="text-red-700 text-sm mt-2">{err}</p>}
-            <div className="flex gap-2 mt-4"><button className="btn-ghost" onClick={back} disabled={idx === 0}>ย้อนกลับ</button><button className="btn-primary" onClick={submit}>{idx + 1 >= visible.length ? 'สร้างโปรไฟล์ธุรกิจ' : 'ถัดไป'}</button></div>
+            {err && <p role="alert" className="text-danger-fg text-sm mt-2">{err}</p>}
+            <div className="flex gap-2 mt-4"><button className="btn-ghost" onClick={back} disabled={idx === 0}>{t('c.back')}</button><button className="btn-primary" onClick={submit}>{idx + 1 >= visible.length ? t('intv.submit') : t('c.next')}</button></div>
           </div>
-          {done.length > 0 && pickIdx([], '') < 0 && <p className="text-xs text-slate-500">ตอบแล้ว {idx} ข้อ — คำถามจะเปลี่ยนตามคำตอบของคุณ ข้อมูลเก็บในเบราว์เซอร์นี้เท่านั้น (ดู “ความเป็นส่วนตัว” ที่ท้ายหน้า)</p>}
+          <p className="text-xs text-muted">{t('intv.answered', { n: idx })}</p>
         </section>
       </div>
     </div>
@@ -190,33 +217,37 @@ export function InterviewPage() {
 
 /* ================= PROFILE ================= */
 export function ProfilePage() {
+  const { t } = useI18n()
   const { profile, set, log } = useStore()
   const [edit, setEdit] = useState(false)
   const [f, setF] = useState<Profile | null>(profile)
   const [err, setErr] = useState('')
-  if (!profile || !f) return <div><PageHead title="โปรไฟล์ธุรกิจ" /><EmptyState /></div>
+  if (!profile || !f) return <div><PageHead title={t('prof.title')} /><EmptyState /></div>
   const save = () => {
-    if (!f.companyName.trim() || !f.activity.trim()) return setErr('กรุณาระบุชื่อธุรกิจและกิจกรรมหลัก')
-    if (!(f.employees >= 0)) return setErr('จำนวนพนักงานต้องเป็นตัวเลขที่ไม่ติดลบ')
-    set({ profile: f, analysisDone: false }); log('แก้ไขโปรไฟล์ธุรกิจ'); setEdit(false); setErr('')
+    if (!dv(f.companyName).trim() || !dv(f.activity).trim()) return setErr(t('prof.e.req'))
+    if (!(f.employees >= 0)) return setErr(t('prof.e.emp'))
+    set({ profile: f, analysisDone: false }); log('hist.profileEdit'); setEdit(false); setErr('')
   }
+  const fields = [['companyName', 'bp.name'], ['activity', 'bp.activity'], ['location', 'bp.location'], ['products', 'bp.products'], ['targetMarket', 'bp.market']] as const
   return (
     <div className="space-y-5">
-      <PageHead title="โปรไฟล์ธุรกิจ" sub="ข้อมูลชุดนี้ถูกใช้เป็นบริบทในทุกการวิเคราะห์ ตั้งแต่ความเสี่ยง แผนงาน จนถึงเอกสาร" />
+      <PageHead title={t('prof.title')} sub={t('prof.sub')} />
       <WorkflowStrip active={0} />
       {edit ? (
         <div className="card space-y-3">
-          <h2 className="h2">แก้ไขข้อมูล</h2>
-          {([['companyName', 'ชื่อธุรกิจ'], ['businessType', 'ประเภทธุรกิจ'], ['activity', 'กิจกรรมหลัก'], ['location', 'พื้นที่ดำเนินงาน'], ['products', 'สินค้า/บริการ']] as const).map(([k, l]) => <div key={k}><label className="label" htmlFor={k}>{l}</label><input id={k} className="input" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></div>)}
-          <div><label className="label" htmlFor="emp">จำนวนพนักงาน</label><input id="emp" type="number" min={0} className="input max-w-[180px]" value={f.employees} onChange={(e) => setF({ ...f, employees: Number(e.target.value) })} /></div>
-          <label className="flex items-center gap-2 min-h-[44px]"><input type="checkbox" className="w-5 h-5" checked={f.crossBorderWorkers} onChange={(e) => setF({ ...f, crossBorderWorkers: e.target.checked })} />มีการจ้างแรงงานข้ามประเทศ</label>
-          <p className="text-sm text-slate-500">แก้ไขสัดส่วนหุ้น เงินลงทุน และการควบคุมได้ที่หน้า “วิเคราะห์โครงสร้างผู้ถือหุ้น”</p>
-          {err && <p role="alert" className="text-red-700 text-sm">{err}</p>}
-          <div className="flex gap-2"><button className="btn-primary" onClick={save}>บันทึก</button><button className="btn-ghost" onClick={() => { setF(profile); setEdit(false); setErr('') }}>ยกเลิก</button></div>
+          <h2 className="h2">{t('prof.edit')}</h2>
+          <div><label className="label" htmlFor="btype">{t('bp.type')}</label>
+            <select id="btype" className="input" value={f.businessType} onChange={(e) => setF({ ...f, businessType: e.target.value })}>{['manufacturing', 'retail', 'service', 'food', 'tech', 'other'].map((o) => <option key={o} value={o}>{tk('opt.btype', o)}</option>)}</select></div>
+          {fields.map(([k, lk]) => <div key={k}><label className="label" htmlFor={k}>{t(lk)}</label><input id={k} className="input" value={dv(f[k] as string)} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></div>)}
+          <div><label className="label" htmlFor="emp">{t('prof.emp')}</label><input id="emp" type="number" min={0} className="input max-w-[180px]" value={f.employees} onChange={(e) => setF({ ...f, employees: Number(e.target.value) })} /></div>
+          <label className="flex items-center gap-2 min-h-[44px]"><input type="checkbox" className="w-5 h-5" checked={f.crossBorderWorkers} onChange={(e) => setF({ ...f, crossBorderWorkers: e.target.checked })} />{t('prof.cross')}</label>
+          <p className="text-sm text-muted">{t('prof.ownerNote')}</p>
+          {err && <p role="alert" className="text-danger-fg text-sm">{err}</p>}
+          <div className="flex gap-2"><button className="btn-primary" onClick={save}>{t('c.save')}</button><button className="btn-ghost" onClick={() => { setF(profile); setEdit(false); setErr('') }}>{t('c.cancel')}</button></div>
         </div>
       ) : <BusinessProfile p={profile} onEdit={() => { setF(profile); setEdit(true) }} />}
-      {profile.unknownFacts && profile.unknownFacts.length > 0 && <Warn>ข้อมูลยังไม่เพียงพอสำหรับบางหัวข้อ: {profile.unknownFacts.join(' · ')}</Warn>}
-      <div className="flex gap-2 flex-wrap"><button className="btn-primary" onClick={() => go('analysis')}>เริ่มให้ AI วิเคราะห์ →</button><button className="btn-ghost" onClick={() => go('dashboard')}>ไปที่ภาพรวม</button></div>
+      {profile.unknownFacts && profile.unknownFacts.length > 0 && <Warn>{t('prof.unknown')} {profile.unknownFacts.map((u) => tk('unk', u)).join(' · ')}</Warn>}
+      <div className="flex gap-2 flex-wrap"><button className="btn-primary" onClick={() => go('analysis')}>{t('prof.startAi')}</button><button className="btn-ghost" onClick={() => go('dashboard')}>{t('prof.toDash')}</button></div>
       <Disclaimer />
     </div>
   )

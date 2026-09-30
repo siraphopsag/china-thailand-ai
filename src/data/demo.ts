@@ -1,68 +1,49 @@
-import type { AlertItem, ContractInput, EmploymentInput, Profile, ChecklistItem } from '../types'
+import type { AlertItem, ChecklistItem, ContractInput, EmploymentInput, Profile } from '../types'
 
-/** ข้อมูลสมมติเพื่อสาธิตเท่านั้น (Fictional demonstration data) */
+/** ข้อมูลสมมติเพื่อสาธิตเท่านั้น (Fictional demonstration data). ค่าที่ขึ้นต้นด้วย "@" คือ token ข้อความที่แปลตามภาษาที่เลือก (ดู dv()) */
 export const demoProfile: Profile = {
-  companyName: 'ABC Manufacturing (บริษัทสมมติ)',
+  companyName: '@demo.company',
   direction: 'TH_CN',
-  businessType: 'ผลิต (Manufacturing)',
-  activity: 'ผลิตชิ้นส่วนพลาสติกสำหรับอุตสาหกรรมเครื่องใช้ไฟฟ้า',
-  forms: ['เปิดบริษัท', 'จ้างพนักงาน', 'ส่งพนักงานจากไทยไปทำงาน'],
-  investmentRange: '10–50 ล้านบาท',
+  businessType: 'manufacturing',
+  activity: '@demo.activity',
+  forms: ['company', 'hire', 'send'],
+  investmentRange: '10to50',
   employees: 20,
   crossBorderWorkers: true,
   holders: [
-    { id: 'origin', label: 'ผู้ถือหุ้นไทย', nationality: 'TH', percent: 60, capital: 0, voting: 60, board: 60, economic: 20 },
-    { id: 'partner', label: 'ผู้ถือหุ้นจีน', nationality: 'CN', percent: 40, capital: 100, voting: 40, board: 40, economic: 80 },
+    { id: 'origin', nationality: 'TH', percent: 60, capital: 0, voting: 60, board: 60, economic: 20 },
+    { id: 'partner', nationality: 'CN', percent: 40, capital: 100, voting: 40, board: 40, economic: 80 },
   ],
   realInvestor: 'partner',
   operator: 'partner',
   sideAgreement: 'unknown',
-  products: 'ชิ้นส่วนพลาสติกฉีดขึ้นรูป',
-  regulatedGoods: 'ไม่มี',
-  location: 'ซูโจว มณฑลเจียงซู',
-  crossBorder: ['นำเข้าวัตถุดิบ', 'ส่งออกสินค้า'],
-  targetMarket: 'ผู้ผลิตเครื่องใช้ไฟฟ้าในจีนตะวันออก',
+  products: '@demo.products',
+  regulatedGoods: 'none',
+  location: '@demo.location',
+  crossBorder: ['import', 'export'],
+  targetMarket: '@demo.market',
   isDemo: true,
 }
 
 export const demoEmployment: EmploymentInput = {
-  mode: 'ส่งพนักงานไทยไปจีน', nationality: 'ไทย', location: 'ซูโจว มณฑลเจียงซู (จีน)', duration: '24 เดือน',
-  salary: '28,000 หยวน/เดือน (สมมติ)', hours: '8 ชั่วโมง/วัน 5 วัน/สัปดาห์', leave: '', socialSecurity: '', workAuth: '', tax: '',
+  mode: 'send_th_cn', nationality: '@opt.empNat.TH', location: '@demo.empLocation', duration: '@demo.empDuration',
+  salary: '@demo.empSalary', hours: '@demo.empHours', leave: '', socialSecurity: '', workAuth: '', tax: '',
 }
-
 export const demoContract: ContractInput = {
-  employer: 'ABC Manufacturing (Suzhou) Co., Ltd. (บริษัทสมมติ)', employee: 'นายสมชาย ใจดี (ชื่อสมมติ)', nationality: 'ไทย',
-  job: 'ผู้จัดการฝ่ายผลิต', location: 'ซูโจว มณฑลเจียงซู', startDate: '', duration: '2 ปี', salary: '28,000 หยวน/เดือน',
-  benefits: '', hours: '8 ชั่วโมง/วัน 5 วัน/สัปดาห์', leave: '', probation: '', other: '',
+  employer: '@demo.employer', employee: '@demo.employee', nationality: '@opt.empNat.TH',
+  job: '@demo.job', location: '@demo.empLocation', startDate: '', duration: '@demo.conDuration', salary: '@demo.empSalary',
+  benefits: '', hours: '@demo.empHours', leave: '', probation: '', other: '',
 }
-
 export const emptyEmployment: EmploymentInput = { mode: '', nationality: '', location: '', duration: '', salary: '', hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' }
 export const emptyContract: ContractInput = { employer: '', employee: '', nationality: '', job: '', location: '', startDate: '', duration: '', salary: '', benefits: '', hours: '', leave: '', probation: '', other: '' }
 
 export const baseAlerts: AlertItem[] = [
-  {
-    id: 'a1', changed: 'ตัวอย่าง: หน่วยงานเผยแพร่ข้อมูลอัปเดตเกี่ยวกับรายการข้อจำกัดการลงทุนจากต่างประเทศ', when: 'ตัวอย่าง — ไม่ใช่เหตุการณ์จริง', country: 'CN', topic: 'การเข้าถึงตลาดสำหรับผู้ลงทุนต่างชาติ',
-    profile: 'ABC Manufacturing (บริษัทสมมติ)', sourceId: 'cn-neglist-2024', severity: 'NEEDS_REVIEW',
-    impact: 'กิจกรรมธุรกิจผลิตของคุณอาจต้องตรวจเทียบกับรายการเวอร์ชันล่าสุดอีกครั้ง', next: 'เปิดแหล่งข้อมูลทางการและยืนยันว่ากิจกรรมของคุณไม่อยู่ในรายการจำกัด',
-    isSample: true,
-  },
-  {
-    id: 'a2', changed: 'ตัวอย่าง: ปรับปรุงแนวทางการขออนุญาตทำงานของชาวต่างชาติ', when: 'ตัวอย่าง — ไม่ใช่เหตุการณ์จริง', country: 'CN', topic: 'ใบอนุญาตทำงานของคนต่างชาติ',
-    profile: 'ABC Manufacturing (บริษัทสมมติ)', sourceId: 'cn-immigration', severity: 'MEDIUM',
-    impact: 'แผนส่งพนักงานไทยไปจีนอาจต้องเตรียมเอกสารเพิ่มเติม', next: 'ตรวจสอบรายการเอกสารกับหน่วยงานในพื้นที่ก่อนยื่นคำขอ', isSample: true,
-  },
+  { id: 'a1', titleKey: 'alert.a1.title', when: 'sample', country: 'CN', topicKey: 'alert.a1.topic', sourceId: 'cn-neglist-2024', impactKey: 'alert.a1.impact', nextKey: 'alert.a1.next', isSample: true, severity: 'NEEDS_REVIEW' },
+  { id: 'a2', titleKey: 'alert.a2.title', when: 'sample', country: 'CN', topicKey: 'alert.a2.topic', sourceId: 'cn-immigration', impactKey: 'alert.a2.impact', nextKey: 'alert.a2.next', isSample: true, severity: 'MEDIUM' },
 ]
 
 export const checklistItems: ChecklistItem[] = [
-  { id: 'b1', group: 'รายการตรวจธุรกิจ', text: 'ระบุกิจกรรมธุรกิจเป็นรายการให้ชัดเจน (สินค้า/บริการ/ช่องทางขาย)' },
-  { id: 'b2', group: 'รายการตรวจธุรกิจ', text: 'ตรวจเทียบกิจกรรมกับรายการข้อจำกัดการลงทุนของประเทศเป้าหมาย' },
-  { id: 'b3', group: 'รายการตรวจธุรกิจ', text: 'ตรวจว่ากิจกรรมต้องขออนุญาตหรือใบรับรองเฉพาะหรือไม่' },
-  { id: 'o1', group: 'รายการตรวจโครงสร้างผู้ถือหุ้น', text: 'รวบรวมหลักฐานแหล่งเงินลงทุนของผู้ถือหุ้นทุกราย' },
-  { id: 'o2', group: 'รายการตรวจโครงสร้างผู้ถือหุ้น', text: 'จัดทำแผนผังสิทธิออกเสียง การแต่งตั้งกรรมการ และสิทธิประโยชน์ทางเศรษฐกิจ' },
-  { id: 'o3', group: 'รายการตรวจโครงสร้างผู้ถือหุ้น', text: 'เปิดเผยข้อตกลงระหว่างผู้ถือหุ้นทั้งหมดให้ผู้ตรวจสอบพิจารณา' },
-  { id: 'o4', group: 'รายการตรวจโครงสร้างผู้ถือหุ้น', text: 'ขอความเห็นจากผู้เชี่ยวชาญ/หน่วยงานที่เกี่ยวข้องเมื่อพบปัจจัยที่ควรตรวจสอบเพิ่มเติม' },
-  { id: 'e1', group: 'รายการตรวจการจ้างงาน', text: 'กำหนดรูปแบบการจ้าง (จ้างในพื้นที่ / ส่งไปทำงานต่างประเทศ)' },
-  { id: 'e2', group: 'รายการตรวจการจ้างงาน', text: 'ตรวจสอบใบอนุญาตทำงานและสถานะการพำนักของพนักงานต่างชาติ' },
-  { id: 'e3', group: 'รายการตรวจการจ้างงาน', text: 'ตรวจสอบประกันสังคมและภาษีเงินได้ของพนักงาน' },
-  { id: 'e4', group: 'รายการตรวจการจ้างงาน', text: 'จัดทำสัญญาจ้างเป็นลายลักษณ์อักษรและให้ผู้เชี่ยวชาญตรวจ' },
+  { id: 'b1', group: 'business' }, { id: 'b2', group: 'business' }, { id: 'b3', group: 'business' },
+  { id: 'o1', group: 'ownership' }, { id: 'o2', group: 'ownership' }, { id: 'o3', group: 'ownership' }, { id: 'o4', group: 'ownership' },
+  { id: 'e1', group: 'employment' }, { id: 'e2', group: 'employment' }, { id: 'e3', group: 'employment' }, { id: 'e4', group: 'employment' },
 ]

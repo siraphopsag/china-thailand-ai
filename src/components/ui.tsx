@@ -1,220 +1,282 @@
-import type { ReactNode } from 'react'
-import type { AIResponse, ActionItem, AlertItem, Level, Profile, RiskCardData, RoadmapStep, StepStatus, Verification, Holder } from '../types'
-import { DISCLAIMER, SAMPLE_NOTE, dirInfo, levelBar, levelIcon, levelLabel, levelStyle, stepLabel, stepStyle, verifyLabel, verifyStyle } from '../utils/labels'
-import { getReg } from '../data/regulations'
+import { useState, type ReactNode } from 'react'
+import type { ActionItem, AIResponse, AlertItem, Level, Profile, RiskCardData, RoadmapStep, StepStatus, Verification } from '../types'
+import { STEP_STATUSES, dirInfo, levelBar, levelChip, levelIcon, stepChip, stepNode, verifyChip } from '../utils/labels'
+import { getReg, lastVerifiedText, regText } from '../data/regulations'
+import { checklistItems } from '../data/demo'
+import { dv, tk, useI18n } from '../i18n'
+import { holderName, ownershipRows } from '../services/engines'
 import { go, useStore } from '../store'
 
-export const StatusBadge = ({ level }: { level: Level }) => (
-  <span className={`inline-flex items-center gap-1 border rounded-full px-2.5 py-0.5 text-xs font-semibold max-w-full ${levelStyle[level]}`}><span aria-hidden>{levelIcon[level]}</span>{levelLabel[level]}</span>
-)
-export const VerifyBadge = ({ v }: { v: Verification }) => (
-  <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${verifyStyle[v]}`}>{verifyLabel[v]}</span>
-)
-export const StepBadge = ({ s }: { s: StepStatus }) => <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${stepStyle[s]}`}>{stepLabel[s]}</span>
-
-export const Disclaimer = () => <p className="text-xs text-slate-500 border-t border-slate-200 pt-3 mt-6">{DISCLAIMER}</p>
-export const SampleTag = ({ text = SAMPLE_NOTE }: { text?: string }) => <span className="inline-block text-[11px] bg-slate-200 text-slate-700 rounded px-1.5 py-0.5">{text}</span>
+/* ---------- small primitives ---------- */
+export const StatusBadge = ({ level }: { level: Level }) => { useI18n(); return <span className={`chip ${levelChip[level]}`}><span aria-hidden>{levelIcon[level]}</span>{tk('level', level)}</span> }
+export const VerifyBadge = ({ v }: { v: Verification }) => { useI18n(); return <span className={`chip font-medium ${verifyChip[v]}`}>{tk('verify', v)}</span> }
+export const StepBadge = ({ s }: { s: StepStatus }) => { useI18n(); return <span className={`chip font-medium ${stepChip[s]}`}>{tk('step', s)}</span> }
+export const SampleTag = ({ text }: { text?: string }) => { const { t } = useI18n(); return <span className="inline-block text-[11px] bg-surface3 text-muted rounded px-1.5 py-0.5">{text ?? t('c.sample')}</span> }
+export const Disclaimer = () => { const { t } = useI18n(); return <p className="text-xs text-muted border-t border-line pt-3 mt-6">{t('c.disclaimer')}</p> }
 
 export function PageHead({ title, sub, children }: { title: string; sub?: string; children?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
-      <div><h1 className="h1">{title}</h1>{sub && <p className="text-slate-600 mt-1 max-w-3xl">{sub}</p>}</div>
-      <div className="flex gap-2 flex-wrap">{children}</div>
+      <div className="min-w-0"><h1 className="h1">{title}</h1>{sub && <p className="text-muted mt-1 max-w-3xl">{sub}</p>}</div>
+      {children && <div className="flex gap-2 flex-wrap">{children}</div>}
     </div>
   )
 }
-
-export function EmptyState({ title = 'ไม่พบข้อมูล', text = 'ยังไม่มีโปรไฟล์ธุรกิจให้ระบบวิเคราะห์ กรุณาสัมภาษณ์ธุรกิจหรือทดลอง Demo ก่อน' }: { title?: string; text?: string }) {
+export function Warn({ children, tone = 'warn' }: { children: ReactNode; tone?: 'warn' | 'danger' | 'info' }) {
+  const c = { warn: 'bg-warn-bg border-warn-line text-warn-fg', danger: 'bg-danger-bg border-danger-line text-danger-fg', info: 'bg-info-bg border-info-line text-info-fg' }[tone]
+  return <div role="note" className={`border rounded-xl px-4 py-3 text-sm ${c}`}>{children}</div>
+}
+export function EmptyState({ title, text }: { title?: string; text?: string }) {
+  const { t } = useI18n()
   const { startDemo } = useStore()
   return (
     <div className="card text-center py-12 max-w-xl mx-auto">
-      <div className="text-4xl mb-3" aria-hidden>🗂️</div>
-      <h2 className="h2">{title}</h2><p className="text-slate-600 mt-2">{text}</p>
+      <div className="mx-auto w-14 h-14 rounded-full bg-brand text-brandfg grid place-items-center text-2xl mb-3" aria-hidden>🗂️</div>
+      <h2 className="h2">{title ?? t('empty.title')}</h2><p className="text-muted mt-2">{text ?? t('empty.text')}</p>
       <div className="flex gap-2 justify-center mt-5 flex-wrap">
-        <button className="btn-primary" onClick={() => go('direction')}>เริ่มวิเคราะห์ธุรกิจ</button>
-        <button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>ทดลอง Demo</button>
+        <button className="btn-primary" onClick={() => go('direction')}>{t('cta.start')}</button>
+        <button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>{t('cta.demo')}</button>
       </div>
     </div>
   )
 }
 
-export function Warn({ children, tone = 'amber' }: { children: ReactNode; tone?: 'amber' | 'red' | 'blue' }) {
-  const t = { amber: 'bg-amber-50 border-amber-300 text-amber-900', red: 'bg-red-50 border-red-300 text-red-900', blue: 'bg-sky-50 border-sky-300 text-sky-900' }[tone]
-  return <div role="note" className={`border rounded-lg px-4 py-3 text-sm ${t}`}>{children}</div>
-}
-
-/* ---- Workflow (พิสูจน์ว่าไม่ใช่แชตบอต) ---- */
-export const flowSteps = ['ข้อมูลธุรกิจ', 'AI วิเคราะห์', 'ตรวจสอบกฎหมาย', 'ประเมินความเสี่ยง', 'แผนดำเนินงาน', 'เอกสาร', 'ติดตาม']
+/* ---------- workflow ---------- */
 export function WorkflowStrip({ active = -1 }: { active?: number }) {
+  const { t } = useI18n()
   return (
-    <ol className="flex flex-wrap items-center gap-y-2 text-sm" aria-label="ขั้นตอนการทำงานของระบบ">
-      {flowSteps.map((s, i) => (
-        <li key={s} className="flex items-center">
-          <span className={`px-3 py-1.5 rounded-full border ${i === active ? 'bg-navy-800 text-white border-navy-800' : i < active ? 'bg-navy-100 text-navy-800 border-navy-200' : 'bg-white text-slate-600 border-slate-300'}`}>{i + 1}. {s}</span>
-          {i < flowSteps.length - 1 && <span className="mx-1 text-slate-400" aria-hidden>→</span>}
+    <ol className="flex flex-wrap items-center gap-y-2 text-sm" aria-label={t('wf.aria')}>
+      {[1, 2, 3, 4, 5, 6, 7].map((n, i) => (
+        <li key={n} className="flex items-center">
+          <span className={`px-3 py-1.5 rounded-full border transition-colors ${i === active ? 'bg-primary text-onprimary border-primary' : i < active ? 'bg-brand text-brandfg border-line' : 'bg-surface text-muted border-line'}`}>{n}. {tk('wf', String(n))}</span>
+          {i < 6 && <span className="mx-1 text-muted" aria-hidden>→</span>}
         </li>
       ))}
     </ol>
   )
 }
-
-export function ProgressStepper({ steps, current }: { steps: string[]; current: number }) {
+export function ProgressStepper({ steps, current, label }: { steps: string[]; current: number; label: string }) {
   return (
-    <ol className="space-y-1" aria-label="ความคืบหน้าการสัมภาษณ์">
+    <ol className="space-y-1" aria-label={label}>
       {steps.map((s, i) => (
-        <li key={s} aria-current={i === current ? 'step' : undefined} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${i === current ? 'bg-navy-100 text-navy-900 font-semibold' : 'text-slate-600'}`}>
-          <span className={`w-6 h-6 rounded-full grid place-items-center text-xs ${i < current ? 'bg-green-600 text-white' : i === current ? 'bg-navy-800 text-white' : 'bg-slate-200'}`}>{i < current ? '✓' : i === current ? '→' : '○'}</span>{s}
+        <li key={s} aria-current={i === current ? 'step' : undefined} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors ${i === current ? 'bg-brand text-brandfg font-semibold' : 'text-muted'}`}>
+          <span className={`w-6 h-6 shrink-0 rounded-full grid place-items-center text-xs ${i < current ? 'bg-ok-fg text-surface' : i === current ? 'bg-primary text-onprimary' : 'bg-surface3'}`}>{i < current ? '✓' : i === current ? '→' : '○'}</span>{s}
         </li>
       ))}
     </ol>
   )
 }
-
-/* ---- AI message in 5-part format ---- */
-export function AIMessage({ r, compact }: { r: AIResponse; compact?: boolean }) {
+export function AnalysisTabs({ active }: { active: string }) {
+  const { t } = useI18n()
+  const tabs = ['analysis', 'ownership', 'nominee', 'employment', 'contract', 'language']
   return (
-    <div className={`rounded-xl border ${r.blocked ? 'border-red-300 bg-red-50' : 'border-navy-200 bg-navy-50'} p-4 space-y-2 text-sm`}>
-      <div className="flex flex-wrap gap-1.5 items-center text-xs text-slate-600"><span className="font-semibold">🤖 โมดูลที่ถูกเรียก:</span>{r.modules.map((m) => <span key={m} className="bg-white border border-slate-200 rounded px-2 py-0.5">{m}</span>)}</div>
-      <p><b>คำตอบ:</b> {r.answer}</p>
-      {!compact && <p><b>เหตุผล:</b> {r.reason}</p>}
-      <p><b>แหล่งข้อมูล:</b> {r.sources.length ? r.sources.map((s) => { const g = getReg(s); return g ? `${g.authority}: ${g.title}` : '' }).filter(Boolean).join(' / ') + ' (' + SAMPLE_NOTE + ')' : 'ยังไม่พบแหล่งข้อมูลที่เกี่ยวข้อง'}</p>
-      <p><b>ความเสี่ยง:</b> <StatusBadge level={r.risk} /></p>
-      <p><b>สิ่งที่ควรทำต่อ:</b> {r.next}</p>
+    <nav aria-label={t('tabs.aria')} className="flex gap-2 overflow-x-auto pb-2 mb-4">
+      {tabs.map((k) => <button key={k} onClick={() => go(k)} aria-current={active === k ? 'page' : undefined} className={`tab ${active === k ? 'tab-on' : ''}`}>{tk('tabs', k)}</button>)}
+    </nav>
+  )
+}
+
+/* ---------- AI output (Answer · Reason · Risk · Source · Next action) ---------- */
+export function AIMessage({ r }: { r: AIResponse }) {
+  const { t } = useI18n()
+  return (
+    <div className={`rounded-2xl border p-4 space-y-3 text-sm ${r.blocked ? 'border-danger-line bg-danger-bg' : 'border-line bg-brand'}`} aria-live="polite">
+      <div className="flex flex-wrap gap-1.5 items-center text-xs text-muted"><span className="font-semibold">🤖 {t('ai.modules')}:</span>{r.modules.map((m) => <span key={m} className="bg-surface border border-line rounded px-2 py-0.5">{m}</span>)}</div>
+      <div><div className="text-xs font-semibold text-muted uppercase">{t('ai.answer')}</div><p className="text-base font-semibold">{r.answer}</p></div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div><div className="text-xs font-semibold text-muted">{t('ai.reason')}</div><p>{r.reason}</p></div>
+        <div><div className="text-xs font-semibold text-muted">{t('ai.risk')}</div><StatusBadge level={r.risk} /></div>
+        <div className="sm:col-span-2"><div className="text-xs font-semibold text-muted">{t('ai.source')}</div>
+          <p>{r.sources.length ? r.sources.map((s) => `${regText(s, 'auth')}: ${regText(s, 'title')}`).join(' / ') + ` (${t('c.sample')})` : t('ai.noSource')}</p></div>
+      </div>
+      <div className="rounded-xl bg-surface border border-line px-3 py-2"><div className="text-xs font-semibold text-muted">{t('ai.next')}</div><p className="font-medium">{r.next}</p></div>
     </div>
   )
 }
 
 export function SourceCard({ id }: { id: string }) {
+  const { t } = useI18n()
   const r = getReg(id)
-  if (!r) return <div className="text-sm text-slate-500">ไม่สามารถตรวจสอบแหล่งข้อมูลได้ (SOURCE NOT FOUND)</div>
+  if (!r) return <div className="text-sm text-muted">{t('verify.NO_SOURCE')}</div>
+  const dt = (x?: string) => (!x ? t('c.unspecified') : x === 'simulated' ? t('reg.simulated') : x)
   return (
-    <div className="border border-slate-200 rounded-lg p-3 bg-white text-sm space-y-1">
-      <div className="flex flex-wrap gap-2 items-center justify-between"><b>{r.country === 'TH' ? '🇹🇭' : '🇨🇳'} {r.authority}</b><VerifyBadge v={r.verificationStatus} /></div>
-      <div className="text-slate-800">{r.title}</div><p className="text-slate-600">{r.rule}</p>
-      {r.originalTerm && <p className="text-slate-500">ศัพท์ต้นฉบับ: {r.originalTerm}</p>}
-      <div className="text-xs text-slate-500 flex flex-wrap gap-x-4">
-        <span>ประกาศ: {r.publicationDate}</span><span>มีผล: {r.effectiveDate}</span><span>ตรวจล่าสุด: {r.lastVerified}</span>
-      </div>
-      {r.supersededBy && <Warn>ข้อมูลนี้อาจไม่ใช่ข้อมูลปัจจุบัน — มีระเบียนใหม่มาแทนที่</Warn>}
-      <div className="flex items-center gap-2">{r.isSample && <SampleTag />}<a className="text-navy-600 underline" href={r.sourceUrl} target="_blank" rel="noopener noreferrer">เปิดแหล่งข้อมูลทางการ ↗</a></div>
+    <div className="card-i text-sm space-y-1.5">
+      <div className="flex flex-wrap gap-2 items-center justify-between"><b>{r.country === 'TH' ? '🇹🇭' : '🇨🇳'} {regText(id, 'auth')}</b><VerifyBadge v={r.verificationStatus} /></div>
+      <div className="font-medium">{regText(id, 'title')}</div><p className="text-muted">{regText(id, 'rule')}</p>
+      {r.originalTerm && <p className="text-muted">{t('reg.originalTerm')}: <span lang="zh">{r.originalTerm}</span></p>}
+      <div className="text-xs text-muted flex flex-wrap gap-x-4"><span>{t('reg.published')}: {dt(r.publicationDate)}</span><span>{t('reg.effective')}: {dt(r.effectiveDate)}</span><span>{t('reg.lastVerified')}: {lastVerifiedText(r)}</span></div>
+      {r.supersededBy && <Warn>{t('reg.outdated')}</Warn>}
+      <div className="flex items-center gap-2 flex-wrap">{r.isSample && <SampleTag />}<a className="text-primary underline" href={r.sourceUrl} target="_blank" rel="noopener noreferrer">{t('c.openOfficial')}</a></div>
     </div>
   )
 }
 
-export function RiskCard({ r }: { r: RiskCardData }) {
+/* ---------- risk ---------- */
+export function RiskCard({ r, actions, onAction, compact }: { r: RiskCardData; actions?: ActionItem[]; onAction?: (id: string, s: StepStatus) => void; compact?: boolean }) {
+  const { t } = useI18n()
+  const [open, setOpen] = useState(!compact)
   return (
-    <article className={`card border-l-8 ${levelBar[r.level]} space-y-2`}>
-      <div className="flex flex-wrap justify-between gap-2 items-center"><h3 className="h2">{r.category}</h3><StatusBadge level={r.level} /></div>
-      <p className="text-sm"><b>เหตุผล:</b> {r.why}</p>
-      <div className="text-sm"><b>แหล่งข้อมูล:</b>{' '}{r.sourceIds.length ? r.sourceIds.map((s) => { const g = getReg(s); return g ? <a key={s} href={g.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-navy-600 underline mr-2">{g.authority}</a> : null }) : 'ไม่มีแหล่งกฎหมายโดยตรง'} <SampleTag /></div>
-      {r.check.length > 0 && <div className="text-sm"><b>สิ่งที่ควรตรวจสอบ:</b><ul className="list-disc ml-5">{r.check.map((c, i) => <li key={i}>{c}</li>)}</ul></div>}
-      <p className="text-sm"><b>ขั้นตอนถัดไป:</b> {r.next}</p>
-      <VerifyBadge v={r.verification} />
+    <article className={`card border-l-8 ${levelBar[r.level]} space-y-2 !p-4`}>
+      <div className="flex flex-wrap justify-between gap-2 items-center"><h3 className="h2 text-base">{r.category}</h3><StatusBadge level={r.level} /></div>
+      <p className="text-sm">{r.why}</p>
+      {open && <>
+        <div className="text-sm"><b>{t('risk.sources')}:</b>{' '}{r.sourceIds.length ? r.sourceIds.map((s) => { const g = getReg(s); return g ? <a key={s} href={g.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline mr-2">{regText(s, 'auth')}</a> : null }) : t('risk.noLaw')} <SampleTag /></div>
+        {r.check.length > 0 && <div className="text-sm"><b>{t('risk.check')}:</b><ul className="list-disc ml-5">{r.check.map((c, i) => <li key={i}>{c}</li>)}</ul></div>}
+        <p className="text-sm"><b>{t('risk.nextStep')}:</b> {r.next}</p>
+        <VerifyBadge v={r.verification} />
+      </>}
+      {actions && actions.length > 0 && open && (
+        <div className="rounded-xl bg-surface2 border border-line p-2 space-y-1.5"><div className="text-xs font-semibold text-muted">{t('risk.actions')}</div>
+          {actions.map((a) => (
+            <label key={a.id} className="flex items-start gap-2 text-sm min-h-[36px] cursor-pointer"><input type="checkbox" className="mt-1 w-4 h-4 accent-[rgb(var(--primary))]" checked={a.status === 'done'} onChange={(e) => onAction?.(a.id, e.target.checked ? 'done' : 'todo')} /><span className={a.status === 'done' ? 'line-through text-muted' : ''}>{a.title}</span></label>))}
+        </div>)}
+      {compact && <button className="text-sm text-primary underline" onClick={() => setOpen(!open)} aria-expanded={open}>{open ? t('ui.hide') : t('ui.show')}</button>}
     </article>
   )
 }
 
+/* ---------- business profile ---------- */
 export function BusinessProfile({ p, onEdit }: { p: Profile; onEdit?: () => void }) {
+  const { t } = useI18n()
   const d = dirInfo(p.direction)
+  const from = tk('country', d.from)
   const rows: [string, string][] = [
-    ['ชื่อธุรกิจ', p.companyName], ['ประเทศต้นทาง', `${d.fromFlag} ประเทศ${d.from}`], ['ประเทศเป้าหมาย', `${d.toFlag} ประเทศ${d.to}`], ['ประเภทธุรกิจ', p.businessType],
-    ['กิจกรรมหลัก', p.activity], ['รูปแบบการขยาย', p.forms.join(', ') || '-'], ['วงเงินลงทุนโดยประมาณ', p.investmentRange || '-'], ['จำนวนพนักงาน', String(p.employees)],
-    ['มีการจ้างแรงงานข้ามประเทศ', p.crossBorderWorkers ? 'ใช่' : 'ไม่ใช่'], ['โครงสร้างผู้ถือหุ้น', p.holders.map((h) => `${h.nationality === 'TH' ? 'ไทย' : 'จีน'} ${h.percent}%`).join(' / ')],
-    ['สินค้า/บริการ', p.products || '-'], ['ตลาดเป้าหมาย', p.targetMarket || '-'], ['สินค้าควบคุม', p.regulatedGoods || '-'], ['พื้นที่ดำเนินงาน', p.location || '-'], ['กิจกรรมข้ามพรมแดน', p.crossBorder.join(', ') || '-'],
+    [t('bp.name'), dv(p.companyName)], [t('bp.origin'), `${d.fromFlag} ${from}`], [t('bp.target'), `${d.toFlag} ${tk('country', d.to)}`],
+    [t('bp.type'), p.businessType === 'other' && p.businessTypeOther ? p.businessTypeOther : tk('opt.btype', p.businessType)], [t('bp.activity'), dv(p.activity)],
+    [t('bp.forms'), p.forms.map((f) => tk('opt.forms', f, { from })).join(', ') || '-'], [t('bp.invest'), p.investmentRange ? tk('opt.invest', p.investmentRange) : '-'],
+    [t('bp.employees'), String(p.employees)], [t('bp.cross'), p.crossBorderWorkers ? t('c.yes') : t('c.no')],
+    [t('bp.holders'), p.holders.map((h) => `${tk('country', h.nationality)} ${h.percent}%`).join(' / ')], [t('bp.products'), dv(p.products) || '-'], [t('bp.market'), dv(p.targetMarket) || '-'],
+    [t('bp.regulated'), p.regulatedGoods ? tk('opt.regulated', p.regulatedGoods) : '-'], [t('bp.location'), dv(p.location) || '-'], [t('bp.crossBorder'), p.crossBorder.map((x) => tk('opt.cross', x)).join(', ') || '-'],
   ]
   return (
     <div className="card">
-      <div className="flex justify-between items-center mb-3"><h2 className="h2">โปรไฟล์ธุรกิจ {p.isDemo && <SampleTag text="ข้อมูลสมมติเพื่อสาธิต" />}</h2>{onEdit && <button className="btn-ghost" onClick={onEdit}>แก้ไขข้อมูล</button>}</div>
-      <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">{rows.map(([k, v]) => <div key={k} className="border-b border-slate-100 pb-1"><dt className="text-slate-500">{k}</dt><dd className="font-medium">{v}</dd></div>)}</dl>
+      <div className="flex justify-between items-center gap-2 flex-wrap mb-3"><h2 className="h2">{t('bp.title')} {p.isDemo && <SampleTag text={t('c.demoTag')} />}</h2>{onEdit && <button className="btn-ghost" onClick={onEdit}>{t('c.editData')}</button>}</div>
+      <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">{rows.map(([k, v]) => <div key={k} className="border-b border-line pb-1"><dt className="text-muted">{k}</dt><dd className="font-medium break-words">{v}</dd></div>)}</dl>
     </div>
   )
 }
 
-export function OwnershipChart({ holders }: { holders: Holder[] }) {
-  const col = ['bg-navy-700', 'bg-sky-500']
+/* ---------- ownership visuals ---------- */
+export function OwnershipMap({ p }: { p: Profile }) {
+  const { t } = useI18n()
+  const d = dirInfo(p.direction)
+  return (
+    <div className="flex flex-col md:flex-row md:items-center gap-4" role="img" aria-label={p.holders.map((h) => `${holderName(h)} ${h.percent}%`).join(', ')}>
+      <div className="flex-1 space-y-3">
+        {p.holders.map((h, i) => (
+          <div key={h.id} className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+            <div className={`flex-1 rounded-2xl border-2 p-3 ${i === 0 ? 'border-primary bg-brand' : 'border-info-fg bg-info-bg'}`}>
+              <div className="text-xs text-muted">{h.nationality === 'TH' ? '🇹🇭' : '🇨🇳'} {h.id === 'origin' ? t('own.foreign', { c: tk('country', d.to) }) : t('own.local')}</div>
+              <div className="font-semibold">{holderName(h)}</div><div className="text-3xl font-bold">{h.percent}%</div>
+            </div>
+            <div className="flex md:w-28 items-center justify-center text-muted text-sm" aria-hidden>
+              <span className="hidden md:block flex-1 h-0.5 bg-line" /><span className="chip bg-surface text-ink border-line mx-1">{h.percent}% {t('own.shares')}</span><span className="hidden md:inline">▶</span><span className="md:hidden">↓</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="md:w-56 rounded-2xl border-2 border-line bg-surface2 p-4 text-center">
+        <div className="text-xs text-muted">{d.toFlag} {tk('country', d.to)}</div><div className="font-semibold break-words">{dv(p.companyName)}</div><div className="text-xs text-muted mt-1">{t('own.entity')}</div>
+      </div>
+    </div>
+  )
+}
+export function ControlBars({ p }: { p: Profile }) {
+  const { t } = useI18n()
+  const rows = ownershipRows(p)
+  const [a, b] = p.holders
   return (
     <div>
-      <div className="flex h-14 rounded-lg overflow-hidden border border-slate-300" role="img" aria-label={holders.map((h) => `${h.label} ${h.percent}%`).join(' ')}>
-        {holders.map((h, i) => <div key={h.id} style={{ width: `${Math.max(h.percent, 0)}%` }} className={`${col[i]} text-white grid place-items-center text-sm font-semibold`}>{h.percent > 8 ? `${h.label} ${h.percent}%` : ''}</div>)}
-      </div>
-      <div className="grid sm:grid-cols-2 gap-3 mt-3">{holders.map((h, i) => (
-        <div key={h.id} className="border border-slate-200 rounded-lg p-3 text-sm">
-          <div className="flex items-center gap-2 font-semibold"><span className={`w-3 h-3 rounded-sm ${col[i]}`} />{h.label} ({h.nationality === 'TH' ? '🇹🇭' : '🇨🇳'}) — {h.percent}%</div>
-          {[['เงินลงทุนที่จัดหา', h.capital], ['สิทธิออกเสียง', h.voting], ['กรรมการที่แต่งตั้ง', h.board], ['สิทธิประโยชน์ทางเศรษฐกิจ', h.economic]].map(([k, v]) => {
-            const diff = Math.abs((v as number) - h.percent) >= 25
-            return <div key={k as string} className="mt-1.5"><div className="flex justify-between"><span>{k}</span><span className={diff ? 'text-orange-700 font-semibold' : ''}>{v}%{diff ? ' ⚠ ต่างจากหุ้น' : ''}</span></div><div className="h-2 bg-slate-100 rounded"><div className={`h-2 rounded ${diff ? 'bg-orange-400' : 'bg-green-500'}`} style={{ width: `${v}%` }} /></div></div>
-          })}
-        </div>))}</div>
+      <div className="text-center font-semibold text-ink mb-3">{t('own.neq')}</div>
+      <div className="flex flex-wrap gap-4 text-xs text-muted mb-3"><span><i className="inline-block w-3 h-3 rounded-sm bg-primary align-middle mr-1" />{holderName(a)}</span><span><i className="inline-block w-3 h-3 rounded-sm bg-info-fg align-middle mr-1" />{holderName(b)}</span></div>
+      <ul className="space-y-3">
+        {rows.map((r) => (
+          <li key={r.key}>
+            <div className="flex justify-between gap-2 text-sm"><span className="font-medium">{tk('row', r.key)}</span>{r.mismatch && <span className="text-review-fg font-semibold">⚠ {t('own.mismatch')}</span>}</div>
+            {r.origin === null || r.partner === null ? <div className="h-5 rounded bg-surface3 text-xs text-muted grid place-items-center">{t('own.unknownVal')}</div> : (
+              <div className={`flex h-6 rounded-lg overflow-hidden text-xs text-white font-semibold ${r.mismatch ? 'ring-2 ring-review-fg' : ''}`} role="img" aria-label={`${r.origin}% / ${r.partner}%`}>
+                <div className="bg-primary grid place-items-center text-onprimary transition-all duration-500" style={{ width: r.origin + '%' }}>{r.origin >= 12 ? r.origin + '%' : ''}</div>
+                <div className="bg-info-fg grid place-items-center text-surface transition-all duration-500" style={{ width: r.partner + '%' }}>{r.partner >= 12 ? r.partner + '%' : ''}</div>
+              </div>)}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
 
-export function Checklist({ items, done, onToggle }: { items: { id: string; group: string; text: string }[]; done: Record<string, boolean>; onToggle: (id: string) => void }) {
-  const groups = [...new Set(items.map((i) => i.group))]
+/* ---------- checklist / roadmap / actions ---------- */
+export function Checklist({ done, onToggle }: { done: Record<string, boolean>; onToggle: (id: string) => void }) {
+  const { t } = useI18n()
   return (
-    <div className="space-y-4">{groups.map((g) => (
-      <fieldset key={g}><legend className="font-semibold text-navy-900 mb-1">{g}</legend>
-        {items.filter((i) => i.group === g).map((i) => (
-          <label key={i.id} className="flex gap-3 items-start py-2 min-h-[44px] cursor-pointer"><input type="checkbox" className="mt-1.5 w-5 h-5 accent-navy-700" checked={!!done[i.id]} onChange={() => onToggle(i.id)} /><span className={done[i.id] ? 'line-through text-slate-500' : ''}>{i.text}</span></label>
+    <div className="space-y-4">{(['business', 'ownership', 'employment'] as const).map((g) => (
+      <fieldset key={g}><legend className="font-semibold mb-1">{tk('chk.group', g)}</legend>
+        {checklistItems.filter((i) => i.group === g).map((i) => (
+          <label key={i.id} className="flex gap-3 items-start py-2 min-h-[44px] cursor-pointer"><input type="checkbox" className="mt-1.5 w-5 h-5 accent-[rgb(var(--primary))]" checked={!!done[i.id]} onChange={() => onToggle(i.id)} /><span className={done[i.id] ? 'line-through text-muted' : ''}>{t(`chk.${i.id}` as never)}</span></label>
         ))}
       </fieldset>))}
     </div>
   )
 }
 
-export function Roadmap({ steps, onStatus }: { steps: RoadmapStep[]; onStatus: (id: number, s: StepStatus) => void }) {
+export function RoadmapTimeline({ steps, onStatus }: { steps: RoadmapStep[]; onStatus: (id: number, s: StepStatus) => void }) {
+  const { t } = useI18n()
+  const [open, setOpen] = useState<number | null>(() => steps.find((s) => s.status === 'fix')?.id ?? steps.find((s) => s.status !== 'done')?.id ?? null)
   return (
-    <ol className="space-y-4">{steps.map((s) => (
-      <li key={s.id} className={`card border-l-8 ${s.status === 'fix' ? 'border-l-red-500' : s.status === 'done' ? 'border-l-green-500' : s.status === 'review' ? 'border-l-amber-400' : s.status === 'doing' ? 'border-l-blue-500' : 'border-l-slate-300'}`}>
-        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="h2">ขั้นที่ {s.id} · {s.title}</h3>
-          <div className="flex items-center gap-2"><StepBadge s={s.status} />
-            <select aria-label={`เปลี่ยนสถานะขั้นที่ ${s.id}`} className="input !w-auto !py-1.5 text-sm" value={s.status} onChange={(e) => onStatus(s.id, e.target.value as StepStatus)}>
-              {(Object.keys(stepLabel) as StepStatus[]).map((k) => <option key={k} value={k}>{stepLabel[k]}</option>)}</select></div></div>
-        <p className="mt-1 text-sm">{s.description}</p>
-        {s.note && <div className="mt-2"><Warn tone={s.status === 'fix' ? 'red' : 'amber'}>{s.note}</Warn></div>}
-        <div className="grid sm:grid-cols-3 gap-3 mt-3 text-sm"><div><b>เอกสารที่ต้องใช้</b><ul className="list-disc ml-5">{s.docs.map((d) => <li key={d}>{d}</li>)}</ul></div><div><b>ทำไมสำคัญ</b><p>{s.why}</p></div><div><b>สิ่งที่ควรทำต่อ</b><p>{s.next}</p></div></div>
-      </li>))}</ol>
-  )
-}
-
-export function DocumentCard({ title, desc, generated, onCreate, onView, onDownload }: { title: string; desc: string; generated: boolean; onCreate: () => void; onView: () => void; onDownload: () => void }) {
-  return (
-    <div className="card flex flex-col gap-2"><h3 className="h2 text-base">{title}</h3><p className="text-sm text-slate-600 flex-1">{desc}</p>
-      <div className="flex flex-wrap gap-2"><button className="btn-primary !py-2" onClick={onCreate}>{generated ? 'สร้างใหม่' : 'สร้างเอกสาร'}</button>
-        <button className="btn-ghost !py-2" disabled={!generated} onClick={onView}>ดูเอกสาร</button><button className="btn-ghost !py-2" disabled={!generated} onClick={onDownload}>ดาวน์โหลด</button></div>
-    </div>
-  )
-}
-
-export function AlertCard({ a }: { a: AlertItem }) {
-  const g = getReg(a.sourceId)
-  return (
-    <article className={`card border-l-8 ${levelBar[a.severity]} text-sm space-y-1`}>
-      <div className="flex flex-wrap justify-between gap-2"><h3 className="font-semibold">⚠ พบข้อมูลใหม่ที่เกี่ยวข้องกับธุรกิจของคุณ</h3>{a.isSample && <SampleTag text="ตัวอย่างการทำงานระบบติดตาม (ไม่ใช่ข้อมูลสด)" />}</div>
-      <p><b>สิ่งที่เปลี่ยน:</b> {a.changed}</p><p><b>เมื่อไร:</b> {a.when}</p><p><b>ประเทศ / หัวข้อ:</b> {a.country === 'TH' ? '🇹🇭 ไทย' : '🇨🇳 จีน'} · {a.topic}</p><p><b>โปรไฟล์ที่ได้รับผลกระทบ:</b> {a.profile}</p>
-      <p><b>แหล่งข้อมูล:</b> {g ? <a href={g.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-navy-600 underline">{g.authority} ↗</a> : '-'}</p>
-      <p><b>ผลกระทบที่อาจเกิดขึ้น:</b> {a.impact}</p><p><b>สิ่งที่ควรทำต่อ:</b> {a.next}</p>
-    </article>
-  )
-}
-
-export function AnalysisTabs({ active }: { active: string }) {
-  const tabs = [['analysis', 'ศูนย์วิเคราะห์'], ['ownership', 'โครงสร้างผู้ถือหุ้น'], ['nominee', 'ความเสี่ยงด้านนอมินี'], ['employment', 'การจ้างงาน'], ['contract', 'สัญญาจ้าง'], ['language', 'ภาษาและวัฒนธรรม']]
-  return (
-    <nav aria-label="หมวดการวิเคราะห์" className="flex gap-2 overflow-x-auto pb-2 mb-4">
-      {tabs.map(([k, t]) => <button key={k} onClick={() => go(k)} aria-current={active === k ? 'page' : undefined} className={`px-4 py-2 rounded-full border whitespace-nowrap min-h-[44px] ${active === k ? 'bg-navy-800 text-white border-navy-800' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}>{t}</button>)}
-    </nav>
+    <ol>{steps.map((s, i) => {
+      const isOpen = open === s.id
+      return (
+        <li key={s.id} className="relative pl-14 pb-4 last:pb-0">
+          {i < steps.length - 1 && <span className="absolute left-5 top-10 -bottom-0 w-0.5 bg-line" aria-hidden />}
+          <button aria-label={`${t('rm.stepN', { n: s.id })}: ${s.title}`} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : s.id)}
+            className={`absolute left-0 top-0 w-10 h-10 rounded-full grid place-items-center font-bold border-2 transition-colors ${stepNode[s.status]}`}>{s.status === 'done' ? '✓' : String(s.id).padStart(2, '0')}</button>
+          <div className={`card !p-4 transition-shadow ${isOpen ? 'shadow-md' : ''} ${s.status === 'fix' ? 'border-danger-line' : ''}`}>
+            <button className="w-full text-left flex flex-wrap items-center justify-between gap-2" onClick={() => setOpen(isOpen ? null : s.id)} aria-expanded={isOpen}>
+              <span className="h2 text-base">{s.title}</span><StepBadge s={s.status} />
+            </button>
+            {s.note && <div className="mt-2"><Warn tone={s.status === 'fix' ? 'danger' : 'warn'}>{s.note}</Warn></div>}
+            {isOpen && (
+              <div className="mt-3 space-y-3 text-sm">
+                <p>{s.description}</p>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div><b>{t('rm.docs')}</b><ul className="list-disc ml-5">{s.docs.map((d) => <li key={d}>{d}</li>)}</ul></div>
+                  <div><b>{t('rm.why')}</b><p>{s.why}</p></div>
+                  <div><b>{t('rm.next')}</b><p>{s.next}</p></div>
+                </div>
+                <div><label className="label" htmlFor={'st' + s.id}>{t('rm.setStatus')}</label>
+                  <select id={'st' + s.id} className="input !w-auto" value={s.status} onChange={(e) => onStatus(s.id, e.target.value as StepStatus)}>{STEP_STATUSES.map((k) => <option key={k} value={k}>{tk('step', k)}</option>)}</select></div>
+              </div>)}
+          </div>
+        </li>)
+    })}</ol>
   )
 }
 
 export function ActionList({ actions, onStatus }: { actions: ActionItem[]; onStatus: (id: string, s: StepStatus) => void }) {
-  if (!actions.length) return <div className="card text-sm text-green-700">✓ ไม่มีงานที่เกิดจากความเสี่ยงในขณะนี้</div>
+  const { t } = useI18n()
+  if (!actions.length) return <div className="card text-sm text-ok-fg">✓ {t('act.none')}</div>
   return (
     <ul className="space-y-2">{actions.map((a) => (
-      <li key={a.id} className="card !p-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm"><div className={a.status === 'done' ? 'line-through text-slate-500' : 'font-medium'}>{a.title}</div><div className="text-xs text-slate-500">เกิดจากความเสี่ยง: {a.riskLabel} · ผู้รับผิดชอบ: {a.owner}</div></div>
+      <li key={a.id} className="card-i flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm min-w-0"><div className={a.status === 'done' ? 'line-through text-muted' : 'font-medium'}>{a.title}</div><div className="text-xs text-muted">{t('c.fromRisk')}: {a.riskLabel} · {t('c.owner')}: {a.owner}</div></div>
         <div className="flex items-center gap-2"><StepBadge s={a.status} />
-          <select aria-label={'สถานะงาน ' + a.title} className="input !w-auto !py-1.5 text-sm" value={a.status} onChange={(e) => onStatus(a.id, e.target.value as StepStatus)}>{(Object.keys(stepLabel) as StepStatus[]).map((k) => <option key={k} value={k}>{stepLabel[k]}</option>)}</select></div>
+          <select aria-label={`${t('c.status')}: ${a.title}`} className="input !w-auto !py-1.5 text-sm" value={a.status} onChange={(e) => onStatus(a.id, e.target.value as StepStatus)}>{STEP_STATUSES.map((k) => <option key={k} value={k}>{tk('step', k)}</option>)}</select></div>
       </li>))}</ul>
+  )
+}
+
+export function AlertCard({ a, profileName }: { a: AlertItem; profileName: string }) {
+  const { t } = useI18n()
+  const g = getReg(a.sourceId)
+  const k = (x: string) => t(x as never)
+  return (
+    <article className={`card border-l-8 ${levelBar[a.severity]} text-sm space-y-1`}>
+      <div className="flex flex-wrap justify-between gap-2"><h3 className="font-semibold">⚠ {t('alert.head')}</h3>{a.isSample && <SampleTag text={t('alert.tag')} />}</div>
+      <p><b>{t('alert.changed')}:</b> {k(a.titleKey)}</p><p><b>{t('alert.when')}:</b> {a.when === 'sample' ? t('alert.sampleWhen') : a.when}</p>
+      <p><b>{t('alert.countryTopic')}:</b> {a.country === 'TH' ? '🇹🇭' : '🇨🇳'} {tk('country', a.country)} · {k(a.topicKey)}</p>
+      <p><b>{t('alert.profile')}:</b> {profileName}</p>
+      <p><b>{t('alert.source')}:</b> {g ? <a href={g.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">{regText(a.sourceId, 'auth')} ↗</a> : '-'}</p>
+      <p><b>{t('alert.impact')}:</b> {k(a.impactKey)}</p><p><b>{t('alert.next')}:</b> {k(a.nextKey)}</p>
+    </article>
   )
 }
