@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { Direction, Holder, Profile, Side } from '../types'
+import { useMemo, useState } from 'react'
+import type { Direction, EmploymentInput, Profile } from '../types'
 import { go, useStore } from '../store'
-import { BusinessProfile, Disclaimer, EmptyState, Go, PageHead, ProgressStepper, Warn, WorkflowStrip } from '../components/ui'
-import { CountryBadge, Icon, type IconName } from '../components/icons'
+import { BusinessProfile, Disclaimer, EmptyState, Go, PageHead, Warn, WorkflowStrip } from '../components/ui'
+import { CountryBadge, Icon } from '../components/icons'
 import { dirInfo } from '../utils/labels'
 import { dv, tk, useI18n } from '../i18n'
-import { KEYS, safeGet, safeSet } from '../storage'
-import { isObj } from '../profileSchema'
+import { OWNERSHIP_KEYS, buildProfile, coreDone, firstUnanswered, prune, remaining, visibleQs, type A, type Q } from '../interview'
 
 /* ================= LANDING ================= */
 function CrossBorderVisual() {
@@ -23,38 +22,25 @@ function CrossBorderVisual() {
 export function Landing() {
   const { t } = useI18n()
   const { startDemo, beginNew } = useStore()
-  const steps: [string, IconName][] = [['1', 'business'], ['2', 'ai'], ['3', 'risk'], ['4', 'plan'], ['5', 'monitor']]
   return (
-    <div className="space-y-12">
-      <section className="rounded-2xl border border-heroline bg-hero text-onhero px-6 py-10 md:px-12 md:py-14 grid md:grid-cols-[1.3fr_1fr] gap-8 items-center">
+    <div className="space-y-10 max-w-5xl mx-auto">
+      <section className="rounded-2xl border border-heroline bg-hero text-onhero px-6 py-12 md:px-12 md:py-16 grid md:grid-cols-[1.4fr_1fr] gap-8 items-center">
         <div>
           <p className="text-sm opacity-75 mb-3">{t('land.kicker')}</p>
           <h1 className="text-3xl md:text-5xl font-bold leading-tight">{t('land.h1')}</h1>
-          <p className="mt-4 text-lg opacity-90 max-w-2xl">{t('land.sub')}</p>
-          <div className="flex flex-wrap gap-3 mt-8">
-            <button className="btn-accent" onClick={beginNew}><Go>{t('cta.start')}</Go></button>
-            <button className="btn border border-heroline bg-herotile/60 text-onhero hover:bg-herotile" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>{t('land.how')}</button>
-            <button className="btn border border-heroline bg-herotile/60 text-onhero hover:bg-herotile" onClick={() => { startDemo(); go('profile') }}>{t('cta.demo')}</button>
+          <p className="mt-4 text-lg opacity-90 max-w-xl">{t('land.sub')}</p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3 mt-8">
+            <button className="btn-accent !px-6 !min-h-[52px] text-base" onClick={beginNew}><Go>{t('land.go')}</Go></button>
+            <button className="underline underline-offset-4 text-sm font-medium py-2" onClick={() => { startDemo(); go('profile') }}>{t('land.demoLink')}</button>
           </div>
-          <p className="text-xs opacity-70 mt-4">{t('land.demoNote')}</p>
+          <p className="text-xs opacity-70 mt-3">{t('land.goNote')}</p>
         </div>
-        <CrossBorderVisual />
+        <div className="hidden md:block"><CrossBorderVisual /></div>
       </section>
-      <section id="how" aria-labelledby="how-h">
-        <h2 id="how-h" className="h1 text-center mb-6">{t('land.h2')}</h2>
-        <ol className="grid grid-cols-2 md:grid-cols-5 gap-3">{steps.map(([n, i]) => <li key={n} className="card text-center !p-4"><div className="mx-auto w-10 h-10 rounded-lg bg-brand text-brandfg grid place-items-center"><Icon name={i} size={20} /></div><div className="text-xs text-muted mt-1">{t('land.stepN', { n })}</div><div className="font-semibold">{tk('land', 's' + n)}</div></li>)}</ol>
-        <div className="card mt-6"><p className="text-sm text-muted mb-3">{t('land.notChat')}</p><WorkflowStrip /></div>
-      </section>
-      <section aria-labelledby="ba-h">
-        <h2 id="ba-h" className="h1 text-center mb-6">{t('land.ba.h')}</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="card border-danger-line"><div className="text-sm font-semibold text-danger-fg mb-2">{t('land.before')}</div><p>{t('land.beforeT')}</p><p className="text-sm text-muted mt-2">{t('land.beforeS')}</p></div>
-          <div className="card border-ok-line"><div className="text-sm font-semibold text-ok-fg mb-2">{t('land.after')}</div><p>{t('land.afterT')}</p><p className="text-sm text-muted mt-2">{t('land.afterS')}</p></div>
-        </div>
-        <p className="text-center font-semibold mt-6 max-w-3xl mx-auto">{t('land.quote')}</p>
-      </section>
-      <section className="grid md:grid-cols-3 gap-4">
-        {(['1', '2', '3'] as const).map((k) => <div key={k} className="card"><h3 className="h2">{tk('land', `c${k}t`)}</h3><p className="text-sm text-muted mt-1">{tk('land', `c${k}d`)}</p></div>)}
+      <section aria-label={t('land.h2')}>
+        <ol className="grid sm:grid-cols-3 gap-4">{[1, 2, 3].map((n) => (
+          <li key={n} className="flex gap-3 items-start"><span className="w-8 h-8 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center font-semibold">{n}</span><span className="pt-1 font-medium">{tk('land', 't' + n)}</span></li>))}</ol>
+        <p className="text-sm text-muted mt-4">{t('land.tip')}</p>
       </section>
       <Disclaimer />
     </div>
@@ -64,8 +50,8 @@ export function Landing() {
 /* ================= DIRECTION ================= */
 export function DirectionPage() {
   const { t } = useI18n()
-  const { set, direction, profile } = useStore()
-  const pick = (d: Direction) => { try { localStorage.removeItem(KEYS.interview) } catch { /* ignore */ } set({ direction: d, profile: profile && profile.direction === d ? profile : null }); go('interview') }
+  const { set, reset, direction } = useStore()
+  const pick = (d: Direction) => { reset(); set({ direction: d }); go('interview') }
   return (
     <div>
       <PageHead title={t('dir.title')} sub={t('dir.sub')} />
@@ -79,102 +65,39 @@ export function DirectionPage() {
   )
 }
 
-/* ================= INTERVIEW (answers are language-neutral ids) ================= */
-type A = Record<string, string | string[]>
-interface Q { id: string; cat: number; type: 'text' | 'choice' | 'multi' | 'number' | 'pct'; ns?: string; opts?: string[]; when?: (a: A) => boolean; help?: boolean; min?: number }
-const SIDE = ['origin', 'partner', 'shared', 'unknown']
-const send = (a: A) => (a.forms as string[] | undefined)?.includes('send') ?? false
-const hires = (a: A) => (a.forms as string[] | undefined)?.includes('hire') ?? false
-const wantsStaff = (a: A) => send(a) || hires(a) || a.hire === 'yes' || a.hire === 'unsure'
-const goods = (a: A) => ((a.forms as string[] | undefined)?.includes('goods') ?? false) || ['manufacturing', 'retail'].includes(String(a.btype ?? ''))
-const company = (a: A) => (a.forms as string[] | undefined)?.some((f) => f === 'company' || f === 'invest') ?? false
-const QS: Q[] = [
-  { id: 'name', cat: 0, type: 'text', help: true },
-  { id: 'btype', cat: 0, type: 'choice', ns: 'btype', opts: ['manufacturing', 'retail', 'service', 'food', 'tech', 'other'] },
-  { id: 'btypeOther', cat: 0, type: 'text', help: true, when: (a) => a.btype === 'other' },
-  { id: 'activity', cat: 0, type: 'text', help: true },
-  { id: 'activityMore', cat: 0, type: 'text', when: (a) => String(a.activity ?? '').trim().length < 20 },
-  { id: 'forms', cat: 1, type: 'multi', ns: 'forms', opts: ['company', 'invest', 'goods', 'hire', 'send', 'partner', 'other'] },
-  { id: 'invest', cat: 1, type: 'choice', ns: 'invest', opts: ['lt10', '10to50', 'gt50', 'unknown'], when: company },
-  { id: 'ownOrigin', cat: 2, type: 'pct', help: true, when: company },
-  { id: 'funding', cat: 2, type: 'choice', ns: 'funding', opts: ['prop', 'origin', 'partner', 'unknown'], when: company },
-  { id: 'realInvestor', cat: 2, type: 'choice', ns: 'side', opts: SIDE, when: company },
-  { id: 'operator', cat: 2, type: 'choice', ns: 'side', opts: SIDE, when: company },
-  { id: 'board', cat: 2, type: 'choice', ns: 'side', opts: SIDE, when: company },
-  { id: 'voting', cat: 2, type: 'choice', ns: 'side', opts: SIDE, when: company },
-  { id: 'economic', cat: 2, type: 'choice', ns: 'economic', opts: ['prop', 'funder', 'unknown'], when: (a) => company(a) && (a.funding === 'origin' || a.funding === 'partner') },
-  { id: 'side', cat: 2, type: 'choice', ns: 'agr', opts: ['no', 'yes', 'unknown'], help: true, when: company },
-  { id: 'hire', cat: 3, type: 'choice', ns: 'hire', opts: ['yes', 'no', 'unsure'], when: (a) => !send(a) && !hires(a) },
-  { id: 'employees', cat: 3, type: 'number', min: 0, when: wantsStaff },
-  { id: 'crossWorkers', cat: 3, type: 'choice', ns: 'cw', opts: ['yes', 'no'], when: (a) => !send(a) && wantsStaff(a) },
-  { id: 'empEmployer', cat: 3, type: 'choice', ns: 'empEmployer', opts: ['origin', 'new', 'unsure'], when: send },
-  { id: 'empNat', cat: 3, type: 'choice', ns: 'empNat', opts: ['TH', 'CN', 'multi'], when: send },
-  { id: 'empDuration', cat: 3, type: 'choice', ns: 'empDuration', opts: ['le6', '6to12', '1to3', 'gt3', 'tbd'], when: send },
-  { id: 'empSalary', cat: 3, type: 'text', help: true, when: send },
-  { id: 'products', cat: 4, type: 'text' },
-  { id: 'market', cat: 4, type: 'text' },
-  { id: 'regulated', cat: 4, type: 'choice', ns: 'regulated', opts: ['none', 'food', 'electrical', 'other'], when: goods },
-  { id: 'location', cat: 5, type: 'text' },
-  { id: 'cross', cat: 6, type: 'multi', ns: 'cross', opts: ['import', 'export', 'fx', 'none'], when: goods },
-]
-const isSide = (v: unknown): v is 'origin' | 'partner' | 'shared' | 'unknown' => SIDE.includes(String(v))
-
-function buildProfile(a: A, d: Direction): { profile: Profile; mode: string } {
-  const comp = company(a)
-  const origin = comp ? Number(a.ownOrigin ?? 50) : 100
-  const fund = String(a.funding ?? 'prop')
-  const fo = fund === 'origin' ? 100 : fund === 'partner' ? 0 : origin
-  const ecoOrigin = a.economic === 'funder' ? (fo === 100 ? 80 : 20) : origin
-  const unknownFacts: string[] = []
-  if (comp && fund === 'unknown') unknownFacts.push('funding')
-  if (comp && a.economic === 'unknown') unknownFacts.push('economic')
-  const ctl = (v: unknown, what: string) => { const s = isSide(v) ? v : 'unknown'; if (s === 'unknown' && comp) unknownFacts.push(what); return s === 'origin' ? 100 : s === 'partner' ? 0 : origin }
-  const vo = ctl(a.voting, 'voting')
-  const bo = ctl(a.board, 'board')
-  const nat = (s: Side): 'TH' | 'CN' => (s === 'origin' ? (d === 'TH_CN' ? 'TH' : 'CN') : d === 'TH_CN' ? 'CN' : 'TH')
-  const mk = (id: Side, pct: number, cap: number, eco: number, vot: number, brd: number): Holder => ({ id, nationality: nat(id), percent: pct, capital: cap, voting: vot, board: brd, economic: eco })
-  const op = isSide(a.operator) ? a.operator : 'unknown'
-  const s = send(a)
-  const profile: Profile = {
-    companyName: String(a.name), direction: d, businessType: String(a.btype), businessTypeOther: a.btype === 'other' ? String(a.btypeOther ?? '') : undefined,
-    activity: [a.activity, a.activityMore].filter(Boolean).join(' — '), forms: a.forms as string[], investmentRange: String(a.invest ?? ''),
-    employees: Number(a.employees ?? 0), crossBorderWorkers: a.crossWorkers === 'yes' || s,
-    holders: [mk('origin', origin, fo, ecoOrigin, vo, bo), mk('partner', 100 - origin, 100 - fo, 100 - ecoOrigin, 100 - vo, 100 - bo)],
-    realInvestor: isSide(a.realInvestor) ? a.realInvestor : 'unknown', operator: op === 'shared' ? 'joint' : op,
-    sideAgreement: a.side === 'yes' ? 'yes' : a.side === 'no' ? 'no' : 'unknown',
-    products: String(a.products ?? ''), targetMarket: String(a.market ?? ''), regulatedGoods: String(a.regulated ?? ''), location: String(a.location ?? ''),
-    crossBorder: ((a.cross as string[]) ?? []).filter((x) => x !== 'none'), unknownFacts,
-  }
-  const mode = !wantsStaff(a) ? '' : s ? (d === 'TH_CN' ? 'send_th_cn' : 'send_cn_th') : d === 'TH_CN' ? 'hire_cn' : 'hire_th'
-  return { profile, mode }
-}
-
-/** The interview survives a refresh: answers + position are kept until the profile is created. */
-function loadDraft(d: Direction): { answers: A; idx: number } {
-  try {
-    const x = JSON.parse(safeGet(KEYS.interview) ?? 'null') as unknown
-    if (isObj(x) && x.direction === d && isObj(x.answers) && typeof x.idx === 'number') return { answers: x.answers as A, idx: Math.max(0, Math.floor(x.idx)) }
-  } catch { /* ignore */ }
-  return { answers: {}, idx: 0 }
-}
+/* ================= INTERVIEW: 3 quick questions, the rest can be answered later ================= */
 const emptyFor = (q: Q) => (q.type === 'multi' ? [] : '')
 
 export function InterviewPage() {
   const { t } = useI18n()
-  const { direction, set, log, startDemo } = useStore()
+  const { direction, profile, answers, employment, set, log, startDemo } = useStore()
   const d: Direction = direction ?? 'TH_CN'
-  const [answers, setAnswers] = useState<A>(() => loadDraft(d).answers)
-  const [idx, setIdx] = useState(() => { const dr = loadDraft(d); return Math.min(dr.idx, Math.max(0, QS.filter((q) => !q.when || q.when(dr.answers)).length - 1)) })
-  const [val, setVal] = useState<string | string[]>(() => { const dr = loadDraft(d); const vis = QS.filter((q) => !q.when || q.when(dr.answers)); const q0 = vis[Math.min(dr.idx, vis.length - 1)]; return (dr.answers[q0.id] as string | string[] | undefined) ?? emptyFor(q0) })
-  const [err, setErr] = useState('')
-  useEffect(() => { if (direction) safeSet(KEYS.interview, JSON.stringify({ direction, answers, idx })) }, [direction, answers, idx])
   const info = dirInfo(d)
   const vars = { from: tk('country', info.from), to: tk('country', info.to) }
-  const visible = useMemo(() => QS.filter((q) => !q.when || q.when(answers)), [answers])
+  const visible = useMemo(() => visibleQs(answers), [answers])
+  const [idx, setIdx] = useState(() => firstUnanswered(answers))
+  const [val, setVal] = useState<string | string[]>(() => { const v = visibleQs(answers); const q0 = v[Math.min(firstUnanswered(answers), v.length - 1)]; return (answers[q0.id] as string | string[] | undefined) ?? emptyFor(q0) })
+  const [err, setErr] = useState('')
   if (!direction) return <div><PageHead title={t('intv.title')} /><EmptyState title={t('intv.noDir.t')} text={t('intv.noDir.d')} /></div>
   const q = visible[Math.min(idx, visible.length - 1)]
+  const core = coreDone(answers)
+  const left = remaining(answers)
   const label = (x: Q, o: string) => tk(`opt.${x.ns}`, o, vars)
   const qText = (x: Q) => t(`q.${x.id}` as never, vars)
+  const coreTotal = visible.filter((x) => x.core).length
+
+  /** Build (or update) the profile from the answers so far and show the first result. */
+  const finalize = (next: A) => {
+    const { profile: built, mode } = buildProfile(next, d)
+    const prev = profile && !profile.isDemo ? profile : null
+    // keep manual what-if edits on the ownership page if no ownership-related answer changed
+    const same = !!prev && OWNERSHIP_KEYS.every((k) => JSON.stringify(answers[k]) === JSON.stringify(next[k]))
+    const merged: Profile = same && prev ? { ...built, holders: prev.holders, realInvestor: prev.realInvestor, operator: prev.operator, sideAgreement: prev.sideAgreement, unknownFacts: prev.unknownFacts } : built
+    const seed: EmploymentInput = { mode, nationality: next.empNat ? `@opt.empNat.${next.empNat}` : '', location: merged.location, duration: next.empDuration ? `@opt.empDuration.${next.empDuration}` : '', salary: String(next.empSalary ?? ''), hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' }
+    const emp = prev ? (Object.fromEntries(Object.keys(seed).map((k) => [k, (employment as unknown as Record<string, string>)[k] || (seed as unknown as Record<string, string>)[k]])) as unknown as EmploymentInput) : seed
+    set({ profile: merged, answers: next, employment: emp, analysisDone: false, tour: null, ...(prev ? {} : { stepOverrides: {}, actionStatus: {}, actionSnap: {}, docs: {}, docStamp: {} }) })
+    log(prev ? 'hist.profileUpdate' : 'hist.profile'); go('dashboard')
+  }
   const submit = () => {
     let v = val
     if (q.type === 'multi') { if (!(v as string[]).length) return setErr(t('intv.e.pick')) }
@@ -185,50 +108,42 @@ export function InterviewPage() {
       v = String(Math.round(n))
     }
     if (q.type === 'text' && String(v).trim().length < 2) return setErr(t('intv.e.short'))
-    const raw = { ...answers, [q.id]: q.type === 'text' ? String(v).trim() : v }
-    const nv = QS.filter((x) => !x.when || x.when(raw))
-    // drop answers of questions that are no longer relevant (e.g. after going back and changing a choice)
-    const visibleIds = new Set(nv.map((x) => x.id))
-    const next = Object.fromEntries(Object.entries(raw).filter(([k]) => visibleIds.has(k))) as A
-    setAnswers(next); setErr('')
+    const next = prune({ ...answers, [q.id]: q.type === 'text' ? String(v).trim() : v }) // drops answers that are no longer relevant
+    set({ answers: next }); setErr('')
+    const nv = visibleQs(next)
     const nextIdx = nv.findIndex((x) => x.id === q.id) + 1
-    if (nextIdx >= nv.length) {
-      const { profile, mode } = buildProfile(next, d)
-      set({
-        profile, analysisDone: false, stepOverrides: {}, actionStatus: {}, docs: {}, tour: null,
-        employment: { mode, nationality: next.empNat ? `@opt.empNat.${next.empNat}` : '', location: profile.location, duration: next.empDuration ? `@opt.empDuration.${next.empDuration}` : '', salary: String(next.empSalary ?? ''), hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' },
-      })
-      try { localStorage.removeItem(KEYS.interview) } catch { /* ignore */ }
-      log('hist.profile'); return go('profile')
-    }
-    setIdx(nextIdx); setVal(nv[nextIdx].type === 'multi' ? [] : '')
+    const justFinishedQuickStart = !profile && coreDone(next) && !coreDone(answers)
+    if (nextIdx >= nv.length || justFinishedQuickStart) return finalize(next)
+    setIdx(nextIdx); setVal((next[nv[nextIdx].id] as string | string[] | undefined) ?? emptyFor(nv[nextIdx]))
   }
-  const back = () => { if (idx > 0) { setIdx(idx - 1); const pq = visible[idx - 1]; setVal((answers[pq.id] as string | string[]) ?? (pq.type === 'multi' ? [] : '')); setErr('') } }
+  const back = () => { if (idx > 0) { setIdx(idx - 1); const pq = visible[idx - 1]; setVal((answers[pq.id] as string | string[]) ?? emptyFor(pq)); setErr('') } }
   const shown = (x: Q) => { const a = answers[x.id]; return Array.isArray(a) ? a.map((o) => label(x, o)).join(', ') : x.type === 'choice' ? label(x, String(a)) : String(a ?? '') + (x.type === 'pct' ? '%' : '') }
-  const cats = [0, 1, 2, 3, 4, 5, 6].map((c) => tk('cat', String(c)))
   return (
-    <div>
+    <div className="max-w-2xl mx-auto">
       <PageHead title={t('intv.title')} sub={t('intv.sub', { dir: tk('dir', d) })}><button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>{t('intv.useDemo')}</button></PageHead>
-      <div className="grid lg:grid-cols-[260px_1fr] gap-6">
-        <aside className="card h-fit"><ProgressStepper steps={cats} current={q.cat} label={t('intv.aria')} /></aside>
-        <section className="space-y-3" aria-live="polite">
-          {visible.slice(0, idx).map((pq) => <div key={pq.id} className="space-y-1"><div className="bg-brand text-brandfg border border-line rounded-xl px-4 py-2 text-sm max-w-xl flex gap-2 items-start"><Icon name="ai" size={16} className="mt-0.5" />{qText(pq)}</div><div className="bg-primary text-onprimary rounded-xl px-4 py-2 text-sm ml-auto max-w-md w-fit">{shown(pq)}</div></div>)}
-          <div className="card border-primary/40">
-            <div className="text-xs text-primary mb-1">{t('intv.cat', { letter: String.fromCharCode(65 + q.cat), cat: cats[q.cat], n: idx + 1 })}</div>
-            <label className="text-lg font-semibold flex gap-2 items-start" htmlFor="ans" id="q-label"><Icon name="ai" size={20} className="mt-1 text-primary" />{qText(q)}</label>
-            {q.help && <p className="text-sm text-muted mb-2">{t(`q.${q.id}.h` as never)}</p>}
-            <div className="mt-3">
-              {(q.type === 'choice' || q.type === 'multi') && <div className="grid sm:grid-cols-2 gap-2" role={q.type === 'choice' ? 'radiogroup' : 'group'} aria-labelledby="q-label">{q.opts!.map((o) => { const sel = q.type === 'multi' ? (val as string[]).includes(o) : val === o; return (
-                <button type="button" key={o} aria-pressed={sel} onClick={() => { setErr(''); setVal(q.type === 'multi' ? (sel ? (val as string[]).filter((x) => x !== o) : [...(val as string[]), o]) : o) }} className={`text-left px-4 py-3 rounded-lg border min-h-[44px] transition ${sel ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line hover:bg-surface3'}`}><span className="flex items-center gap-2.5"><Icon name={q.type === 'multi' ? (sel ? 'squareCheck' : 'square') : sel ? 'circleDot' : 'circle'} className={sel ? 'text-primary' : 'text-muted'} />{label(q, o)}</span></button>) })}</div>}
-              {q.type === 'text' && <input id="ans" className="input" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
-              {(q.type === 'number' || q.type === 'pct') && <input id="ans" type="number" inputMode="numeric" className="input max-w-[180px]" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
-            </div>
-            {err && <p role="alert" className="text-danger-fg text-sm mt-2">{err}</p>}
-            <div className="flex gap-2 mt-4"><button className="btn-ghost" onClick={back} disabled={idx === 0}><Icon name="back" size={16} />{t('c.back')}</button><button className="btn-primary" onClick={submit}>{idx + 1 >= visible.length ? t('intv.submit') : t('c.next')}<Icon name="next" size={16} /></button></div>
-          </div>
-          <p className="text-xs text-muted">{t('intv.answered', { n: idx })}</p>
-        </section>
+      <div className="mb-4" aria-live="polite">
+        {!core ? <><p className="text-sm font-medium">{t('intv.quickProg', { n: Math.min(idx + 1, coreTotal), total: coreTotal })}</p>
+          <div className="h-1.5 rounded bg-surface3 mt-1.5 overflow-hidden"><div className="h-1.5 bg-primary transition-all duration-500" style={{ width: `${(Math.min(idx, coreTotal) / coreTotal) * 100}%` }} /></div>
+          <p className="text-xs text-muted mt-1.5">{t('intv.quickHint')}</p></>
+          : <p className="text-sm text-muted">{t('intv.left', { n: left })}</p>}
       </div>
+      <section className="space-y-3">
+        {idx > 0 && visible.slice(Math.max(0, idx - 2), idx).map((pq) => <div key={pq.id} className="space-y-1"><div className="bg-brand text-brandfg border border-line rounded-xl px-4 py-2 text-sm max-w-xl flex gap-2 items-start"><Icon name="ai" size={16} className="mt-0.5" />{qText(pq)}</div><div className="bg-primary text-onprimary rounded-xl px-4 py-2 text-sm ml-auto max-w-md w-fit">{shown(pq)}</div></div>)}
+        <div className="card border-primary/40">
+          <div className="text-xs text-primary mb-1">{tk('cat', String(q.cat))}</div>
+          <label className="text-lg font-semibold flex gap-2 items-start" htmlFor="ans" id="q-label"><Icon name="ai" size={20} className="mt-1 text-primary" />{qText(q)}</label>
+          {q.help && <p className="text-sm text-muted mt-1">{t(`q.${q.id}.h` as never)}</p>}
+          <div className="mt-3">
+            {(q.type === 'choice' || q.type === 'multi') && <div className="grid sm:grid-cols-2 gap-2" role={q.type === 'choice' ? 'radiogroup' : 'group'} aria-labelledby="q-label">{q.opts!.map((o) => { const sel = q.type === 'multi' ? (val as string[]).includes(o) : val === o; return (
+              <button type="button" key={o} aria-pressed={sel} onClick={() => { setErr(''); setVal((prev) => (q.type === 'multi' ? ((prev as string[]).includes(o) ? (prev as string[]).filter((x) => x !== o) : [...(prev as string[]), o]) : o)) }} className={`text-left px-4 py-3 rounded-lg border min-h-[44px] transition ${sel ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line hover:bg-surface3'}`}><span className="flex items-center gap-2.5"><Icon name={q.type === 'multi' ? (sel ? 'squareCheck' : 'square') : sel ? 'circleDot' : 'circle'} className={sel ? 'text-primary' : 'text-muted'} />{label(q, o)}</span></button>) })}</div>}
+            {q.type === 'text' && <input id="ans" className="input" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
+            {(q.type === 'number' || q.type === 'pct') && <input id="ans" type="number" inputMode="numeric" className="input max-w-[180px]" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
+          </div>
+          {err && <p role="alert" className="text-danger-fg text-sm mt-2">{err}</p>}
+          <div className="flex flex-wrap gap-2 mt-4"><button className="btn-ghost" onClick={back} disabled={idx === 0}><Icon name="back" size={16} />{t('c.back')}</button><button className="btn-primary" onClick={submit}>{idx + 1 >= visible.length || (!profile && coreDone({ ...answers, [q.id]: val }) && !core) ? t('intv.submit') : t('c.next')}<Icon name="next" size={16} /></button></div>
+        </div>
+        {core && <div className="flex flex-wrap items-center gap-3"><button className="btn-ghost" onClick={() => finalize(answers)}><Go>{t('intv.finish')}</Go></button><span className="text-xs text-muted">{t('intv.finishNote')}</span></div>}
+      </section>
     </div>
   )
 }

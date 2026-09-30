@@ -9,8 +9,8 @@ import { go, useStore } from '../store'
 import { CountryBadge, Icon } from './icons'
 
 /* ---------- small primitives ---------- */
-export const StatusBadge = ({ level }: { level: Level }) => { useI18n(); return <span className={`chip ${levelChip[level]}`}><Icon name={levelIconName[level]} size={13} />{tk('level', level)}</span> }
-export const VerifyBadge = ({ v }: { v: Verification }) => { useI18n(); return <span className={`chip font-medium ${verifyChip[v]}`}>{tk('verify', v)}</span> }
+export const StatusBadge = ({ level }: { level: Level }) => { useI18n(); return <span title={level} className={`chip ${levelChip[level]}`}><Icon name={levelIconName[level]} size={13} />{tk('level', level)}</span> }
+export const VerifyBadge = ({ v }: { v: Verification }) => { useI18n(); return <span title={v} className={`chip font-medium ${verifyChip[v]}`}>{tk('verify', v)}</span> }
 export const StepBadge = ({ s }: { s: StepStatus }) => { useI18n(); return <span className={`chip font-medium ${stepChip[s]}`}>{tk('step', s)}</span> }
 export const SimTag = () => { const { t } = useI18n(); return <span title={t('sim.note')} className="chip bg-surface3 text-muted border-line font-medium cursor-help"><Icon name="info" size={12} />{t('sim.tag')}</span> }
 export const SampleTag = ({ text }: { text?: string }) => { const { t } = useI18n(); return <span className="inline-block text-[11px] bg-surface3 text-muted rounded px-1.5 py-0.5">{text ?? t('c.sample')}</span> }
@@ -135,11 +135,12 @@ export function SectionTabs({ group, active }: { group: 'ownership' | 'employmen
 }
 
 /* ---------- AI output (Answer · Reason · Risk · Source · Next action) ---------- */
+const MOD: Record<string, string> = { 'Business Intake AI': 'intake', 'Legal Analysis AI': 'legal', 'Ownership Analysis AI': 'ownership', 'Nominee Risk AI': 'nominee', 'Employment AI': 'employment', 'Tax Analysis AI': 'tax', 'Document AI': 'documents', 'Language AI': 'language', 'Culture & Communication AI': 'culture' }
 export function AIMessage({ r }: { r: AIResponse }) {
   const { t } = useI18n()
   return (
     <div className={`rounded-xl border p-4 space-y-3 text-sm ${r.blocked ? 'border-danger-line bg-danger-bg' : r.kind === 'educational' ? 'border-info-line bg-info-bg' : 'border-line bg-brand'}`} aria-live="polite">
-      <div className="flex flex-wrap gap-1.5 items-center text-xs text-muted"><span className="font-semibold inline-flex items-center gap-1"><Icon name="ai" size={14} />{t('ai.modules')}:</span>{r.modules.map((m) => <span key={m} className="bg-surface border border-line rounded px-2 py-0.5">{m}</span>)}<span className="ml-auto"><SimTag /></span></div>
+      <div className="flex flex-wrap gap-1.5 items-center text-xs text-muted"><span className="font-semibold inline-flex items-center gap-1"><Icon name="ai" size={14} />{t('ai.modules')}:</span>{r.modules.map((m) => <span key={m} className="bg-surface border border-line rounded px-2 py-0.5">{MOD[m] ? tk('mod', MOD[m]) : m}</span>)}<span className="ml-auto"><SimTag /></span></div>
       <div><div className="text-xs font-semibold text-muted">{t('ai.answer')}</div><p className="text-base font-semibold">{r.answer}</p></div>
       <div className="grid sm:grid-cols-2 gap-3">
         <div><div className="text-xs font-semibold text-muted">{t('ai.reason')}</div><p>{r.reason}</p></div>

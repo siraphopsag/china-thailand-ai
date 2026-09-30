@@ -11,4 +11,4 @@ export const terms = [
 /** Business-situation guidance: sit.S.t title, sit.S.i intro, sit.S.p.K.t/d considerations, sit.S.a suggested approach. */
 export const situations = [0, 1, 2, 3]
 export const situationPoints = [0, 1, 2, 3]
-export const tourRoutes = ['profile', 'analysis', 'ownership', 'nominee', 'employment', 'contract', 'risk', 'roadmap', 'dashboard', 'documents', 'monitoring', 'sources']
+export const tourRoutes = ['profile', 'analysis', 'ownership', 'employment', 'roadmap', 'dashboard', 'documents', 'monitoring', 'sources']

@@ -4,11 +4,11 @@ import type { IconName } from '../components/icons'
 /** Status → semantic token classes (defined in index.css, switch with light/dark theme). */
 export const levelChip: Record<Level, string> = {
   LOW: 'bg-ok-bg text-ok-fg border-ok-line', MEDIUM: 'bg-warn-bg text-warn-fg border-warn-line',
-  HIGH: 'bg-danger-bg text-danger-fg border-danger-line', NEEDS_REVIEW: 'bg-review-bg text-review-fg border-review-line',
+  HIGH: 'bg-danger-bg text-danger-fg border-danger-line', NEEDS_REVIEW: 'bg-warn-bg text-warn-fg border-warn-line',
 }
-export const levelBar: Record<Level, string> = { LOW: 'border-l-ok-fg', MEDIUM: 'border-l-warn-fg', HIGH: 'border-l-danger-fg', NEEDS_REVIEW: 'border-l-review-fg' }
-export const levelPanel: Record<Level, string> = { LOW: 'border-ok-line bg-ok-bg', MEDIUM: 'border-warn-line bg-warn-bg', HIGH: 'border-danger-line bg-danger-bg', NEEDS_REVIEW: 'border-review-line bg-review-bg' }
-export const levelIconName: Record<Level, IconName> = { LOW: 'ok', MEDIUM: 'alert', HIGH: 'warn', NEEDS_REVIEW: 'help' }
+export const levelBar: Record<Level, string> = { LOW: 'border-l-ok-fg', MEDIUM: 'border-l-warn-fg', HIGH: 'border-l-danger-fg', NEEDS_REVIEW: 'border-l-warn-fg' }
+export const levelPanel: Record<Level, string> = { LOW: 'border-ok-line bg-ok-bg', MEDIUM: 'border-warn-line bg-warn-bg', HIGH: 'border-danger-line bg-danger-bg', NEEDS_REVIEW: 'border-warn-line bg-warn-bg' }
+export const levelIconName: Record<Level, IconName> = { LOW: 'ok', MEDIUM: 'alert', HIGH: 'warn', NEEDS_REVIEW: 'alert' }
 export const levelOrder: Level[] = ['HIGH', 'NEEDS_REVIEW', 'MEDIUM', 'LOW']
 
 export const verifyChip: Record<Verification, string> = {

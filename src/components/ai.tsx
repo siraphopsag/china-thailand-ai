@@ -9,16 +9,17 @@ import { AIMessage } from './ui'
 import { Icon, type IconName } from './icons'
 
 const TILES: [route: string, icon: IconName, key: string][] = [
-  ['analysis', 'business', 'a1'], ['ownership', 'ownership', 'a2'], ['employment', 'employment', 'a3'], ['risk', 'risk', 'a4'], ['roadmap', 'plan', 'a5'],
+  ['analysis', 'business', 'a1'], ['ownership', 'ownership', 'a2'], ['employment', 'employment', 'a3'], ['roadmap', 'plan', 'a4'], ['documents', 'documents', 'a5'],
 ]
 
-/** AI Command Center: five plain actions wired to the existing modules + a free-text ask through the orchestrator. */
-export function AICommandCenter({ profile }: { profile: Profile | null }) {
+/** AI Command Center: plain actions wired to the existing modules. The recommended next one is highlighted; the free-text ask is one click away. */
+export function AICommandCenter({ profile, highlight }: { profile: Profile | null; highlight?: string }) {
   const { t, lang } = useI18n()
   const [q, setQ] = useState('')
   const [resp, setResp] = useState<AIResponse | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [askOpen, setAskOpen] = useState(false)
   const ask = async () => {
     if (q.trim().length < 4) return setErr(t('err.qShort'))
     if (q.length > 500) return setErr(t('err.qLong'))
@@ -30,23 +31,30 @@ export function AICommandCenter({ profile }: { profile: Profile | null }) {
     <section className="card space-y-4" aria-labelledby="cc-h">
       <div><h2 id="cc-h" className="text-xl font-semibold">{t('cc.title')}</h2><p className="text-sm text-muted">{t('cc.sub')}</p></div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {TILES.map(([route, icon, k], i) => (
-          <button key={k} onClick={() => go(route)} className={`group text-left rounded-xl border border-line bg-surface2 p-4 flex gap-3 items-start hover:border-primary hover:bg-surface3 transition active:scale-[.99] ${i === 0 ? 'sm:col-span-2 lg:col-span-1 ring-1 ring-primary/40' : ''}`}>
-            <span className="w-10 h-10 rounded-lg bg-brand text-brandfg grid place-items-center shrink-0"><Icon name={icon} size={20} /></span>
-            <span className="min-w-0"><span className="block font-semibold leading-snug">{tk('cc', k)}</span><span className="block text-sm text-muted mt-0.5">{tk('cc', k + 'd')}</span></span>
-          </button>))}
+        {TILES.map(([route, icon, k]) => {
+          const rec = highlight === route
+          return (
+            <button key={k} onClick={() => go(route)} aria-label={rec ? `${tk('cc', k)} — ${t('cc.recommended')}` : undefined} className={`group text-left rounded-xl border p-4 flex gap-3 items-start hover:border-primary hover:bg-surface3 transition active:scale-[.99] ${rec ? 'border-primary ring-2 ring-primary/30 bg-brand' : 'border-line bg-surface2'}`}>
+              <span className="w-10 h-10 rounded-lg bg-brand text-brandfg grid place-items-center shrink-0"><Icon name={icon} size={20} /></span>
+              <span className="min-w-0"><span className="block font-semibold leading-snug">{tk('cc', k)}</span><span className="block text-sm text-muted mt-0.5">{tk('cc', k + 'd')}</span>{rec && <span className="inline-block mt-1 text-xs font-semibold text-primary">{t('cc.recommended')}</span>}</span>
+            </button>)
+        })}
       </div>
-      <div className="space-y-2 pt-1">
-        <label htmlFor="cc-q" className="label">{t('cc.askLabel')}</label>
-        <div className="flex gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]"><Icon name="ai" size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-            <input id="cc-q" className="input !pl-10" value={q} placeholder={t('cc.ph')} onChange={(e) => { setQ(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && ask()} maxLength={500} /></div>
-          <button className="btn-primary" disabled={busy} onClick={ask}>{busy ? t('cc.busy') : t('cc.ask')}</button>
-        </div>
-        <div className="flex gap-2 flex-wrap text-sm">{(['s1', 's2', 's3'] as const).map((k) => <button key={k} className="px-3 py-1.5 rounded-lg border border-line bg-surface hover:bg-surface3 min-h-[36px] transition text-left" onClick={() => setQ(t(`cc.${k}` as never))}>{tk('cc', k)}</button>)}</div>
-        {err && <p role="alert" className="text-danger-fg text-sm">{err}</p>}
-        {busy && <p className="text-sm text-muted animate-pulse">{t('cc.loading')}</p>}
-        {resp && !busy && <AIMessage r={resp} />}
+      <div>
+        <button className="text-sm text-primary font-medium inline-flex items-center gap-1" aria-expanded={askOpen} onClick={() => setAskOpen(!askOpen)}><Icon name="ai" size={15} />{t('cc.askToggle')}<Icon name={askOpen ? 'up' : 'down'} size={14} /></button>
+        {askOpen && (
+          <div className="space-y-2 pt-3">
+            <label htmlFor="cc-q" className="sr-only">{t('cc.askLabel')}</label>
+            <div className="flex gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-[200px]"><Icon name="ai" size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                <input id="cc-q" className="input !pl-10" value={q} placeholder={t('cc.ph')} onChange={(e) => { setQ(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && ask()} maxLength={500} autoFocus /></div>
+              <button className="btn-primary" disabled={busy} onClick={ask}>{busy ? t('cc.busy') : t('cc.ask')}</button>
+            </div>
+            <div className="flex gap-2 flex-wrap text-sm">{(['s1', 's2', 's3'] as const).map((k) => <button key={k} className="px-3 py-1.5 rounded-lg border border-line bg-surface hover:bg-surface3 min-h-[36px] transition text-left" onClick={() => setQ(t(`cc.${k}` as never))}>{tk('cc', k)}</button>)}</div>
+            {err && <p role="alert" className="text-danger-fg text-sm">{err}</p>}
+            {busy && <p className="text-sm text-muted animate-pulse">{t('cc.loading')}</p>}
+            {resp && !busy && <AIMessage r={resp} />}
+          </div>)}
       </div>
     </section>
   )

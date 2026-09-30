@@ -10,3 +10,4 @@
 - Accessibility: menus and tab lists support keyboard navigation; colour pairs were checked for WCAG AA contrast in both themes (only decorative icons fall between 3:1 and 4.5:1).
 - Assistant screening (`classifyIntent`) is a heuristic, not a safety system. A connected LLM needs its own policy and classifier.
 - The API (`api/analyze-business.ts`) validates input (400), is same-origin only (403) and has a best-effort per-instance rate limit (429); use a shared store before connecting a paid LLM.
+- UX: the interview is a 3-question quick start (`src/interview.ts`); remaining questions can be answered later and unanswered ownership facts count as "unknown", never as "fine". Pages are merged: ownership+screening, employment+contract, risks+to-do.

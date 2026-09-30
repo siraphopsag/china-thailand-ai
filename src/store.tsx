@@ -14,6 +14,7 @@ export type Mode = 'real' | 'demo'
 export interface ActionSnap { title: string; riskLabel: string; owner: string; riskId: string }
 interface State {
   direction: Direction | null
+  answers: Record<string, string | string[]> // interview answers (language-neutral ids); the profile is built from them
   profile: Profile | null
   employment: EmploymentInput
   contract: ContractInput
@@ -31,7 +32,7 @@ interface State {
   history: HistoryItem[]
 }
 const initial: State = {
-  direction: null, profile: null, employment: emptyEmployment, contract: emptyContract, stepOverrides: {}, actionStatus: {}, actionSnap: {}, tour: null, checks: {}, docs: {}, docLang: {}, docStamp: {},
+  direction: null, answers: {}, profile: null, employment: emptyEmployment, contract: emptyContract, stepOverrides: {}, actionStatus: {}, actionSnap: {}, tour: null, checks: {}, docs: {}, docLang: {}, docStamp: {},
   extraAlerts: [], regChanged: false, analysisDone: false, history: [],
 }
 const now = () => new Date().toISOString()
@@ -56,12 +57,16 @@ const isBool = (v: unknown): v is boolean => typeof v === 'boolean'
 const isString = (v: unknown): v is string => typeof v === 'string'
 const isLang = (v: unknown): v is 'th' | 'zh' | 'en' => v === 'th' || v === 'zh' || v === 'en'
 const isSnap = (v: unknown): v is ActionSnap => isObj(v) && typeof v.title === 'string' && typeof v.riskLabel === 'string' && typeof v.owner === 'string' && typeof v.riskId === 'string'
+function sanitizeAnswers(raw: unknown): Record<string, string | string[]> {
+  if (!isObj(raw)) return {}
+  return Object.fromEntries(Object.entries(raw).filter(([, v]) => typeof v === 'string' || (Array.isArray(v) && v.every((x) => typeof x === 'string')))) as Record<string, string | string[]>
+}
 export function sanitizeState(raw: unknown): State {
   if (!isObj(raw)) return initial
   const profile = cleanProfile(raw.profile)
   return {
     direction: raw.direction === 'CN_TH' ? 'CN_TH' : raw.direction === 'TH_CN' ? 'TH_CN' : profile ? profile.direction : null,
-    profile, employment: fill(emptyEmployment, raw.employment), contract: fill(emptyContract, raw.contract),
+    answers: sanitizeAnswers(raw.answers), profile, employment: fill(emptyEmployment, raw.employment), contract: fill(emptyContract, raw.contract),
     stepOverrides: mapOf(raw.stepOverrides, isStep) as Record<number, StepStatus>, actionStatus: mapOf(raw.actionStatus, isStep), actionSnap: mapOf(raw.actionSnap, isSnap), tour: null,
     checks: mapOf(raw.checks, isBool), docs: mapOf(raw.docs, isBool), docLang: mapOf(raw.docLang, isLang), docStamp: mapOf(raw.docStamp, isString),
     extraAlerts: Array.isArray(raw.extraAlerts) ? (raw.extraAlerts.filter((a) => isObj(a) && typeof a.id === 'string' && typeof a.titleKey === 'string' && typeof a.sourceId === 'string') as unknown as AlertItem[]) : [],

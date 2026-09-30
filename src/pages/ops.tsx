@@ -4,11 +4,12 @@ import { fingerprint, go, useStore } from '../store'
 import { ActionList, AlertCard, Checklist, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, Ok, PageHead, RiskCard, RoadmapTimeline, SampleTag, SourceCard, StatusBadge, VerifyBadge, Warn } from '../components/ui'
 import { AICommandCenter, AITimeline } from '../components/ai'
 import { CountryBadge, Icon } from '../components/icons'
+import { remaining } from '../interview'
 import { assessRisks, buildDocument, contractKeys, contractLabel, deriveActions, detectNomineeRisk, docDesc, docIds, docTitle, docToHtml, generateRoadmap, hasCompany, riskRoute, type DocType } from '../services/engines'
 import { aiService } from '../services/aiService'
 import { checklistItems } from '../data/demo'
 import { lastVerifiedText, regText, regulations, simulatedReplacement } from '../data/regulations'
-import { dirInfo, levelChip, levelOrder } from '../utils/labels'
+import { dirInfo, levelOrder } from '../utils/labels'
 import { dv, LANGS, tk, useI18n, type Lang } from '../i18n'
 
 function useRoadmap() {
@@ -32,7 +33,7 @@ function useActions() {
 /* ================= DASHBOARD (business · status · issues · next action · documents · AI activity) ================= */
 export function Dashboard() {
   const { t } = useI18n()
-  const { profile, employment, checks, docs, startDemo } = useStore()
+  const { profile, employment, checks, docs, answers, startDemo } = useStore()
   const steps = useRoadmap()
   const actions = useActions()
   if (!profile) return <div><PageHead title={t('dash.title')} /><EmptyState /></div>
@@ -46,10 +47,17 @@ export function Dashboard() {
   const next = pending.find((a) => a.riskId === 'nominee') ?? pending[0]
   const issues = [...risks].filter((r) => r.level !== 'LOW').sort((a, b) => levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level)).slice(0, 3)
   const status = nom.stop ? t('dash.status.stop') : pending.length ? t('dash.status.fix') : t('dash.status.ok')
+  const left = !profile.isDemo && Object.keys(answers).length > 0 ? remaining(answers) : 0
+  const tileFor = (r: string) => ({ nominee: 'ownership', ownership: 'ownership', employment: 'employment', contract: 'employment', documents: 'documents' } as Record<string, string>)[r] ?? 'roadmap'
   const needed: DocType[] = ['business', ...(hasCompany(profile) ? (['ownership'] as DocType[]) : []), ...(profile.employees > 0 || profile.crossBorderWorkers ? (['employment', 'contract'] as DocType[]) : []), 'report', 'plan']
   return (
     <div className="space-y-5">
-      <PageHead title={t('dash.title')} sub={t('dash.sub')}><button className="btn-ghost" onClick={() => startDemo()}>{t('dash.resetDemo')}</button></PageHead>
+      <PageHead title={t('dash.title')} sub={t('dash.sub')}>{profile.isDemo && <button className="btn-ghost" onClick={() => startDemo()}>{t('dash.resetDemo')}</button>}</PageHead>
+      {left > 0 && (
+        <div className="rounded-xl border border-info-line bg-info-bg text-info-fg px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2" role="status">
+          <Icon name="info" size={18} /><p className="flex-1 min-w-[220px] text-sm">{t('dash.partial', { n: left })}</p>
+          <button className="btn-primary !min-h-[40px]" onClick={() => go('interview')}><Go>{t('dash.answerMore')}</Go></button>
+        </div>)}
       <div className="grid lg:grid-cols-5 gap-4">
         <section className="card lg:col-span-3 space-y-4" aria-labelledby="biz-h">
           <div>
@@ -62,8 +70,7 @@ export function Dashboard() {
             <div><div className="text-xs text-muted">{t('dash.status')}</div><div className="font-semibold">{status}</div></div>
           </div>
           <div><div className="flex justify-between text-sm"><span className="text-muted">{t('dash.progress')}</span><span className="font-semibold">{done} / {total}</span></div>
-            <div className="h-2.5 bg-surface3 rounded-full mt-1.5 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={t('dash.progress')}><div className="h-2.5 bg-primary transition-all duration-700" style={{ width: pct + '%' }} /></div>
-            <p className="text-xs text-muted mt-1.5">{t('dash.progressNote')}</p></div>
+            <div className="h-2.5 bg-surface3 rounded-full mt-1.5 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={t('dash.progress')}><div className="h-2.5 bg-primary transition-all duration-700" style={{ width: pct + '%' }} /></div></div>
         </section>
         <section className="lg:col-span-2 rounded-xl bg-primary text-onprimary p-5 flex flex-col gap-3 shadow-md" aria-labelledby="nxt-h">
           <div id="nxt-h" className="text-xs font-semibold opacity-80 flex items-center gap-1.5"><Icon name="ai" size={15} />{t('dash.nextTitle')}</div>
@@ -72,83 +79,64 @@ export function Dashboard() {
           {next && <button className="btn bg-surface text-ink hover:opacity-90" onClick={() => go(riskRoute(next.riskId))}><Go>{t('dash.nextGo')}</Go></button>}
         </section>
       </div>
-      {nom.stop && <Warn tone="danger"><b>{t('nom.stopBanner')}</b> — {t('dash.stopText')} <button className="underline font-semibold ml-1" onClick={() => go('nominee')}>{t('dash.seeDetails')}</button></Warn>}
-      <AICommandCenter profile={profile} />
-      <div className="grid lg:grid-cols-3 gap-4">
-        <section className="card" aria-labelledby="iss-h"><h2 id="iss-h" className="h2 mb-3">{t('dash.issues')}</h2>
-          {issues.length ? <ul className="space-y-2">{issues.map((r) => (
-            <li key={r.id}><button className="w-full text-left card-i hover:bg-surface3 transition flex flex-col gap-1" onClick={() => go('risk')}>
-              <span className="flex items-center justify-between gap-2 flex-wrap"><span className="font-medium text-sm">{r.category}</span><StatusBadge level={r.level} /></span>
-              <span className="block text-xs text-muted line-clamp-2">{r.why}</span></button></li>))}</ul> : <p className="text-sm text-ok-fg"><Ok>{t('dash.noIssues')}</Ok></p>}
-          <button className="btn-ghost mt-3 !min-h-[40px] text-sm" onClick={() => go('risk')}><Go>{t('dash.seeAll')}</Go></button></section>
-        <section className="card" aria-labelledby="doc-h"><h2 id="doc-h" className="h2">{t('dash.docsNeeded')}</h2><p className="text-xs text-muted mb-3">{t('dash.docsSub')}</p>
-          <ul className="space-y-2">{needed.map((x) => (
-            <li key={x} className="flex items-center justify-between gap-2 text-sm"><span className="flex items-center gap-2 min-w-0"><Icon name="documents" size={16} className="text-muted" /><span className="truncate">{docTitle(x)}</span></span>
-              <span className={`chip shrink-0 ${docs[x] ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface3 text-muted border-line'}`}>{docs[x] ? t('dash.docMade') : t('dash.docTodo')}</span></li>))}</ul>
-          <button className="btn-ghost mt-3 !min-h-[40px] text-sm" onClick={() => go('documents')}><Go>{t('dash.toDocs')}</Go></button></section>
-        <section className="card" aria-labelledby="act-h"><h2 id="act-h" className="h2 mb-3">{t('tl.title')}</h2><AITimeline p={profile} emp={employment} /></section>
-      </div>
+      {nom.stop && <Warn tone="danger"><b>{t('nom.stopBanner')}</b> — {t('dash.stopText')} <button className="underline font-semibold ml-1" onClick={() => go('ownership')}>{t('dash.seeDetails')}</button></Warn>}
+      <AICommandCenter profile={profile} highlight={next ? tileFor(next.riskId) : undefined} />
+      <section className="card" aria-labelledby="iss-h"><h2 id="iss-h" className="h2 mb-3">{t('dash.issues')}</h2>
+        {issues.length ? <ul className="space-y-2">{issues.map((r) => (
+          <li key={r.id}><button className="w-full text-left card-i hover:bg-surface3 transition flex flex-col gap-1" onClick={() => go('roadmap')}>
+            <span className="flex items-center justify-between gap-2 flex-wrap"><span className="font-medium text-sm">{r.category}</span><StatusBadge level={r.level} /></span>
+            <span className="block text-xs text-muted line-clamp-2">{r.why}</span></button></li>))}</ul> : <p className="text-sm text-ok-fg"><Ok>{t('dash.noIssues')}</Ok></p>}
+      </section>
+      <Disclosure title={t('dash.docsNeeded')}>
+        <p className="text-xs text-muted">{t('dash.docsSub')}</p>
+        <ul className="space-y-2">{needed.map((x) => (
+          <li key={x} className="flex items-center justify-between gap-2 text-sm"><span className="flex items-center gap-2 min-w-0"><Icon name="documents" size={16} className="text-muted" /><span className="truncate">{docTitle(x)}</span></span>
+            <span className={`chip shrink-0 ${docs[x] ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface3 text-muted border-line'}`}>{docs[x] ? t('dash.docMade') : t('dash.docTodo')}</span></li>))}</ul>
+        <button className="btn-ghost !min-h-[40px] text-sm" onClick={() => go('documents')}><Go>{t('dash.toDocs')}</Go></button>
+      </Disclosure>
+      <Disclosure title={t('dash.aiDid')}><AITimeline p={profile} emp={employment} /></Disclosure>
       <Disclaimer />
     </div>
   )
 }
 
-/* ================= RISK (found → why it matters → what to verify → next action) ================= */
-export function RiskPage() {
+/* ================= TO-DO PLAN: what to do now · what was found · all steps ================= */
+export function RoadmapPage({ openRisks = false }: { openRisks?: boolean }) {
   const { t } = useI18n()
-  const { profile, employment, setActionStatus } = useStore()
-  const actions = useActions()
-  if (!profile) return <div><PageHead title={t('risk.title')} /><EmptyState /></div>
-  const risks = assessRisks(profile, employment)
-  const setAct = (id: string, s: StepStatus) => { const a = actions.find((x) => x.id === id); if (a) setActionStatus(a, s) }
-  return (
-    <div className="space-y-5">
-      <PageHead title={t('risk.title')} sub={t('risk.sub')} />
-      <GuideStrip page="risk" nextRoute="roadmap" />
-      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
-        {levelOrder.map((l) => {
-          const list = risks.filter((r) => r.level === l)
-          return (
-            <section key={l} aria-label={tk('level', l)} className="space-y-3">
-              <div className={`flex items-center justify-between rounded-lg border px-3 py-2 ${levelChip[l]}`}><span className="font-semibold text-sm">{tk('lvl', l)}</span><span className="font-semibold">{list.length}</span></div>
-              {list.length ? list.map((r) => <RiskCard key={r.id} r={r} compact actions={actions.filter((a) => a.riskId === r.id)} onAction={setAct} />) : <div className="card-i text-sm text-muted text-center">{t('risk.none')}</div>}
-            </section>)
-        })}
-      </div>
-      <p className="text-xs text-muted">{t('risk.boardNote')}</p>
-      <Disclaimer />
-    </div>
-  )
-}
-
-/* ================= ROADMAP ================= */
-export function RoadmapPage() {
-  const { t } = useI18n()
-  const { profile, stepOverrides, setActionStatus, checks, set } = useStore()
+  const { profile, employment, stepOverrides, setActionStatus, checks, set } = useStore()
   const steps = useRoadmap()
   const actions = useActions()
   const [lockMsg, setLockMsg] = useState('')
   if (!profile) return <div><PageHead title={t('rm.title')} /><EmptyState /></div>
   const stop = detectNomineeRisk(profile).stop
   const done = steps.filter((s) => s.status === 'done').length
+  const risks = [...assessRisks(profile, employment)].sort((a, b) => levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level))
+  const setAct = (id: string, s: StepStatus) => { const a = actions.find((x) => x.id === id); if (a) setActionStatus(a, s) }
   return (
     <div className="space-y-5">
       <PageHead title={t('rm.title')} sub={t('rm.sub')} />
       <GuideStrip page="roadmap" nextRoute="documents" />
-      <p className="text-sm text-muted">{t('rm.progress', { n: done, total: steps.length })}</p>
       {lockMsg && <Warn tone="danger">{lockMsg}</Warn>}
       {stop && <Warn tone="danger"><b>{t('nom.stopBanner')}</b> — {t('rm.lockText')}</Warn>}
-      <RoadmapTimeline steps={steps} onStatus={(id, s: StepStatus) => {
-        if (stop && id >= 7 && (s === 'doing' || s === 'done')) { setLockMsg(t('rm.locked', { n: id })); return }
-        setLockMsg(''); set({ stepOverrides: { ...stepOverrides, [id]: s } })
-      }} />
-      <div className="card"><h2 className="h2 mb-1">{t('rm.actionsT')}</h2><p className="text-sm text-muted mb-3">{t('rm.actionsD')}</p>
-        <ActionList actions={actions} onStatus={(id, s) => { const a = actions.find((x) => x.id === id); if (a) setActionStatus(a, s) }} /></div>
+      <section className="card" aria-labelledby="todo-h"><h2 id="todo-h" className="h2 mb-1">{t('rm.actionsT')}</h2><p className="text-sm text-muted mb-3">{t('rm.actionsD')}</p>
+        <ActionList actions={actions} onStatus={setAct} /></section>
+      <Disclosure title={t('rm.found')} defaultOpen={openRisks}>
+        <p className="text-xs text-muted">{t('risk.boardNote')}</p>
+        <div className="grid md:grid-cols-2 gap-3">{risks.map((r) => <RiskCard key={r.id} r={r} compact actions={actions.filter((a) => a.riskId === r.id)} onAction={setAct} />)}</div>
+      </Disclosure>
+      <Disclosure title={`${t('rm.allSteps')} (${t('rm.progress', { n: done, total: steps.length })})`}>
+        <RoadmapTimeline steps={steps} onStatus={(id, s: StepStatus) => {
+          if (stop && id >= 7 && (s === 'doing' || s === 'done')) { setLockMsg(t('rm.locked', { n: id })); return }
+          setLockMsg(''); set({ stepOverrides: { ...stepOverrides, [id]: s } })
+        }} />
+      </Disclosure>
       <Disclosure title={t('rm.checklist')}><Checklist done={checks} onToggle={(id) => set({ checks: { ...checks, [id]: !checks[id] } })} /></Disclosure>
       <Disclaimer />
     </div>
   )
 }
+/** /risk is the same page with the findings opened. */
+export const RiskPage = () => <RoadmapPage openRisks />
 
 /* ================= DOCUMENTS ================= */
 const DOC_EDIT: Record<DocType, string> = { business: 'roadmap', ownership: 'ownership', employment: 'employment', contract: 'contract', report: 'risk', translation: 'language', plan: 'roadmap' }

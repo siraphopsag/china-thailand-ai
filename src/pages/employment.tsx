@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ContractInput, EmploymentInput } from '../types'
 import { go, useStore } from '../store'
-import { Disclaimer, Disclosure, EmptyState, GuideStrip, Go, Ok, PageHead, SectionTabs, SourceCard, StatusBadge, TabBar, VerifyBadge, Warn, ExtLink } from '../components/ui'
+import { Disclaimer, Disclosure, EmptyState, GuideStrip, Go, Ok, PageHead, SourceCard, StatusBadge, TabBar, VerifyBadge, Warn, ExtLink } from '../components/ui'
 import { Icon } from '../components/icons'
 import { analyzeEmployment, contractKeys, contractLabel, draftNote, generateContract } from '../services/engines'
 import { aiService } from '../services/aiService'
@@ -13,7 +13,7 @@ const MODES = ['hire_cn', 'hire_th', 'send_th_cn', 'send_cn_th', 'cross']
 const EMP_FIELDS: [keyof EmploymentInput, string][] = [['nationality', 'nationality'], ['location', 'location'], ['duration', 'duration'], ['salary', 'salary'], ['hours', 'hours'], ['leave', 'leave'], ['socialSecurity', 'social'], ['workAuth', 'workauth'], ['tax', 'tax']]
 
 /* ================= EMPLOYMENT CHECK ================= */
-export function EmploymentPage() {
+export function EmploymentPage({ openContract = false }: { openContract?: boolean }) {
   const { t } = useI18n()
   const { profile, employment, set, log } = useStore()
   if (!profile) return <div><PageHead title={t('emp.title')} /><EmptyState /></div>
@@ -24,7 +24,6 @@ export function EmploymentPage() {
   return (
     <div className="space-y-5">
       <PageHead title={t('emp.title')} sub={t('emp.sub')} />
-      <SectionTabs group="employment" active="employment" />
       <GuideStrip page="employment" nextRoute="contract" />
       <div className="card space-y-3"><h2 className="h2">{t('emp.mode')}</h2>
         <div role="radiogroup" aria-label={t('emp.mode')} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">{MODES.map((m) => <button key={m} role="radio" aria-checked={employment.mode === m} onClick={() => up('mode', m)} className={`px-4 py-3 rounded-lg border text-left min-h-[44px] transition flex items-center gap-2.5 ${employment.mode === m ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line hover:bg-surface3'}`}><Icon name={employment.mode === m ? 'circleDot' : 'circle'} className={employment.mode === m ? 'text-primary' : 'text-muted'} />{tk('mode', m)}</button>)}</div>
@@ -36,7 +35,8 @@ export function EmploymentPage() {
           {rows.map((r) => { const g = getReg(r.sourceId); return <tr key={r.id} className="border-b border-line align-top"><td className="p-2 font-medium">{r.area}</td><td className="p-2"><StatusBadge level={r.status} /></td><td className="p-2 text-muted">{r.note}</td><td className="p-2">{g && <ExtLink href={g.sourceUrl}>{regText(r.sourceId, 'auth')}</ExtLink>}</td></tr> })}</tbody></table></div>
         <div className="grid md:grid-cols-2 gap-3"><SourceCard id={tc ? 'cn-immigration' : 'th-labour'} /><SourceCard id={tc ? 'cn-labor' : 'th-tax'} /></div>
       </Disclosure>
-      <div className="flex gap-2 flex-wrap"><button className="btn-primary" onClick={() => { log('hist.employment'); go('contract') }}><Go>{t('emp.toContract')}</Go></button></div>
+      <Disclosure title={t('ctr.title')} defaultOpen={openContract}><ContractSection /></Disclosure>
+      <div className="flex gap-2 flex-wrap"><button className="btn-primary" onClick={() => { log('hist.employment'); go('roadmap') }}><Go>{t('emp.toPlan')}</Go></button></div>
       <Disclaimer />
     </div>
   )
@@ -44,14 +44,14 @@ export function EmploymentPage() {
 
 /* ================= CONTRACT ================= */
 const CFIELDS: (keyof ContractInput)[] = ['employer', 'employee', 'nationality', 'job', 'location', 'startDate', 'duration', 'salary', 'benefits', 'hours', 'leave', 'probation', 'other']
-export function ContractPage() {
+function ContractSection() {
   const { t, lang } = useI18n()
   const { profile, contract, employment, set, log } = useStore()
   const [out, setOut] = useState<ReturnType<typeof generateContract> | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [vLang, setVLang] = useState<Lang | null>(null)
-  if (!profile) return <div><PageHead title={t('ctr.title')} /><EmptyState /></div>
+  if (!profile) return null
   const cur = generateContract(contract, employment.mode)
   const gen = async () => {
     if (!cur.ready) { setOut(null); return setErr(t('ctr.e.min')) }
@@ -64,9 +64,7 @@ export function ContractPage() {
   const pipe: [string, boolean][] = [['ctx', !!employment.mode], ['info', cur.missing.length === 0], ['review', !!out], ['missing', !!out && out.missing.length === 0], ['draft', !!out], ['lang', !!out], ['verify', !!out]]
   return (
     <div className="space-y-5">
-      <PageHead title={t('ctr.title')} sub={t('ctr.sub')} />
-      <SectionTabs group="employment" active="contract" />
-      <GuideStrip page="contract" nextRoute="risk" />
+      <p className="text-sm text-muted">{t('ctr.sub')}</p>
       <ol className="flex flex-wrap gap-2 text-xs" aria-label={t('ctr.pipe.aria')}>{pipe.map(([k, done], i) => (
         <li key={k} className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 ${done ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface text-muted border-line'}`}>{done ? <Icon name="check" size={13} /> : <span className="font-semibold">{i + 1}</span>}{tk('ctr.pipe', k)}</li>))}</ol>
       <Warn tone="info"><b>{draftNote()}</b></Warn>
@@ -92,10 +90,11 @@ export function ContractPage() {
           <p className="text-sm mt-2"><b>{t('ctr.explainT')}</b> {t('ctr.explain')}</p><p className="text-xs text-muted mt-1">{t('ctr.sameData')}</p>
           <p className="text-xs font-semibold mt-2">{draftNote()}</p></div>
       </>}
-      <Disclaimer />
     </div>
   )
 }
+/** /contract is the same page with the contract section opened. */
+export const ContractPage = () => <EmploymentPage openContract />
 
 /* ================= LANGUAGE & CULTURE ================= */
 function CultureSituations() {

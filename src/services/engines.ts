@@ -186,7 +186,7 @@ export function deriveActions(p: Profile, emp: EmploymentInput): ActionItem[] {
   }
   return out
 }
-export const riskRoute = (riskId: string) => ({ nominee: 'nominee', ownership: 'ownership', employment: 'employment', legal: 'roadmap', tax: 'employment', language: 'contract', culture: 'language', documents: 'documents' }[riskId] ?? 'risk')
+export const riskRoute = (riskId: string) => ({ nominee: 'ownership', ownership: 'ownership', employment: 'employment', legal: 'roadmap', tax: 'employment', language: 'employment', culture: 'language', documents: 'documents' }[riskId] ?? 'roadmap')
 
 /* ---------- Roadmap ---------- */
 export function generateRoadmap(p: Profile): RoadmapStep[] {

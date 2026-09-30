@@ -13,8 +13,7 @@ export const PRIMARY: NavItem[] = [
   { route: 'dashboard', key: 'nav.overview', icon: 'overview', sub: ['profile', 'direction', 'interview', 'analysis'] },
   { route: 'ownership', key: 'nav.ownershipCheck', icon: 'ownership', sub: ['nominee'] },
   { route: 'employment', key: 'nav.employmentCheck', icon: 'employment', sub: ['contract'] },
-  { route: 'risk', key: 'nav.riskCheck', icon: 'risk', sub: [] },
-  { route: 'roadmap', key: 'nav.plan', icon: 'plan', sub: [] },
+  { route: 'roadmap', key: 'nav.plan', icon: 'plan', sub: ['risk'] },
   { route: 'documents', key: 'nav.documents', icon: 'documents', sub: [] },
 ]
 export const MORE: NavItem[] = [
@@ -22,9 +21,6 @@ export const MORE: NavItem[] = [
   { route: 'monitoring', key: 'nav.monitoring', icon: 'monitor', sub: [] },
   { route: 'sources', key: 'nav.sources', icon: 'sources', sub: [] },
   { route: 'language', key: 'tabs.language', icon: 'culture', sub: [] },
-  { route: 'pricing', key: 'nav.pricing', icon: 'business', sub: [] },
-  { route: 'privacy', key: 'nav.privacy', icon: 'info', sub: [] },
-  { route: 'admin', key: 'nav.admin', icon: 'settings', sub: [] },
 ]
 const isActive = (route: string, n: NavItem) => route === n.route || n.sub.includes(route)
 
@@ -105,7 +101,8 @@ export function LanguageSwitcher() {
 
 export function Header({ route }: { route: string }) {
   const { t } = useI18n()
-  const { startDemo } = useStore()
+  const { startDemo, profile } = useStore()
+  const started = !!profile // the menu appears once there is something to navigate
   const [menu, setMenu] = useState(false)
   const menuBtn = useRef<HTMLButtonElement>(null)
   useEffect(() => {
@@ -120,20 +117,20 @@ export function Header({ route }: { route: string }) {
         <button onClick={() => go('')} className="flex items-center gap-2 text-left shrink-0" aria-label={t('nav.home')}>
           <Logo /><span className="leading-tight hidden min-[420px]:block"><span className="block text-sm font-semibold">{t('app.name')}</span><span className="block text-[11px] opacity-70">{t('app.tagline')}</span></span>
         </button>
-        <nav aria-label={t('nav.main')} className="hidden xl:flex gap-0.5 ml-3 flex-1 min-w-0">
+        {started && <nav aria-label={t('nav.main')} className="hidden xl:flex gap-0.5 ml-3 flex-1 min-w-0">
           {PRIMARY.map((n) => (
             <button key={n.route} onClick={() => go(n.route)} aria-current={isActive(route, n) ? 'page' : undefined} className={`px-2.5 py-2 rounded-lg text-sm min-h-[40px] whitespace-nowrap transition-colors flex items-center gap-1.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3'}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</button>))}
           <Menu label={t('nav.more')} buttonClass="border-transparent" kind="disclosure">
             {(close) => <ul>{MORE.map((m) => <li key={m.route}><button className={`${item} ${route === m.route ? 'bg-brand text-brandfg font-semibold' : ''}`} onClick={() => { go(m.route); close() }}><Icon name={m.icon} size={17} />{t(m.key as never)}</button></li>)}</ul>}
           </Menu>
-        </nav>
+        </nav>}
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <LanguageSwitcher /><ThemeSwitcher />
           <button className="btn-accent !py-1.5 !min-h-[40px] text-sm hidden sm:inline-flex" onClick={() => { startDemo(); go('profile') }}>{t('cta.startDemo')}</button>
-          <button ref={menuBtn} className={`xl:hidden ${ctrl} w-10`} aria-expanded={menu} aria-label={t('nav.menu')} onClick={() => setMenu(!menu)}><Icon name={menu ? 'close' : 'menu'} /></button>
+          {started && <button ref={menuBtn} className={`xl:hidden ${ctrl} w-10`} aria-expanded={menu} aria-label={t('nav.menu')} onClick={() => setMenu(!menu)}><Icon name={menu ? 'close' : 'menu'} /></button>}
         </div>
       </div>
-      {menu && (
+      {started && menu && (
         <div className="xl:hidden bg-header px-3 pb-3 border-t border-line max-h-[70vh] overflow-auto">
           <button className="btn-accent w-full my-2 text-sm" onClick={() => { startDemo(); go('profile'); setMenu(false) }}>{t('cta.startDemo')}</button>
           <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-1">
@@ -189,9 +186,11 @@ export function ContextStack({ route }: { route: string }) {
 
 export function BottomNav({ route }: { route: string }) {
   const { t } = useI18n()
+  const { profile } = useStore()
+  if (!profile) return null
   return (
     <nav aria-label={t('nav.mobile')} className="xl:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-line grid grid-cols-5 z-40">
-      {PRIMARY.filter((n) => n.route !== 'documents').map((n) => (
+      {PRIMARY.map((n) => (
         <button key={n.route} onClick={() => go(n.route)} aria-current={isActive(route, n) ? 'page' : undefined} className={`py-2 text-[11px] min-h-[56px] flex flex-col items-center gap-0.5 leading-tight px-0.5 ${isActive(route, n) ? 'text-primary font-semibold' : 'text-muted'}`}>
           <Icon name={n.icon} size={21} /><span className="truncate max-w-full">{t(n.key as never)}</span>
         </button>))}
