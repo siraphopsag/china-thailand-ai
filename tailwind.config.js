@@ -10,7 +10,7 @@ export default {
       colors: {
         page: v('page'), surface: v('surface'), surface2: v('surface2'), surface3: v('surface3'), line: v('line'),
         ink: v('ink'), muted: v('muted'), primary: v('primary'), onprimary: v('onprimary'), brand: v('brand'), brandfg: v('brandfg'),
-        header: v('header'), onheader: v('onheader'), hero: v('hero'), accent: v('accent'), onaccent: v('onaccent'),
+        header: v('header'), onheader: v('onheader'), hero: v('hero'), onhero: v('onhero'), herotile: v('herotile'), heroline: v('heroline'), accent: v('accent'), onaccent: v('onaccent'),
         ok: status('ok'), warn: status('warn'), danger: status('danger'), review: status('review'), info: status('info'),
       },
     },

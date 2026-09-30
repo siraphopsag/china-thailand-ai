@@ -13,9 +13,9 @@ function CrossBorderVisual() {
   const { t } = useI18n()
   return (
     <div className="flex items-center justify-center gap-2 sm:gap-3 select-none" aria-hidden>
-      <div className="rounded-xl bg-white/10 border border-white/20 px-3 py-3 text-center w-24 sm:w-28"><div className="text-2xl font-bold tracking-wide">TH</div><div className="text-xs mt-1">{tk('country', 'TH')}</div></div>
-      <div className="flex-1 max-w-[140px] flex items-center"><span className="flex-1 border-t-2 border-dashed border-white/40" /><span className="mx-1 rounded-full bg-accent text-onaccent px-2 py-1 animate-pulse"><Icon name="ai" size={16} /></span><span className="flex-1 border-t-2 border-dashed border-white/40" /></div>
-      <div className="rounded-xl bg-white/10 border border-white/20 px-3 py-3 text-center w-24 sm:w-28"><div className="text-2xl font-bold tracking-wide">CN</div><div className="text-xs mt-1">{tk('country', 'CN')}</div></div>
+      <div className="rounded-xl bg-herotile border border-heroline px-3 py-3 text-center w-24 sm:w-28"><div className="text-2xl font-bold tracking-wide">TH</div><div className="text-xs mt-1">{tk('country', 'TH')}</div></div>
+      <div className="flex-1 max-w-[140px] flex items-center"><span className="flex-1 border-t-2 border-dashed border-onhero/40" /><span className="mx-1 rounded-full bg-accent text-onaccent px-2 py-1 animate-pulse"><Icon name="ai" size={16} /></span><span className="flex-1 border-t-2 border-dashed border-onhero/40" /></div>
+      <div className="rounded-xl bg-herotile border border-heroline px-3 py-3 text-center w-24 sm:w-28"><div className="text-2xl font-bold tracking-wide">CN</div><div className="text-xs mt-1">{tk('country', 'CN')}</div></div>
       <span className="sr-only">{t('dir.TH_CN')}</span>
     </div>
   )
@@ -26,15 +26,15 @@ export function Landing() {
   const steps: [string, IconName][] = [['1', 'business'], ['2', 'ai'], ['3', 'risk'], ['4', 'plan'], ['5', 'monitor']]
   return (
     <div className="space-y-12">
-      <section className="rounded-2xl bg-hero text-onheader px-6 py-10 md:px-12 md:py-14 grid md:grid-cols-[1.3fr_1fr] gap-8 items-center">
+      <section className="rounded-2xl border border-heroline bg-hero text-onhero px-6 py-10 md:px-12 md:py-14 grid md:grid-cols-[1.3fr_1fr] gap-8 items-center">
         <div>
           <p className="text-sm opacity-75 mb-3">{t('land.kicker')}</p>
           <h1 className="text-3xl md:text-5xl font-bold leading-tight">{t('land.h1')}</h1>
           <p className="mt-4 text-lg opacity-90 max-w-2xl">{t('land.sub')}</p>
           <div className="flex flex-wrap gap-3 mt-8">
             <button className="btn-accent" onClick={beginNew}><Go>{t('cta.start')}</Go></button>
-            <button className="btn border border-white/50 text-onheader hover:bg-white/10" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>{t('land.how')}</button>
-            <button className="btn border border-white/50 text-onheader hover:bg-white/10" onClick={() => { startDemo(); go('profile') }}>{t('cta.demo')}</button>
+            <button className="btn border border-heroline bg-herotile/60 text-onhero hover:bg-herotile" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>{t('land.how')}</button>
+            <button className="btn border border-heroline bg-herotile/60 text-onhero hover:bg-herotile" onClick={() => { startDemo(); go('profile') }}>{t('cta.demo')}</button>
           </div>
           <p className="text-xs opacity-70 mt-4">{t('land.demoNote')}</p>
         </div>

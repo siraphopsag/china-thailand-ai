@@ -6,7 +6,8 @@
   --page: 243 246 251; --surface: 255 255 255; --surface2: 247 249 252; --surface3: 232 238 247; --line: 214 222 235;
   --ink: 15 30 56; --muted: 82 96 120;
   --primary: 24 44 79; --onprimary: 255 255 255; --brand: 221 230 243; --brandfg: 34 61 104;
-  --header: 15 30 56; --onheader: 255 255 255; --hero: 15 30 56;
+  --header: 255 255 255; --onheader: 15 30 56;
+  --hero: 226 234 247; --onhero: 15 30 56; --herotile: 255 255 255; --heroline: 190 205 230;
   --accent: 251 191 36; --onaccent: 15 30 56;
   --ok-bg: 220 252 231; --ok-fg: 22 101 52; --ok-line: 134 239 172;
   --warn-bg: 254 243 199; --warn-fg: 146 64 14; --warn-line: 252 211 77;
@@ -19,7 +20,8 @@
   --page: 10 16 29; --surface: 18 27 46; --surface2: 24 35 58; --surface3: 34 48 78; --line: 50 66 100;
   --ink: 232 238 248; --muted: 160 174 198;
   --primary: 96 140 212; --onprimary: 8 14 26; --brand: 30 46 80; --brandfg: 184 206 242;
-  --header: 13 21 38; --onheader: 240 244 251; --hero: 17 28 52;
+  --header: 13 21 38; --onheader: 240 244 251;
+  --hero: 17 28 52; --onhero: 240 244 251; --herotile: 33 46 76; --heroline: 58 75 108;
   --accent: 251 191 36; --onaccent: 15 30 56;
   --ok-bg: 20 58 38; --ok-fg: 134 239 172; --ok-line: 34 110 66;
   --warn-bg: 66 50 14; --warn-fg: 252 211 77; --warn-line: 130 96 20;

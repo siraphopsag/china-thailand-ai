@@ -45,7 +45,7 @@ function useOutside(open: boolean, close: () => void) {
   }, [open, close])
   return ref
 }
-const ctrl = 'h-10 whitespace-nowrap rounded-lg border border-white/25 text-onheader hover:bg-white/10 transition active:scale-95 flex items-center justify-center gap-1.5 text-sm'
+const ctrl = 'h-10 whitespace-nowrap rounded-lg border border-line text-onheader hover:bg-surface3 transition active:scale-95 flex items-center justify-center gap-1.5 text-sm'
 
 export function ThemeSwitcher() {
   const { theme, toggle } = useTheme()
@@ -115,14 +115,14 @@ export function Header({ route }: { route: string }) {
     return () => document.removeEventListener('keydown', esc)
   }, [menu])
   return (
-    <header className="bg-header text-onheader sticky top-0 z-40 border-b border-white/10">
+    <header className="bg-header text-onheader sticky top-0 z-40 border-b border-line">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
         <button onClick={() => go('')} className="flex items-center gap-2 text-left shrink-0" aria-label={t('nav.home')}>
           <Logo /><span className="leading-tight hidden min-[420px]:block"><span className="block text-sm font-semibold">{t('app.name')}</span><span className="block text-[11px] opacity-70">{t('app.tagline')}</span></span>
         </button>
         <nav aria-label={t('nav.main')} className="hidden xl:flex gap-0.5 ml-3 flex-1 min-w-0">
           {PRIMARY.map((n) => (
-            <button key={n.route} onClick={() => go(n.route)} aria-current={isActive(route, n) ? 'page' : undefined} className={`px-2.5 py-2 rounded-lg text-sm min-h-[40px] whitespace-nowrap transition-colors flex items-center gap-1.5 ${isActive(route, n) ? 'bg-white/15 font-semibold' : 'hover:bg-white/10'}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</button>))}
+            <button key={n.route} onClick={() => go(n.route)} aria-current={isActive(route, n) ? 'page' : undefined} className={`px-2.5 py-2 rounded-lg text-sm min-h-[40px] whitespace-nowrap transition-colors flex items-center gap-1.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3'}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</button>))}
           <Menu label={t('nav.more')} buttonClass="border-transparent" kind="disclosure">
             {(close) => <ul>{MORE.map((m) => <li key={m.route}><button className={`${item} ${route === m.route ? 'bg-brand text-brandfg font-semibold' : ''}`} onClick={() => { go(m.route); close() }}><Icon name={m.icon} size={17} />{t(m.key as never)}</button></li>)}</ul>}
           </Menu>
@@ -134,10 +134,10 @@ export function Header({ route }: { route: string }) {
         </div>
       </div>
       {menu && (
-        <div className="xl:hidden bg-header px-3 pb-3 border-t border-white/10 max-h-[70vh] overflow-auto">
+        <div className="xl:hidden bg-header px-3 pb-3 border-t border-line max-h-[70vh] overflow-auto">
           <button className="btn-accent w-full my-2 text-sm" onClick={() => { startDemo(); go('profile'); setMenu(false) }}>{t('cta.startDemo')}</button>
           <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-1">
-            {[...PRIMARY, ...MORE].map((n) => <li key={n.route}><button onClick={() => { go(n.route); setMenu(false) }} className={`w-full text-left px-3 py-3 rounded-lg hover:bg-white/10 flex items-center gap-2.5 ${isActive(route, n) ? 'bg-white/15 font-semibold' : ''}`}><Icon name={n.icon} size={17} />{t(n.key as never)}</button></li>)}
+            {[...PRIMARY, ...MORE].map((n) => <li key={n.route}><button onClick={() => { go(n.route); setMenu(false) }} className={`w-full text-left px-3 py-3 rounded-lg hover:bg-surface3 flex items-center gap-2.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : ''}`}><Icon name={n.icon} size={17} />{t(n.key as never)}</button></li>)}
           </ul>
         </div>)}
     </header>
