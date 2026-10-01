@@ -1,6 +1,7 @@
+import type { Citation, ReasonCode, Trust } from '../data/legal/types'
 export type Direction = 'TH_CN' | 'CN_TH'
 export type Level = 'LOW' | 'MEDIUM' | 'HIGH' | 'NEEDS_REVIEW'
-export type Verification = 'VERIFIED' | 'PARTIAL' | 'NEED_INFO' | 'NO_SOURCE' | 'EXPERT'
+export type Verification = 'VERIFIED' | 'PARTIAL' | 'NEED_INFO' | 'NO_SOURCE' | 'EXPERT' | 'STALE' | 'CHANGED'
 export type StepStatus = 'todo' | 'doing' | 'review' | 'done' | 'fix'
 export type Tri = 'yes' | 'no' | 'unknown'
 export type Side = 'origin' | 'partner'
@@ -44,11 +45,20 @@ export interface Regulation {
   id: string
   country: 'TH' | 'CN'
   originalTerm?: string
+  instrument?: string
+  /** Where the "open source" link goes: the official text when an admin has supplied one, else the agency home page. */
   sourceUrl: string
+  agencyUrl: string
+  textUrl?: string
   publicationDate?: string
-  effectiveDate?: string
-  lastVerified?: string // undefined = never verified by an expert
-  verificationStatus: Verification
+  effectiveDate?: string // only ever set from a human review
+  provisions?: string[] // only ever set from a human review
+  lastVerified?: string // date of the last human review; undefined = never reviewed
+  reviewedBy?: string
+  verificationStatus: Verification // derived from trust (data/legal/trust.ts), never set by hand
+  trust: Trust
+  trustReasons: ReasonCode[]
+  monitored: boolean
   isSample: boolean
   supersededBy?: string
 }
@@ -69,8 +79,14 @@ export interface RiskCardData {
   id: string
   category: string
   level: Level
+  /** What we found (one sentence) */
+  found: string
+  /** Why it matters */
   why: string
+  /** What we don't know yet */
+  unknown: string[]
   sourceIds: string[]
+  /** What to verify */
   check: string[]
   next: string
   verification: Verification
@@ -109,7 +125,14 @@ export interface AlertItem {
 
 export interface ChecklistItem { id: string; group: 'business' | 'ownership' | 'employment' }
 
+export type Grounding = 'VERIFIED' | 'PARTIAL' | 'UNVERIFIED' | 'NONE'
 export interface AIResponse {
   answer: string; reason: string; sources: string[]; risk: Level; next: string
-  modules: string[]; blocked?: boolean; kind?: 'blocked' | 'educational'
+  modules: string[]; blocked?: boolean; kind?: 'blocked' | 'educational' | 'insufficient'
+  /** Per-source citation (jurisdiction, instrument, provisions, effective date, trust). Built by the server from the registry, never by the writer of the answer. */
+  citations?: Citation[]
+  /** How much of the answer rests on human-verified sources. Undefined when the answer cites no legal source. */
+  grounding?: Grounding
+  /** Reasons the guard replaced or trimmed the original answer. */
+  guarded?: string[]
 }

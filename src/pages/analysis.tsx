@@ -1,60 +1,79 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Holder, Profile } from '../types'
+import type { Holder, Profile, StepStatus } from '../types'
 import { go, useStore } from '../store'
-import { ControlBars, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, OwnershipMap, PageHead, SimTag, SourceCard, StatusBadge, VerifyBadge, Warn, WorkflowStrip } from '../components/ui'
+import { BackLink, ControlBars, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, JourneyStrip, Ok, OwnershipMap, PageHead, RiskCard, SimTag, SourceCard, StatusBadge, VerifyBadge, Warn } from '../components/ui'
 import { AICommandCenter } from '../components/ai'
 import { Icon, type IconName } from '../components/icons'
-import { assessRisks, compliantOptions, consequences, detectNomineeRisk, holderName, holdersSum, indicatorCategory, ownershipDims, targetCountry, verifyAnalysis, hasCompany, type IndicatorCategory } from '../services/engines'
+import { useActions } from '../hooks'
+import { assessRisks, riskRoute, compliantOptions, consequences, detectNomineeRisk, holderName, holdersSum, indicatorCategory, ownershipDims, targetCountry, verifyAnalysis, hasCompany, type IndicatorCategory } from '../services/engines'
 import { getReg } from '../data/regulations'
-import { levelChip, levelPanel } from '../utils/labels'
+import { levelOrder, levelPanel } from '../utils/labels'
 import type { Level } from '../types'
 import { tk, useI18n } from '../i18n'
 
 const MODULES = ['legal', 'invest', 'ownership', 'nominee', 'employment', 'tax', 'language', 'culture'] as const
 
-/* ================= ANALYSE MY BUSINESS ================= */
+/* ================= AI ANALYSIS: the AI checks key issues, then shows what it found (found · why · unknown · verify · next · status) ================= */
 export function AnalysisCenter() {
   const { t } = useI18n()
-  const { profile, employment, analysisDone, set, log } = useStore()
+  const { profile, employment, analysisDone, set, log, setActionStatus } = useStore()
+  const actions = useActions()
   const [step, setStep] = useState(analysisDone ? MODULES.length : -1)
   const timer = useRef<number>(0)
-  useEffect(() => () => window.clearInterval(timer.current), [])
-  if (!profile) return <div><PageHead title={t('an.title')} /><EmptyState /></div>
-  const vr = verifyAnalysis(profile, employment)
-  // Each module's chip is its real result (from the same engines the other pages use).
-  const byId = Object.fromEntries(assessRisks(profile, employment).map((r) => [r.id, r.level])) as Record<string, Level>
-  const fund = ownershipDims(profile).find((d) => d.key === 'fund')!.status
-  const res = (m: (typeof MODULES)[number]): Level => ({ legal: byId.legal, invest: fund, ownership: byId.ownership, nominee: byId.nominee, employment: byId.employment, tax: byId.tax, language: byId.language, culture: byId.culture }[m])
   const run = () => {
     setStep(0); window.clearInterval(timer.current)
     let i = 0
-    timer.current = window.setInterval(() => { i++; setStep(i); if (i >= MODULES.length) { window.clearInterval(timer.current); set({ analysisDone: true }); log('hist.analysis') } }, 650)
+    timer.current = window.setInterval(() => { i++; setStep(i); if (i >= MODULES.length) { window.clearInterval(timer.current); set({ analysisDone: true }); log('hist.analysis') } }, 450)
   }
+  // Arriving here with a business context that has not been analysed yet starts the analysis: no extra click needed.
+  useEffect(() => { if (profile && !analysisDone) run(); return () => window.clearInterval(timer.current) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!profile) return <div><PageHead title={t('an.title')} /><EmptyState /></div>
+  const vr = verifyAnalysis(profile, employment)
+  const risks = [...assessRisks(profile, employment)].sort((x, y) => levelOrder.indexOf(x.level) - levelOrder.indexOf(y.level))
+  const byId = Object.fromEntries(risks.map((r) => [r.id, r.level])) as Record<string, Level>
+  const fund = ownershipDims(profile).find((d) => d.key === 'fund')!.status
+  const res = (m: (typeof MODULES)[number]): Level => (m === 'invest' ? fund : byId[m])
   const running = step >= 0 && step < MODULES.length
-  const done = step >= MODULES.length
+  const done = !running && (analysisDone || step >= MODULES.length)
+  const top = risks.filter((r) => r.level !== 'LOW'), rest = risks.filter((r) => r.level === 'LOW')
+  const detailOf = (id: string) => { const r = riskRoute(id); return r === 'roadmap' ? undefined : r }
+  const setAct = (id: string, st: StepStatus) => { const x = actions.find((y) => y.id === id); if (x) setActionStatus(x, st) }
+  const card = (r: (typeof risks)[number], compact: boolean) => <RiskCard key={r.id} r={r} compact={compact} detail={detailOf(r.id)} actions={actions.filter((x) => x.riskId === r.id)} onAction={setAct} />
+  const nom = detectNomineeRisk(profile)
   return (
     <div className="space-y-5">
-      <PageHead title={t('an.title')} sub={t('an.sub')}><button className="btn-primary" onClick={run} disabled={running}><Icon name="ai" size={16} />{done ? t('an.rerun') : t('an.run')}</button></PageHead>
-      <GuideStrip page="analysis" nextRoute="ownership" />
-      <WorkflowStrip active={done ? 3 : 1} />
-      <div className="grid lg:grid-cols-2 gap-5">
-        <div className="card">
-          <h2 className="h2 mb-3">{t('an.modules')}</h2>
-          {step < 0 ? <p className="text-muted text-sm">{t('an.hint')}</p> : (
-            <ul className="space-y-2.5" aria-live="polite">{MODULES.map((m, i) => (
-              <li key={m} className="flex items-center gap-3 text-sm"><Icon name={i < step ? 'ok' : i === step ? 'ai' : 'circle'} className={i < step ? 'text-ok-fg' : i === step ? 'text-primary animate-pulse' : 'text-muted'} /><span className="font-medium w-32 shrink-0">{tk('an.m', m)}</span><span className="text-muted">{i === step ? tk('an.msg', m) : i < step ? t('an.done') : t('an.queued')}</span>{i < step && <span className={`chip ml-auto ${levelChip[res(m)]}`}>{tk('lvl', res(m))}</span>}</li>))}</ul>)}
-          {done && <div className="mt-4 flex flex-wrap gap-2"><button className="btn-primary" onClick={() => go('ownership')}><Go>{t('an.toOwner')}</Go></button><button className="btn-ghost" onClick={() => go('risk')}>{t('an.toRisk')}</button></div>}
+      <PageHead title={t('an.title')} sub={t('an.sub')}>{done && <button className="btn-ghost" onClick={run}><Icon name="ai" size={16} />{t('an.rerun')}</button>}</PageHead>
+      <JourneyStrip active={done ? 3 : 2} />
+      {!done && (
+        <section className="card space-y-3" aria-live="polite" aria-busy={running}>
+          <p className="font-semibold flex items-center gap-2"><Icon name="ai" size={18} className="text-primary animate-pulse" />{step < 0 ? t('an.hint') : t('an.working')}</p>
+          {step < 0 ? <button className="btn-primary" onClick={run}><Icon name="ai" size={16} />{t('an.run')}</button> : (
+            <ul className="space-y-2">{MODULES.map((m, i) => (
+              <li key={m} className="flex items-center gap-3 text-sm"><Icon name={i < step ? 'ok' : i === step ? 'ai' : 'circle'} className={i < step ? 'text-ok-fg' : i === step ? 'text-primary animate-pulse' : 'text-muted'} /><span className={i <= step ? 'font-medium' : 'text-muted'}>{tk('an.m', m)}</span>{i < step && <span className="ml-auto"><StatusBadge level={res(m)} /></span>}</li>))}</ul>)}
+        </section>)}
+      {done && <>
+        <div className="rounded-xl border border-line bg-brand text-brandfg px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2" role="status">
+          <Icon name="ok" size={18} className="text-ok-fg" /><p className="text-sm flex-1 min-w-[200px] font-medium">{t('an.doneLine', { n: top.length })}</p>
+          <button className="btn-primary !min-h-[40px]" onClick={() => go('roadmap')}><Go>{t('an.toActions')}</Go></button>
         </div>
-        <div className="card">
-          <h2 className="h2 mb-1 flex flex-wrap items-center gap-2">{t('an.verify')}<SimTag /></h2>
-          <p className="text-sm text-muted mb-3">{t('an.verifySub')}</p>
-          {!done ? <p className="text-sm text-muted">{t('an.verifyWait')}</p> : <>
-            <ul className="space-y-2">{vr.steps.map((s) => <li key={s.name} className="text-sm flex gap-2"><Icon name={s.ok ? 'ok' : 'alert'} size={17} className={`mt-0.5 ${s.ok ? 'text-ok-fg' : 'text-warn-fg'}`} /><span><b>{s.name}</b><br /><span className="text-muted">{s.note}</span></span></li>)}</ul>
-            {vr.recheck && <div className="mt-3"><Warn tone="danger">{t('an.recheck')}</Warn></div>}
-            <div className="mt-3 flex items-center gap-2 text-sm flex-wrap">{t('an.final')}: <VerifyBadge v={vr.final} /></div><p className="text-xs text-muted mt-1">{t('an.finalWhy')}</p></>}
-        </div>
-      </div>
-      <AICommandCenter profile={profile} />
+        {nom.stop && <Warn tone="danger"><b>{t('nom.stopBanner')}</b> — {t('nom.stopRoadmap')}</Warn>}
+        <section aria-labelledby="found-h" className="space-y-3">
+          <h2 id="found-h" className="h2">{t('find.top')}</h2>
+          {top.length ? <div className="grid lg:grid-cols-2 gap-4 items-start">{top.map((r, i) => card(r, i > 0))}</div> : <div className="card"><Ok>{t('find.none')}</Ok></div>}
+        </section>
+        {rest.length > 0 && <Disclosure title={t('find.rest') + ' (' + rest.length + ')'}><div className="grid lg:grid-cols-2 gap-4 items-start">{rest.map((r) => card(r, true))}</div></Disclosure>}
+        <Disclosure title={t('an.areas')}>
+          <ul className="grid sm:grid-cols-2 gap-2">{MODULES.map((m) => <li key={m} className="flex items-center justify-between gap-2 text-sm card-i"><span>{tk('an.m', m)}</span><StatusBadge level={res(m)} /></li>)}</ul>
+          <div className="flex flex-wrap gap-2 pt-1"><button className="btn-ghost !min-h-[40px] text-sm" onClick={() => go('ownership')}><Icon name="ownership" size={16} />{t('an.detail.own')}</button><button className="btn-ghost !min-h-[40px] text-sm" onClick={() => go('employment')}><Icon name="employment" size={16} />{t('an.detail.emp')}</button></div>
+        </Disclosure>
+        <Disclosure title={t('an.verify')}>
+          <p className="text-sm text-muted flex flex-wrap items-center gap-2">{t('an.verifySub')}<SimTag /></p>
+          <ul className="space-y-2">{vr.steps.map((x) => <li key={x.name} className="text-sm flex gap-2"><Icon name={x.ok ? 'ok' : 'alert'} size={17} className={'mt-0.5 ' + (x.ok ? 'text-ok-fg' : 'text-warn-fg')} /><span><b>{x.name}</b><br /><span className="text-muted">{x.note}</span></span></li>)}</ul>
+          {vr.recheck && <Warn tone="danger">{t('an.recheck')}</Warn>}
+          <div className="flex items-center gap-2 text-sm flex-wrap">{t('an.final')}: <VerifyBadge v={vr.final} /></div><p className="text-xs text-muted">{t('an.finalWhy')}</p>
+        </Disclosure>
+        <Disclosure title={t('an.ask')}><AICommandCenter profile={profile} /></Disclosure>
+      </>}
       <Disclaimer />
     </div>
   )
@@ -87,6 +106,7 @@ export function OwnershipPage() {
       <option value="origin">{holderName(o)}</option><option value="partner">{holderName(pa)}</option><option value={key === 'operator' ? 'joint' : 'shared'}>{t('own.opt.joint')}</option><option value="unknown">{t('own.opt.unknown')}</option></select></div>)
   return (
     <div className="space-y-5">
+      <BackLink to="analysis" label={t('nav.backAnalysis')} />
       <PageHead title={t('own.title')} sub={t('own.sub')} />
       <GuideStrip page="ownership" nextRoute="employment" />
       {/* what the AI found · what it means · what to do next */}

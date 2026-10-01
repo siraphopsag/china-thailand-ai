@@ -1,0 +1,54 @@
+name: Legal change watch
+
+# Daily: fetch each monitored official legal text, hash it, record the observation, and open an issue if a text changed.
+# Committing observed.ts to main lowers the affected records to "source changed" on the next deploy (fail closed).
+# It never raises trust: only `npm run legal:review` (a human, via Pull Request) can do that.
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: legal-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run the change monitor
+        id: watch
+        run: |
+          set +e
+          npm run --silent legal:watch | tee watch.log
+          echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+      - name: Commit new observations
+        run: |
+          if ! git diff --quiet -- src/data/legal/observed.ts; then
+            git config user.name "legal-watch[bot]"
+            git config user.email "legal-watch@users.noreply.github.com"
+            git add src/data/legal/observed.ts
+            git commit -m "chore(legal): record official-text observations"
+            git push
+          fi
+      - name: Open an issue when an official text changed
+        if: steps.watch.outputs.code == '2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "Official legal text changed - re-review needed" --body-file watch.log
+      - name: Fail the run when some texts could not be fetched
+        if: steps.watch.outputs.code == '3'
+        run: |
+          echo "Some official texts could not be fetched (see the log). The previous hashes were kept."
+          exit 1

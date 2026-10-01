@@ -14,6 +14,7 @@ export const levelOrder: Level[] = ['HIGH', 'NEEDS_REVIEW', 'MEDIUM', 'LOW']
 export const verifyChip: Record<Verification, string> = {
   VERIFIED: 'bg-ok-bg text-ok-fg border-ok-line', PARTIAL: 'bg-info-bg text-info-fg border-info-line', NEED_INFO: 'bg-warn-bg text-warn-fg border-warn-line',
   NO_SOURCE: 'bg-surface3 text-muted border-line', EXPERT: 'bg-danger-bg text-danger-fg border-danger-line',
+  STALE: 'bg-warn-bg text-warn-fg border-warn-line', CHANGED: 'bg-danger-bg text-danger-fg border-danger-line',
 }
 export const stepChip: Record<StepStatus, string> = {
   todo: 'bg-surface3 text-muted border-line', doing: 'bg-info-bg text-info-fg border-info-line', review: 'bg-warn-bg text-warn-fg border-warn-line',

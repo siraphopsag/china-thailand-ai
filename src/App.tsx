@@ -3,6 +3,7 @@ import { go, StoreProvider, useRoute, useStore } from './store'
 import { LanguageProvider, useI18n } from './i18n'
 import { ThemeProvider } from './theme'
 import { ErrorBoundary } from './ErrorBoundary'
+import { BRAND } from './brand'
 import { BottomNav, ContextStack, Header } from './components/shell'
 import { Landing, DirectionPage, InterviewPage, ProfilePage } from './pages/intake'
 // Landing/interview load immediately; the analysis, employment and operations pages load on demand.
@@ -34,7 +35,7 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <main id="main" className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-6 pb-28 xl:pb-10"><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
       <footer className="bg-surface border-t border-line text-xs text-muted px-4 py-6 mb-16 xl:mb-0">
         <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-1 items-center">
-          <span>{t('foot.note')}</span>
+          <span className="font-semibold text-ink" lang="en">{BRAND.title}</span><span>{t('foot.note')}</span>
           <button className="underline" onClick={() => go('privacy')}>{t('nav.privacy')}</button><button className="underline" onClick={() => go('pricing')}>{t('nav.pricing')}</button><button className="underline" onClick={() => go('admin')}>{t('nav.admin')}</button>
           {profile && <button className="underline" onClick={() => { if (confirm(t('foot.confirm'))) { reset(); go('') } }}>{t('foot.clear')}</button>}
         </div>

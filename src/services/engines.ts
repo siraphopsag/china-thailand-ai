@@ -5,6 +5,10 @@ import { dv, tk, tr, withLang, type Lang } from '../i18n/core.js'
 import { escapeHtml } from '../utils/labels.js'
 import { terms } from '../data/culture.js'
 import type { MsgKey } from '../locales/index.js'
+import type { Citation } from '../data/legal/types.js'
+import { registry } from '../data/legal/registry.js'
+import { liveLegal, type LegalView } from '../data/legal/trust.js'
+import { answerSpecific, asksSpecificDetail, guardResponse } from './legalGuard.js'
 
 const GAP = 25 // ส่วนต่าง (จุดเปอร์เซ็นต์) ที่ถือว่าควรตรวจสอบเพิ่มเติม
 const K = (s: string) => s as MsgKey
@@ -149,21 +153,25 @@ export function assessRisks(p: Profile, emp: EmploymentInput): RiskCardData[] {
   const regulated = !!p.regulatedGoods && p.regulatedGoods !== 'none'
   const nr = restricted || regulated
   const legalSrc = tc === 'CN' ? 'cn-neglist-2024' : 'th-fba'
+  // a mismatch is a known difference; an unanswered side-agreement question is an unknown, not a mismatch
+  const flagged = dims.filter((d) => d.status !== 'LOW' && !(d.key === 'agr' && p.sideAgreement === 'unknown')).map((d) => d.title)
+  const ownUnknown = [...(p.unknownFacts ?? []).map((u) => tr(K('unk.' + u))), ...(hasCompany(p) && p.sideAgreement === 'unknown' ? [tr('unk.agreement')] : [])]
+  const missing = (ids?: string[]) => empAreas.filter((a) => a.missing && (!ids || ids.includes(a.id))).map((a) => a.area)
   return [
-    { id: 'legal', category: tr('risk.cat.legal'), level: nr ? 'NEEDS_REVIEW' : 'MEDIUM', verification: 'NEED_INFO', why: tr(nr ? 'risk.legal.why.review' : 'risk.legal.why.base'),
+    { id: 'legal', category: tr('risk.cat.legal'), level: nr ? 'NEEDS_REVIEW' : 'MEDIUM', verification: 'NEED_INFO', found: tr('risk.found.legal'), unknown: [], why: tr(nr ? 'risk.legal.why.review' : 'risk.legal.why.base'),
       sourceIds: [legalSrc], check: [tr('risk.legal.c1'), tr('risk.legal.c2')], next: tr('risk.legal.next') },
-    { id: 'ownership', category: tr('risk.cat.ownership'), level: ownLvl, verification: 'NEED_INFO', why: tr('risk.own.why'), sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-fba'],
+    { id: 'ownership', category: tr('risk.cat.ownership'), level: ownLvl, verification: 'NEED_INFO', found: flagged.length ? tr('risk.found.own.flag', { list: flagged.join(', ') }) : ownUnknown.length ? tr('risk.found.own.unk', { n: ownUnknown.length }) : tr('risk.found.own.ok'), unknown: ownUnknown, why: tr('risk.own.why'), sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-fba'],
       check: dims.filter((d) => d.status !== 'LOW').map((d) => d.title), next: tr('risk.own.next') },
-    { id: 'nominee', category: tr('risk.cat.nominee'), level: nom.level, verification: nom.level === 'LOW' ? 'NEED_INFO' : 'EXPERT', why: nom.reason, sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-fba'],
-      check: nom.indicators.map((i) => i.verify).slice(0, 3), next: nom.next[0] },
-    { id: 'employment', category: tr('risk.cat.employment'), level: 'NEEDS_REVIEW', verification: 'NEED_INFO', why: missEmp ? tr('risk.emp.why.miss', { n: missEmp }) : tr('risk.emp.why.ok'),
+    { id: 'nominee', category: tr('risk.cat.nominee'), level: nom.level, verification: nom.level === 'LOW' ? 'NEED_INFO' : 'EXPERT', found: nom.headline, unknown: nom.unknowns, why: nom.reason, sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-fba'],
+      check: [...new Set(nom.indicators.map((i) => i.verify))].slice(0, 3), next: nom.next[0] },
+    { id: 'employment', category: tr('risk.cat.employment'), level: 'NEEDS_REVIEW', verification: 'NEED_INFO', found: missEmp ? tr('risk.found.emp.miss', { n: missEmp }) : tr('risk.found.emp.ok'), unknown: missing(), why: missEmp ? tr('risk.emp.why.miss', { n: missEmp }) : tr('risk.emp.why.ok'),
       sourceIds: [tc === 'CN' ? 'cn-labor' : 'th-labour', tc === 'CN' ? 'cn-immigration' : 'th-labour'], check: empAreas.filter((a) => a.status !== 'LOW').slice(0, 4).map((a) => a.area), next: tr('risk.emp.next') },
-    { id: 'tax', category: tr('risk.cat.tax'), level: p.crossBorderWorkers ? 'MEDIUM' : 'NEEDS_REVIEW', verification: 'NEED_INFO', why: tr(p.crossBorderWorkers ? 'risk.tax.why.cross' : 'risk.tax.why.none'),
+    { id: 'tax', category: tr('risk.cat.tax'), level: p.crossBorderWorkers ? 'MEDIUM' : 'NEEDS_REVIEW', verification: 'NEED_INFO', found: tr('risk.found.tax'), unknown: missing(['salary', 'tax', 'duration']), why: tr(p.crossBorderWorkers ? 'risk.tax.why.cross' : 'risk.tax.why.none'),
       sourceIds: [tc === 'CN' ? 'cn-tax' : 'th-tax'], check: [tr('risk.tax.c1'), tr('risk.tax.c2'), tr('risk.tax.c3')], next: tr('risk.tax.next') },
-    { id: 'language', category: tr('risk.cat.language'), level: 'MEDIUM', verification: 'NEED_INFO', why: tr('risk.lang.why'), sourceIds: [tc === 'CN' ? 'cn-labor' : 'th-labour'],
+    { id: 'language', category: tr('risk.cat.language'), level: 'MEDIUM', verification: 'NEED_INFO', found: tr('risk.found.language'), unknown: [], why: tr('risk.lang.why'), sourceIds: [tc === 'CN' ? 'cn-labor' : 'th-labour'],
       check: [tr('risk.lang.c1'), tr('risk.lang.c2')], next: tr('risk.lang.next') },
-    { id: 'culture', category: tr('risk.cat.culture'), level: 'LOW', verification: 'NEED_INFO', why: tr('risk.cul.why'), sourceIds: [], check: [tr('risk.cul.c1')], next: tr('risk.cul.next') },
-    { id: 'documents', category: tr('risk.cat.documents'), level: 'MEDIUM', verification: 'NEED_INFO', why: tr('risk.doc.why'), sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-dbd-reg'],
+    { id: 'culture', category: tr('risk.cat.culture'), level: 'LOW', verification: 'NEED_INFO', found: tr('risk.found.culture'), unknown: [], why: tr('risk.cul.why'), sourceIds: [], check: [tr('risk.cul.c1')], next: tr('risk.cul.next') },
+    { id: 'documents', category: tr('risk.cat.documents'), level: 'MEDIUM', verification: 'NEED_INFO', found: tr('risk.found.documents'), unknown: [], why: tr('risk.doc.why'), sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-dbd-reg'],
       check: [tr('risk.doc.c1'), tr('risk.doc.c2'), tr('risk.doc.c3')], next: tr('risk.doc.next') },
   ]
 }
@@ -243,7 +251,7 @@ export const docTitle = (t: DocType) => tr(K(`doc.${t}.t`))
 export const docDesc = (t: DocType) => tr(K(`doc.${t}.d`))
 export function buildDocument(type: DocType, p: Profile, emp: EmploymentInput, con: ContractInput, lang: Lang) {
   return withLang(lang, () => {
-    const head = `${docTitle(type)}\n${tr('doc.head', { company: dv(p.companyName), dir: tk('dir', p.direction) })}\n${tr('doc.created', { date: new Date().toLocaleDateString(lang === 'th' ? 'th-TH' : lang === 'zh' ? 'zh-CN' : 'en-GB') })}\n`
+    const head = `${docTitle(type)}\n${tr('doc.brand')}\n${tr('doc.head', { company: dv(p.companyName), dir: tk('dir', p.direction) })}\n${tr('doc.created', { date: new Date().toLocaleDateString(lang === 'th' ? 'th-TH' : lang === 'zh' ? 'zh-CN' : 'en-GB') })}\n`
     let body = ''
     if (type === 'business') body = [tr('doc.b.1', { v: dv(p.activity) }), tr('doc.b.2'), tr('doc.b.3', { v: p.regulatedGoods ? tk('opt.regulated', p.regulatedGoods) : '-' }), tr('doc.b.4', { v: p.crossBorder.map((x) => tk('opt.cross', x)).join(', ') || '-' })].map((x) => '☐ ' + x).join('\n')
     if (type === 'ownership') body = [...p.holders.map((h) => '☐ ' + tr('doc.o.holder', { holder: holderName(h), percent: h.percent, capital: h.capital, economic: h.economic })), '☐ ' + tr('doc.o.1'), '☐ ' + tr('doc.o.2'), '☐ ' + tr('doc.o.3')].join('\n')
@@ -269,7 +277,7 @@ const CONCEAL = /(hide|conceal|disguise|mask|cover up|keep (it )?secret|ซ่�
 const EVADE_VERB = /(avoid|bypass|circumvent|evade|get around|sidestep|work around|หลบ|เลี่ยง|หลีกเลี่ยง|规避|绕过|绕开|避开)/i
 const OWN_NOUN = /(owner|ownership|shareholder|shares?|stake|investor|foreign (ownership|investment)|restriction|limit|threshold|negative list|เจ้าของ|ผู้ถือหุ้น|หุ้น|ผู้ลงทุน|ข้อจำกัด|สัดส่วน|股|所有|投资|限制|比例)/i
 const NOMINEE = /(nominee|straw ?(man|person)|fake shareholder|dummy shareholder|proxy shareholder|นอมินี|ถือหุ้นแทน|คนถือหุ้นแทน|ผู้ถือหุ้นปลอม|代持|假股东|挂名|名义股东)/i
-const SETUP = /(set ?up|create|arrange|find|get|hire|use|appoint|recruit|need|want|หา|จัดตั้ง|จัดหา|ใช้|อยากได้|ต้องการ|找|安排|设立|需要|想)/i
+const SETUP = /(set ?up|create|arrange|find|get|hir(?:e|ing)|use|appoint|recruit|need|want|หา|จัดตั้ง|จัดหา|ใช้|อยากได้|ต้องการ|找|安排|设立|需要|想)/i
 const NAME_TRICK = /((in|under)\s+(a\s+|my\s+)?(friend|relative|cousin|someone|another person|somebody|employee)('s)?\s+name|ใช้ชื่อ(คน|เพื่อน|ญาติ|ลูกน้อง)|ใส่ชื่อ(คน|เพื่อน|ญาติ)|借.{0,4}名)/i
 const EDU = /(what is|what are|explain|meaning|define|is it (legal|illegal|allowed)|risk|why|คืออะไร|หมายความว่า|อธิบาย|ผิดกฎหมายไหม|ผิดไหม|ทำได้ไหม|เสี่ยง|什么是|是什么|是否合法|违法吗|风险|为什么)/i
 export type Intent = 'evade' | 'educate' | 'normal'
@@ -279,35 +287,63 @@ export function classifyIntent(q: string): Intent {
   return 'normal'
 }
 const MODS: [RegExp, string][] = [
-  [/พนักงาน|จ้าง|แรงงาน|สัญญาจ้าง|ส่งไป|employ|staff|hire|worker|secon|员工|雇|用工|派/i, 'Employment AI'], [/ภาษี|tax|税/i, 'Tax Analysis AI'], [/หุ้น|ผู้ถือหุ้น|เจ้าของ|ควบคุม|share|owner|control|股|控制/i, 'Ownership Analysis AI'],
+  [/พนักงาน|จ้าง|แรงงาน|สัญญาจ้าง|ส่งไป|employ|staff|hir(?:e|ing)|worker|secon|员工|雇|用工|派/i, 'Employment AI'], [/ภาษี|tax|税/i, 'Tax Analysis AI'], [/หุ้น|ผู้ถือหุ้น|เจ้าของ|ควบคุม|share|owner|control|股|控制/i, 'Ownership Analysis AI'],
   [/นอมินี|ผู้ลงทุนจริง|แหล่งเงิน|nominee|real investor|source of fund|代持|实际投资/i, 'Nominee Risk AI'], [/สัญญา|เอกสาร|ร่าง|contract|document|draft|合同|文件|草案/i, 'Document AI'],
   [/ภาษา|แปล|จีน|อังกฤษ|language|translat|语言|翻译/i, 'Language AI'], [/วัฒนธรรม|เจรจา|ประชุม|สื่อสาร|culture|negotiat|meeting|文化|谈判|会议/i, 'Culture & Communication AI'],
   [/กฎหมาย|ลงทุน|ใบอนุญาต|ข้อจำกัด|เปิดบริษัท|law|invest|licen|restrict|company|法|投资|许可|公司/i, 'Legal Analysis AI'],
 ]
-export function orchestrate(q: string, p: Profile | null, lang?: Lang): AIResponse {
+/** Which regulation records an answer for these modules rests on (deduplicated, one or both countries). */
+function pickSources(modules: string[], hit: boolean, countries: ('TH' | 'CN')[]): string[] {
+  const ids = countries.flatMap((c) => {
+    const cn = c === 'CN'
+    return hit ? [cn ? 'cn-neglist-2024' : 'th-fba']
+      : modules.includes('Employment AI') ? [cn ? 'cn-labor' : 'th-labour', ...(cn ? ['cn-immigration'] : [])]
+      : modules.includes('Tax Analysis AI') ? [cn ? 'cn-tax' : 'th-tax']
+      : [cn ? 'cn-neglist-2024' : 'th-fba']
+  })
+  return [...new Set(ids)]
+}
+/** Employment instruments the registry knows by name only (no reviewed content in the app). Shown so the gap is visible, not hidden. */
+const employmentGaps = (countries: ('TH' | 'CN')[]) => registry.filter((e) => e.gap && e.area === 'employment' && countries.includes(e.country)).map((e) => e.id)
+
+export function orchestrate(q: string, p: Profile | null, lang?: Lang, legal: LegalView = liveLegal): AIResponse {
   const run = (): AIResponse => {
+    /** Every answer passes the legal guard (citations, grounding, unsupported-claim check). Employment answers also list the instruments the app has no content for. */
+    const fin = (r: AIResponse, gapIds: string[] = []): AIResponse => {
+      const g = guardResponse(r, legal, { lang })
+      const gaps = gapIds.map((id) => legal.cite(id, lang)).filter((c): c is Citation => !!c)
+      if (!gaps.length) return g
+      return { ...g, citations: [...(g.citations ?? []), ...gaps], grounding: g.grounding === 'VERIFIED' ? 'PARTIAL' : g.grounding }
+    }
     const intent = classifyIntent(q)
     if (intent === 'evade')
-      return { blocked: true, kind: 'blocked', modules: ['Legal Analysis AI', 'Nominee Risk AI'], risk: 'HIGH', answer: tr('orch.block.a'), reason: tr('orch.block.r'), sources: ['th-fba', 'cn-neglist-2024'], next: tr('orch.block.n') }
+      return fin({ blocked: true, kind: 'blocked', modules: ['Legal Analysis AI', 'Nominee Risk AI'], risk: 'HIGH', answer: tr('orch.block.a'), reason: tr('orch.block.r'), sources: ['th-fba', 'cn-neglist-2024'], next: tr('orch.block.n') })
     if (intent === 'educate')
-      return { kind: 'educational', modules: ['Legal Analysis AI', 'Nominee Risk AI'], risk: 'NEEDS_REVIEW', answer: tr('orch.edu.a'), reason: tr('orch.edu.r'), sources: ['th-fba', 'cn-neglist-2024'], next: tr('orch.edu.n') }
+      return fin({ kind: 'educational', modules: ['Legal Analysis AI', 'Nominee Risk AI'], risk: 'NEEDS_REVIEW', answer: tr('orch.edu.a'), reason: tr('orch.edu.r'), sources: ['th-fba', 'cn-neglist-2024'], next: tr('orch.edu.n') })
     const modules = MODS.filter(([r]) => r.test(q)).map(([, n]) => n)
     const isStaff = /ส่ง.*พนักงาน|พนักงาน.*(ไป|ข้าม)|send.*(staff|employee)|secon|派.*员工|外派/i.test(q)
-    if (/พนักงาน|จ้าง|ส่งไป|staff|employ|hire|员工|雇|外派/i.test(q) && !modules.includes('Legal Analysis AI')) modules.push('Legal Analysis AI')
+    if (/พนักงาน|จ้าง|ส่งไป|staff|employ|hir(?:e|ing)|员工|雇|外派/i.test(q) && !modules.includes('Legal Analysis AI')) modules.push('Legal Analysis AI')
     if (isStaff) for (const x of ['Tax Analysis AI', 'Document AI']) if (!modules.includes(x)) modules.push(x)
     if (/สัญญา|contract|合同/i.test(q) && !modules.includes('Language AI')) modules.push('Language AI')
-    if (!p) return { modules: ['Business Intake AI'], risk: 'NEEDS_REVIEW', answer: tr('orch.nop.a'), reason: tr('orch.nop.r'), sources: [], next: tr('orch.nop.n') }
-    if (!modules.length) return { modules: ['Business Intake AI'], risk: 'NEEDS_REVIEW', answer: tr('orch.noq.a'), reason: tr('orch.noq.r'), sources: [], next: tr('orch.noq.n') }
+    const employment = modules.includes('Employment AI') || /สัญญาจ้าง|contract|合同/i.test(q)
+    if (asksSpecificDetail(q)) {
+      // Exact penalties / figures / periods / article numbers: only a verified record may be quoted; otherwise say plainly that the app cannot answer.
+      const cs: ('TH' | 'CN')[] = p ? [targetCountry(p)] : ['TH', 'CN']
+      const ms = employment ? [...modules, 'Employment AI'] : modules
+      return fin(answerSpecific(ms.length ? pickSources(ms, false, cs) : [], modules, legal), employment ? employmentGaps(cs) : [])
+    }
+    if (!p) return fin({ modules: ['Business Intake AI'], risk: 'NEEDS_REVIEW', answer: tr('orch.nop.a'), reason: tr('orch.nop.r'), sources: [], next: tr('orch.nop.n') })
+    if (!modules.length) return fin({ modules: ['Business Intake AI'], risk: 'NEEDS_REVIEW', answer: tr('orch.noq.a'), reason: tr('orch.noq.r'), sources: [], next: tr('orch.noq.n') })
     const tc = targetCountry(p)
     const nom = detectNomineeRisk(p)
     const hit = modules.includes('Nominee Risk AI') || modules.includes('Ownership Analysis AI')
-    const srcs = hit ? [tc === 'CN' ? 'cn-neglist-2024' : 'th-fba'] : modules.includes('Employment AI') ? [tc === 'CN' ? 'cn-labor' : 'th-labour', tc === 'CN' ? 'cn-immigration' : 'th-labour'] : modules.includes('Tax Analysis AI') ? [tc === 'CN' ? 'cn-tax' : 'th-tax'] : [tc === 'CN' ? 'cn-neglist-2024' : 'th-fba']
-    return {
+    const srcs = pickSources(modules, hit, [tc])
+    return fin({
       modules, sources: srcs, risk: (hit ? nom.level : 'NEEDS_REVIEW') as Level,
       answer: hit ? nom.answer : tr('orch.gen.a'),
       reason: hit ? nom.reason : tr('orch.gen.r', { n: modules.length, company: dv(p.companyName) }),
       next: hit ? nom.next[0] : tr('orch.gen.n'),
-    }
+    }, !hit && modules.includes('Employment AI') ? employmentGaps([tc]) : [])
   }
   return lang ? withLang(lang, run) : run()
 }

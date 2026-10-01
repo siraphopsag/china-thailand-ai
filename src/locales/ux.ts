@@ -99,7 +99,6 @@ export const ux = {
   'own.toNominee': ['ดูประเด็นที่ควรตรวจสอบ', '查看待核查事项', 'See the points to review'],
   'nom.toEmp': ['ไปตรวจการจ้างงาน', '前往用工核查', 'Go to the employment check'],
   'emp.toContract': ['ไปที่สัญญาจ้าง', '前往劳动合同', 'Go to the contract'],
-  'land.kicker': ['แพลตฟอร์ม AI สำหรับธุรกิจไทย–จีน', '泰中企业的 AI 平台', 'AI platform for Thailand–China business'],
   'dash.resetDemo': ['เริ่ม Demo ใหม่', '重新开始演示', 'Restart the demo'],
   // ---- demo / real data separation, recovery
   'demo.mode': ['โหมด Demo — ใช้ข้อมูลสมมติ ข้อมูลจริงของคุณถูกเก็บแยกไว้และไม่ถูกแก้ไข', '演示模式 —— 使用虚构数据，您的真实数据单独保存，不会被修改', 'Demo mode — fictional data; your real data is stored separately and untouched'],

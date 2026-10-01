@@ -41,8 +41,9 @@ export async function POST(request: Request) {
       profile = cleanProfile(body.profile)
       if (!profile) return json({ error: tr('err.badProfile', undefined, lang) }, 400)
     }
-    // Hook for a real LLM: call the provider here using process.env.AI_API_KEY (server-side only), passing `lang`,
-    // then run the result through the same safety/verification rules before returning.
+    // Hook for a real LLM: call the provider here using process.env.AI_API_KEY (server-side only), passing `lang` and ONLY the text of
+    // human-verified records as context. The draft MUST then go through guardResponse(draft, liveLegal, { requireSources: true, lang }) —
+    // it attaches server-built citations and withholds any answer with unknown sources or unsupported figures, articles or penalties.
     return json(orchestrate(question, profile, lang))
   } catch (e) {
     console.error('analyze-business failed', e) // technical detail stays in server logs

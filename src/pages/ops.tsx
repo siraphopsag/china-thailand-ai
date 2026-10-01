@@ -1,39 +1,22 @@
-import { useMemo, useState } from 'react'
-import type { AlertItem, RoadmapStep, StepStatus } from '../types'
+import { useState } from 'react'
+import type { AlertItem, StepStatus } from '../types'
 import { fingerprint, go, useStore } from '../store'
-import { ActionList, AlertCard, Checklist, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, Ok, PageHead, RiskCard, RoadmapTimeline, SampleTag, SourceCard, StatusBadge, VerifyBadge, Warn } from '../components/ui'
+import { ActionList, AlertCard, Checklist, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, JourneyStrip, Ok, PageHead, RiskCard, RoadmapTimeline, SampleTag, SourceCard, StatusBadge, VerifyBadge, Warn, useReasonText } from '../components/ui'
 import { AICommandCenter, AITimeline } from '../components/ai'
 import { CountryBadge, Icon } from '../components/icons'
-import { remaining } from '../interview'
-import { assessRisks, buildDocument, contractKeys, contractLabel, deriveActions, detectNomineeRisk, docDesc, docIds, docTitle, docToHtml, generateRoadmap, hasCompany, riskRoute, type DocType } from '../services/engines'
+import { assessRisks, buildDocument, contractKeys, contractLabel, detectNomineeRisk, docDesc, docIds, docTitle, docToHtml, hasCompany, riskRoute, type DocType } from '../services/engines'
 import { aiService } from '../services/aiService'
+import { useActions, useRoadmap } from '../hooks'
 import { checklistItems } from '../data/demo'
-import { lastVerifiedText, regText, regulations, simulatedReplacement } from '../data/regulations'
+import { coverageGaps, lastVerifiedText, regText, regulations, simulatedReplacement } from '../data/regulations'
+import { trustSummary } from '../data/legal/trust'
 import { dirInfo, levelOrder } from '../utils/labels'
 import { dv, LANGS, tk, useI18n, type Lang } from '../i18n'
-
-function useRoadmap() {
-  const { lang } = useI18n()
-  const { profile, stepOverrides } = useStore()
-  return useMemo<RoadmapStep[]>(() => (profile ? generateRoadmap(profile).map((s) => ({ ...s, status: stepOverrides[s.id] ?? s.status })) : []), [profile, stepOverrides, lang])
-}
-/** Current actions from the risk analysis + finished actions whose risk has since disappeared (so progress never goes backwards). */
-function useActions() {
-  const { lang } = useI18n()
-  const { profile, employment, actionStatus, actionSnap } = useStore()
-  return useMemo(() => {
-    if (!profile) return []
-    const live = deriveActions(profile, employment).map((a) => ({ ...a, status: actionStatus[a.id] ?? a.status }))
-    const ids = new Set(live.map((a) => a.id))
-    const kept = Object.entries(actionSnap).filter(([id]) => !ids.has(id) && actionStatus[id] === 'done').map(([id, s]) => ({ id, riskId: s.riskId, riskLabel: s.riskLabel, title: s.title, owner: s.owner, status: 'done' as StepStatus }))
-    return [...live, ...kept]
-  }, [profile, employment, actionStatus, actionSnap, lang])
-}
 
 /* ================= DASHBOARD (business · status · issues · next action · documents · AI activity) ================= */
 export function Dashboard() {
   const { t } = useI18n()
-  const { profile, employment, checks, docs, answers, startDemo } = useStore()
+  const { profile, employment, checks, docs, analysisDone, startDemo } = useStore()
   const steps = useRoadmap()
   const actions = useActions()
   if (!profile) return <div><PageHead title={t('dash.title')} /><EmptyState /></div>
@@ -46,55 +29,59 @@ export function Dashboard() {
   const pct = Math.round((done / total) * 100)
   const next = pending.find((a) => a.riskId === 'nominee') ?? pending[0]
   const issues = [...risks].filter((r) => r.level !== 'LOW').sort((a, b) => levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level)).slice(0, 3)
-  const status = nom.stop ? t('dash.status.stop') : pending.length ? t('dash.status.fix') : t('dash.status.ok')
-  const left = !profile.isDemo && Object.keys(answers).length > 0 ? remaining(answers) : 0
-  const tileFor = (r: string) => ({ nominee: 'ownership', ownership: 'ownership', employment: 'employment', contract: 'employment', documents: 'documents' } as Record<string, string>)[r] ?? 'roadmap'
+  const status = !analysisDone ? t('dash.status.notYet') : nom.stop ? t('dash.status.stop') : pending.length ? t('dash.status.fix') : t('dash.status.ok')
   const needed: DocType[] = ['business', ...(hasCompany(profile) ? (['ownership'] as DocType[]) : []), ...(profile.employees > 0 || profile.crossBorderWorkers ? (['employment', 'contract'] as DocType[]) : []), 'report', 'plan']
   return (
     <div className="space-y-5">
       <PageHead title={t('dash.title')} sub={t('dash.sub')}>{profile.isDemo && <button className="btn-ghost" onClick={() => startDemo()}>{t('dash.resetDemo')}</button>}</PageHead>
-      {left > 0 && (
-        <div className="rounded-xl border border-info-line bg-info-bg text-info-fg px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2" role="status">
-          <Icon name="info" size={18} /><p className="flex-1 min-w-[220px] text-sm">{t('dash.partial', { n: left })}</p>
-          <button className="btn-primary !min-h-[40px]" onClick={() => go('interview')}><Go>{t('dash.answerMore')}</Go></button>
-        </div>)}
+      <JourneyStrip />
       <div className="grid lg:grid-cols-5 gap-4">
         <section className="card lg:col-span-3 space-y-4" aria-labelledby="biz-h">
           <div>
             <div id="biz-h" className="text-xs text-muted flex items-center gap-2 flex-wrap">{t('dash.business')}{profile.isDemo && <SampleTag text={t('c.demoTag')} />}</div>
             <div className="text-2xl font-semibold break-words">{dv(profile.companyName)}</div>
-            <div className="text-sm text-muted flex items-center gap-1.5 flex-wrap mt-1"><CountryBadge c={d.from} />{tk('country', d.from)}<Icon name="next" size={14} /><CountryBadge c={d.to} />{tk('country', d.to)}</div>
+            <div className="text-sm text-muted flex items-center gap-1.5 flex-wrap mt-1"><CountryBadge c={d.from} />{tk('country', d.from)}<Icon name="next" size={14} /><CountryBadge c={d.to} />{tk('country', d.to)}<span aria-hidden>·</span>{profile.businessType === 'other' && profile.businessTypeOther ? profile.businessTypeOther : tk('opt.btype', profile.businessType)}</div>
           </div>
           <div className="flex items-start gap-2.5 rounded-lg bg-surface2 border border-line px-3 py-2.5">
-            <Icon name={nom.stop ? 'warn' : 'info'} className={nom.stop ? 'text-danger-fg mt-0.5' : 'text-info-fg mt-0.5'} />
+            <Icon name={nom.stop && analysisDone ? 'warn' : 'info'} className={nom.stop && analysisDone ? 'text-danger-fg mt-0.5' : 'text-info-fg mt-0.5'} />
             <div><div className="text-xs text-muted">{t('dash.status')}</div><div className="font-semibold">{status}</div></div>
           </div>
-          <div><div className="flex justify-between text-sm"><span className="text-muted">{t('dash.progress')}</span><span className="font-semibold">{done} / {total}</span></div>
-            <div className="h-2.5 bg-surface3 rounded-full mt-1.5 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={t('dash.progress')}><div className="h-2.5 bg-primary transition-all duration-700" style={{ width: pct + '%' }} /></div></div>
+          {analysisDone && <div><div className="flex justify-between text-sm"><span className="text-muted">{t('dash.progress')}</span><span className="font-semibold">{done} / {total}</span></div>
+            <div className="h-2.5 bg-surface3 rounded-full mt-1.5 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={t('dash.progress')}><div className="h-2.5 bg-primary transition-all duration-700" style={{ width: pct + '%' }} /></div></div>}
         </section>
         <section className="lg:col-span-2 rounded-xl bg-primary text-onprimary p-5 flex flex-col gap-3 shadow-md" aria-labelledby="nxt-h">
           <div id="nxt-h" className="text-xs font-semibold opacity-80 flex items-center gap-1.5"><Icon name="ai" size={15} />{t('dash.nextTitle')}</div>
-          <p className="text-lg font-semibold leading-snug flex-1">{next ? next.title : t('dash.nextNone')}</p>
-          {next && <div className="text-xs opacity-80">{t('c.fromRisk')}: {next.riskLabel} · {t('c.owner')}: {next.owner}</div>}
-          {next && <button className="btn bg-surface text-ink hover:opacity-90" onClick={() => go(riskRoute(next.riskId))}><Go>{t('dash.nextGo')}</Go></button>}
+          {!analysisDone ? <>
+            <p className="text-lg font-semibold leading-snug flex-1">{t('journey.cta.3')}</p>
+            <p className="text-xs opacity-80">{t('journey.d.3')}</p>
+            <button className="btn bg-surface text-ink hover:opacity-90" onClick={() => go('analysis')}><Go>{t('journey.cta.3')}</Go></button>
+            {!!profile.unknownFacts?.length && <button className="text-sm underline underline-offset-2 text-left opacity-90" onClick={() => go('profile')}>{t('dash.answerFirst', { n: profile.unknownFacts.length })}</button>}
+          </> : <>
+            <p className="text-lg font-semibold leading-snug flex-1">{next ? next.title : t('dash.nextNone')}</p>
+            {next && <div className="text-xs opacity-80">{t('c.fromRisk')}: {next.riskLabel} · {t('c.owner')}: {next.owner}</div>}
+            {next && <button className="btn bg-surface text-ink hover:opacity-90" onClick={() => go(riskRoute(next.riskId))}><Go>{t('dash.nextGo')}</Go></button>}
+          </>}
         </section>
       </div>
-      {nom.stop && <Warn tone="danger"><b>{t('nom.stopBanner')}</b> — {t('dash.stopText')} <button className="underline font-semibold ml-1" onClick={() => go('ownership')}>{t('dash.seeDetails')}</button></Warn>}
-      <AICommandCenter profile={profile} highlight={next ? tileFor(next.riskId) : undefined} />
-      <section className="card" aria-labelledby="iss-h"><h2 id="iss-h" className="h2 mb-3">{t('dash.issues')}</h2>
-        {issues.length ? <ul className="space-y-2">{issues.map((r) => (
-          <li key={r.id}><button className="w-full text-left card-i hover:bg-surface3 transition flex flex-col gap-1" onClick={() => go('roadmap')}>
-            <span className="flex items-center justify-between gap-2 flex-wrap"><span className="font-medium text-sm">{r.category}</span><StatusBadge level={r.level} /></span>
-            <span className="block text-xs text-muted line-clamp-2">{r.why}</span></button></li>))}</ul> : <p className="text-sm text-ok-fg"><Ok>{t('dash.noIssues')}</Ok></p>}
+      {nom.stop && analysisDone && <Warn tone="danger"><b>{t('nom.stopBanner')}</b> — {t('dash.stopText')} <button className="underline font-semibold ml-1" onClick={() => go('ownership')}>{t('dash.seeDetails')}</button></Warn>}
+      <section className="card" aria-labelledby="iss-h"><h2 id="iss-h" className="h2 mb-3">{t('dash.found')}</h2>
+        {!analysisDone ? <div className="space-y-3"><p className="text-sm text-muted">{t('dash.foundWait')}</p><button className="btn-ghost !min-h-[40px] text-sm" onClick={() => go('analysis')}><Go>{t('journey.cta.3')}</Go></button></div>
+          : issues.length ? <><ul className="space-y-2">{issues.map((r) => (
+            <li key={r.id}><button className="w-full text-left card-i hover:bg-surface3 transition flex flex-col gap-1" onClick={() => go('analysis')}>
+              <span className="flex items-center justify-between gap-2 flex-wrap"><span className="font-medium text-sm">{r.category}</span><StatusBadge level={r.level} /></span>
+              <span className="block text-sm text-muted line-clamp-2">{r.found}</span></button></li>))}</ul>
+            <button className="btn-ghost !min-h-[40px] text-sm mt-3" onClick={() => go('analysis')}><Go>{t('dash.foundAll')}</Go></button></>
+          : <p className="text-sm text-ok-fg"><Ok>{t('dash.noIssues')}</Ok></p>}
       </section>
       <Disclosure title={t('dash.docsNeeded')}>
         <p className="text-xs text-muted">{t('dash.docsSub')}</p>
         <ul className="space-y-2">{needed.map((x) => (
           <li key={x} className="flex items-center justify-between gap-2 text-sm"><span className="flex items-center gap-2 min-w-0"><Icon name="documents" size={16} className="text-muted" /><span className="truncate">{docTitle(x)}</span></span>
-            <span className={`chip shrink-0 ${docs[x] ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface3 text-muted border-line'}`}>{docs[x] ? t('dash.docMade') : t('dash.docTodo')}</span></li>))}</ul>
+            <span className={'chip shrink-0 ' + (docs[x] ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface3 text-muted border-line')}>{docs[x] ? t('dash.docMade') : t('dash.docTodo')}</span></li>))}</ul>
         <button className="btn-ghost !min-h-[40px] text-sm" onClick={() => go('documents')}><Go>{t('dash.toDocs')}</Go></button>
       </Disclosure>
       <Disclosure title={t('dash.aiDid')}><AITimeline p={profile} emp={employment} /></Disclosure>
+      <div className="card"><AICommandCenter profile={profile} /></div>
       <Disclaimer />
     </div>
   )
@@ -115,14 +102,14 @@ export function RoadmapPage({ openRisks = false }: { openRisks?: boolean }) {
   return (
     <div className="space-y-5">
       <PageHead title={t('rm.title')} sub={t('rm.sub')} />
-      <GuideStrip page="roadmap" nextRoute="documents" />
+      <JourneyStrip active={4} />
       {lockMsg && <Warn tone="danger">{lockMsg}</Warn>}
       {stop && <Warn tone="danger"><b>{t('nom.stopBanner')}</b> — {t('rm.lockText')}</Warn>}
       <section className="card" aria-labelledby="todo-h"><h2 id="todo-h" className="h2 mb-1">{t('rm.actionsT')}</h2><p className="text-sm text-muted mb-3">{t('rm.actionsD')}</p>
         <ActionList actions={actions} onStatus={setAct} /></section>
       <Disclosure title={t('rm.found')} defaultOpen={openRisks}>
         <p className="text-xs text-muted">{t('risk.boardNote')}</p>
-        <div className="grid md:grid-cols-2 gap-3">{risks.map((r) => <RiskCard key={r.id} r={r} compact actions={actions.filter((a) => a.riskId === r.id)} onAction={setAct} />)}</div>
+        <div className="grid md:grid-cols-2 gap-3">{risks.map((r) => <RiskCard key={r.id} r={r} compact detail={riskRoute(r.id) === 'roadmap' ? undefined : riskRoute(r.id)} actions={actions.filter((a) => a.riskId === r.id)} onAction={setAct} />)}</div>
       </Disclosure>
       <Disclosure title={`${t('rm.allSteps')} (${t('rm.progress', { n: done, total: steps.length })})`}>
         <RoadmapTimeline steps={steps} onStatus={(id, s: StepStatus) => {
@@ -141,9 +128,12 @@ export const RiskPage = () => <RoadmapPage openRisks />
 /* ================= DOCUMENTS ================= */
 const DOC_EDIT: Record<DocType, string> = { business: 'roadmap', ownership: 'ownership', employment: 'employment', contract: 'contract', report: 'risk', translation: 'language', plan: 'roadmap' }
 const MULTI_LANG: DocType[] = ['contract', 'translation']
+/** Which findings each document supports (so the user sees why it is needed). */
+const DOC_RISK: Record<DocType, string[]> = { business: ['legal'], ownership: ['nominee', 'ownership'], employment: ['employment', 'tax'], contract: ['employment', 'language'], report: [], translation: ['language'], plan: [] }
 export function DocumentsPage() {
   const { t, lang } = useI18n()
   const { profile, employment, contract, docs, docLang, docStamp, checks, set, log } = useStore()
+  const actions = useActions()
   const [sel, setSel] = useState<DocType | null>(null)
   const [genLang, setGenLang] = useState<Partial<Record<DocType, Lang>>>({})
   const [busy, setBusy] = useState<DocType | null>(null)
@@ -172,6 +162,7 @@ export function DocumentsPage() {
   }
   const pctOf = (x: DocType) => { const it = items(x); return it.length ? Math.round((it.filter((i) => i.done).length / it.length) * 100) : null }
   const cur = sel ? get(sel, langOf(sel)) : null
+  const risks = assessRisks(profile, employment)
   return (
     <div className="space-y-5">
       <PageHead title={t('docs.title')} sub={t('docs.sub')} />
@@ -183,6 +174,16 @@ export function DocumentsPage() {
           <article key={x} className={`card flex flex-col gap-2 !p-4 transition ${sel === x ? 'ring-2 ring-primary' : ''}`}>
             <div className="flex items-start justify-between gap-2"><h3 className="font-semibold leading-snug flex items-start gap-2"><Icon name="documents" size={18} className="mt-0.5 text-primary" />{docTitle(x)}</h3><span className={`chip shrink-0 ${gen ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface3 text-muted border-line'}`}>{gen ? t('docs.draftMade') : t('docs.notMade')}</span></div>
             <p className="text-sm text-muted">{docDesc(x)}</p>
+            {(() => {
+              const rel = DOC_RISK[x].map((id) => risks.find((r) => r.id === id)).filter((r) => !!r)
+              const relActs = actions.filter((a) => DOC_RISK[x].includes(a.riskId))
+              const open = relActs.find((a) => a.status !== 'done')
+              return (
+                <div className="text-xs rounded-lg bg-surface2 border border-line px-2.5 py-2 space-y-1">
+                  {rel.length ? <p className="flex flex-wrap items-center gap-1.5"><b>{t('docs.relRisk')}:</b> {rel[0]!.category} <StatusBadge level={rel[0]!.level} /></p> : <p className="text-muted">{t('docs.relNone')}</p>}
+                  {relActs.length > 0 && <p><b>{t('docs.relAction')}:</b> {open ? open.title : t('docs.relAllDone')}{open && <button className="text-primary underline ml-1.5" onClick={() => go('roadmap')}>{t('docs.relOpen')}</button>}</p>}
+                </div>)
+            })()}
             {gen && docStamp[x] !== undefined && docStamp[x] !== fp && <p className="text-xs text-warn-fg flex items-center gap-1.5"><Icon name="alert" size={14} />{t('docs.stale')}</p>}
             <div className="flex gap-1.5 items-center" role="group" aria-label={t('docs.langLabel')}>
               {MULTI_LANG.includes(x) ? LANGS.map((l) => <button key={l.id} aria-pressed={langOf(x) === l.id} onClick={() => setGenLang({ ...genLang, [x]: l.id })} className={`px-2.5 py-1 rounded-md border text-xs min-h-[32px] transition ${langOf(x) === l.id ? 'bg-primary text-onprimary border-primary' : 'border-line hover:bg-surface3'}`}>{l.short}</button>) : <span className="chip bg-surface2 border-line text-muted">{LANGS.find((l) => l.id === (gen ? docLang[x] ?? lang : lang))!.short}</span>}
@@ -252,7 +253,7 @@ export function SourcesPage() {
   const list = useRegs().filter((r) => (c === 'ALL' || r.country === c) && (regText(r.id, 'title') + regText(r.id, 'auth') + regText(r.id, 'topic')).toLowerCase().includes(q.toLowerCase()))
   return (
     <div className="space-y-5"><PageHead title={t('src.title')} sub={t('src.sub')} />
-      <Warn>{t('src.warn')}</Warn>
+      <Warn>{t('src.warn', { v: regulations.filter((r) => r.trust === 'VERIFIED').length, n: regulations.length })}</Warn>
       <div className="card"><Filters c={c} setC={setC} q={q} setQ={setQ} />
         {list.length === 0 ? <p className="text-muted">{t('c.noData')}</p> : <div className="grid md:grid-cols-2 gap-3">{list.map((r) => <div key={r.id}><div className="text-xs font-semibold text-muted mb-1">{regText(r.id, 'topic')}</div><SourceCard id={r.id} /></div>)}</div>}</div>
       <Disclaimer /></div>
@@ -261,21 +262,28 @@ export function SourcesPage() {
 export function AdminPage() {
   const { t } = useI18n()
   const { regChanged, set } = useStore()
+  const reason = useReasonText()
   const [c, setC] = useState('ALL')
   const [q, setQ] = useState('')
+  const sum = trustSummary()
   const list = useRegs().filter((r) => (c === 'ALL' || r.country === c) && (regText(r.id, 'title') + regText(r.id, 'auth') + regText(r.id, 'topic')).toLowerCase().includes(q.toLowerCase()))
   return (
     <div className="space-y-5"><PageHead title={t('adm.title')} sub={t('adm.sub')}><button className="btn-ghost" onClick={() => set({ regChanged: !regChanged })}>{regChanged ? t('adm.undo') : t('adm.sim')}</button></PageHead>
       <Warn tone="info">{t('adm.note')}</Warn>
+      <p className="text-sm font-semibold" role="status">{t('adm.sum', { v: sum.verified, u: sum.unverified, s: sum.needsReview, g: sum.gaps })}</p>
       <div className="card"><Filters c={c} setC={setC} q={q} setQ={setQ} />
-        <div className="overflow-x-auto"><table className="w-full text-sm min-w-[720px]"><thead><tr className="bg-surface3 text-left"><th className="p-2">{t('c.country')}</th><th className="p-2">{t('c.authority')}</th><th className="p-2">{t('c.topic')}</th><th className="p-2">{t('src.record')}</th><th className="p-2">{t('reg.lastVerified')}</th><th className="p-2">{t('c.status')}</th></tr></thead><tbody>
-          {list.map((r) => <tr key={r.id} className="border-b border-line align-top"><td className="p-2"><span className="inline-flex items-center gap-1.5"><CountryBadge c={r.country} />{tk('country', r.country)}</span></td><td className="p-2">{regText(r.id, 'auth')}</td><td className="p-2 font-medium">{regText(r.id, 'topic')}</td>
-            <td className="p-2"><span className="text-muted">{regText(r.id, 'title')}</span><br /><ExtLink href={r.sourceUrl}>{t('c.openLink')}</ExtLink> {r.isSample && <SampleTag />}</td>
-            <td className="p-2 text-xs">{lastVerifiedText(r)}</td><td className="p-2 space-y-1"><VerifyBadge v={r.verificationStatus} />{r.supersededBy && <div className="text-xs text-danger-fg">{t('reg.outdated')}</div>}</td></tr>)}</tbody></table></div></div>
+        <div className="overflow-x-auto"><table className="w-full text-sm min-w-[820px]"><thead><tr className="bg-surface3 text-left"><th className="p-2">{t('c.country')}</th><th className="p-2">{t('c.authority')}</th><th className="p-2">{t('src.record')}</th><th className="p-2">{t('adm.col.review')}</th><th className="p-2">{t('adm.col.monitor')}</th><th className="p-2">{t('c.status')}</th><th className="p-2">{t('adm.col.why')}</th></tr></thead><tbody>
+          {list.map((r) => <tr key={r.id} className="border-b border-line align-top"><td className="p-2"><span className="inline-flex items-center gap-1.5"><CountryBadge c={r.country} />{tk('country', r.country)}</span></td><td className="p-2">{regText(r.id, 'auth')}<div className="text-xs text-muted">{regText(r.id, 'topic')}</div></td>
+            <td className="p-2"><span className="text-muted">{regText(r.id, 'title')}</span><br /><ExtLink href={r.sourceUrl}>{r.textUrl ? t('cite.textLink') : t('cite.agencyOnly')}</ExtLink></td>
+            <td className="p-2 text-xs">{r.reviewedBy ? `${r.reviewedBy} · ${r.lastVerified}` : lastVerifiedText(r)}</td><td className="p-2 text-xs">{r.monitored ? t('cite.monitored') : t('cite.notMonitored')}</td>
+            <td className="p-2 space-y-1"><VerifyBadge v={r.verificationStatus} />{r.supersededBy && <div className="text-xs text-danger-fg">{t('reg.outdated')}</div>}</td><td className="p-2 text-xs text-muted">{r.trust === 'VERIFIED' ? '-' : reason(r.trustReasons)}</td></tr>)}</tbody></table></div></div>
+      <section className="card space-y-2" aria-labelledby="gaps-h"><h2 id="gaps-h" className="h2">{t('adm.gaps.t')}</h2><p className="text-sm text-muted">{t('adm.gaps.d')}</p>
+        <ul className="text-sm space-y-1">{coverageGaps.map((g) => <li key={g.id} className="flex flex-wrap items-center gap-2"><CountryBadge c={g.country} /><span lang={g.country === 'CN' ? 'zh' : 'th'}>{g.instrument}</span><VerifyBadge v={g.verificationStatus} /></li>)}</ul></section>
+      <section className="card space-y-2" aria-labelledby="how-h"><h2 id="how-h" className="h2">{t('adm.how.t')}</h2>
+        <ol className="list-decimal ml-5 text-sm space-y-1"><li>{t('adm.how.1')}</li><li>{t('adm.how.2')}</li><li>{t('adm.how.3')}</li><li>{t('adm.how.4')}</li></ol></section>
       <Disclaimer /></div>
   )
 }
-
 /* ================= PRICING / PRIVACY ================= */
 export function PricingPage() {
   const { t } = useI18n()

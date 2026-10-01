@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import type { Direction, EmploymentInput, Profile } from '../types'
 import { go, useStore } from '../store'
-import { BusinessProfile, Disclaimer, EmptyState, Go, PageHead, Warn, WorkflowStrip } from '../components/ui'
+import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead } from '../components/ui'
 import { CountryBadge, Icon } from '../components/icons'
 import { dirInfo } from '../utils/labels'
+import { BRAND, BRAND_CONCEPTS } from '../brand'
 import { dv, tk, useI18n } from '../i18n'
 import { OWNERSHIP_KEYS, buildProfile, coreDone, firstUnanswered, prune, remaining, visibleQs, type A, type Q } from '../interview'
 
@@ -26,9 +27,9 @@ export function Landing() {
     <div className="space-y-10 max-w-5xl mx-auto">
       <section className="rounded-2xl border border-heroline bg-hero text-onhero px-6 py-12 md:px-12 md:py-16 grid md:grid-cols-[1.4fr_1fr] gap-8 items-center">
         <div>
-          <p className="text-sm opacity-75 mb-3">{t('land.kicker')}</p>
-          <h1 className="text-3xl md:text-5xl font-bold leading-tight">{t('land.h1')}</h1>
-          <p className="mt-4 text-lg opacity-90 max-w-xl">{t('land.sub')}</p>
+          <p className="text-sm opacity-75 mb-4">{t('land.h1')}</p>
+          <h1 lang="en"><span className="block text-5xl md:text-7xl font-bold tracking-[0.08em] leading-none">{BRAND.name}</span><span className="block text-base md:text-xl font-medium opacity-80 tracking-wide mt-3">{BRAND.full}</span></h1>
+          <p className="mt-6 text-lg opacity-90 max-w-xl">{t('land.pos')}</p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3 mt-8">
             <button className="btn-accent !px-6 !min-h-[52px] text-base" onClick={beginNew}><Go>{t('land.go')}</Go></button>
             <button className="underline underline-offset-4 text-sm font-medium py-2" onClick={() => { startDemo(); go('profile') }}>{t('land.demoLink')}</button>
@@ -37,9 +38,15 @@ export function Landing() {
         </div>
         <div className="hidden md:block"><CrossBorderVisual /></div>
       </section>
+      <section aria-labelledby="stands-h" className="space-y-3">
+        <h2 id="stands-h" className="h2">{t('brand.stands')}</h2>
+        <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">{BRAND_CONCEPTS.map((c, i) => (
+          <li key={i} className="card !p-4 space-y-1.5"><div className="flex items-baseline gap-2" lang="en"><span className="text-2xl font-bold text-primary">{c.letter}</span><span className="font-semibold">{c.word}</span></div><p className="text-sm text-muted">{t(('brand.' + c.key) as never)}</p></li>))}</ul>
+        <p className="text-xs text-muted">{t('brand.together')}</p>
+      </section>
       <section aria-label={t('land.h2')}>
-        <ol className="grid sm:grid-cols-3 gap-4">{[1, 2, 3].map((n) => (
-          <li key={n} className="flex gap-3 items-start"><span className="w-8 h-8 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center font-semibold">{n}</span><span className="pt-1 font-medium">{tk('land', 't' + n)}</span></li>))}</ol>
+        <ol className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">{[1, 2, 3, 4, 5].map((n) => (
+          <li key={n} className="flex gap-3 items-start"><span className="w-8 h-8 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center font-semibold">{n}</span><span className="pt-1 font-medium">{tk('journey', String(n))}</span></li>))}</ol>
         <p className="text-sm text-muted mt-4">{t('land.tip')}</p>
       </section>
       <Disclaimer />
@@ -165,7 +172,7 @@ export function ProfilePage() {
   return (
     <div className="space-y-5">
       <PageHead title={t('prof.title')} sub={t('prof.sub')} />
-      <WorkflowStrip active={0} />
+      <JourneyStrip />
       {edit ? (
         <div className="card space-y-3">
           <h2 className="h2">{t('prof.edit')}</h2>
@@ -179,8 +186,19 @@ export function ProfilePage() {
           <div className="flex gap-2"><button className="btn-primary" onClick={save}>{t('c.save')}</button><button className="btn-ghost" onClick={() => { setF(profile); setEdit(false); setErr('') }}>{t('c.cancel')}</button></div>
         </div>
       ) : <BusinessProfile p={profile} onEdit={() => { setF(profile); setEdit(true) }} />}
-      {profile.unknownFacts && profile.unknownFacts.length > 0 && <Warn>{t('prof.unknown')} {profile.unknownFacts.map((u) => tk('unk', u)).join(' · ')}</Warn>}
-      <div className="flex gap-2 flex-wrap"><button className="btn-primary" onClick={() => go('analysis')}><Icon name="ai" size={16} />{t('prof.startAi')}</button><button className="btn-ghost" onClick={() => go('dashboard')}>{t('prof.toDash')}</button></div>
+      <section className="card space-y-3" aria-labelledby="need-h">
+        <h2 id="need-h" className="h2">{t('biz.need.t')}</h2>
+        {profile.unknownFacts && profile.unknownFacts.length > 0 ? <>
+          <p className="text-sm text-muted">{t('biz.need.d')}</p>
+          <ul className="space-y-2">{profile.unknownFacts.map((u) => (
+            <li key={u} className="card-i flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0 flex-1 basis-60"><div className="font-medium text-sm">{tk('unk', u)}</div><div className="text-xs text-muted">{tk('biz.why', u)}</div></div>
+              <button className="btn-ghost !min-h-[36px] !py-1 text-sm" onClick={() => go('interview')}>{t('biz.answerNow')}</button>
+            </li>))}</ul>
+        </> : <p className="text-sm text-ok-fg"><Ok>{t('biz.need.none')}</Ok></p>}
+      </section>
+      <div className="space-y-2"><div className="flex gap-2 flex-wrap"><button className="btn-primary" onClick={() => go('analysis')}><Icon name="ai" size={16} />{t('biz.analyze')}</button><button className="btn-ghost" onClick={() => go('dashboard')}>{t('prof.toDash')}</button></div>
+        {!!profile.unknownFacts?.length && <p className="text-xs text-muted">{t('biz.analyzeHint')}</p>}</div>
       <Disclaimer />
     </div>
   )

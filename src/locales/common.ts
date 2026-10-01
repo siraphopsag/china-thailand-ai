@@ -1,9 +1,6 @@
 export type Msg = readonly [th: string, zh: string, en: string]
 export const common = {
   // ---- app / nav
-  'app.name': ['ไทย–จีน AI', '泰中 AI', 'TH–CN AI'],
-  'app.tagline': ['Business Entry & Compliance', 'Business Entry & Compliance', 'Business Entry & Compliance'],
-  'app.title': ['แพลตฟอร์ม AI วางแผนธุรกิจไทย–จีน', '泰中 AI 商业拓展与合规平台', 'China–Thailand AI Business Platform'],
   'nav.home': ['หน้าแรก', '首页', 'Home'],
   'nav.documents': ['เอกสาร', '文件', 'Documents'],
   'nav.sources': ['แหล่งข้อมูล', '信息来源', 'Sources'],

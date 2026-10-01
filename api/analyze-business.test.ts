@@ -48,4 +48,20 @@ describe('POST /api/analyze-business', () => {
     const text = await r.text()
     expect(text).not.toMatch(/at \w+|node_modules|stack/i)
   })
+  it('every answer carries server-built citations with jurisdiction and trust; employment answers also name the laws with no content', async () => {
+    const h = (id: string) => ({ id, nationality: id === 'origin' ? 'TH' : 'CN', percent: 50, capital: 50, voting: 50, board: 50, economic: 50 })
+    const profile = { companyName: 'X', direction: 'TH_CN', businessType: 'other', forms: ['send'], holders: [h('origin'), h('partner')] }
+    const j = await (await call({ ...good, profile, lang: 'en' })).json()
+    expect(j.grounding).toBe('UNVERIFIED')
+    expect(j.citations.length).toBeGreaterThan(0)
+    for (const c of j.citations) expect(['TH', 'CN']).toContain(c.jurisdiction)
+    expect(j.citations.some((c: { trust: string }) => c.trust === 'GAP')).toBe(true)
+    expect(j.citations.filter((c: { trust: string }) => c.trust !== 'GAP').every((c: { trust: string }) => c.trust !== 'VERIFIED')).toBe(true)
+  })
+  it('asking for an exact penalty or figure gets the refusal, not a guess', async () => {
+    for (const [lang, question] of [['en', 'What is the penalty for hiring without a work permit?'], ['th', 'โทษของการจ้างโดยไม่มีใบอนุญาตคืออะไร'], ['zh', '没有工作许可雇用外国人的处罚是什么']] as const) {
+      const j = await (await call({ question, profile: null, lang })).json()
+      expect(j.kind).toBe('insufficient'); expect(j.grounding).toBe('NONE'); expect(j.answer).not.toMatch(/[0-9]/)
+    }
+  })
 })

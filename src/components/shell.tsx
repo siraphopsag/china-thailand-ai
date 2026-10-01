@@ -5,28 +5,33 @@ import { go, useStore } from '../store'
 import { dirInfo } from '../utils/labels'
 import { tourRoutes } from '../data/culture'
 import { SampleTag } from './ui'
+import { BRAND } from '../brand'
 import { CountryBadge, Icon, type IconName } from './icons'
 
 type NavItem = { route: string; key: string; icon: IconName; sub: string[] }
-/** Six plain-language destinations. Everything else lives under "More". */
+/** Five primary areas that follow the journey. The internal analysis modules (ownership, employment, contract) live inside AI Analysis. */
 export const PRIMARY: NavItem[] = [
-  { route: 'dashboard', key: 'nav.overview', icon: 'overview', sub: ['profile', 'direction', 'interview', 'analysis'] },
-  { route: 'ownership', key: 'nav.ownershipCheck', icon: 'ownership', sub: ['nominee'] },
-  { route: 'employment', key: 'nav.employmentCheck', icon: 'employment', sub: ['contract'] },
+  { route: 'dashboard', key: 'nav.overview', icon: 'overview', sub: [] },
+  { route: 'profile', key: 'nav.business', icon: 'business', sub: ['direction', 'interview'] },
+  { route: 'analysis', key: 'nav.analysisHub', icon: 'ai', sub: ['ownership', 'nominee', 'employment', 'contract'] },
   { route: 'roadmap', key: 'nav.plan', icon: 'plan', sub: ['risk'] },
   { route: 'documents', key: 'nav.documents', icon: 'documents', sub: [] },
 ]
 export const MORE: NavItem[] = [
-  { route: 'analysis', key: 'nav.analysis', icon: 'ai', sub: [] },
   { route: 'monitoring', key: 'nav.monitoring', icon: 'monitor', sub: [] },
   { route: 'sources', key: 'nav.sources', icon: 'sources', sub: [] },
   { route: 'language', key: 'tabs.language', icon: 'culture', sub: [] },
 ]
 const isActive = (route: string, n: NavItem) => route === n.route || n.sub.includes(route)
 
-export function Logo() {
+/** C.A.L.L. mark: two linked rings (two sides of a border, two languages) joined by one line. Follows the theme. */
+export function Logo({ size = 32 }: { size?: number }) {
   return (
-    <svg width="32" height="32" viewBox="0 0 34 34" aria-hidden><circle cx="9" cy="17" r="7" fill="#fbbf24" /><circle cx="25" cy="17" r="7" fill="#f87171" /><path d="M13 17h8" stroke="#0f1e38" strokeWidth="2.5" strokeLinecap="round" /><path d="M19 13l4 4-4 4" stroke="#0f1e38" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden className="shrink-0">
+      <rect width="32" height="32" rx="8" className="fill-primary" />
+      <circle cx="12.5" cy="16" r="6" fill="none" strokeWidth="2.2" className="stroke-onprimary" />
+      <circle cx="19.5" cy="16" r="6" fill="none" strokeWidth="2.2" className="stroke-onprimary" opacity="0.75" />
+    </svg>
   )
 }
 
@@ -115,7 +120,7 @@ export function Header({ route }: { route: string }) {
     <header className="bg-header text-onheader sticky top-0 z-40 border-b border-line">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
         <button onClick={() => go('')} className="flex items-center gap-2 text-left shrink-0" aria-label={t('nav.home')}>
-          <Logo /><span className="leading-tight hidden min-[420px]:block"><span className="block text-sm font-semibold">{t('app.name')}</span><span className="block text-[11px] opacity-70">{t('app.tagline')}</span></span>
+          <Logo /><span className="leading-tight" lang="en"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
         </button>
         {started && <nav aria-label={t('nav.main')} className="hidden xl:flex gap-0.5 ml-3 flex-1 min-w-0">
           {PRIMARY.map((n) => (
@@ -192,7 +197,7 @@ export function BottomNav({ route }: { route: string }) {
     <nav aria-label={t('nav.mobile')} className="xl:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-line grid grid-cols-5 z-40">
       {PRIMARY.map((n) => (
         <button key={n.route} onClick={() => go(n.route)} aria-current={isActive(route, n) ? 'page' : undefined} className={`py-2 text-[11px] min-h-[56px] flex flex-col items-center gap-0.5 leading-tight px-0.5 ${isActive(route, n) ? 'text-primary font-semibold' : 'text-muted'}`}>
-          <Icon name={n.icon} size={21} /><span className="truncate max-w-full">{t(n.key as never)}</span>
+          <Icon name={n.icon} size={21} /><span className="line-clamp-2 max-w-full text-center">{t(n.key as never)}</span>
         </button>))}
     </nav>
   )

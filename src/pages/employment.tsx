@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ContractInput, EmploymentInput } from '../types'
 import { go, useStore } from '../store'
-import { Disclaimer, Disclosure, EmptyState, GuideStrip, Go, Ok, PageHead, SourceCard, StatusBadge, TabBar, VerifyBadge, Warn, ExtLink } from '../components/ui'
+import { BackLink, Disclaimer, Disclosure, EmptyState, GuideStrip, Go, Ok, PageHead, SourceCard, StatusBadge, TabBar, VerifyBadge, Warn, ExtLink } from '../components/ui'
 import { Icon } from '../components/icons'
 import { analyzeEmployment, contractKeys, contractLabel, draftNote, generateContract } from '../services/engines'
 import { aiService } from '../services/aiService'
@@ -23,6 +23,7 @@ export function EmploymentPage({ openContract = false }: { openContract?: boolea
   const tc = profile.direction === 'TH_CN'
   return (
     <div className="space-y-5">
+      <BackLink to="analysis" label={t('nav.backAnalysis')} />
       <PageHead title={t('emp.title')} sub={t('emp.sub')} />
       <GuideStrip page="employment" nextRoute="contract" />
       <div className="card space-y-3"><h2 className="h2">{t('emp.mode')}</h2>

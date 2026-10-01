@@ -1,5 +1,5 @@
 {
-  "name": "cn-th-ai-compliance",
+  "name": "call-cross-asean-language-legal",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "legal:watch": "tsx scripts/legal-watch.ts",
+    "legal:review": "tsx scripts/legal-review.ts"
   },
   "dependencies": {
     "@fontsource/noto-sans-thai": "^5.3.0",
@@ -16,12 +18,14 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@types/node": "^24.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.6.1",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.19",
+    "tsx": "^4.20.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.3"
