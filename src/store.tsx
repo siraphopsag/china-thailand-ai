@@ -6,12 +6,15 @@ import { KEYS, STATE_VERSION, safeGet, safeSet } from './storage'
 import { cleanProfile, isObj, str } from './profileSchema'
 import { tr } from './i18n/core'
 import type { MsgKey } from './locales'
+import { emptyEmployeeCheck, sanitizeEmployeeCheck, type EmployeeCheck } from './services/compliance'
 
 export { cleanProfile }
 export interface HistoryItem { at: string; key: MsgKey; vars?: Record<string, string> } // `at` is an ISO timestamp, formatted when displayed
 export type Mode = 'real' | 'demo'
 /** Snapshot of a completed action, so finished work stays counted even if the risk that created it later disappears. */
 export interface ActionSnap { title: string; riskLabel: string; owner: string; riskId: string }
+export type DocState = 'required' | 'have' | 'missing' | 'verified' | 'review'
+export const DOC_STATES: DocState[] = ['required', 'have', 'missing', 'verified', 'review']
 interface State {
   direction: Direction | null
   /** ISO 3166-2 code chosen on the map (e.g. TH-20), or null when no province was chosen */
@@ -27,6 +30,10 @@ interface State {
   tour: number | null
   checks: Record<string, boolean>
   docs: Record<string, boolean> // generated document types
+  /** Employee Compliance Check answers (one employee) */
+  employeeCheck: EmployeeCheck
+  /** Status the user recorded for each required document (kb document id → status); files are never uploaded */
+  docStatus: Record<string, DocState>
   docLang: Record<string, 'th' | 'zh' | 'en'>
   docStamp: Record<string, string> // data fingerprint at generation time → detects outdated drafts
   extraAlerts: AlertItem[]
@@ -35,7 +42,7 @@ interface State {
   history: HistoryItem[]
 }
 const initial: State = {
-  direction: null, originProvince: null, destinationProvince: null, answers: {}, profile: null, employment: emptyEmployment, contract: emptyContract, stepOverrides: {}, actionStatus: {}, actionSnap: {}, tour: null, checks: {}, docs: {}, docLang: {}, docStamp: {},
+  direction: null, originProvince: null, destinationProvince: null, answers: {}, profile: null, employment: emptyEmployment, contract: emptyContract, stepOverrides: {}, actionStatus: {}, actionSnap: {}, tour: null, checks: {}, docs: {}, employeeCheck: emptyEmployeeCheck, docStatus: {}, docLang: {}, docStamp: {},
   extraAlerts: [], regChanged: false, analysisDone: false, history: [],
 }
 const now = () => new Date().toISOString()
@@ -49,7 +56,7 @@ export function fingerprint(...parts: unknown[]): string {
 }
 
 /* ---------- defensive loading: never trust what is in localStorage ---------- */
-const STEP_VALUES: StepStatus[] = ['todo', 'doing', 'review', 'done', 'fix']
+const STEP_VALUES: StepStatus[] = ['todo', 'doing', 'waitdoc', 'waitver', 'review', 'done', 'fix']
 const fill = <T extends object>(empty: T, raw: unknown): T => {
   const src = isObj(raw) ? raw : {}
   return Object.fromEntries(Object.keys(empty).map((k) => [k, str(src[k])])) as T
@@ -58,6 +65,7 @@ const mapOf = <V,>(raw: unknown, ok: (v: unknown) => v is V): Record<string, V> 
 const isStep = (v: unknown): v is StepStatus => STEP_VALUES.includes(v as StepStatus)
 const isBool = (v: unknown): v is boolean => typeof v === 'boolean'
 const isString = (v: unknown): v is string => typeof v === 'string'
+const isDocState = (v: unknown): v is DocState => DOC_STATES.includes(v as DocState)
 const isLang = (v: unknown): v is 'th' | 'zh' | 'en' => v === 'th' || v === 'zh' || v === 'en'
 const isSnap = (v: unknown): v is ActionSnap => isObj(v) && typeof v.title === 'string' && typeof v.riskLabel === 'string' && typeof v.owner === 'string' && typeof v.riskId === 'string'
 function sanitizeAnswers(raw: unknown): Record<string, string | string[]> {
@@ -73,7 +81,7 @@ export function sanitizeState(raw: unknown): State {
     originProvince: provCode(raw.originProvince), destinationProvince: provCode(raw.destinationProvince),
     answers: sanitizeAnswers(raw.answers), profile, employment: fill(emptyEmployment, raw.employment), contract: fill(emptyContract, raw.contract),
     stepOverrides: mapOf(raw.stepOverrides, isStep) as Record<number, StepStatus>, actionStatus: mapOf(raw.actionStatus, isStep), actionSnap: mapOf(raw.actionSnap, isSnap), tour: null,
-    checks: mapOf(raw.checks, isBool), docs: mapOf(raw.docs, isBool), docLang: mapOf(raw.docLang, isLang), docStamp: mapOf(raw.docStamp, isString),
+    checks: mapOf(raw.checks, isBool), docs: mapOf(raw.docs, isBool), employeeCheck: sanitizeEmployeeCheck(raw.employeeCheck), docStatus: mapOf(raw.docStatus, isDocState), docLang: mapOf(raw.docLang, isLang), docStamp: mapOf(raw.docStamp, isString),
     extraAlerts: Array.isArray(raw.extraAlerts) ? (raw.extraAlerts.filter((a) => isObj(a) && typeof a.id === 'string' && typeof a.titleKey === 'string' && typeof a.sourceId === 'string') as unknown as AlertItem[]) : [],
     regChanged: !!raw.regChanged, analysisDone: !!raw.analysisDone,
     history: Array.isArray(raw.history) ? (raw.history.filter((h) => isObj(h) && typeof h.key === 'string' && typeof h.at === 'string') as unknown as HistoryItem[]).slice(0, 8) : [],

@@ -5,6 +5,7 @@ export const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 
 export const str = (v: unknown) => (typeof v === 'string' ? v : '')
 export const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d)
 export const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
+const prov = (v: unknown) => (typeof v === 'string' && /^(TH|CN)-[A-Z0-9]{2,3}$/.test(v) ? v : undefined)
 export const pick = <T extends string>(v: unknown, all: readonly T[], d: T): T => (all.includes(v as T) ? (v as T) : d)
 
 function cleanHolder(h: unknown, id: Side): Holder | null {
@@ -24,6 +25,6 @@ export function cleanProfile(p: unknown): Profile | null {
     investmentRange: str(p.investmentRange), employees: Math.max(0, num(p.employees)), crossBorderWorkers: !!p.crossBorderWorkers, holders: [o, pa],
     realInvestor: pick(p.realInvestor, ['origin', 'partner', 'shared', 'unknown'], 'unknown'), operator: pick(p.operator, ['origin', 'partner', 'joint', 'unknown'], 'unknown'),
     sideAgreement: pick(p.sideAgreement, ['yes', 'no', 'unknown'], 'unknown'), products: str(p.products).slice(0, 500), regulatedGoods: str(p.regulatedGoods), location: str(p.location).slice(0, 200),
-    crossBorder: strs(p.crossBorder).slice(0, 20), targetMarket: p.targetMarket ? str(p.targetMarket).slice(0, 300) : undefined, unknownFacts: strs(p.unknownFacts).slice(0, 20), isDemo: !!p.isDemo,
+    crossBorder: strs(p.crossBorder).slice(0, 20), targetMarket: p.targetMarket ? str(p.targetMarket).slice(0, 300) : undefined, originProvince: prov(p.originProvince), destProvince: prov(p.destProvince), unknownFacts: strs(p.unknownFacts).slice(0, 20), isDemo: !!p.isDemo,
   }
 }

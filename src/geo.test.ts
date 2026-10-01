@@ -57,6 +57,12 @@ describe('geographic data is taken from Natural Earth, not invented', () => {
     const ids = new Set(t.objects.countries.geometries.map((g) => g.id))
     for (const c of [...ACTIVE, ...SOON]) expect(ids.has(GEO[c].iso), c).toBe(true)
   })
+  it('nothing outside China + ASEAN exists in the map data (no India, Japan, Korea, Taiwan, Mongolia, Russia, Australia…)', () => {
+    const t2 = region as unknown as { objects: Record<string, { geometries: { id?: string }[] }> }
+    const allowed = new Set([...[...ACTIVE, ...SOON].map((c) => GEO[c].iso), '344', '446']) // Hong Kong and Macao are drawn as part of China
+    for (const g of t2.objects.countries.geometries) expect(allowed.has(String(g.id)), String(g.id)).toBe(true)
+    for (const iso of ['356', '392', '410', '158', '496', '643', '036']) expect(t2.objects.countries.geometries.some((g) => g.id === iso), iso).toBe(false)
+  })
   it('every country and capital shown has a name in Thai, Chinese and English', () => {
     const m = messages as Record<string, readonly string[]>
     for (const c of [...ACTIVE, ...SOON]) expect(m[`geo.c.${c}`]?.every((s) => s.length > 0), c).toBe(true)

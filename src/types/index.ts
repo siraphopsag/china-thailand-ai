@@ -2,7 +2,8 @@ import type { Citation, ReasonCode, Trust } from '../data/legal/types'
 export type Direction = 'TH_CN' | 'CN_TH'
 export type Level = 'LOW' | 'MEDIUM' | 'HIGH' | 'NEEDS_REVIEW'
 export type Verification = 'VERIFIED' | 'PARTIAL' | 'NEED_INFO' | 'NO_SOURCE' | 'EXPERT' | 'STALE' | 'CHANGED'
-export type StepStatus = 'todo' | 'doing' | 'review' | 'done' | 'fix'
+/** todo = not started · doing = in progress · waitdoc = waiting for document · waitver = waiting for verification · review = needs review · done = completed · fix = needs fixing */
+export type StepStatus = 'todo' | 'doing' | 'waitdoc' | 'waitver' | 'review' | 'done' | 'fix'
 export type Tri = 'yes' | 'no' | 'unknown'
 export type Side = 'origin' | 'partner'
 
@@ -38,6 +39,9 @@ export interface Profile {
   crossBorder: string[] // ids: import | export | fx
   targetMarket?: string
   unknownFacts?: string[] // ids: funding | economic | voting | board
+  /** ISO 3166-2 codes chosen on the map (optional) */
+  originProvince?: string
+  destProvince?: string
   isDemo?: boolean
 }
 
@@ -90,6 +94,10 @@ export interface RiskCardData {
   check: string[]
   next: string
   verification: Verification
+  /** Knowledge-base links: requirement ids, responsible authority ids and evidence document ids (data/legal/kb.ts) */
+  requirementIds?: string[]
+  authorityIds?: string[]
+  evidence?: string[]
 }
 export interface ActionItem { id: string; riskId: string; riskLabel: string; title: string; owner: string; status: StepStatus }
 

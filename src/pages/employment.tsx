@@ -47,7 +47,7 @@ export function EmploymentPage({ openContract = false }: { openContract?: boolea
 const CFIELDS: (keyof ContractInput)[] = ['employer', 'employee', 'nationality', 'job', 'location', 'startDate', 'duration', 'salary', 'benefits', 'hours', 'leave', 'probation', 'other']
 function ContractSection() {
   const { t, lang } = useI18n()
-  const { profile, contract, employment, set, log } = useStore()
+  const { profile, contract, employment, employeeCheck: ec, set, log } = useStore()
   const [out, setOut] = useState<ReturnType<typeof generateContract> | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -68,7 +68,9 @@ function ContractSection() {
       <p className="text-sm text-muted">{t('ctr.sub')}</p>
       <ol className="flex flex-wrap gap-2 text-xs" aria-label={t('ctr.pipe.aria')}>{pipe.map(([k, done], i) => (
         <li key={k} className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 ${done ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface text-muted border-line'}`}>{done ? <Icon name="check" size={13} /> : <span className="font-semibold">{i + 1}</span>}{tk('ctr.pipe', k)}</li>))}</ol>
-      <Warn tone="info"><b>{draftNote()}</b></Warn>
+      <Warn tone="info"><b>{t('ctr.draftBanner')}</b><br />{draftNote()}</Warn>
+      {ec.nationality && <div className="card-i !p-3 flex flex-wrap items-center gap-2 text-sm"><Icon name="employment" size={16} /><span className="flex-1 min-w-[200px]">{t('ec.title')}: {tk('ec.o.nat', ec.nationality)}{ec.role ? ' · ' + ec.role : ''}</span>
+        <button className="btn-ghost !min-h-[40px] text-sm" onClick={() => { set({ contract: { ...contract, employer: ec.employer || contract.employer || dv(profile.companyName), job: ec.role || contract.job, nationality: ec.nationality === 'OTHER' ? contract.nationality : ec.nationality ? tk('country', ec.nationality) : contract.nationality, location: ec.province ? tk('prov', ec.province) : contract.location, startDate: ec.start || contract.startDate } }); setOut(null) }}>{t('ctr.fromCheck')}</button></div>}
       <div className="card"><h2 className="h2 mb-2">{t('ctr.context')}</h2>
         <dl className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
           {[[t('emp.mode'), employment.mode ? tk('mode', employment.mode) : '-'], [t('emp.a.nationality'), dv(employment.nationality) || '-'], [t('emp.a.location'), dv(employment.location) || '-'], [t('emp.a.duration'), dv(employment.duration) || '-']].map(([k, v]) => <div key={k} className="card-i"><dt className="text-muted text-xs">{k}</dt><dd className="font-medium break-words">{v}</dd></div>)}</dl>

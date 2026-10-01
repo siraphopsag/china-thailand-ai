@@ -7,8 +7,10 @@ import { terms } from '../data/culture.js'
 import type { MsgKey } from '../locales/index.js'
 import type { Citation } from '../data/legal/types.js'
 import { registry } from '../data/legal/registry.js'
-import { liveLegal, type LegalView } from '../data/legal/trust.js'
+import { liveLegal, toVerification, type LegalView } from '../data/legal/trust.js'
 import { answerSpecific, asksSpecificDetail, guardResponse } from './legalGuard.js'
+import { contextFrom, ecCounts, ecStarted, evaluateEmployeeCheck, retrieveRequirements, riskLinks, type EmployeeCheck } from './compliance.js'
+import { requirementOf } from '../data/legal/kb.js'
 
 const GAP = 25 // ส่วนต่าง (จุดเปอร์เซ็นต์) ที่ถือว่าควรตรวจสอบเพิ่มเติม
 const K = (s: string) => s as MsgKey
@@ -142,7 +144,29 @@ export function analyzeEmployment(e: EmploymentInput, p: Profile | null): Employ
 }
 
 /* ---------- Risk cards ---------- */
-export function assessRisks(p: Profile, emp: EmploymentInput): RiskCardData[] {
+/** Risks + their knowledge-base links (requirement → authority → evidence). With an employee check, one more card summarises it. */
+export function assessRisks(p: Profile, emp: EmploymentInput, ec?: EmployeeCheck): RiskCardData[] {
+  const reqs = retrieveRequirements(contextFrom(p, ec))
+  const out = baseRisks(p, emp).map((r) => ({ ...r, sourceIds: [...new Set(r.sourceIds)], ...(r.level === 'LOW' && !r.sourceIds.length ? {} : riskLinks(r.id, reqs)) }))
+  if (ec && ecStarted(ec)) {
+    const items = evaluateEmployeeCheck(ec, targetCountry(p))
+    const c = ecCounts(items)
+    const open = items.filter((i) => i.status === 'POTENTIAL_COMPLIANCE_ISSUE' || i.status === 'NEEDS_INFORMATION' || i.status === 'NEEDS_VERIFICATION')
+    const title = (id: string) => tr(K('ec.i.' + id + '.t'))
+    const rids = [...new Set(open.flatMap((i) => i.requirementIds))]
+    out.push({
+      id: 'employee', category: tr('ec.risk'), level: c.p ? 'HIGH' : open.length ? 'NEEDS_REVIEW' : 'LOW', verification: 'NEED_INFO',
+      found: tr('ec.summary', c), why: tr('ec.disclaimer'),
+      unknown: items.filter((i) => i.status === 'NEEDS_INFORMATION').map((i) => title(i.id)),
+      check: items.filter((i) => i.status === 'POTENTIAL_COMPLIANCE_ISSUE' || i.status === 'NEEDS_VERIFICATION').map((i) => title(i.id)),
+      next: open.length ? tr(K('ec.i.' + (open.find((i) => i.status === 'POTENTIAL_COMPLIANCE_ISSUE') ?? open[0]).id + '.next')) : tr('risk.next.na'),
+      sourceIds: [...new Set(rids.flatMap((id) => requirementOf(id)?.sources ?? []))],
+      requirementIds: rids, authorityIds: [...new Set(open.flatMap((i) => i.authorityIds))], evidence: [...new Set(open.flatMap((i) => i.evidence))],
+    })
+  }
+  return out
+}
+function baseRisks(p: Profile, emp: EmploymentInput): RiskCardData[] {
   const tc = targetCountry(p)
   const nom = detectNomineeRisk(p)
   const dims = ownershipDims(p)
@@ -153,21 +177,25 @@ export function assessRisks(p: Profile, emp: EmploymentInput): RiskCardData[] {
   const regulated = !!p.regulatedGoods && p.regulatedGoods !== 'none'
   const nr = restricted || regulated
   const legalSrc = tc === 'CN' ? 'cn-neglist-2024' : 'th-fba'
+  // does the plan involve people at all? if not, employment and employee-tax findings are not relevant yet
+  const staff = p.forms.includes('hire') || p.forms.includes('send') || p.employees > 0 || p.crossBorderWorkers
+  // place-specific checks (only facts that hold for the whole area; details are left to verification)
+  const placeChecks = [...(p.destProvince && ['TH-20', 'TH-21', 'TH-24'].includes(p.destProvince) ? [tr('risk.legal.c.eec')] : []), ...(p.destProvince?.startsWith('CN-') ? [tr('risk.legal.c.ftz', { place: tr(K('prov.' + p.destProvince)) })] : [])]
   // a mismatch is a known difference; an unanswered side-agreement question is an unknown, not a mismatch
   const flagged = dims.filter((d) => d.status !== 'LOW' && !(d.key === 'agr' && p.sideAgreement === 'unknown')).map((d) => d.title)
   const ownUnknown = [...(p.unknownFacts ?? []).map((u) => tr(K('unk.' + u))), ...(hasCompany(p) && p.sideAgreement === 'unknown' ? [tr('unk.agreement')] : [])]
   const missing = (ids?: string[]) => empAreas.filter((a) => a.missing && (!ids || ids.includes(a.id))).map((a) => a.area)
   return [
     { id: 'legal', category: tr('risk.cat.legal'), level: nr ? 'NEEDS_REVIEW' : 'MEDIUM', verification: 'NEED_INFO', found: tr('risk.found.legal'), unknown: [], why: tr(nr ? 'risk.legal.why.review' : 'risk.legal.why.base'),
-      sourceIds: [legalSrc], check: [tr('risk.legal.c1'), tr('risk.legal.c2')], next: tr('risk.legal.next') },
+      sourceIds: [legalSrc], check: [tr('risk.legal.c1'), tr('risk.legal.c2'), ...placeChecks], next: tr('risk.legal.next') },
     { id: 'ownership', category: tr('risk.cat.ownership'), level: ownLvl, verification: 'NEED_INFO', found: flagged.length ? tr('risk.found.own.flag', { list: flagged.join(', ') }) : ownUnknown.length ? tr('risk.found.own.unk', { n: ownUnknown.length }) : tr('risk.found.own.ok'), unknown: ownUnknown, why: tr('risk.own.why'), sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-fba'],
       check: dims.filter((d) => d.status !== 'LOW').map((d) => d.title), next: tr('risk.own.next') },
     { id: 'nominee', category: tr('risk.cat.nominee'), level: nom.level, verification: nom.level === 'LOW' ? 'NEED_INFO' : 'EXPERT', found: nom.headline, unknown: nom.unknowns, why: nom.reason, sourceIds: [tc === 'CN' ? 'cn-fil' : 'th-fba'],
       check: [...new Set(nom.indicators.map((i) => i.verify))].slice(0, 3), next: nom.next[0] },
-    { id: 'employment', category: tr('risk.cat.employment'), level: 'NEEDS_REVIEW', verification: 'NEED_INFO', found: missEmp ? tr('risk.found.emp.miss', { n: missEmp }) : tr('risk.found.emp.ok'), unknown: missing(), why: missEmp ? tr('risk.emp.why.miss', { n: missEmp }) : tr('risk.emp.why.ok'),
-      sourceIds: [tc === 'CN' ? 'cn-labor' : 'th-labour', tc === 'CN' ? 'cn-immigration' : 'th-labour'], check: empAreas.filter((a) => a.status !== 'LOW').slice(0, 4).map((a) => a.area), next: tr('risk.emp.next') },
-    { id: 'tax', category: tr('risk.cat.tax'), level: p.crossBorderWorkers ? 'MEDIUM' : 'NEEDS_REVIEW', verification: 'NEED_INFO', found: tr('risk.found.tax'), unknown: missing(['salary', 'tax', 'duration']), why: tr(p.crossBorderWorkers ? 'risk.tax.why.cross' : 'risk.tax.why.none'),
-      sourceIds: [tc === 'CN' ? 'cn-tax' : 'th-tax'], check: [tr('risk.tax.c1'), tr('risk.tax.c2'), tr('risk.tax.c3')], next: tr('risk.tax.next') },
+    ...(staff ? <RiskCardData[]>[{ id: 'employment', category: tr('risk.cat.employment'), level: 'NEEDS_REVIEW', verification: 'NEED_INFO', found: missEmp ? tr('risk.found.emp.miss', { n: missEmp }) : tr('risk.found.emp.ok'), unknown: missing(), why: missEmp ? tr('risk.emp.why.miss', { n: missEmp }) : tr('risk.emp.why.ok'),
+      sourceIds: [tc === 'CN' ? 'cn-labor' : 'th-labour', tc === 'CN' ? 'cn-immigration' : 'th-labour'], check: empAreas.filter((a) => a.status !== 'LOW').slice(0, 4).map((a) => a.area), next: tr('risk.emp.next') }] : [{ id: 'employment', category: tr('risk.cat.employment'), level: 'LOW' as Level, verification: 'NEED_INFO' as Verification, found: tr('risk.found.emp.na'), unknown: [], why: tr('risk.found.emp.na'), sourceIds: [], check: [], next: tr('risk.next.na') }]),
+    ...(staff ? <RiskCardData[]>[{ id: 'tax', category: tr('risk.cat.tax'), level: p.crossBorderWorkers ? 'MEDIUM' : 'NEEDS_REVIEW', verification: 'NEED_INFO', found: tr('risk.found.tax'), unknown: missing(['salary', 'tax', 'duration']), why: tr(p.crossBorderWorkers ? 'risk.tax.why.cross' : 'risk.tax.why.none'),
+      sourceIds: [tc === 'CN' ? 'cn-tax' : 'th-tax'], check: [tr('risk.tax.c1'), tr('risk.tax.c2'), tr('risk.tax.c3')], next: tr('risk.tax.next') }] : [{ id: 'tax', category: tr('risk.cat.tax'), level: 'LOW' as Level, verification: 'NEED_INFO' as Verification, found: tr('risk.found.tax.na'), unknown: [], why: tr('risk.found.tax.na'), sourceIds: [], check: [], next: tr('risk.next.na') }]),
     { id: 'language', category: tr('risk.cat.language'), level: 'MEDIUM', verification: 'NEED_INFO', found: tr('risk.found.language'), unknown: [], why: tr('risk.lang.why'), sourceIds: [tc === 'CN' ? 'cn-labor' : 'th-labour'],
       check: [tr('risk.lang.c1'), tr('risk.lang.c2')], next: tr('risk.lang.next') },
     { id: 'culture', category: tr('risk.cat.culture'), level: 'LOW', verification: 'NEED_INFO', found: tr('risk.found.culture'), unknown: [], why: tr('risk.cul.why'), sourceIds: [], check: [tr('risk.cul.c1')], next: tr('risk.cul.next') },
@@ -182,7 +210,7 @@ export function deriveActions(p: Profile, emp: EmploymentInput): ActionItem[] {
   const nom = detectNomineeRisk(p)
   const me = tr('act.owner.me')
   for (const r of assessRisks(p, emp)) {
-    if (r.level === 'LOW') continue
+    if (r.level === 'LOW' || r.id === 'employee') continue // employee-check actions come from compliance.employeeActions
     if (r.id === 'nominee') {
       const seen = new Set<string>()
       nom.indicators.forEach((i) => { const k = i.key.split('-')[0]; if (seen.has(k)) return; seen.add(k); out.push({ id: 'act-nominee-' + k, riskId: r.id, riskLabel: r.category, title: i.next, owner: me, status: 'todo' }) })
@@ -194,7 +222,7 @@ export function deriveActions(p: Profile, emp: EmploymentInput): ActionItem[] {
   }
   return out
 }
-export const riskRoute = (riskId: string) => ({ nominee: 'ownership', ownership: 'ownership', employment: 'employment', legal: 'roadmap', tax: 'employment', language: 'employment', culture: 'language', documents: 'documents' }[riskId] ?? 'roadmap')
+export const riskRoute = (riskId: string) => ({ nominee: 'ownership', ownership: 'ownership', employment: 'employment', legal: 'navigator', employee: 'employee', tax: 'employment', language: 'employment', culture: 'language', documents: 'documents' }[riskId] ?? 'roadmap')
 
 /* ---------- Roadmap ---------- */
 export function generateRoadmap(p: Profile): RoadmapStep[] {
@@ -245,11 +273,17 @@ export function generateContract(c: ContractInput, mode = '') {
 }
 
 /* ---------- Documents ---------- */
-export const docIds = ['business', 'ownership', 'employment', 'contract', 'report', 'translation', 'plan'] as const
+export const docIds = ['brief', 'business', 'ownership', 'employment', 'contract', 'report', 'translation', 'plan'] as const
 export type DocType = (typeof docIds)[number]
 export const docTitle = (t: DocType) => tr(K(`doc.${t}.t`))
 export const docDesc = (t: DocType) => tr(K(`doc.${t}.d`))
-export function buildDocument(type: DocType, p: Profile, emp: EmploymentInput, con: ContractInput, lang: Lang) {
+/** "Thailand · Chon Buri → China · Shanghai" (provinces only when chosen on the map). */
+export function routeText(p: Profile): string {
+  const from = p.direction === 'TH_CN' ? 'TH' : 'CN', to = from === 'TH' ? 'CN' : 'TH'
+  const part = (c: string, pr?: string) => tk('country', c) + (pr ? ' · ' + tr(K('prov.' + pr)) : '')
+  return `${part(from, p.originProvince)} → ${part(to, p.destProvince)}`
+}
+export function buildDocument(type: DocType, p: Profile, emp: EmploymentInput, con: ContractInput, lang: Lang, actions: ActionItem[] = []) {
   return withLang(lang, () => {
     const head = `${docTitle(type)}\n${tr('doc.brand')}\n${tr('doc.head', { company: dv(p.companyName), dir: tk('dir', p.direction) })}\n${tr('doc.created', { date: new Date().toLocaleDateString(lang === 'th' ? 'th-TH' : lang === 'zh' ? 'zh-CN' : 'en-GB') })}\n`
     let body = ''
@@ -259,6 +293,24 @@ export function buildDocument(type: DocType, p: Profile, emp: EmploymentInput, c
     if (type === 'contract') { const g = generateContract(con, emp.mode); body = `${draftNote()}\n\n${tr('doc.c.missing')}\n${g.missing.map((m) => '- ' + contractLabel(m)).join('\n') || '-'}\n\n${g.text[lang]}` }
     if (type === 'report') body = assessRisks(p, emp).map((r) => `• ${r.category}: ${tk('level', r.level)} — ${r.why}\n  ${tr('doc.r.next')}: ${r.next}`).join('\n') + `\n\n${tr('c.disclaimer')}`
     if (type === 'translation') body = terms.map((x) => `${tr(K(`term.${x.n}.n`))} | ${x.orig} | ${tr(K(`term.${x.n}.m`))}`).join('\n')
+    if (type === 'brief') {
+      const nom = detectNomineeRisk(p)
+      const risks = assessRisks(p, emp).filter((r) => r.level !== 'LOW')
+      const from = p.direction === 'TH_CN' ? 'TH' : 'CN'
+      const sec = (k: string) => `\n■ ${tr(K('doc.br.' + k))}`
+      const L: string[] = [sec('route'), routeText(p)]
+      L.push(sec('biz'), `${tr(K('bp.type'))}: ${p.businessType === 'other' && p.businessTypeOther ? p.businessTypeOther : tk('opt.btype', p.businessType)}`, `${tr(K('bp.activity'))}: ${dv(p.activity) || '-'}`,
+        `${tr('doc.br.forms')}: ${p.forms.map((f) => tk('opt.forms', f, { from: tk('country', from) })).join(', ') || '-'}`, `${tr('doc.br.staff')}: ${p.employees}`)
+      if (hasCompany(p)) L.push(sec('own'), ...p.holders.map((h) => { const unk = new Set(p.unknownFacts ?? []); const v = (fact: string, n: number) => (unk.has(fact) ? '?' : n + '%'); return tr('doc.br.holder', { holder: holderName(h), percent: v('shares', h.percent), capital: v('funding', h.capital), voting: v('voting', h.voting), board: v('board', h.board), economic: v('economic', h.economic) }) }), ...nom.unknowns.map((u) => '? ' + u))
+      L.push(sec('found'), ...(risks.length ? risks.map((r) => `• ${r.category} [${tk('level', r.level)} · ${tk('verify', r.verification)}]\n  ${r.found}\n  ${tr('find.why')}: ${r.why}`) : [tr('find.none')]))
+      const qs = [...new Set([...risks.flatMap((r) => r.unknown), ...risks.flatMap((r) => r.check)])].slice(0, 12)
+      L.push(sec('ask'), ...(qs.length ? qs.map((q, i) => `${i + 1}. ${q}`) : ['-']))
+      const open = actions.filter((a) => a.status !== 'done')
+      if (actions.length) L.push(sec('tasks'), tr('doc.br.taskCount', { done: actions.length - open.length, total: actions.length }), ...open.slice(0, 8).map((a) => '☐ ' + a.title))
+      const ids = [...new Set(risks.flatMap((r) => r.sourceIds))]
+      L.push(sec('src'), ...ids.map((id) => { const c = liveLegal.cite(id); return `- ${tr(K('reg.' + id + '.auth'))}: ${tr(K('reg.' + id + '.title'))} — ${c ? tk('verify', toVerification(c.trust)) : '-'}` }))
+      body = L.join('\n')
+    }
     if (type === 'plan') body = generateRoadmap(p).map((s) => `${tr('doc.p.step', { n: s.id })} ${s.title}\n  ${s.description}\n  ${tr('doc.p.docs')}: ${s.docs.join(', ')}\n  ${tr('doc.p.next')}: ${s.next}`).join('\n')
     return { title: docTitle(type), text: head + '\n' + body + `\n\n${tr('c.disclaimer')}`, lang }
   })

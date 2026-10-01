@@ -1,4 +1,4 @@
-import type { AIResponse, ContractInput, EmploymentInput, Profile } from '../types'
+import type { ActionItem, AIResponse, ContractInput, EmploymentInput, Profile } from '../types'
 import type { Lang } from '../i18n'
 import * as E from './engines'
 import { isObj } from '../profileSchema'
@@ -18,7 +18,7 @@ export const aiService = {
   analyzeBusiness: (p: Profile, emp: EmploymentInput) => delay(E.assessRisks(p, emp)),
   detectNomineeRisk: (p: Profile) => delay(E.detectNomineeRisk(p)),
   generateContract: (c: ContractInput, mode = '') => delay(E.generateContract(c, mode), 700),
-  generateDocument: (t: E.DocType, p: Profile, e: EmploymentInput, c: ContractInput, lang: Lang) => delay(E.buildDocument(t, p, e, c, lang), 450),
+  generateDocument: (t: E.DocType, p: Profile, e: EmploymentInput, c: ContractInput, lang: Lang, actions: ActionItem[] = []) => delay(E.buildDocument(t, p, e, c, lang, actions), 450),
   /** Source-aware orchestration: language is part of the AI request context. */
   orchestrate: async (q: string, p: Profile | null, lang: Lang): Promise<AIResponse> => {
     try {

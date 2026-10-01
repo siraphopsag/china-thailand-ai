@@ -33,7 +33,7 @@ export const MAX_K = 12
 /** Keep the region on screen: never smaller than the fitted view, never panned away from it. */
 export function clampView(v: View, w: number, h: number): View {
   const k = Math.max(1, Math.min(MAX_K, v.k))
-  const m = 0.25
+  const m = 0.12 // the China + ASEAN region can be nudged, never dragged away to empty space
   return { k, x: Math.min(w * m, Math.max(w * (1 - k) - w * m, v.x)), y: Math.min(h * m, Math.max(h * (1 - k) - h * m, v.y)) }
 }
 /** View that frames a box [[x0,y0],[x1,y1]] (in fitted-map coordinates) with the given fill. */

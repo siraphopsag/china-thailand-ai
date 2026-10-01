@@ -253,6 +253,10 @@ export function RiskCard({ r, actions, onAction, compact, detail }: { r: RiskCar
         {sec(t('find.unknown'), list(r.unknown, t('find.unknownNone')))}
         {sec(t('find.verify'), list(r.check, '-'))}
         {sec(t('find.next'), <p className="font-medium">{r.next}</p>)}
+        {!!r.requirementIds?.length && sec(t('kb.risk.req'), list(r.requirementIds.map((id) => tk('kb.r', id + '.t')), '-'))}
+        {!!r.authorityIds?.length && sec(t('kb.risk.auth'), <p>{r.authorityIds.map((id) => tk('kb.a', id)).join(' · ')}</p>)}
+        {!!r.evidence?.length && sec(t('kb.risk.evidence'), <p>{r.evidence.map((id) => tk('kb.doc', id)).join(' · ')}</p>)}
+        {!!r.requirementIds?.length && <button className="text-sm text-primary font-medium inline-flex items-center gap-1 min-h-[36px]" onClick={() => go(r.id === 'employee' ? 'employee' : 'navigator')}>{r.id === 'employee' ? t('nav.employeeCheck') : t('kb.toNavigator')}<Icon name="next" size={14} /></button>}
         <div className="text-xs text-muted flex flex-wrap items-center gap-x-2 gap-y-1"><span>{t('risk.sources')}:</span>{r.sourceIds.length ? r.sourceIds.map((s) => { const g = getReg(s); return g ? <ExtLink key={s} href={g.sourceUrl}>{regText(s, 'auth')}</ExtLink> : null }) : <span>{t('risk.noLaw')}</span>}<SampleTag /></div>
         {(r.id === 'nominee' || r.id === 'ownership') && <p className="text-xs text-muted">{t('find.caution')}</p>}
       </>}

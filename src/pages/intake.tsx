@@ -93,7 +93,7 @@ const emptyFor = (q: Q) => (q.type === 'multi' ? [] : '')
 
 export function InterviewPage() {
   const { t } = useI18n()
-  const { direction, profile, answers, employment, set, log, startDemo } = useStore()
+  const { direction, profile, answers, employment, set, log, startDemo, originProvince, destinationProvince } = useStore()
   const route = useRouteText()
   const d: Direction = direction ?? 'TH_CN'
   const info = dirInfo(d)
@@ -112,7 +112,8 @@ export function InterviewPage() {
 
   /** Build (or update) the profile from the answers so far and show the first result. */
   const finalize = (next: A) => {
-    const { profile: built, mode } = buildProfile(next, d)
+    const { profile: base, mode } = buildProfile(next, d)
+    const built = { ...base, originProvince: originProvince ?? undefined, destProvince: destinationProvince ?? undefined }
     const prev = profile && !profile.isDemo ? profile : null
     // keep manual what-if edits on the ownership page if no ownership-related answer changed
     const same = !!prev && OWNERSHIP_KEYS.every((k) => JSON.stringify(answers[k]) === JSON.stringify(next[k]))

@@ -18,13 +18,15 @@ export const verifyChip: Record<Verification, string> = {
 }
 export const stepChip: Record<StepStatus, string> = {
   todo: 'bg-surface3 text-muted border-line', doing: 'bg-info-bg text-info-fg border-info-line', review: 'bg-warn-bg text-warn-fg border-warn-line',
+  waitdoc: 'bg-warn-bg text-warn-fg border-warn-line', waitver: 'bg-info-bg text-info-fg border-info-line',
   done: 'bg-ok-bg text-ok-fg border-ok-line', fix: 'bg-danger-bg text-danger-fg border-danger-line',
 }
 export const stepNode: Record<StepStatus, string> = {
   todo: 'bg-surface text-muted border-line', doing: 'bg-info-bg text-info-fg border-info-fg', review: 'bg-warn-bg text-warn-fg border-warn-fg',
+  waitdoc: 'bg-warn-bg text-warn-fg border-warn-fg', waitver: 'bg-info-bg text-info-fg border-info-fg',
   done: 'bg-ok-bg text-ok-fg border-ok-fg', fix: 'bg-danger-bg text-danger-fg border-danger-fg',
 }
-export const STEP_STATUSES: StepStatus[] = ['todo', 'doing', 'review', 'done', 'fix']
+export const STEP_STATUSES: StepStatus[] = ['todo', 'doing', 'waitdoc', 'waitver', 'review', 'done', 'fix']
 
 export const dirInfo = (d: Direction) => (d === 'TH_CN' ? { from: 'TH' as const, to: 'CN' as const } : { from: 'CN' as const, to: 'TH' as const })
 

@@ -3,6 +3,7 @@ import type { Holder, Profile, StepStatus } from '../types'
 import { go, useStore } from '../store'
 import { BackLink, ControlBars, Disclaimer, Disclosure, EmptyState, ExtLink, GuideStrip, Go, JourneyStrip, Ok, OwnershipMap, PageHead, RiskCard, SimTag, SourceCard, StatusBadge, VerifyBadge, Warn } from '../components/ui'
 import { AICommandCenter } from '../components/ai'
+import { StagesPanel } from '../components/compliance'
 import { Icon, type IconName } from '../components/icons'
 import { useActions } from '../hooks'
 import { assessRisks, riskRoute, compliantOptions, consequences, detectNomineeRisk, holderName, holdersSum, indicatorCategory, ownershipDims, targetCountry, verifyAnalysis, hasCompany, type IndicatorCategory } from '../services/engines'
@@ -16,7 +17,7 @@ const MODULES = ['legal', 'invest', 'ownership', 'nominee', 'employment', 'tax',
 /* ================= AI ANALYSIS: the AI checks key issues, then shows what it found (found · why · unknown · verify · next · status) ================= */
 export function AnalysisCenter() {
   const { t } = useI18n()
-  const { profile, employment, analysisDone, set, log, setActionStatus } = useStore()
+  const { profile, employment, employeeCheck, analysisDone, set, log, setActionStatus } = useStore()
   const actions = useActions()
   const [step, setStep] = useState(analysisDone ? MODULES.length : -1)
   const timer = useRef<number>(0)
@@ -29,7 +30,7 @@ export function AnalysisCenter() {
   useEffect(() => { if (profile && !analysisDone) run(); return () => window.clearInterval(timer.current) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   if (!profile) return <div><PageHead title={t('an.title')} /><EmptyState /></div>
   const vr = verifyAnalysis(profile, employment)
-  const risks = [...assessRisks(profile, employment)].sort((x, y) => levelOrder.indexOf(x.level) - levelOrder.indexOf(y.level))
+  const risks = [...assessRisks(profile, employment, employeeCheck)].sort((x, y) => levelOrder.indexOf(x.level) - levelOrder.indexOf(y.level))
   const byId = Object.fromEntries(risks.map((r) => [r.id, r.level])) as Record<string, Level>
   const fund = ownershipDims(profile).find((d) => d.key === 'fund')!.status
   const res = (m: (typeof MODULES)[number]): Level => (m === 'invest' ? fund : byId[m])
@@ -57,6 +58,7 @@ export function AnalysisCenter() {
           <button className="btn-primary !min-h-[40px]" onClick={() => go('roadmap')}><Go>{t('an.toActions')}</Go></button>
         </div>
         {nom.stop && <Warn tone="danger"><b>{t('nom.stopBanner')}</b> — {t('nom.stopRoadmap')}</Warn>}
+        <StagesPanel missing={new Set(risks.flatMap((r) => r.unknown)).size} risks={top.length} actions={actions.filter((a) => a.status !== 'done').length} />
         <section aria-labelledby="found-h" className="space-y-3">
           <h2 id="found-h" className="h2">{t('find.top')}</h2>
           {top.length ? <div className="grid lg:grid-cols-2 gap-4 items-start">{top.map((r, i) => card(r, i > 0))}</div> : <div className="card"><Ok>{t('find.none')}</Ok></div>}

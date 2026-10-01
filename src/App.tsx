@@ -22,6 +22,8 @@ const MonitoringPage = lazy(() => import('./pages/ops').then((m) => ({ default: 
 const SourcesPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.SourcesPage })))
 const AdminPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.AdminPage })))
 const PricingPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.PricingPage })))
+const NavigatorPage = lazy(() => import('./pages/compliance').then((m) => ({ default: m.NavigatorPage })))
+const EmployeeCheckPage = lazy(() => import('./pages/compliance').then((m) => ({ default: m.EmployeeCheckPage })))
 const PrivacyPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.PrivacyPage })))
 
 function Shell({ route, children }: { route: string; children: ReactNode }) {
@@ -51,7 +53,7 @@ function Router() {
   const { t } = useI18n()
   const pages: Record<string, ReactNode> = {
     '': <Landing />, start: <StartPage />, direction: <DirectionPage />, interview: <InterviewPage />, profile: <ProfilePage />, dashboard: <Dashboard />, analysis: <AnalysisCenter />,
-    ownership: <OwnershipPage />, nominee: <NomineePage />, employment: <EmploymentPage />, contract: <ContractPage />, language: <LanguagePage />, risk: <RiskPage />,
+    ownership: <OwnershipPage />, nominee: <NomineePage />, employment: <EmploymentPage />, contract: <ContractPage />, language: <LanguagePage />, navigator: <NavigatorPage />, employee: <EmployeeCheckPage />, risk: <RiskPage />,
     roadmap: <RoadmapPage />, documents: <DocumentsPage />, monitoring: <MonitoringPage />, sources: <SourcesPage />, pricing: <PricingPage />, privacy: <PrivacyPage />, admin: <AdminPage />,
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>

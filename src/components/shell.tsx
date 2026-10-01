@@ -13,7 +13,7 @@ type NavItem = { route: string; key: string; icon: IconName; sub: string[] }
 export const PRIMARY: NavItem[] = [
   { route: 'dashboard', key: 'nav.overview', icon: 'overview', sub: [] },
   { route: 'profile', key: 'nav.business', icon: 'business', sub: ['start', 'direction', 'interview'] },
-  { route: 'analysis', key: 'nav.analysisHub', icon: 'ai', sub: ['ownership', 'nominee', 'employment', 'contract'] },
+  { route: 'analysis', key: 'nav.analysisHub', icon: 'ai', sub: ['ownership', 'nominee', 'employment', 'contract', 'navigator', 'employee'] },
   { route: 'roadmap', key: 'nav.plan', icon: 'plan', sub: ['risk'] },
   { route: 'documents', key: 'nav.documents', icon: 'documents', sub: [] },
 ]

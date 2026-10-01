@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { geoCentroid, geoContains, geoMercator, geoPath } from 'd3-geo'
-import { feature } from 'topojson-client'
+import { feature, merge } from 'topojson-client'
 import type { Feature, FeatureCollection, Geometry } from 'geojson'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 import { go, useStore } from '../store'
@@ -9,7 +9,10 @@ import { CountryBadge, Icon } from '../components/icons'
 import capitals from '../data/geo/capitals.json'
 import { ACTIVE, GEO, HOME, MAX_K, SOON, arcPoint, checkDestination, clampView, codeOfIso, directionOf, lerpView, viewForBox, type GeoCode, type View } from '../geo'
 
-/* ================= data (Natural Earth): 1:50m countries clipped to ASEAN + China, first-level divisions of Thailand and China, the 11 capitals ================= */
+/* ================= data (Natural Earth): only China + the ten ASEAN member states (filtered in the data file, nothing else exists on the map),
+   first-level divisions of Thailand and China, the 11 capitals ================= */
+/** Natural Earth keeps Hong Kong and Macao as separate shapes; on this map they are part of China (otherwise China has holes on its coast). */
+const CHINA_PARTS = new Set(['156', '344', '446'])
 type Country = Feature<Geometry, { name?: string }>
 type Province = Feature<Geometry, { name?: string; name_zh?: string; adm0_a3?: string; iso_3166_2?: string }>
 async function loadGeo(): Promise<{ countries: Country[]; provinces: Province[] }> {
@@ -19,7 +22,10 @@ async function loadGeo(): Promise<{ countries: Country[]; provinces: Province[] 
   const ao = at.objects[Object.keys(at.objects)[0]] as GeometryCollection<Province['properties']>
   const provinces = (feature(at, ao) as FeatureCollection<Geometry, Province['properties']>).features
     .filter((f) => f.properties.iso_3166_2 && !f.properties.iso_3166_2.includes('~')) // not selectable: non-ISO entries such as disputed islands
-  return { countries: (feature(rt, rt.objects.countries) as FeatureCollection<Geometry, { name?: string }>).features, provinces }
+  const geoms = rt.objects.countries.geometries
+  const china: Country = { type: 'Feature', id: '156', properties: { name: 'China' }, geometry: merge(rt, geoms.filter((g) => CHINA_PARTS.has(String(g.id))) as never) }
+  const rest = geoms.filter((g) => !CHINA_PARTS.has(String(g.id))).map((g) => feature(rt, g) as Country)
+  return { countries: [china, ...rest], provinces }
 }
 type Capital = { country: GeoCode; ne_id: number; name: string; lon: number; lat: number }
 const CAPITALS = capitals as Capital[]
@@ -252,7 +258,7 @@ export function StartPage() {
   // painting
   const journey = stage === 'flight' || stage === 'arrived'
   const paint = (c: GeoCode | undefined) => {
-    if (!c) return 'g-land'
+    if (!c) return 'g-dim'
     if (journey) return c === origin || c === dest ? 'g-pick' : 'g-dim'
     if (focus === c) return GEO[c].status === 'active' ? (c === shown ? 'g-footprint' : 'g-pick') : 'g-soon-pick'
     if (picking === 'destination' && c === origin) return 'g-origin'

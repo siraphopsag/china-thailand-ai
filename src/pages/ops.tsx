@@ -10,17 +10,19 @@ import { useActions, useRoadmap } from '../hooks'
 import { checklistItems } from '../data/demo'
 import { coverageGaps, lastVerifiedText, regText, regulations, simulatedReplacement } from '../data/regulations'
 import { trustSummary } from '../data/legal/trust'
+import { RequiredDocs } from '../components/compliance'
+import { BRAND } from '../brand'
 import { dirInfo, levelOrder } from '../utils/labels'
 import { dv, LANGS, tk, useI18n, type Lang } from '../i18n'
 
 /* ================= DASHBOARD (business · status · issues · next action · documents · AI activity) ================= */
 export function Dashboard() {
   const { t } = useI18n()
-  const { profile, employment, checks, docs, analysisDone, startDemo } = useStore()
+  const { profile, employment, employeeCheck, checks, docs, analysisDone, startDemo } = useStore()
   const steps = useRoadmap()
   const actions = useActions()
   if (!profile) return <div><PageHead title={t('dash.title')} /><EmptyState /></div>
-  const risks = assessRisks(profile, employment)
+  const risks = assessRisks(profile, employment, employeeCheck)
   const d = dirInfo(profile.direction)
   const nom = detectNomineeRisk(profile)
   const total = steps.length + actions.length + checklistItems.length
@@ -70,7 +72,7 @@ export function Dashboard() {
             <li key={r.id}><button className="w-full text-left card-i hover:bg-surface3 transition flex flex-col gap-1" onClick={() => go('analysis')}>
               <span className="flex items-center justify-between gap-2 flex-wrap"><span className="font-medium text-sm">{r.category}</span><StatusBadge level={r.level} /></span>
               <span className="block text-sm text-muted line-clamp-2">{r.found}</span></button></li>))}</ul>
-            <button className="btn-ghost !min-h-[40px] text-sm mt-3" onClick={() => go('analysis')}><Go>{t('dash.foundAll')}</Go></button></>
+            <div className="flex flex-wrap gap-2 mt-3"><button className="btn-ghost !min-h-[40px] text-sm" onClick={() => go('analysis')}><Go>{t('dash.foundAll')}</Go></button><button className="btn-ghost !min-h-[40px] text-sm" onClick={() => go('documents')}><Icon name="documents" size={16} />{t('dash.brief')}</button></div></>
           : <p className="text-sm text-ok-fg"><Ok>{t('dash.noIssues')}</Ok></p>}
       </section>
       <Disclosure title={t('dash.docsNeeded')}>
@@ -90,14 +92,14 @@ export function Dashboard() {
 /* ================= TO-DO PLAN: what to do now · what was found · all steps ================= */
 export function RoadmapPage({ openRisks = false }: { openRisks?: boolean }) {
   const { t } = useI18n()
-  const { profile, employment, stepOverrides, setActionStatus, checks, set } = useStore()
+  const { profile, employment, employeeCheck, stepOverrides, setActionStatus, checks, set } = useStore()
   const steps = useRoadmap()
   const actions = useActions()
   const [lockMsg, setLockMsg] = useState('')
   if (!profile) return <div><PageHead title={t('rm.title')} /><EmptyState /></div>
   const stop = detectNomineeRisk(profile).stop
   const done = steps.filter((s) => s.status === 'done').length
-  const risks = [...assessRisks(profile, employment)].sort((a, b) => levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level))
+  const risks = [...assessRisks(profile, employment, employeeCheck)].sort((a, b) => levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level))
   const setAct = (id: string, s: StepStatus) => { const a = actions.find((x) => x.id === id); if (a) setActionStatus(a, s) }
   return (
     <div className="space-y-5">
@@ -126,13 +128,13 @@ export function RoadmapPage({ openRisks = false }: { openRisks?: boolean }) {
 export const RiskPage = () => <RoadmapPage openRisks />
 
 /* ================= DOCUMENTS ================= */
-const DOC_EDIT: Record<DocType, string> = { business: 'roadmap', ownership: 'ownership', employment: 'employment', contract: 'contract', report: 'risk', translation: 'language', plan: 'roadmap' }
-const MULTI_LANG: DocType[] = ['contract', 'translation']
+const DOC_EDIT: Record<DocType, string> = { brief: 'analysis', business: 'roadmap', ownership: 'ownership', employment: 'employment', contract: 'contract', report: 'risk', translation: 'language', plan: 'roadmap' }
+const MULTI_LANG: DocType[] = ['brief', 'contract', 'translation']
 /** Which findings each document supports (so the user sees why it is needed). */
-const DOC_RISK: Record<DocType, string[]> = { business: ['legal'], ownership: ['nominee', 'ownership'], employment: ['employment', 'tax'], contract: ['employment', 'language'], report: [], translation: ['language'], plan: [] }
+const DOC_RISK: Record<DocType, string[]> = { brief: [], business: ['legal'], ownership: ['nominee', 'ownership'], employment: ['employment', 'tax'], contract: ['employment', 'language'], report: [], translation: ['language'], plan: [] }
 export function DocumentsPage() {
   const { t, lang } = useI18n()
-  const { profile, employment, contract, docs, docLang, docStamp, checks, set, log } = useStore()
+  const { profile, employment, employeeCheck, contract, docs, docLang, docStamp, docStatus, checks, set, log } = useStore()
   const actions = useActions()
   const [sel, setSel] = useState<DocType | null>(null)
   const [genLang, setGenLang] = useState<Partial<Record<DocType, Lang>>>({})
@@ -143,11 +145,11 @@ export function DocumentsPage() {
   const fp = fingerprint(profile, employment, contract)
   const langOf = (x: DocType): Lang => (MULTI_LANG.includes(x) ? genLang[x] ?? docLang[x] ?? lang : docLang[x] ?? lang)
   const key = (x: DocType, l: Lang) => `${x}|${l}`
-  const get = (x: DocType, l: Lang) => cache[key(x, l)] ?? buildDocument(x, profile, employment, contract, l)
+  const get = (x: DocType, l: Lang) => cache[key(x, l)] ?? buildDocument(x, profile, employment, contract, l, actions)
   const create = async (x: DocType) => {
     const l = MULTI_LANG.includes(x) ? langOf(x) : lang
     setBusy(x); setErr('')
-    try { const r = await aiService.generateDocument(x, profile, employment, contract, l); setCache((c) => ({ ...c, [key(x, l)]: r })); set({ docs: { ...docs, [x]: true }, docLang: { ...docLang, [x]: l }, docStamp: { ...docStamp, [x]: fp } }); log('hist.doc', { title: r.title }); setSel(x) } catch { setErr(t('err.generic')) }
+    try { const r = await aiService.generateDocument(x, profile, employment, contract, l, actions); setCache((c) => ({ ...c, [key(x, l)]: r })); set({ docs: { ...docs, [x]: true }, docLang: { ...docLang, [x]: l }, docStamp: { ...docStamp, [x]: fp } }); log('hist.doc', { title: r.title }); setSel(x) } catch { setErr(t('err.generic')) }
     setBusy(null)
   }
   const download = (x: DocType) => {
@@ -162,12 +164,13 @@ export function DocumentsPage() {
   }
   const pctOf = (x: DocType) => { const it = items(x); return it.length ? Math.round((it.filter((i) => i.done).length / it.length) * 100) : null }
   const cur = sel ? get(sel, langOf(sel)) : null
-  const risks = assessRisks(profile, employment)
+  const risks = assessRisks(profile, employment, employeeCheck)
   return (
     <div className="space-y-5">
       <PageHead title={t('docs.title')} sub={t('docs.sub')} />
       <GuideStrip page="documents" nextRoute="dashboard" />
       {err && <Warn tone="danger">{err}</Warn>}
+      <RequiredDocs docStatus={docStatus} onChange={(id, s) => set({ docStatus: { ...docStatus, [id]: s } })} />
       <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">{docIds.map((x) => {
         const gen = !!docs[x]; const pc = pctOf(x)
         return (
@@ -259,8 +262,21 @@ export function SourcesPage() {
       <Disclaimer /></div>
   )
 }
+/** A document a lawyer can fill in: every record's summary in TH/ZH/EN plus blanks for link, articles, effective date, corrections and sign-off. */
+function downloadPack(lang: Lang) {
+  const T = (k: string) => tk('adm', k)
+  const lines = [T('pack.title'), BRAND.title, '', T('pack.intro'), '']
+  for (const r of regulations) {
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━', `[${r.id}] ${tk('country', r.country)} — ${r.instrument ?? r.originalTerm ?? ''}`)
+    for (const l of ['th', 'zh', 'en'] as const) lines.push(`${l.toUpperCase()}: ${regText(r.id, 'title', l)}`, `    ${regText(r.id, 'rule', l)}`)
+    lines.push('', `${T('pack.link')}: ______________________________`, `${T('pack.articles')}: ____________   ${T('pack.effective')}: ____________`, `${T('pack.ok')} ______________________________`, `${T('pack.by')}: ______________________________`, '')
+  }
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━', T('pack.gaps'), ...coverageGaps.map((g) => `- [${g.id}] ${tk('country', g.country)} — ${g.instrument}`))
+  const url = URL.createObjectURL(new Blob([docToHtml(T('pack.title'), lines.join('\n'), lang)], { type: 'text/html;charset=utf-8' }))
+  const a = document.createElement('a'); a.href = url; a.download = `call-legal-review-pack-${lang}.html`; a.click(); URL.revokeObjectURL(url)
+}
 export function AdminPage() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const { regChanged, set } = useStore()
   const reason = useReasonText()
   const [c, setC] = useState('ALL')
@@ -279,6 +295,8 @@ export function AdminPage() {
             <td className="p-2 space-y-1"><VerifyBadge v={r.verificationStatus} />{r.supersededBy && <div className="text-xs text-danger-fg">{t('reg.outdated')}</div>}</td><td className="p-2 text-xs text-muted">{r.trust === 'VERIFIED' ? '-' : reason(r.trustReasons)}</td></tr>)}</tbody></table></div></div>
       <section className="card space-y-2" aria-labelledby="gaps-h"><h2 id="gaps-h" className="h2">{t('adm.gaps.t')}</h2><p className="text-sm text-muted">{t('adm.gaps.d')}</p>
         <ul className="text-sm space-y-1">{coverageGaps.map((g) => <li key={g.id} className="flex flex-wrap items-center gap-2"><CountryBadge c={g.country} /><span lang={g.country === 'CN' ? 'zh' : 'th'}>{g.instrument}</span><VerifyBadge v={g.verificationStatus} /></li>)}</ul></section>
+      <section className="card space-y-2" aria-labelledby="pack-h"><h2 id="pack-h" className="h2">{t('adm.pack')}</h2><p className="text-sm text-muted">{t('adm.pack.d')}</p>
+        <button className="btn-primary" onClick={() => downloadPack(lang)}><Icon name="documents" size={16} />{t('adm.pack')}</button></section>
       <section className="card space-y-2" aria-labelledby="how-h"><h2 id="how-h" className="h2">{t('adm.how.t')}</h2>
         <ol className="list-decimal ml-5 text-sm space-y-1"><li>{t('adm.how.1')}</li><li>{t('adm.how.2')}</li><li>{t('adm.how.3')}</li><li>{t('adm.how.4')}</li></ol></section>
       <Disclaimer /></div>
