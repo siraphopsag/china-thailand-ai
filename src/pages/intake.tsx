@@ -87,6 +87,7 @@ function ContinueCase() {
 }
 export function Landing() {
   const { t } = useI18n()
+  const { beginNew } = useStore()
   return (
     <div className="space-y-12 max-w-5xl mx-auto">
       <section className="hero-shell relative overflow-hidden rounded-3xl border border-line px-5 pt-14 pb-10 sm:px-10 md:pt-20 md:pb-14 text-center" aria-labelledby="hero-h">
@@ -99,7 +100,8 @@ export function Landing() {
           <p className="mt-5 text-base sm:text-lg text-ink max-w-2xl mx-auto font-medium">{t('land.value')}</p>
           <p className="mt-2 text-sm text-muted max-w-2xl mx-auto">{t('land.pos')}</p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-x-5 gap-y-3">
-            <span className="cta-ring"><a href="#goals" className="cta-core text-base" onClick={(e) => { e.preventDefault(); const g = document.getElementById('goals'); g?.scrollIntoView({ behavior: 'smooth' }); g?.querySelector('button')?.focus({ preventScroll: true }) }}>{t('hero.cta')}<Icon name="down" size={18} /></a></span>
+            {/* the main start goes through the geographic map (/start), as before; the goal cards below are shortcuts */}
+            <span className="cta-ring"><button className="cta-core text-base" onClick={beginNew}>{t('hero.cta')}<Icon name="next" size={18} /></button></span>
           </div>
         </div>
       </section>

@@ -3,7 +3,6 @@ import type { Msg } from './common.js'
 export const plan = {
   // ---------- landing: value proposition + goals
   'land.value': ['C.A.L.L. เปลี่ยนข้อกำหนดของการทำธุรกิจข้ามพรมแดนให้เป็นขั้นตอนที่ชัดเจน ทำตามได้ และมีแหล่งข้อมูลทางการกำกับ', 'C.A.L.L. 把跨境经营的各项要求变成清晰、可执行、并附官方来源的步骤。', 'C.A.L.L. turns cross-border business requirements into clear, actionable steps supported by official sources.'],
-  'hero.cta': ['เลือกสิ่งที่คุณต้องการทำ', '选择您要做的事', 'Choose what you want to do'],
   'goal.title': ['วันนี้คุณต้องการทำอะไร?', '您今天想做什么？', 'What do you want to do today?'],
   'goal.sub': ['เลือกหนึ่งข้อ C.A.L.L. จะถามเฉพาะสิ่งที่จำเป็น แล้วสร้างแผนงานพร้อมเอกสาร หน่วยงาน และแหล่งข้อมูล', '选择一项，C.A.L.L. 只会询问必要信息，然后生成包含文件、主管部门和来源的行动计划。', 'Pick one. C.A.L.L. asks only what it needs, then builds an action plan with documents, authorities and sources.'],
   'goal.th_cn.t': ['ขยายธุรกิจไทยไปจีน', '泰国企业拓展到中国', 'Expand a Thai business into China'],
