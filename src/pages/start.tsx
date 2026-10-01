@@ -111,7 +111,8 @@ export function StartPage() {
     return () => { ro?.disconnect(); window.removeEventListener('resize', measure) }
   }, [])
   const { w, h } = size
-  const focusSet = useMemo(() => (data?.countries ?? []).filter((f) => codeOfIso(f.id)), [data])
+  // frame every drawn shape (incl. background Papua New Guinea), so New Guinea is never cut by the edge of the map
+  const focusSet = useMemo(() => data?.countries ?? [], [data])
   const proj = useMemo(() => {
     const p = geoMercator()
     if (focusSet.length) p.fitExtent([[16, 16], [w - 16, h - 16]], { type: 'FeatureCollection', features: focusSet } as FeatureCollection)
@@ -258,7 +259,7 @@ export function StartPage() {
   // painting
   const journey = stage === 'flight' || stage === 'arrived'
   const paint = (c: GeoCode | undefined) => {
-    if (!c) return 'g-dim'
+    if (!c) return 'g-context' // background land outside the scope (Papua New Guinea): visible, never selectable
     if (journey) return c === origin || c === dest ? 'g-pick' : 'g-dim'
     if (focus === c) return GEO[c].status === 'active' ? (c === shown ? 'g-footprint' : 'g-pick') : 'g-soon-pick'
     if (picking === 'destination' && c === origin) return 'g-origin'
@@ -354,7 +355,6 @@ export function StartPage() {
         {data && (
           <svg ref={svg} width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="application" aria-label={t('geo.mapLabel')} aria-describedby="geo-state" tabIndex={0} onKeyDown={onKey} onPointerDown={onDown}
             className="block select-none cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
-            <defs><pattern id="g-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" className="g-hatch-bg" /><line x1="0" y1="0" x2="0" y2="7" className="g-hatch-line" /></pattern></defs>
             <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
               {/* the flat map: every country stays a flat 2D shape */}
               {shapes.map((s, i) => <path key={i + ":" + String(s.f.id)} d={s.d} data-code={s.code} className={'g-c ' + paint(s.code)}>{s.code && <title>{name(s.code)}</title>}</path>)}

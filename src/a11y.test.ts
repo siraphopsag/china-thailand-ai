@@ -21,9 +21,10 @@ describe('accessibility audit fixes (WCAG 2.2 A/AA)', () => {
     for (const t of [light, dark]) for (const s of ['surface', 'surface2', 'surface3', 'page']) expect(cr(t['control-line'], t[s]), s).toBeGreaterThanOrEqual(3)
     for (const cls of ['.input', '.btn-ghost', '.tab']) expect(css).toMatch(new RegExp(`\\${cls} \\{ @apply[^}]*border-control`))
   })
-  it('#3 "coming soon" countries reach 3:1 against the sea and use a pattern', () => {
+  it('#3 "coming soon" countries reach 3:1 against the sea (solid fill, no stripe pattern)', () => {
     for (const t of [light, dark]) expect(cr(t['globe-soon'], t['globe-ocean'])).toBeGreaterThanOrEqual(3)
-    expect(css).toMatch(/\.g-soon \{ fill: url\(#g-hatch\)/)
+    expect(css).toMatch(/\.g-soon \{ fill: rgb\(var\(--globe-soon\)\)/)
+    expect(css).not.toMatch(/g-hatch/)
   })
   it('#11 no decorative animation runs forever', () => {
     expect(css).not.toMatch(/animation:[^;]*(retro-drift|cta-spin)[^;]*infinite/)

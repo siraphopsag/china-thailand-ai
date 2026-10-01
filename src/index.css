@@ -75,14 +75,13 @@ h1[tabindex="-1"]:focus { outline: none }
 .g-c { stroke: rgb(var(--globe-line) / .75); stroke-width: .8; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: fill .3s ease }
 .g-land { fill: rgb(var(--globe-land) / .55); stroke: rgb(var(--globe-line) / .3) }
 .g-dim { fill: rgb(var(--globe-land) / .55) }
+.g-context { fill: rgb(var(--globe-soon) / .45); pointer-events: none }
 .g-active { fill: rgb(var(--globe-active) / .72); cursor: pointer }
-.g-soon { fill: url(#g-hatch); cursor: pointer }
-/* "coming soon" is told apart by a pattern, not by colour alone */
-.g-hatch-bg { fill: rgb(var(--globe-soon)) } .g-hatch-line { stroke: rgb(var(--globe-line) / .8); stroke-width: 2.2 }
+.g-soon { fill: rgb(var(--globe-soon)); cursor: pointer }
 .g-active:hover, .g-soon:hover { filter: brightness(1.12) }
 .g-footprint { fill: rgb(var(--globe-active) / .55) }
 .g-pick { fill: rgb(var(--globe-active)); stroke-width: 1.4 }
-.g-soon-pick { fill: url(#g-hatch); stroke: rgb(var(--globe-line)); stroke-width: 1.8 }
+.g-soon-pick { fill: rgb(var(--globe-soon)); stroke: rgb(var(--globe-line)); stroke-width: 1.8 }
 .g-origin { fill: rgb(var(--globe-active) / .3); stroke-dasharray: 3 3 }
 .g-hit { fill: transparent }
 /* selection rises: stacked sides, lifted top face, soft shadow (only the current selection) */

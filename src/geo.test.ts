@@ -59,9 +59,14 @@ describe('geographic data is taken from Natural Earth, not invented', () => {
   })
   it('nothing outside China + ASEAN exists in the map data (no India, Japan, Korea, Taiwan, Mongolia, Russia, Australia…)', () => {
     const t2 = region as unknown as { objects: Record<string, { geometries: { id?: string }[] }> }
-    const allowed = new Set([...[...ACTIVE, ...SOON].map((c) => GEO[c].iso), '344', '446']) // Hong Kong and Macao are drawn as part of China
+    // Hong Kong and Macao are drawn as part of China; Papua New Guinea (598) is background land only, so New Guinea is not cut at Indonesia's border
+    const allowed = new Set([...[...ACTIVE, ...SOON].map((c) => GEO[c].iso), '344', '446', '598'])
     for (const g of t2.objects.countries.geometries) expect(allowed.has(String(g.id)), String(g.id)).toBe(true)
     for (const iso of ['356', '392', '410', '158', '496', '643', '036']) expect(t2.objects.countries.geometries.some((g) => g.id === iso), iso).toBe(false)
+  })
+  it('Papua New Guinea is background only: not a selectable country, no name, not used to frame the map', () => {
+    expect(codeOfIso('598')).toBeUndefined()
+    expect(Object.values(GEO).some((g) => g.iso === '598')).toBe(false)
   })
   it('every country and capital shown has a name in Thai, Chinese and English', () => {
     const m = messages as Record<string, readonly string[]>
