@@ -90,8 +90,10 @@ interface Ctx extends State {
   set: (patch: Partial<State>) => void
   startDemo: () => void
   exitDemo: () => void
-  /** Begin a real analysis: leaves the demo, and asks before replacing an existing real profile. */
+  /** Begin a real analysis: leaves the demo and opens the geographic onboarding. Nothing is replaced until a route is chosen. */
   beginNew: () => void
+  /** Start a new real Business Context for origin → destination. Asks before replacing an existing real profile; false = the user kept it. */
+  chooseDirection: (d: Direction) => boolean
   reset: () => void
   log: (key: MsgKey, vars?: Record<string, string>) => void
   /** Change an action's status; completed actions keep a snapshot so progress never goes backwards. */
@@ -121,8 +123,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     exitDemo: () => { setMode('real'); setS(load('real')) },
     beginNew: () => {
       if (mode === 'demo') { setMode('real'); setS(load('real')) }
-      else if (s.profile && !window.confirm(tr('start.confirm'))) return
-      go('direction')
+      go('start')
+    },
+    chooseDirection: (d) => {
+      const existing = mode === 'demo' ? load('real').profile : s.profile
+      if (existing && !window.confirm(tr('start.confirm'))) return false
+      setMode('real'); setS({ ...initial, direction: d }); go('interview')
+      return true
     },
     reset: () => setS(mode === 'demo' ? demoState() : initial),
     alerts: [...s.extraAlerts, ...(s.profile ? baseAlerts : [])],

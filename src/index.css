@@ -14,6 +14,7 @@
   --danger-bg: 254 226 226; --danger-fg: 153 27 27; --danger-line: 252 165 165;
   --review-bg: 255 237 213; --review-fg: 154 52 18; --review-line: 253 186 116;
   --info-bg: 224 242 254; --info-fg: 7 89 133; --info-line: 125 211 252;
+  --globe-bg: 236 241 248; --globe-ocean: 218 226 238; --globe-land: 196 205 219; --globe-soon: 140 163 194; --globe-active: 24 44 79; --globe-line: 255 255 255; --globe-capital: 220 38 38; --globe-route: 24 44 79;
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -28,6 +29,7 @@
   --danger-bg: 72 26 30; --danger-fg: 252 165 165; --danger-line: 140 50 56;
   --review-bg: 70 40 18; --review-fg: 253 186 116; --review-line: 138 78 30;
   --info-bg: 16 52 78; --info-fg: 125 211 252; --info-line: 30 100 150;
+  --globe-bg: 8 13 24; --globe-ocean: 16 25 43; --globe-land: 46 59 82; --globe-soon: 72 90 120; --globe-active: 110 154 226; --globe-line: 255 255 255; --globe-capital: 239 68 68; --globe-route: 147 197 253;
 }
 
 html { scroll-behavior: smooth }
@@ -54,3 +56,35 @@ body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","
   .tab-on { @apply bg-primary text-onprimary border-primary hover:bg-primary }
   .ai-panel { @apply rounded-xl border border-line bg-brand text-ink p-4 }
 }
+
+/* ---------- geographic onboarding (globe) ---------- */
+.globe-stage { background: radial-gradient(ellipse at 50% 45%, rgb(var(--globe-bg)) 0%, rgb(var(--page)) 100%) }
+.globe-ocean { fill: rgb(var(--globe-ocean)) }
+.globe-grat { fill: none; stroke: rgb(var(--globe-line) / .08); stroke-width: .6 }
+.g-c { stroke: rgb(var(--globe-line) / .6); stroke-width: .5; stroke-linejoin: round; transition: fill .35s ease }
+.g-land { fill: rgb(var(--globe-land)) }
+.g-dim { fill: rgb(var(--globe-land) / .7) }
+.g-active-soft { fill: rgb(var(--globe-active) / .45) }
+.g-active { fill: rgb(var(--globe-active) / .7); cursor: pointer }
+.g-soon { fill: rgb(var(--globe-soon)); cursor: pointer }
+.g-active:hover, .g-soon:hover { fill-opacity: .85; filter: brightness(1.15) }
+.g-pick { fill: rgb(var(--globe-active)) }
+.g-soon-pick { fill: rgb(var(--globe-soon)); stroke: rgb(var(--globe-line)); stroke-width: 1.4 }
+.g-origin { fill: rgb(var(--globe-active) / .3); stroke-dasharray: 3 2 }
+.g-prov { fill: transparent }
+.g-prov:hover { fill: rgb(var(--globe-line) / .12) }
+.g-admin { fill: none; stroke: rgb(var(--globe-line) / .75); stroke-width: .7; pointer-events: none }
+.g-hit { fill: transparent }
+.g-sg { fill: rgb(var(--globe-soon)); stroke: rgb(var(--globe-line)); stroke-width: 1 }
+.is-pick .g-sg { stroke-width: 2 }
+.g-route { fill: none; stroke: rgb(var(--globe-route) / .55); stroke-width: 1.6; stroke-dasharray: 5 6; stroke-linecap: round }
+.g-route-done { fill: none; stroke: rgb(var(--globe-route)); stroke-width: 2.2; stroke-dasharray: 5 6; stroke-linecap: round }
+.g-capital { fill: rgb(var(--globe-capital)); stroke: #fff; stroke-width: 1.6 }
+.g-city { fill: #fff; stroke: rgb(var(--globe-active)); stroke-width: 1.2 }
+.g-plane { fill: rgb(var(--globe-route)); stroke: rgb(var(--page)); stroke-width: 1 }
+.g-label, .g-label-sm { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .85); stroke-width: 3px; stroke-linejoin: round; font-weight: 600 }
+.g-label { font-size: 13px } .g-label-sm { font-size: 11px; font-weight: 500 }
+svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: -3px }
+.globe-ctl { width: 40px; height: 40px; display: grid; place-items: center; border-radius: .6rem; background: rgb(var(--surface) / .9); border: 1px solid rgb(var(--line)); color: rgb(var(--ink)) }
+.globe-ctl:hover { background: rgb(var(--surface3)) }
+@media (prefers-reduced-motion: reduce) { .g-c { transition: none } }

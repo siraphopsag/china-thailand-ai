@@ -1,0 +1,90 @@
+[
+ {
+  "ne_id": 1159151509,
+  "country": "TH",
+  "name": "Bangkok",
+  "capital": true,
+  "lon": 100.514699,
+  "lat": 13.751945
+ },
+ {
+  "ne_id": 1159149407,
+  "country": "TH",
+  "name": "Chiang Mai",
+  "capital": false,
+  "lon": 98.980046,
+  "lat": 18.799975
+ },
+ {
+  "ne_id": 1159149409,
+  "country": "TH",
+  "name": "Nakhon Ratchasima",
+  "capital": false,
+  "lon": 102.10001,
+  "lat": 15.000026
+ },
+ {
+  "ne_id": 1159147895,
+  "country": "TH",
+  "name": "Hat Yai",
+  "capital": false,
+  "lon": 100.471428,
+  "lat": 6.996432
+ },
+ {
+  "ne_id": 1159146329,
+  "country": "TH",
+  "name": "Khon Kaen",
+  "capital": false,
+  "lon": 102.830044,
+  "lat": 16.420043
+ },
+ {
+  "ne_id": 1159151595,
+  "country": "CN",
+  "name": "Beijing",
+  "capital": true,
+  "lon": 116.394201,
+  "lat": 39.90172
+ },
+ {
+  "ne_id": 1159151605,
+  "country": "CN",
+  "name": "Shanghai",
+  "capital": false,
+  "lon": 121.434559,
+  "lat": 31.218398
+ },
+ {
+  "ne_id": 1159151331,
+  "country": "CN",
+  "name": "Guangzhou",
+  "capital": false,
+  "lon": 113.261785,
+  "lat": 23.124723
+ },
+ {
+  "ne_id": 1159151367,
+  "country": "CN",
+  "name": "Wuhan",
+  "capital": false,
+  "lon": 114.268071,
+  "lat": 30.581977
+ },
+ {
+  "ne_id": 1159151327,
+  "country": "CN",
+  "name": "Chongqing",
+  "capital": false,
+  "lon": 106.593036,
+  "lat": 29.566923
+ },
+ {
+  "ne_id": 1159151627,
+  "country": "SG",
+  "name": "Singapore",
+  "capital": true,
+  "lon": 103.853875,
+  "lat": 1.294979
+ }
+]

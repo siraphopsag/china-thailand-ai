@@ -12,7 +12,7 @@ type NavItem = { route: string; key: string; icon: IconName; sub: string[] }
 /** Five primary areas that follow the journey. The internal analysis modules (ownership, employment, contract) live inside AI Analysis. */
 export const PRIMARY: NavItem[] = [
   { route: 'dashboard', key: 'nav.overview', icon: 'overview', sub: [] },
-  { route: 'profile', key: 'nav.business', icon: 'business', sub: ['direction', 'interview'] },
+  { route: 'profile', key: 'nav.business', icon: 'business', sub: ['start', 'direction', 'interview'] },
   { route: 'analysis', key: 'nav.analysisHub', icon: 'ai', sub: ['ownership', 'nominee', 'employment', 'contract'] },
   { route: 'roadmap', key: 'nav.plan', icon: 'plan', sub: ['risk'] },
   { route: 'documents', key: 'nav.documents', icon: 'documents', sub: [] },
@@ -150,7 +150,7 @@ export function Header({ route }: { route: string }) {
 export function ContextStack({ route }: { route: string }) {
   const { t } = useI18n()
   const { profile, tour, set, mode, exitDemo } = useStore()
-  const hideCtx = ['', 'direction', 'interview', 'privacy', 'pricing'].includes(route)
+  const hideCtx = ['', 'start', 'direction', 'interview', 'privacy', 'pricing'].includes(route)
   const showTour = tour !== null && tour < tourRoutes.length
   const demo = mode === 'demo'
   if ((hideCtx || !profile) && !showTour && !demo) return null

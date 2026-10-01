@@ -7,6 +7,7 @@ import { BRAND } from './brand'
 import { BottomNav, ContextStack, Header } from './components/shell'
 import { Landing, DirectionPage, InterviewPage, ProfilePage } from './pages/intake'
 // Landing/interview load immediately; the analysis, employment and operations pages load on demand.
+const StartPage = lazy(() => import('./pages/start').then((m) => ({ default: m.StartPage })))
 const AnalysisCenter = lazy(() => import('./pages/analysis').then((m) => ({ default: m.AnalysisCenter })))
 const OwnershipPage = lazy(() => import('./pages/analysis').then((m) => ({ default: m.OwnershipPage })))
 const NomineePage = lazy(() => import('./pages/analysis').then((m) => ({ default: m.NomineePage })))
@@ -49,7 +50,7 @@ function Router() {
   const r = useRoute()
   const { t } = useI18n()
   const pages: Record<string, ReactNode> = {
-    '': <Landing />, direction: <DirectionPage />, interview: <InterviewPage />, profile: <ProfilePage />, dashboard: <Dashboard />, analysis: <AnalysisCenter />,
+    '': <Landing />, start: <StartPage />, direction: <DirectionPage />, interview: <InterviewPage />, profile: <ProfilePage />, dashboard: <Dashboard />, analysis: <AnalysisCenter />,
     ownership: <OwnershipPage />, nominee: <NomineePage />, employment: <EmploymentPage />, contract: <ContractPage />, language: <LanguagePage />, risk: <RiskPage />,
     roadmap: <RoadmapPage />, documents: <DocumentsPage />, monitoring: <MonitoringPage />, sources: <SourcesPage />, pricing: <PricingPage />, privacy: <PrivacyPage />, admin: <AdminPage />,
   }

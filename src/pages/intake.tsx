@@ -57,8 +57,8 @@ export function Landing() {
 /* ================= DIRECTION ================= */
 export function DirectionPage() {
   const { t } = useI18n()
-  const { set, reset, direction } = useStore()
-  const pick = (d: Direction) => { reset(); set({ direction: d }); go('interview') }
+  const { chooseDirection, direction } = useStore()
+  const pick = (d: Direction) => { if (!chooseDirection(d)) go('dashboard') }
   return (
     <div>
       <PageHead title={t('dir.title')} sub={t('dir.sub')} />
