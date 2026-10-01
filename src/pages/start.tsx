@@ -66,11 +66,22 @@ function Raised({ d, lift, k, side, top }: { d: string; lift: number; k: number;
   )
 }
 
+/** Low extruded edge drawn under a flat country, so every country stands slightly above the sea. */
+function Base({ d, lift, k, side }: { d: string; lift: number; k: number; side: string }) {
+  const L = lift / k, n = 3
+  return (
+    <>
+      <path d={d} className="g-shadow" transform={`translate(${L * 0.6},${L * 1.6})`} />
+      {Array.from({ length: n }, (_, i) => <path key={i} d={d} className={side} transform={`translate(0,${(L * (n - i)) / n})`} />)}
+    </>
+  )
+}
+
 /* ================= flow ================= */
 // Internal states (never shown to users): MAP_REGION_SELECT = 'origin' | 'destination'; COUNTRY_SELECTED / PROVINCE_SELECT = 'originDetail' | 'destDetail';
 // 'soon' = a planned ASEAN country (cannot continue); ROUTE_PREVIEW = 'flight' → 'arrived' → TRANSITION_TO_BUSINESS_CONTEXT (chooseDirection → /interview).
 type Stage = 'origin' | 'originDetail' | 'destination' | 'destDetail' | 'soon' | 'flight' | 'arrived'
-const COUNTRY_LIFT = 12, PROVINCE_LIFT = 9
+const COUNTRY_LIFT = 12, PROVINCE_LIFT = 9, BASE_LIFT = 4
 export function StartPage() {
   const { t, lang } = useI18n()
   const { mode, exitDemo, chooseDirection } = useStore()
@@ -111,8 +122,7 @@ export function StartPage() {
     return () => { ro?.disconnect(); window.removeEventListener('resize', measure) }
   }, [])
   const { w, h } = size
-  // frame every drawn shape (incl. background Papua New Guinea), so New Guinea is never cut by the edge of the map
-  const focusSet = useMemo(() => data?.countries ?? [], [data])
+  const focusSet = useMemo(() => (data?.countries ?? []).filter((f) => codeOfIso(f.id)), [data])
   const proj = useMemo(() => {
     const p = geoMercator()
     if (focusSet.length) p.fitExtent([[16, 16], [w - 16, h - 16]], { type: 'FeatureCollection', features: focusSet } as FeatureCollection)
@@ -259,7 +269,7 @@ export function StartPage() {
   // painting
   const journey = stage === 'flight' || stage === 'arrived'
   const paint = (c: GeoCode | undefined) => {
-    if (!c) return 'g-context' // background land outside the scope (Papua New Guinea): visible, never selectable
+    if (!c) return 'g-dim'
     if (journey) return c === origin || c === dest ? 'g-pick' : 'g-dim'
     if (focus === c) return GEO[c].status === 'active' ? (c === shown ? 'g-footprint' : 'g-pick') : 'g-soon-pick'
     if (picking === 'destination' && c === origin) return 'g-origin'
@@ -351,12 +361,14 @@ export function StartPage() {
         {picking === 'destination' && origin && !journey && <p className="text-sm text-muted">{t('geo.originTag')}: <b className="text-ink">{crumb(origin, originProv)}</b></p>}
       </header>
 
-      <div ref={box} className="relative rounded-2xl overflow-hidden border border-line map-stage h-[50vh] min-h-[300px] max-h-[600px] sm:h-[56vh]">
-        {data && (
+      <div ref={box} className="relative rounded-2xl overflow-hidden border border-line map-ocean h-[50vh] min-h-[300px] max-h-[600px] sm:h-[56vh]">
+        {data && (<div className="map-tilt map-stage">
           <svg ref={svg} width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="application" aria-label={t('geo.mapLabel')} aria-describedby="geo-state" tabIndex={0} onKeyDown={onKey} onPointerDown={onDown}
             className="block select-none cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
             <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
-              {/* the flat map: every country stays a flat 2D shape */}
+              {/* every country has a low edge, so the map reads as a slightly raised relief */}
+              <g className="pointer-events-none">{shapes.filter((s) => s.code).map((s, i) => <Base key={'b' + i + ':' + String(s.f.id)} d={s.d} lift={BASE_LIFT} k={view.k} side={GEO[s.code!].status === 'active' ? 'g-side' : 'g-side-soon'} />)}</g>
+              {/* the country tops */}
               {shapes.map((s, i) => <path key={i + ":" + String(s.f.id)} d={s.d} data-code={s.code} className={'g-c ' + paint(s.code)}>{s.code && <title>{name(s.code)}</title>}</path>)}
               {/* only the selected country rises (while no province is chosen) */}
               {focusShape && <Raised d={focusShape.d} lift={countryLift} k={view.k} side="g-side" top="g-top" />}
@@ -388,7 +400,7 @@ export function StartPage() {
             {/* the capital is the first reference point: one red marker for the country in focus */}
             {!journey && focus && (() => { const cap = capitalOf(focus); const pt: [number, number] = [cap.lon, cap.lat]; const p = screen(cap.lon, cap.lat, liftAt(focus, pt)); return p ? (
               <g className="pointer-events-none"><circle cx={p[0]} cy={p[1]} r={6} className="g-capital" />{capName(focus) !== name(focus) && <text x={p[0] + 10} y={p[1] + 4} className="g-label">{capName(focus)}</text>}</g>) : null })()}
-          </svg>)}
+          </svg></div>)}
         {data && (
           <div className="absolute top-3 right-3 flex flex-col gap-1.5">
             <button className="globe-ctl" onClick={() => zoomAt(1.3)} aria-label={t('geo.zoomIn')} title={t('geo.zoomIn')}><Icon name="plus" size={18} /></button>

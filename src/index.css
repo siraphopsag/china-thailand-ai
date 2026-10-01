@@ -16,7 +16,7 @@
   --danger-bg: 254 226 226; --danger-fg: 153 27 27; --danger-line: 252 165 165;
   --review-bg: 255 237 213; --review-fg: 154 52 18; --review-line: 253 186 116;
   --info-bg: 224 242 254; --info-fg: 7 89 133; --info-line: 125 211 252;
-  --globe-bg: 236 241 248; --globe-ocean: 218 226 238; --globe-land: 196 205 219; --globe-soon: 90 112 145; --globe-active: 24 44 79; --globe-line: 255 255 255; --globe-capital: 220 38 38; --globe-route: 24 44 79; --globe-side: 12 24 46; --globe-prov: 37 99 235; --globe-pside: 23 62 150;
+  --globe-bg: 236 241 248; --globe-ocean: 218 226 238; --globe-land: 196 205 219; --globe-soon: 90 112 145; --globe-active: 24 44 79; --globe-line: 255 255 255; --globe-capital: 220 38 38; --globe-route: 24 44 79; --globe-side: 12 24 46; --globe-soon-side: 58 74 100; --globe-prov: 37 99 235; --globe-pside: 23 62 150;
   --grid-line: 15 30 56; --grid-a: .1; --glow-a: 59 130 246; --glow-b: 124 58 237; --glow-k: .16;
   --grad-a: 29 78 216; --grad-b: 79 70 229; --cta-a: 29 64 175; --cta-b: 67 56 202; --hero-base: 248 250 253;
 }
@@ -34,7 +34,7 @@
   --danger-bg: 72 26 30; --danger-fg: 252 165 165; --danger-line: 140 50 56;
   --review-bg: 70 40 18; --review-fg: 253 186 116; --review-line: 138 78 30;
   --info-bg: 16 52 78; --info-fg: 125 211 252; --info-line: 30 100 150;
-  --globe-bg: 8 13 24; --globe-ocean: 16 25 43; --globe-land: 46 59 82; --globe-soon: 120 140 175; --globe-active: 110 154 226; --globe-line: 255 255 255; --globe-capital: 239 68 68; --globe-route: 147 197 253; --globe-side: 52 82 130; --globe-prov: 147 197 253; --globe-pside: 74 116 180;
+  --globe-bg: 8 13 24; --globe-ocean: 16 25 43; --globe-land: 46 59 82; --globe-soon: 120 140 175; --globe-active: 110 154 226; --globe-line: 255 255 255; --globe-capital: 239 68 68; --globe-route: 147 197 253; --globe-side: 52 82 130; --globe-soon-side: 62 76 104; --globe-prov: 147 197 253; --globe-pside: 74 116 180;
   --grid-line: 148 163 184; --grid-a: .16; --glow-a: 59 130 246; --glow-b: 139 92 246; --glow-k: .3;
   --grad-a: 147 197 253; --grad-b: 196 181 253; --cta-a: 37 99 235; --cta-b: 79 70 229; --hero-base: 7 11 22;
 }
@@ -74,9 +74,7 @@ h1[tabindex="-1"]:focus { outline: none }
 /* ---------- geographic onboarding (ASEAN + China map) ---------- */
 .g-c { stroke: rgb(var(--globe-line) / .75); stroke-width: .8; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: fill .3s ease }
 .g-land { fill: rgb(var(--globe-land) / .55); stroke: rgb(var(--globe-line) / .3) }
-.g-dim { fill: rgb(var(--globe-land) / .55) }
-.g-context { fill: rgb(var(--globe-soon) / .45); pointer-events: none }
-.g-active { fill: rgb(var(--globe-active) / .72); cursor: pointer }
+.g-dim { fill: rgb(var(--globe-land) / .55) }.g-active { fill: rgb(var(--globe-active) / .72); cursor: pointer }
 .g-soon { fill: rgb(var(--globe-soon)); cursor: pointer }
 .g-active:hover, .g-soon:hover { filter: brightness(1.12) }
 .g-footprint { fill: rgb(var(--globe-active) / .55) }
@@ -87,6 +85,7 @@ h1[tabindex="-1"]:focus { outline: none }
 /* selection rises: stacked sides, lifted top face, soft shadow (only the current selection) */
 .g-shadow { fill: rgb(0 0 0 / .22); stroke: none }
 .g-side { fill: rgb(var(--globe-side)); stroke: none }
+.g-side-soon { fill: rgb(var(--globe-soon-side)); stroke: none }
 .g-top { fill: rgb(var(--globe-active)); stroke: rgb(var(--globe-line) / .9); stroke-width: 1.2; vector-effect: non-scaling-stroke }
 .g-pside { fill: rgb(var(--globe-pside)); stroke: none }
 .g-ptop { fill: rgb(var(--globe-prov)); stroke: rgb(var(--globe-line)); stroke-width: 1.4; vector-effect: non-scaling-stroke }
@@ -135,4 +134,7 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
 .ai-scan::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, transparent, rgb(var(--glow-a)), rgb(var(--glow-b)), transparent); animation: ai-scan 1.6s ease-in-out infinite }
 @keyframes ai-scan { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
 /* the map uses the same surface language: a faint static grid under the ocean */
+/* the map plane is seen at a slight angle (the controls and the frame stay flat) */
+.map-ocean { background-color: rgb(var(--globe-ocean)) }
+.map-tilt { position: absolute; inset: 0; transform: perspective(1600px) rotateX(14deg) scale(1.06); transform-origin: 50% 55% }
 .map-stage { background-color: rgb(var(--globe-ocean)); background-image: linear-gradient(to right, rgb(var(--grid-line) / calc(var(--grid-a) * .4)) 1px, transparent 0), linear-gradient(to bottom, rgb(var(--grid-line) / calc(var(--grid-a) * .4)) 1px, transparent 0); background-size: 56px 56px }

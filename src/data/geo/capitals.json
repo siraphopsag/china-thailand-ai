@@ -75,5 +75,12 @@
   "name": "Bandar Seri Begawan",
   "lon": 114.9333,
   "lat": 4.8833
+ },
+ {
+  "country": "TL",
+  "ne_id": 1159150577,
+  "name": "Dili",
+  "lon": 125.5795,
+  "lat": -8.5594
  }
 ]

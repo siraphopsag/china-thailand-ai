@@ -56,6 +56,7 @@ export const geo = {
   'geo.c.ID': ['อินโดนีเซีย', '印度尼西亚', 'Indonesia'],
   'geo.c.PH': ['ฟิลิปปินส์', '菲律宾', 'Philippines'],
   'geo.c.BN': ['บรูไน', '文莱', 'Brunei'],
+  'geo.c.TL': ['ติมอร์-เลสเต', '东帝汶', 'Timor-Leste'],
   // capitals (positions from Natural Earth populated places; see data/geo/capitals.json)
   'geo.city.Bangkok': ['กรุงเทพมหานคร', '曼谷', 'Bangkok'],
   'geo.city.Beijing': ['ปักกิ่ง', '北京', 'Beijing'],
@@ -67,5 +68,6 @@ export const geo = {
   'geo.city.Jakarta': ['จาการ์ตา', '雅加达', 'Jakarta'],
   'geo.city.Manila': ['มะนิลา', '马尼拉', 'Manila'],
   'geo.city.BandarSeriBegawan': ['บันดาร์เสรีเบกาวัน', '斯里巴加湾市', 'Bandar Seri Begawan'],
+  'geo.city.Dili': ['ดิลี', '帝力', 'Dili'],
   'geo.city.Singapore': ['สิงคโปร์', '新加坡', 'Singapore'],
 } as const satisfies Record<string, Msg>

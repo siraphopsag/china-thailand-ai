@@ -2,15 +2,16 @@ import type { Direction } from './types'
 
 /** Countries on the ASEAN + China map. Active = supported today; soon = planned ASEAN expansion (visible and selectable, never a route).
  *  `iso` is the ISO 3166-1 numeric code used by Natural Earth / world-atlas. */
-export type GeoCode = 'TH' | 'CN' | 'VN' | 'MM' | 'LA' | 'SG' | 'KH' | 'MY' | 'ID' | 'PH' | 'BN'
+export type GeoCode = 'TH' | 'CN' | 'VN' | 'MM' | 'LA' | 'SG' | 'KH' | 'MY' | 'ID' | 'PH' | 'BN' | 'TL'
 export type GeoStatus = 'active' | 'soon'
 export const GEO: Record<GeoCode, { iso: string; status: GeoStatus }> = {
   TH: { iso: '764', status: 'active' }, CN: { iso: '156', status: 'active' },
   VN: { iso: '704', status: 'soon' }, MM: { iso: '104', status: 'soon' }, LA: { iso: '418', status: 'soon' }, SG: { iso: '702', status: 'soon' },
   KH: { iso: '116', status: 'soon' }, MY: { iso: '458', status: 'soon' }, ID: { iso: '360', status: 'soon' }, PH: { iso: '608', status: 'soon' }, BN: { iso: '096', status: 'soon' },
+  TL: { iso: '626', status: 'soon' }, // Timor-Leste, ASEAN's 11th member (2025)
 }
 export const ACTIVE: GeoCode[] = ['TH', 'CN']
-export const SOON: GeoCode[] = ['VN', 'MM', 'LA', 'SG', 'KH', 'MY', 'ID', 'PH', 'BN']
+export const SOON: GeoCode[] = ['VN', 'MM', 'LA', 'SG', 'KH', 'MY', 'ID', 'PH', 'BN', 'TL']
 const BY_ISO = Object.fromEntries(Object.entries(GEO).map(([c, v]) => [v.iso, c])) as Record<string, GeoCode>
 export const codeOfIso = (iso: string | number | undefined): GeoCode | undefined => (iso === undefined ? undefined : BY_ISO[String(iso).padStart(3, '0')])
 
