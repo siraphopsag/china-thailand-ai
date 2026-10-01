@@ -57,34 +57,25 @@ body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","
   .ai-panel { @apply rounded-xl border border-line bg-brand text-ink p-4 }
 }
 
-/* ---------- geographic onboarding (globe) ---------- */
-.globe-stage { background: radial-gradient(ellipse at 50% 45%, rgb(var(--globe-bg)) 0%, rgb(var(--page)) 100%) }
-.globe-ocean { fill: rgb(var(--globe-ocean)) }
-.globe-grat { fill: none; stroke: rgb(var(--globe-line) / .08); stroke-width: .6 }
-.g-c { stroke: rgb(var(--globe-line) / .6); stroke-width: .5; stroke-linejoin: round; transition: fill .35s ease }
-.g-land { fill: rgb(var(--globe-land)) }
-.g-dim { fill: rgb(var(--globe-land) / .7) }
-.g-active-soft { fill: rgb(var(--globe-active) / .45) }
-.g-active { fill: rgb(var(--globe-active) / .7); cursor: pointer }
+/* ---------- geographic onboarding (ASEAN + China map) ---------- */
+.map-stage { background: rgb(var(--globe-ocean)) }
+.g-c { stroke: rgb(var(--globe-line) / .75); stroke-width: .8; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: fill .3s ease }
+.g-land { fill: rgb(var(--globe-land) / .55) }
+.g-dim { fill: rgb(var(--globe-land) / .55) }
+.g-active { fill: rgb(var(--globe-active) / .72); cursor: pointer }
 .g-soon { fill: rgb(var(--globe-soon)); cursor: pointer }
-.g-active:hover, .g-soon:hover { fill-opacity: .85; filter: brightness(1.15) }
-.g-pick { fill: rgb(var(--globe-active)) }
-.g-soon-pick { fill: rgb(var(--globe-soon)); stroke: rgb(var(--globe-line)); stroke-width: 1.4 }
-.g-origin { fill: rgb(var(--globe-active) / .3); stroke-dasharray: 3 2 }
-.g-prov { fill: transparent }
-.g-prov:hover { fill: rgb(var(--globe-line) / .12) }
-.g-admin { fill: none; stroke: rgb(var(--globe-line) / .75); stroke-width: .7; pointer-events: none }
+.g-active:hover, .g-soon:hover { filter: brightness(1.12) }
+.g-pick { fill: rgb(var(--globe-active)); stroke-width: 1.4 }
+.g-soon-pick { fill: rgb(var(--globe-soon)); stroke: rgb(var(--globe-line)); stroke-width: 1.8 }
+.g-origin { fill: rgb(var(--globe-active) / .3); stroke-dasharray: 3 3 }
 .g-hit { fill: transparent }
-.g-sg { fill: rgb(var(--globe-soon)); stroke: rgb(var(--globe-line)); stroke-width: 1 }
-.is-pick .g-sg { stroke-width: 2 }
-.g-route { fill: none; stroke: rgb(var(--globe-route) / .55); stroke-width: 1.6; stroke-dasharray: 5 6; stroke-linecap: round }
+.g-route { fill: none; stroke: rgb(var(--globe-route) / .5); stroke-width: 1.6; stroke-dasharray: 5 6; stroke-linecap: round }
 .g-route-done { fill: none; stroke: rgb(var(--globe-route)); stroke-width: 2.2; stroke-dasharray: 5 6; stroke-linecap: round }
-.g-capital { fill: rgb(var(--globe-capital)); stroke: #fff; stroke-width: 1.6 }
-.g-city { fill: #fff; stroke: rgb(var(--globe-active)); stroke-width: 1.2 }
+.g-capital { fill: rgb(var(--globe-capital)); stroke: #fff; stroke-width: 1.8 }
 .g-plane { fill: rgb(var(--globe-route)); stroke: rgb(var(--page)); stroke-width: 1 }
-.g-label, .g-label-sm { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .85); stroke-width: 3px; stroke-linejoin: round; font-weight: 600 }
-.g-label { font-size: 13px } .g-label-sm { font-size: 11px; font-weight: 500 }
+.g-label, .g-name { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font-weight: 600 }
+.g-label { font-size: 13px } .g-name { font-size: 17px; font-weight: 700; letter-spacing: .04em }
 svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: -3px }
-.globe-ctl { width: 40px; height: 40px; display: grid; place-items: center; border-radius: .6rem; background: rgb(var(--surface) / .9); border: 1px solid rgb(var(--line)); color: rgb(var(--ink)) }
+.globe-ctl { width: 40px; height: 40px; display: grid; place-items: center; border-radius: .6rem; background: rgb(var(--surface) / .92); border: 1px solid rgb(var(--line)); color: rgb(var(--ink)) }
 .globe-ctl:hover { background: rgb(var(--surface3)) }
 @media (prefers-reduced-motion: reduce) { .g-c { transition: none } }

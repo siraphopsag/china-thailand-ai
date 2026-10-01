@@ -87,6 +87,9 @@ function load(mode: Mode): State {
 
 interface Ctx extends State {
   mode: Mode
+  /** Origin and destination of the cross-border journey, derived from `direction` so there is a single source of truth. */
+  originCountry: 'TH' | 'CN' | null
+  destinationCountry: 'TH' | 'CN' | null
   set: (patch: Partial<State>) => void
   startDemo: () => void
   exitDemo: () => void
@@ -111,6 +114,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [s, mode])
   const value = useMemo<Ctx>(() => ({
     ...s, mode,
+    originCountry: s.direction ? (s.direction === 'TH_CN' ? 'TH' : 'CN') : null,
+    destinationCountry: s.direction ? (s.direction === 'TH_CN' ? 'CN' : 'TH') : null,
     set: (patch) => setS((x) => ({ ...x, ...patch })),
     log: (key, vars) => setS((x) => ({ ...x, history: [{ at: now(), key, vars }, ...x.history].slice(0, 8) })),
     setActionStatus: (a, st) => setS((x) => {

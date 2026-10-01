@@ -1,7 +1,7 @@
 import type { Direction } from './types'
 
-/** Countries in the geographic onboarding. Active = supported today; soon = planned ASEAN expansion (shown, never selectable as a route).
- *  `iso` is the ISO 3166-1 numeric code used by world-atlas (Natural Earth). Singapore is too small for the 1:110m map, so it is a point. */
+/** Countries on the ASEAN + China map. Active = supported today; soon = planned ASEAN expansion (visible and selectable, never a route).
+ *  `iso` is the ISO 3166-1 numeric code used by Natural Earth / world-atlas. */
 export type GeoCode = 'TH' | 'CN' | 'VN' | 'MM' | 'LA' | 'SG' | 'KH' | 'MY' | 'ID' | 'PH' | 'BN'
 export type GeoStatus = 'active' | 'soon'
 export const GEO: Record<GeoCode, { iso: string; status: GeoStatus }> = {
@@ -26,18 +26,34 @@ export function checkDestination(origin: GeoCode, dest: GeoCode): DestCheck {
   return GEO[dest].status === 'active' ? 'ok' : 'soon'
 }
 
-/** Camera: rotation [lambda, phi] (d3 orthographic convention: rotate by minus the centre) and zoom factor on top of the fitted globe. */
-export interface Camera { rotate: [number, number]; k: number }
-export const WORLD_VIEW: Camera = { rotate: [-20, -15], k: 1 }
-/** ASEAN + China: centred near 106°E 24°N. */
-export const REGION_VIEW: Camera = { rotate: [-106, -24], k: 1.9 }
-export const clampK = (k: number) => Math.max(0.85, Math.min(14, k))
-export const clampPhi = (p: number) => Math.max(-80, Math.min(80, p))
+/** 2D map view: zoom k and translation (x, y) applied on top of the fitted regional projection. */
+export interface View { k: number; x: number; y: number }
+export const HOME: View = { k: 1, x: 0, y: 0 }
+export const MAX_K = 12
+/** Keep the region on screen: never smaller than the fitted view, never panned away from it. */
+export function clampView(v: View, w: number, h: number): View {
+  const k = Math.max(1, Math.min(MAX_K, v.k))
+  const m = 0.25
+  return { k, x: Math.min(w * m, Math.max(w * (1 - k) - w * m, v.x)), y: Math.min(h * m, Math.max(h * (1 - k) - h * m, v.y)) }
+}
+/** View that frames a box [[x0,y0],[x1,y1]] (in fitted-map coordinates) with the given fill. */
+export function viewForBox(b: [[number, number], [number, number]], w: number, h: number, fill = 0.7, maxK = 8): View {
+  const bw = Math.max(1, b[1][0] - b[0][0]), bh = Math.max(1, b[1][1] - b[0][1])
+  const k = Math.max(1, Math.min(maxK, fill * Math.min(w / bw, h / bh)))
+  const cx = (b[0][0] + b[1][0]) / 2, cy = (b[0][1] + b[1][1]) / 2
+  return clampView({ k, x: w / 2 - k * cx, y: h / 2 - k * cy }, w, h)
+}
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
-/** Interpolate cameras along the shortest way round the globe. */
-export function lerpCamera(a: Camera, b: Camera, t: number): Camera {
+export function lerpView(a: View, b: View, t: number): View {
   const e = ease(Math.max(0, Math.min(1, t)))
-  let dl = b.rotate[0] - a.rotate[0]
-  dl = ((dl + 540) % 360) - 180
-  return { rotate: [a.rotate[0] + dl * e, a.rotate[1] + (b.rotate[1] - a.rotate[1]) * e], k: a.k * Math.pow(b.k / a.k, e) }
+  return { k: a.k * Math.pow(b.k / a.k, e), x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e }
+}
+/** A gentle arc between two screen points (quadratic Bézier bulging to the left of the direction of travel). */
+export function arcPoint(a: [number, number], b: [number, number], t: number, bend = 0.22): { x: number; y: number; deg: number } {
+  const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, dx = b[0] - a[0], dy = b[1] - a[1]
+  const c: [number, number] = [mx + dy * bend, my - dx * bend]
+  const u = 1 - t
+  const x = u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], y = u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]
+  const tx = 2 * u * (c[0] - a[0]) + 2 * t * (b[0] - c[0]), ty = 2 * u * (c[1] - a[1]) + 2 * t * (b[1] - c[1])
+  return { x, y, deg: (Math.atan2(ty, tx) * 180) / Math.PI }
 }

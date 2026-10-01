@@ -1,0 +1,79 @@
+[
+ {
+  "country": "TH",
+  "ne_id": 1159151509,
+  "name": "Bangkok",
+  "lon": 100.5147,
+  "lat": 13.7519
+ },
+ {
+  "country": "CN",
+  "ne_id": 1159151595,
+  "name": "Beijing",
+  "lon": 116.3942,
+  "lat": 39.9017
+ },
+ {
+  "country": "VN",
+  "ne_id": 1159151251,
+  "name": "Hanoi",
+  "lon": 105.8481,
+  "lat": 21.0353
+ },
+ {
+  "country": "MM",
+  "ne_id": 1159151179,
+  "name": "Naypyidaw",
+  "lon": 96.1167,
+  "lat": 19.7685
+ },
+ {
+  "country": "LA",
+  "ne_id": 1159150991,
+  "name": "Vientiane",
+  "lon": 102.6,
+  "lat": 17.9667
+ },
+ {
+  "country": "SG",
+  "ne_id": 1159151627,
+  "name": "Singapore",
+  "lon": 103.8539,
+  "lat": 1.295
+ },
+ {
+  "country": "KH",
+  "ne_id": 1159151127,
+  "name": "Phnom Penh",
+  "lon": 104.9147,
+  "lat": 11.552
+ },
+ {
+  "country": "MY",
+  "ne_id": 1159151317,
+  "name": "Kuala Lumpur",
+  "lon": 101.6887,
+  "lat": 3.1398
+ },
+ {
+  "country": "ID",
+  "ne_id": 1159151599,
+  "name": "Jakarta",
+  "lon": 106.8275,
+  "lat": -6.1725
+ },
+ {
+  "country": "PH",
+  "ne_id": 1159151525,
+  "name": "Manila",
+  "lon": 120.9803,
+  "lat": 14.6061
+ },
+ {
+  "country": "BN",
+  "ne_id": 1159151083,
+  "name": "Bandar Seri Begawan",
+  "lon": 114.9333,
+  "lat": 4.8833
+ }
+]
