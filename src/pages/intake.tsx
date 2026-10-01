@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Direction, EmploymentInput, Profile } from '../types'
 import { go, useStore } from '../store'
-import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead } from '../components/ui'
+import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead, useRouteText } from '../components/ui'
 import { CountryBadge, Icon } from '../components/icons'
 import { dirInfo } from '../utils/labels'
 import { BRAND, BRAND_CONCEPTS } from '../brand'
@@ -78,6 +78,7 @@ const emptyFor = (q: Q) => (q.type === 'multi' ? [] : '')
 export function InterviewPage() {
   const { t } = useI18n()
   const { direction, profile, answers, employment, set, log, startDemo } = useStore()
+  const route = useRouteText()
   const d: Direction = direction ?? 'TH_CN'
   const info = dirInfo(d)
   const vars = { from: tk('country', info.from), to: tk('country', info.to) }
@@ -127,7 +128,7 @@ export function InterviewPage() {
   const shown = (x: Q) => { const a = answers[x.id]; return Array.isArray(a) ? a.map((o) => label(x, o)).join(', ') : x.type === 'choice' ? label(x, String(a)) : String(a ?? '') + (x.type === 'pct' ? '%' : '') }
   return (
     <div className="max-w-2xl mx-auto">
-      <PageHead title={t('intv.title')} sub={t('intv.sub', { dir: tk('dir', d) })}><button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>{t('intv.useDemo')}</button></PageHead>
+      <PageHead title={t('intv.title')} sub={t('intv.sub', { dir: route || tk('dir', d) })}><button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>{t('intv.useDemo')}</button></PageHead>
       <div className="mb-4" aria-live="polite">
         {!core ? <><p className="text-sm font-medium">{t('intv.quickProg', { n: Math.min(idx + 1, coreTotal), total: coreTotal })}</p>
           <div className="h-1.5 rounded bg-surface3 mt-1.5 overflow-hidden"><div className="h-1.5 bg-primary transition-all duration-500" style={{ width: `${(Math.min(idx, coreTotal) / coreTotal) * 100}%` }} /></div>
@@ -158,7 +159,8 @@ export function InterviewPage() {
 /* ================= PROFILE ================= */
 export function ProfilePage() {
   const { t } = useI18n()
-  const { profile, set, log } = useStore()
+  const { profile, set, log, originProvince, destinationProvince } = useStore()
+  const route = useRouteText()
   const [edit, setEdit] = useState(false)
   const [f, setF] = useState<Profile | null>(profile)
   const [err, setErr] = useState('')
@@ -173,6 +175,7 @@ export function ProfilePage() {
     <div className="space-y-5">
       <PageHead title={t('prof.title')} sub={t('prof.sub')} />
       <JourneyStrip />
+      {(originProvince || destinationProvince) && <p className="text-sm flex items-center gap-2"><Icon name="globe" size={16} className="text-primary" /><span className="text-muted">{t('geo.route')}:</span> <b>{route}</b></p>}
       {edit ? (
         <div className="card space-y-3">
           <h2 className="h2">{t('prof.edit')}</h2>

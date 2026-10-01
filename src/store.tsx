@@ -14,6 +14,9 @@ export type Mode = 'real' | 'demo'
 export interface ActionSnap { title: string; riskLabel: string; owner: string; riskId: string }
 interface State {
   direction: Direction | null
+  /** ISO 3166-2 code chosen on the map (e.g. TH-20), or null when no province was chosen */
+  originProvince: string | null
+  destinationProvince: string | null
   answers: Record<string, string | string[]> // interview answers (language-neutral ids); the profile is built from them
   profile: Profile | null
   employment: EmploymentInput
@@ -32,7 +35,7 @@ interface State {
   history: HistoryItem[]
 }
 const initial: State = {
-  direction: null, answers: {}, profile: null, employment: emptyEmployment, contract: emptyContract, stepOverrides: {}, actionStatus: {}, actionSnap: {}, tour: null, checks: {}, docs: {}, docLang: {}, docStamp: {},
+  direction: null, originProvince: null, destinationProvince: null, answers: {}, profile: null, employment: emptyEmployment, contract: emptyContract, stepOverrides: {}, actionStatus: {}, actionSnap: {}, tour: null, checks: {}, docs: {}, docLang: {}, docStamp: {},
   extraAlerts: [], regChanged: false, analysisDone: false, history: [],
 }
 const now = () => new Date().toISOString()
@@ -61,11 +64,13 @@ function sanitizeAnswers(raw: unknown): Record<string, string | string[]> {
   if (!isObj(raw)) return {}
   return Object.fromEntries(Object.entries(raw).filter(([, v]) => typeof v === 'string' || (Array.isArray(v) && v.every((x) => typeof x === 'string')))) as Record<string, string | string[]>
 }
+const provCode = (v: unknown): string | null => (typeof v === 'string' && /^(TH|CN)-[A-Z0-9]{2,3}$/.test(v) ? v : null)
 export function sanitizeState(raw: unknown): State {
   if (!isObj(raw)) return initial
   const profile = cleanProfile(raw.profile)
   return {
     direction: raw.direction === 'CN_TH' ? 'CN_TH' : raw.direction === 'TH_CN' ? 'TH_CN' : profile ? profile.direction : null,
+    originProvince: provCode(raw.originProvince), destinationProvince: provCode(raw.destinationProvince),
     answers: sanitizeAnswers(raw.answers), profile, employment: fill(emptyEmployment, raw.employment), contract: fill(emptyContract, raw.contract),
     stepOverrides: mapOf(raw.stepOverrides, isStep) as Record<number, StepStatus>, actionStatus: mapOf(raw.actionStatus, isStep), actionSnap: mapOf(raw.actionSnap, isSnap), tour: null,
     checks: mapOf(raw.checks, isBool), docs: mapOf(raw.docs, isBool), docLang: mapOf(raw.docLang, isLang), docStamp: mapOf(raw.docStamp, isString),
@@ -95,8 +100,9 @@ interface Ctx extends State {
   exitDemo: () => void
   /** Begin a real analysis: leaves the demo and opens the geographic onboarding. Nothing is replaced until a route is chosen. */
   beginNew: () => void
-  /** Start a new real Business Context for origin → destination. Asks before replacing an existing real profile; false = the user kept it. */
-  chooseDirection: (d: Direction) => boolean
+  /** Start a new real Business Context for origin → destination (and optional provinces). Asks before replacing an existing real profile; false = the user kept it.
+   *  `location` pre-answers the interview question about where the business will operate, so it is not asked again. */
+  chooseDirection: (d: Direction, geo?: { originProvince?: string | null; destinationProvince?: string | null; location?: string }) => boolean
   reset: () => void
   log: (key: MsgKey, vars?: Record<string, string>) => void
   /** Change an action's status; completed actions keep a snapshot so progress never goes backwards. */
@@ -130,10 +136,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (mode === 'demo') { setMode('real'); setS(load('real')) }
       go('start')
     },
-    chooseDirection: (d) => {
+    chooseDirection: (d, geo) => {
       const existing = mode === 'demo' ? load('real').profile : s.profile
       if (existing && !window.confirm(tr('start.confirm'))) return false
-      setMode('real'); setS({ ...initial, direction: d }); go('interview')
+      setMode('real')
+      setS({ ...initial, direction: d, originProvince: provCode(geo?.originProvince), destinationProvince: provCode(geo?.destinationProvince), answers: geo?.location ? { location: geo.location } : {} })
+      go('interview')
       return true
     },
     reset: () => setS(mode === 'demo' ? demoState() : initial),

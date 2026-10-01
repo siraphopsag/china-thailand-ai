@@ -14,7 +14,7 @@
   --danger-bg: 254 226 226; --danger-fg: 153 27 27; --danger-line: 252 165 165;
   --review-bg: 255 237 213; --review-fg: 154 52 18; --review-line: 253 186 116;
   --info-bg: 224 242 254; --info-fg: 7 89 133; --info-line: 125 211 252;
-  --globe-bg: 236 241 248; --globe-ocean: 218 226 238; --globe-land: 196 205 219; --globe-soon: 140 163 194; --globe-active: 24 44 79; --globe-line: 255 255 255; --globe-capital: 220 38 38; --globe-route: 24 44 79;
+  --globe-bg: 236 241 248; --globe-ocean: 218 226 238; --globe-land: 196 205 219; --globe-soon: 140 163 194; --globe-active: 24 44 79; --globe-line: 255 255 255; --globe-capital: 220 38 38; --globe-route: 24 44 79; --globe-side: 12 24 46; --globe-prov: 37 99 235; --globe-pside: 23 62 150;
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -29,7 +29,7 @@
   --danger-bg: 72 26 30; --danger-fg: 252 165 165; --danger-line: 140 50 56;
   --review-bg: 70 40 18; --review-fg: 253 186 116; --review-line: 138 78 30;
   --info-bg: 16 52 78; --info-fg: 125 211 252; --info-line: 30 100 150;
-  --globe-bg: 8 13 24; --globe-ocean: 16 25 43; --globe-land: 46 59 82; --globe-soon: 72 90 120; --globe-active: 110 154 226; --globe-line: 255 255 255; --globe-capital: 239 68 68; --globe-route: 147 197 253;
+  --globe-bg: 8 13 24; --globe-ocean: 16 25 43; --globe-land: 46 59 82; --globe-soon: 72 90 120; --globe-active: 110 154 226; --globe-line: 255 255 255; --globe-capital: 239 68 68; --globe-route: 147 197 253; --globe-side: 52 82 130; --globe-prov: 147 197 253; --globe-pside: 74 116 180;
 }
 
 html { scroll-behavior: smooth }
@@ -60,15 +60,25 @@ body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","
 /* ---------- geographic onboarding (ASEAN + China map) ---------- */
 .map-stage { background: rgb(var(--globe-ocean)) }
 .g-c { stroke: rgb(var(--globe-line) / .75); stroke-width: .8; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: fill .3s ease }
-.g-land { fill: rgb(var(--globe-land) / .55) }
+.g-land { fill: rgb(var(--globe-land) / .55); stroke: rgb(var(--globe-line) / .3) }
 .g-dim { fill: rgb(var(--globe-land) / .55) }
 .g-active { fill: rgb(var(--globe-active) / .72); cursor: pointer }
 .g-soon { fill: rgb(var(--globe-soon)); cursor: pointer }
 .g-active:hover, .g-soon:hover { filter: brightness(1.12) }
+.g-footprint { fill: rgb(var(--globe-active) / .55) }
 .g-pick { fill: rgb(var(--globe-active)); stroke-width: 1.4 }
 .g-soon-pick { fill: rgb(var(--globe-soon)); stroke: rgb(var(--globe-line)); stroke-width: 1.8 }
 .g-origin { fill: rgb(var(--globe-active) / .3); stroke-dasharray: 3 3 }
 .g-hit { fill: transparent }
+/* selection rises: stacked sides, lifted top face, soft shadow (only the current selection) */
+.g-shadow { fill: rgb(0 0 0 / .22); stroke: none }
+.g-side { fill: rgb(var(--globe-side)); stroke: none }
+.g-top { fill: rgb(var(--globe-active)); stroke: rgb(var(--globe-line) / .9); stroke-width: 1.2; vector-effect: non-scaling-stroke }
+.g-pside { fill: rgb(var(--globe-pside)); stroke: none }
+.g-ptop { fill: rgb(var(--globe-prov)); stroke: rgb(var(--globe-line)); stroke-width: 1.4; vector-effect: non-scaling-stroke }
+.g-prov { fill: transparent; stroke: rgb(var(--globe-line) / .55); stroke-width: .6; vector-effect: non-scaling-stroke; cursor: pointer }
+.g-prov:hover { fill: rgb(var(--globe-line) / .14) }
+.g-provmark { fill: rgb(var(--globe-prov)); stroke: #fff; stroke-width: 1.8 }
 .g-route { fill: none; stroke: rgb(var(--globe-route) / .5); stroke-width: 1.6; stroke-dasharray: 5 6; stroke-linecap: round }
 .g-route-done { fill: none; stroke: rgb(var(--globe-route)); stroke-width: 2.2; stroke-dasharray: 5 6; stroke-linecap: round }
 .g-capital { fill: rgb(var(--globe-capital)); stroke: #fff; stroke-width: 1.8 }

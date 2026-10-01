@@ -63,3 +63,25 @@ describe('geographic data is taken from Natural Earth, not invented', () => {
     for (const c of cs) expect(m[`geo.city.${c.name.replace(/\s/g, '')}`]?.length, c.name).toBe(3)
   })
 })
+
+describe('provinces and the shared Business Context', () => {
+  it('every Thai and Chinese first-level division has a name in Thai, Chinese and English, keyed by its ISO 3166-2 code', async () => {
+    const t = (await import('./data/geo/admin1-th-cn.json')) as unknown as { default?: unknown }
+    const topo = (t.default ?? t) as { objects: Record<string, { geometries: { properties: { iso_3166_2: string } }[] }> }
+    const codes = Object.values(topo.objects)[0].geometries.map((g) => g.properties.iso_3166_2).filter((c) => !c.includes('~'))
+    expect(codes.filter((c) => c.startsWith('TH-')).length).toBe(77)
+    const m = messages as Record<string, readonly string[]>
+    for (const c of codes) expect(m[`prov.${c}`]?.every((s) => s.length > 0), c).toBe(true)
+  })
+  it('a destination province chosen on the map answers the interview question about location, so it is not asked again', async () => {
+    const { visibleQs, isAnswered } = await import('./interview')
+    const a = { name: 'Acme', btype: 'manufacturing', forms: ['company'], location: 'Shanghai' }
+    expect(visibleQs(a).filter((q) => !isAnswered(a, q)).some((q) => q.id === 'location')).toBe(false)
+  })
+  it('stored provinces are validated: only real-looking TH/CN ISO codes survive', async () => {
+    const { sanitizeState } = await import('./store')
+    const s = sanitizeState({ direction: 'TH_CN', originProvince: 'TH-20', destinationProvince: '<script>' })
+    expect(s.originProvince).toBe('TH-20'); expect(s.destinationProvince).toBeNull()
+    expect(sanitizeState({}).originProvince).toBeNull()
+  })
+})

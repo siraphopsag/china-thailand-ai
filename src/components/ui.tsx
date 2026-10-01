@@ -127,6 +127,15 @@ export function JourneyStrip({ active }: { active?: number }) {
     </section>
   )
 }
+/** "Thailand · Chon Buri → China · Shanghai" from the shared context (provinces only when chosen on the map). */
+export function useRouteText() {
+  const { t } = useI18n()
+  const { direction, originProvince, destinationProvince } = useStore()
+  if (!direction) return ''
+  const d = dirInfo(direction)
+  const part = (c: 'TH' | 'CN', p: string | null) => tk('country', c) + (p ? ' · ' + t(('prov.' + p) as never) : '')
+  return `${part(d.from, originProvince)} → ${part(d.to, destinationProvince)}`
+}
 /** Sub-pages of AI Analysis (ownership, employment) link back to the hub. */
 export function BackLink({ to, label }: { to: string; label: string }) {
   return <button className="text-sm text-primary font-medium inline-flex items-center gap-1 min-h-[36px]" onClick={() => go(to)}><Icon name="back" size={15} />{label}</button>
