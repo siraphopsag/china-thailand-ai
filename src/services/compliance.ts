@@ -14,6 +14,10 @@ import { messages, type MsgKey } from '../locales/index.js'
 const K = (s: string) => s as MsgKey
 const MSG_KEYS = messages as Record<string, unknown>
 
+/** Status the user records for a required document (files are never uploaded, so nothing here is "verified" by C.A.L.L.). */
+export type DocState = 'required' | 'have' | 'missing' | 'verified' | 'review'
+export const DOC_STATES: DocState[] = ['required', 'have', 'missing', 'verified', 'review']
+
 /* ---------- employee check input (stored in the Business Context) ---------- */
 export type Nat = '' | 'TH' | 'CN' | 'OTHER'
 export interface EmployeeCheck {
@@ -62,6 +66,7 @@ export function contextFrom(p: Profile | null, ec: EmployeeCheck = emptyEmployee
   if (p.forms.includes('hire') || p.forms.includes('send') || p.employees > 0 || p.crossBorderWorkers || ecStarted(ec)) flags.add('hire')
   if (p.crossBorderWorkers || p.forms.includes('send') || foreignEmployee) flags.add('foreign_worker')
   if (p.businessType === 'manufacturing') flags.add('manufacturing')
+  if (p.businessType === 'food') flags.add('food_service')
   const province = p.destProvince && p.destProvince.startsWith(country + '-') ? p.destProvince : null
   return { country, origin, province, flags }
 }
@@ -113,7 +118,7 @@ export interface RequirementView {
   responsible_authority: string
   authority_url?: string
   office: Office
-  required_documents: { id: string; name: string; purpose: string; issuer: string; submitTo: string }[]
+  required_documents: { id: string; name: string; purpose: string; issuer: string; submitTo: string; issued: boolean }[]
   procedure: string
   official_source: { id: string; title: string; url: string; isOfficialText: boolean }[]
   source_url?: string
@@ -138,10 +143,10 @@ export function viewRequirement(r: Requirement, province: string | null, lang: L
     required_documents: r.documents.map((d) => {
       const spec = documentOf(d)
       const submitTo = spec && (spec.issuer.startsWith('th-') || spec.issuer.startsWith('cn-')) ? resolveOffice(spec.issuer, province, lang).text : tr('nv.channelVerify', undefined, lang)
-      return { id: d, name: tr(K('kb.doc.' + d), undefined, lang), purpose: tr(K('kb.doc.' + d + '.p'), undefined, lang), issuer: spec ? issuerName(spec.issuer, lang) : '-', submitTo }
+      return { id: d, name: tr(K('kb.doc.' + d), undefined, lang), purpose: tr(K('kb.doc.' + d + '.p'), undefined, lang), issuer: spec ? issuerName(spec.issuer, lang) : '-', submitTo, issued: !!r.issues?.includes(d) }
     }),
     procedure: tr('nv.nextText', { authority: authName }, lang), // no step-by-step procedure is stated until a reviewer supplies one
-    official_source: r.sources.map((id) => { const e = getEntry(id); return { id, title: tr(K('reg.' + id + '.title'), undefined, lang) || e?.instrument || id, url: e?.textUrl ?? e?.agencyUrl ?? '', isOfficialText: !!e?.textUrl } }),
+    official_source: r.sources.map((id) => { const e = getEntry(id); return { id, title: ('reg.' + id + '.title' in MSG_KEYS ? tr(K('reg.' + id + '.title'), undefined, lang) : '') || e?.instrument || e?.originalTerm || id, url: e?.textUrl ?? e?.agencyUrl ?? '', isOfficialText: !!e?.textUrl } }),
     source_url: r.sources.map((id) => getEntry(id)?.textUrl ?? getEntry(id)?.agencyUrl).find(Boolean),
     effective_date: effective[0], last_verified: reviewed[reviewed.length - 1],
     status: requirementStatus(r, now), language: lang,
@@ -255,3 +260,86 @@ export function stages(p: Profile, reqs: Requirement[], missing: number, risks: 
 /** Every URL the knowledge base can show (used by tests: nothing outside the checked list). */
 export const kbUrls = () => [...new Set(AUTHORITIES.map((a) => a.url).filter((u): u is string => !!u))]
 export { DOCUMENTS }
+
+/* ---------- action plan: the main output (requirement → documents → authority → source → dependencies → status → next step) ---------- */
+export interface PlanItem {
+  id: string
+  requirementId: string
+  domain: Domain
+  /** position in the dependency order (1 = can start now) */
+  step: number
+  title: string
+  why: string
+  /** documents to bring (including results of earlier steps) */
+  documents: { id: string; name: string; status: DocState }[]
+  /** documents this step results in */
+  receives: { id: string; name: string; status: DocState }[]
+  authority: string
+  authorityUrl?: string
+  office: Office
+  sources: RequirementView['official_source']
+  sourceStatus: ReqStatus
+  dependsOn: { id: string; title: string; done: boolean }[]
+  status: StepStatus
+  next: string
+  optional: boolean
+}
+/** Dependency level of each requirement (only dependencies that are part of this case count). */
+export function orderRequirements(reqs: Requirement[]): Map<string, number> {
+  const ids = new Set(reqs.map((r) => r.id))
+  const level = new Map<string, number>()
+  const visit = (r: Requirement, seen: Set<string>): number => {
+    if (level.has(r.id)) return level.get(r.id)!
+    if (seen.has(r.id)) return 1 // a cycle in the data never hangs the app
+    seen.add(r.id)
+    const deps = (r.after ?? []).filter((d) => ids.has(d)).map((d) => visit(reqs.find((x) => x.id === d)!, seen))
+    const l = 1 + (deps.length ? Math.max(...deps) : 0)
+    level.set(r.id, l)
+    return l
+  }
+  for (const r of reqs) visit(r, new Set())
+  return level
+}
+const DONE: StepStatus[] = ['done']
+const HAVE: DocState[] = ['have', 'verified']
+export function buildPlan(p: Profile, ec: EmployeeCheck, statuses: Record<string, StepStatus>, docStatus: Record<string, DocState>, lang?: Lang, now = new Date()): PlanItem[] {
+  const ctx = contextFrom(p, ec)
+  const reqs = retrieveRequirements(ctx)
+  const level = orderRequirements(reqs)
+  const idOf = (r: string) => 'act-req-' + r
+  return reqs
+    .map((r) => {
+      const v = viewRequirement(r, ctx.province, lang ?? ('th' as Lang), now)
+      const status = statuses[idOf(r.id)] ?? 'todo'
+      const dependsOn = (r.after ?? []).filter((d) => reqs.some((x) => x.id === d)).map((d) => ({ id: d, title: tr(K('kb.r.' + d + '.t'), undefined, lang), done: DONE.includes(statuses[idOf(d)] ?? 'todo') }))
+      const doc = (d: string) => ({ id: d, name: tr(K('kb.doc.' + d), undefined, lang), status: docStatus[d] ?? 'required' })
+      // only documents the knowledge base lists for this step; results of earlier steps are not assumed to be needed
+      const documents = r.documents.filter((d) => !r.issues?.includes(d)).map(doc)
+      const receives = (r.issues ?? []).map(doc)
+      const open = documents.filter((d) => !HAVE.includes(d.status))
+      const waiting = dependsOn.find((d) => !d.done)
+      const next = status === 'done' ? tr('plan.next.done', undefined, lang)
+        : waiting ? tr('plan.next.wait', { req: waiting.title }, lang)
+        : open.length ? tr('plan.next.docs', { docs: open.map((d) => d.name).join(', ') }, lang)
+        : !v.office.resolved ? tr('plan.next.office', { authority: v.responsible_authority }, lang)
+        : v.procedure
+      return { id: idOf(r.id), requirementId: r.id, domain: r.domain, step: level.get(r.id) ?? 1, title: v.requirement, why: v.description, documents, receives, authority: v.responsible_authority, authorityUrl: v.authority_url,
+        office: v.office, sources: v.official_source, sourceStatus: v.status, dependsOn, status, next, optional: v.optional }
+    })
+    .sort((a, b) => a.step - b.step || Number(a.optional) - Number(b.optional) || DOMAINS.indexOf(a.domain) - DOMAINS.indexOf(b.domain))
+}
+/** Plan items as tasks for the shared task list (dashboard, risks & actions). */
+export const planActions = (items: PlanItem[]): ActionItem[] => items.map((i) => ({ id: i.id, riskId: 'req', riskLabel: tr(K('kb.d.' + i.domain)), title: i.title, owner: tr('kb.act.owner'), status: i.status }))
+
+/* ---------- what is still unknown, and why it matters ---------- */
+export type MissingId = 'province' | 'ownership' | 'employee' | 'activity'
+export interface Missing { id: MissingId; route?: string }
+export function missingInfo(p: Profile, ec: EmployeeCheck): Missing[] {
+  const ctx = contextFrom(p, ec)
+  const out: Missing[] = []
+  if (!ctx.province) out.push({ id: 'province' })
+  if (ctx.flags.has('foreign_worker') && !ecStarted(ec)) out.push({ id: 'employee', route: 'employee' })
+  if ((p.unknownFacts ?? []).length) out.push({ id: 'ownership', route: 'interview' })
+  if (!String(p.activity ?? '').trim()) out.push({ id: 'activity', route: 'interview' })
+  return out
+}

@@ -52,15 +52,15 @@ export function Dashboard() {
             <div className="h-2.5 bg-surface3 rounded-full mt-1.5 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={t('dash.progress')}><div className="h-2.5 bg-primary transition-all duration-700" style={{ width: pct + '%' }} /></div></div>}
         </section>
         <section className="lg:col-span-2 rounded-xl bg-primary text-onprimary p-5 flex flex-col gap-3 shadow-md" aria-labelledby="nxt-h">
-          <div id="nxt-h" className="text-xs font-semibold opacity-80 flex items-center gap-1.5"><Icon name="ai" size={15} />{t('dash.nextTitle')}</div>
+          <div id="nxt-h" className="text-xs font-semibold flex items-center gap-1.5"><Icon name="ai" size={15} />{t('dash.nextTitle')}</div>
           {!analysisDone ? <>
             <p className="text-lg font-semibold leading-snug flex-1">{t('journey.cta.3')}</p>
-            <p className="text-xs opacity-80">{t('journey.d.3')}</p>
+            <p className="text-xs">{t('journey.d.3')}</p>
             <button className="btn bg-surface text-ink hover:opacity-90" onClick={() => go('analysis')}><Go>{t('journey.cta.3')}</Go></button>
             {!!profile.unknownFacts?.length && <button className="text-sm underline underline-offset-2 text-left opacity-90" onClick={() => go('profile')}>{t('dash.answerFirst', { n: profile.unknownFacts.length })}</button>}
           </> : <>
             <p className="text-lg font-semibold leading-snug flex-1">{next ? next.title : t('dash.nextNone')}</p>
-            {next && <div className="text-xs opacity-80">{t('c.fromRisk')}: {next.riskLabel} · {t('c.owner')}: {next.owner}</div>}
+            {next && <div className="text-xs">{t('c.fromRisk')}: {next.riskLabel} · {t('c.owner')}: {next.owner}</div>}
             {next && <button className="btn bg-surface text-ink hover:opacity-90" onClick={() => go(riskRoute(next.riskId))}><Go>{t('dash.nextGo')}</Go></button>}
           </>}
         </section>
@@ -184,12 +184,12 @@ export function DocumentsPage() {
               return (
                 <div className="text-xs rounded-lg bg-surface2 border border-line px-2.5 py-2 space-y-1">
                   {rel.length ? <p className="flex flex-wrap items-center gap-1.5"><b>{t('docs.relRisk')}:</b> {rel[0]!.category} <StatusBadge level={rel[0]!.level} /></p> : <p className="text-muted">{t('docs.relNone')}</p>}
-                  {relActs.length > 0 && <p><b>{t('docs.relAction')}:</b> {open ? open.title : t('docs.relAllDone')}{open && <button className="text-primary underline ml-1.5" onClick={() => go('roadmap')}>{t('docs.relOpen')}</button>}</p>}
+                  {relActs.length > 0 && <p><b>{t('docs.relAction')}:</b> {open ? open.title : t('docs.relAllDone')}{open && <button className="text-primary underline ml-1.5 inline-flex items-center min-h-[24px]" onClick={() => go('roadmap')}>{t('docs.relOpen')}</button>}</p>}
                 </div>)
             })()}
             {gen && docStamp[x] !== undefined && docStamp[x] !== fp && <p className="text-xs text-warn-fg flex items-center gap-1.5"><Icon name="alert" size={14} />{t('docs.stale')}</p>}
             <div className="flex gap-1.5 items-center" role="group" aria-label={t('docs.langLabel')}>
-              {MULTI_LANG.includes(x) ? LANGS.map((l) => <button key={l.id} aria-pressed={langOf(x) === l.id} onClick={() => setGenLang({ ...genLang, [x]: l.id })} className={`px-2.5 py-1 rounded-md border text-xs min-h-[32px] transition ${langOf(x) === l.id ? 'bg-primary text-onprimary border-primary' : 'border-line hover:bg-surface3'}`}>{l.short}</button>) : <span className="chip bg-surface2 border-line text-muted">{LANGS.find((l) => l.id === (gen ? docLang[x] ?? lang : lang))!.short}</span>}
+              {MULTI_LANG.includes(x) ? LANGS.map((l) => <button key={l.id} aria-pressed={langOf(x) === l.id} onClick={() => setGenLang({ ...genLang, [x]: l.id })} className={`px-2.5 py-1 rounded-md border text-xs min-h-[32px] transition ${langOf(x) === l.id ? 'bg-primary text-onprimary border-primary' : 'border-control hover:bg-surface3'}`}>{l.short}</button>) : <span className="chip bg-surface2 border-control text-muted">{LANGS.find((l) => l.id === (gen ? docLang[x] ?? lang : lang))!.short}</span>}
             </div>
             {pc !== null && <div><div className="flex justify-between text-xs text-muted"><span>{t('docs.complete')}</span><span>{pc}%</span></div><div className="h-2 rounded bg-surface3 overflow-hidden"><div className="h-2 bg-primary transition-all duration-500" style={{ width: pc + '%' }} /></div></div>}
             <div className="flex flex-wrap gap-2 mt-auto pt-1">

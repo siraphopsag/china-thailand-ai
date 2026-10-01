@@ -19,7 +19,7 @@ export const SimTag = () => { const { t } = useI18n(); return <span title={t('si
 export const SampleTag = ({ text }: { text?: string }) => { const { t } = useI18n(); return <span className="inline-block text-[11px] bg-surface3 text-muted rounded px-1.5 py-0.5">{text ?? t('c.sample')}</span> }
 export const Disclaimer = () => { const { t } = useI18n(); return <p className="text-xs text-muted border-t border-line pt-3 mt-6">{t('c.disclaimer')}</p> }
 export const ExtLink = ({ href, children }: { href?: string; children: ReactNode }) => (
-  <a className="inline-flex items-center gap-1 text-primary underline underline-offset-2" href={href} target="_blank" rel="noopener noreferrer">{children}<Icon name="external" size={13} /></a>
+  <a className="inline-flex items-center gap-1 min-h-[24px] text-primary underline underline-offset-2" href={href} target="_blank" rel="noopener noreferrer">{children}<Icon name="external" size={13} /></a>
 )
 export const Go = ({ children }: { children: ReactNode }) => <>{children}<Icon name="next" size={16} /></>
 export const Ok = ({ children }: { children: ReactNode }) => <span className="inline-flex items-center gap-1.5"><Icon name="ok" size={16} />{children}</span>
@@ -116,7 +116,7 @@ export function JourneyStrip({ active }: { active?: number }) {
           return (
             <li key={s.id} className="min-w-0">
               <button onClick={() => go(s.route)} aria-current={on ? 'step' : undefined} aria-label={`${t('journey.step', { n: s.id })}: ${t(`journey.${s.id}` as never)}${ok ? ' — ' + tk('step', 'done') : ''}`}
-                className={`w-full h-full flex flex-col items-center sm:items-start gap-1.5 rounded-lg border px-1 sm:px-3 py-2 text-left transition hover:border-primary ${on ? 'border-primary bg-brand text-brandfg ring-2 ring-primary/30' : ok ? 'border-line bg-surface2' : 'border-line bg-surface text-muted'}`}>
+                className={`w-full h-full flex flex-col items-center sm:items-start gap-1.5 rounded-lg border px-1 sm:px-3 py-2 text-left transition hover:border-primary ${on ? 'border-primary bg-brand text-brandfg ring-2 ring-primary/30' : ok ? 'border-control bg-surface2' : 'border-control bg-surface text-muted'}`}>
                 <span className={`w-6 h-6 rounded-full grid place-items-center text-xs font-semibold shrink-0 ${ok ? 'bg-ok-fg text-surface' : on ? 'bg-primary text-onprimary' : 'bg-surface3 text-muted'}`}>{ok ? <Icon name="ok" size={14} /> : s.id}</span>
                 <span className="hidden sm:block text-sm font-medium leading-snug">{t(`journey.${s.id}` as never)}</span>
               </button>
@@ -228,8 +228,8 @@ export function SourceCard({ id }: { id: string }) {
     <div className="card-i text-sm space-y-1.5">
       <div className="flex flex-wrap gap-2 items-center justify-between"><b className="inline-flex items-center gap-2"><CountryBadge c={r.country} />{regText(id, 'auth')}</b><VerifyBadge v={r.verificationStatus} /></div>
       <div className="font-medium">{regText(id, 'title')}</div><p className="text-muted">{regText(id, 'rule')}</p>
-      {r.instrument && <p className="text-muted">{t('cite.instrument')}: <span lang={r.country === 'CN' ? 'zh' : 'th'}>{r.instrument}</span></p>}
-      {r.originalTerm && <p className="text-muted">{t('reg.originalTerm')}: <span lang="zh">{r.originalTerm}</span></p>}
+      {r.instrument && <p className="text-muted">{t('cite.instrument')}: <LangText text={r.instrument} /></p>}
+      {r.originalTerm && <p className="text-muted">{t('reg.originalTerm')}: <LangText text={r.originalTerm} /></p>}
       <div className="text-xs text-muted flex flex-wrap gap-x-4"><span>{t('cite.provisions')}: {r.provisions?.length ? r.provisions.join(', ') : t('cite.unspecified')}</span><span>{t('reg.effective')}: {dt(r.effectiveDate)}</span><span>{t('reg.lastVerified')}: {lastVerifiedText(r)}{r.reviewedBy ? ` · ${r.reviewedBy}` : ''}</span></div>
       {r.supersededBy && <Warn>{t('reg.outdated')}</Warn>}
       {r.trust !== 'VERIFIED' && r.trustReasons.length > 0 && <p className="text-xs text-warn-fg"><b>{t('cite.whyNot')}:</b> {reason(r.trustReasons)}</p>}
@@ -237,6 +237,25 @@ export function SourceCard({ id }: { id: string }) {
     </div>
   )
 }
+
+/* ---------- language of parts (WCAG 3.1.2) ---------- */
+const RUNS = /([\u3400-\u9FFF\uF900-\uFAFF]+(?:[\s\u3000-\u303F\uFF00-\uFFEF·]*[\u3400-\u9FFF\uF900-\uFAFF]+)*)|([\u0E00-\u0E7F]+(?:\s+[\u0E00-\u0E7F]+)*)/g
+/** Splits a string into runs and marks Chinese or Thai runs that differ from the page language, so screen readers switch voice. */
+export function langRuns(text: string, pageLang: string): ReactNode {
+  const out: ReactNode[] = []
+  let last = 0
+  for (const m of text.matchAll(RUNS)) {
+    const l = m[1] ? 'zh' : 'th'
+    if (l === pageLang) continue
+    if (m.index! > last) out.push(text.slice(last, m.index))
+    out.push(<span key={m.index} lang={l === 'zh' ? 'zh-CN' : 'th'}>{m[0]}</span>)
+    last = m.index! + m[0].length
+  }
+  if (!out.length) return text
+  if (last < text.length) out.push(text.slice(last))
+  return <>{out}</>
+}
+export function LangText({ text }: { text: string }) { const { lang } = useI18n(); return <>{langRuns(text, lang)}</> }
 
 /* ---------- risk: found → why it matters → (details) verify → next action ---------- */
 export function RiskCard({ r, actions, onAction, compact, detail }: { r: RiskCardData; actions?: ActionItem[]; onAction?: (id: string, s: StepStatus) => void; compact?: boolean; detail?: string }) {
@@ -253,11 +272,11 @@ export function RiskCard({ r, actions, onAction, compact, detail }: { r: RiskCar
         {sec(t('find.unknown'), list(r.unknown, t('find.unknownNone')))}
         {sec(t('find.verify'), list(r.check, '-'))}
         {sec(t('find.next'), <p className="font-medium">{r.next}</p>)}
-        {!!r.requirementIds?.length && sec(t('kb.risk.req'), list(r.requirementIds.map((id) => tk('kb.r', id + '.t')), '-'))}
+        {!!r.requirementIds?.length && sec(t('kb.risk.req'), <ul className="list-disc ml-5 space-y-0.5">{r.requirementIds.map((id) => <li key={id}><LangText text={tk('kb.r', id + '.t')} /></li>)}</ul>)}
         {!!r.authorityIds?.length && sec(t('kb.risk.auth'), <p>{r.authorityIds.map((id) => tk('kb.a', id)).join(' · ')}</p>)}
-        {!!r.evidence?.length && sec(t('kb.risk.evidence'), <p>{r.evidence.map((id) => tk('kb.doc', id)).join(' · ')}</p>)}
+        {!!r.evidence?.length && sec(t('kb.risk.evidence'), <p><LangText text={r.evidence.map((id) => tk('kb.doc', id)).join(' · ')} /></p>)}
         {!!r.requirementIds?.length && <button className="text-sm text-primary font-medium inline-flex items-center gap-1 min-h-[36px]" onClick={() => go(r.id === 'employee' ? 'employee' : 'navigator')}>{r.id === 'employee' ? t('nav.employeeCheck') : t('kb.toNavigator')}<Icon name="next" size={14} /></button>}
-        <div className="text-xs text-muted flex flex-wrap items-center gap-x-2 gap-y-1"><span>{t('risk.sources')}:</span>{r.sourceIds.length ? r.sourceIds.map((s) => { const g = getReg(s); return g ? <ExtLink key={s} href={g.sourceUrl}>{regText(s, 'auth')}</ExtLink> : null }) : <span>{t('risk.noLaw')}</span>}<SampleTag /></div>
+        <div className="text-xs text-muted flex flex-wrap items-center gap-x-3 gap-y-2"><span>{t('risk.sources')}:</span>{r.sourceIds.length ? r.sourceIds.map((s) => { const g = getReg(s); return g ? <ExtLink key={s} href={g.sourceUrl}>{regText(s, 'auth')}</ExtLink> : null }) : <span>{t('risk.noLaw')}</span>}<SampleTag /></div>
         {(r.id === 'nominee' || r.id === 'ownership') && <p className="text-xs text-muted">{t('find.caution')}</p>}
       </>}
       {actions && actions.length > 0 && open && (
@@ -329,15 +348,15 @@ export function ControlBars({ p }: { p: Profile }) {
   return (
     <div>
       <div className="text-center font-semibold text-ink mb-3">{t('own.neq')}</div>
-      <div className="flex flex-wrap gap-4 text-xs text-muted mb-3"><span><i className="inline-block w-3 h-3 rounded-sm bg-primary align-middle mr-1" />{holderName(a)}</span><span><i className="inline-block w-3 h-3 rounded-sm bg-info-fg align-middle mr-1" />{holderName(b)}</span></div>
+      <div className="flex flex-wrap gap-4 text-xs text-muted mb-3"><span><i className="inline-block w-3 h-3 rounded-sm bg-primary align-middle mr-1" />{holderName(a)}</span><span><i className="inline-block w-3 h-3 rounded-sm bg-info-fg align-middle mr-1 bar-hatch" />{holderName(b)}</span></div>
       <ul className="space-y-3">
         {rows.map((r) => (
           <li key={r.key}>
             <div className="flex justify-between gap-2 text-sm"><span className="font-medium">{tk('row', r.key)}</span>{r.mismatch && <span className="text-review-fg font-semibold inline-flex items-center gap-1"><Icon name="warn" size={14} />{t('own.mismatch')}</span>}{r.origin !== null && r.partner !== null && r.origin + r.partner !== 100 && <span className="text-danger-fg text-xs font-semibold">{t('own.sumWarn')}</span>}</div>
             {r.origin === null || r.partner === null ? <div className="h-5 rounded bg-surface3 text-xs text-muted grid place-items-center">{t('own.unknownVal')}</div> : (
-              <div className={`flex h-6 rounded-md overflow-hidden text-xs font-semibold ${r.mismatch ? 'ring-2 ring-review-fg' : ''}`} role="img" aria-label={`${r.origin}% / ${r.partner}%`}>
+              <div className={`flex h-6 rounded-md overflow-hidden text-xs font-semibold ${r.mismatch ? 'ring-2 ring-review-fg' : ''}`} role="img" aria-label={`${tk('row', r.key)}: ${holderName(a)} ${r.origin}%, ${holderName(b)} ${r.partner}%`}>
                 <div className="bg-primary grid place-items-center text-onprimary transition-all duration-500" style={{ width: r.origin + '%' }}>{r.origin >= 12 ? r.origin + '%' : ''}</div>
-                <div className="bg-info-fg grid place-items-center text-surface transition-all duration-500" style={{ width: r.partner + '%' }}>{r.partner >= 12 ? r.partner + '%' : ''}</div>
+                <div className="bg-info-fg bar-hatch grid place-items-center text-surface transition-all duration-500" style={{ width: r.partner + '%' }}>{r.partner >= 12 ? r.partner + '%' : ''}</div>
               </div>)}
           </li>
         ))}

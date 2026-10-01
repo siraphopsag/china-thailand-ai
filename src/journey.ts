@@ -6,7 +6,7 @@ export const JOURNEY = [
   { id: 2, route: 'profile' },
   { id: 3, route: 'analysis' },
   { id: 4, route: 'analysis' },
-  { id: 5, route: 'roadmap' },
+  { id: 5, route: 'plan' },
 ] as const
 
 export interface JourneyFacts {

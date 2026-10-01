@@ -11,7 +11,8 @@ import { provinces } from './provinces.js'
 import { value } from './value.js'
 import { brand } from './brand.js'
 import { kb } from './kb.js'
+import { plan } from './plan.js'
 
 /** Every message is [th, zh, en]. Later spreads override earlier keys (ux.ts = simplified copy). */
-export const messages = { ...common, ...intake, ...engine, ...data, ...pages, ...ux, ...legal, ...journey, ...geo, ...provinces, ...value, ...brand, ...kb }
+export const messages = { ...common, ...intake, ...engine, ...data, ...pages, ...ux, ...legal, ...journey, ...geo, ...provinces, ...value, ...brand, ...kb, ...plan }
 export type MsgKey = keyof typeof messages

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useActions } from '../hooks'
 import type { Direction, EmploymentInput, Profile } from '../types'
 import { go, useStore } from '../store'
 import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead, useRouteText } from '../components/ui'
@@ -33,9 +34,59 @@ function HeroPreview() {
     </div>
   )
 }
+type GoalCard = 'th_cn' | 'cn_th' | 'employee' | 'documents'
+/** Goal-first entry: each option says in plain words what C.A.L.L. will help with and what you get. */
+function Goals() {
+  const { t } = useI18n()
+  const { chooseDirection, beginNew, startDemo } = useStore()
+  const [open, setOpen] = useState<GoalCard | null>(null)
+  const start = (d: Direction, goal: 'expand' | 'employee' | 'documents') => { chooseDirection(d, { goal }) }
+  const pick = (g: GoalCard) => (g === 'th_cn' ? start('TH_CN', 'expand') : g === 'cn_th' ? start('CN_TH', 'expand') : setOpen(open === g ? null : g))
+  const cards: [GoalCard, 'expand' | 'employee' | 'documents', 'globe' | 'employment' | 'documents'][] = [['th_cn', 'expand', 'globe'], ['cn_th', 'expand', 'globe'], ['employee', 'employee', 'employment'], ['documents', 'documents', 'documents']]
+  return (
+    <section id="goals" aria-labelledby="goals-h" className="space-y-4 scroll-mt-24">
+      <div><h2 id="goals-h" className="text-2xl font-bold">{t('goal.title')}</h2><p className="text-muted mt-1">{t('goal.sub')}</p></div>
+      <ul className="grid sm:grid-cols-2 gap-3">{cards.map(([g, kind, icon]) => (
+        <li key={g} className="card !p-4 flex flex-col gap-2">
+          <button className="text-left flex gap-3 items-start group" aria-expanded={g === 'employee' || g === 'documents' ? open === g : undefined} onClick={() => pick(g)}>
+            <span className="w-10 h-10 shrink-0 rounded-xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={20} /></span>
+            <span className="min-w-0"><span className="font-semibold text-lg group-hover:underline underline-offset-4 flex items-center gap-1.5">{t(`goal.${g}.t` as never)}<Icon name="next" size={16} className="text-primary" /></span>
+              <span className="block text-sm text-muted">{t(`goal.${g}.d` as never)}</span>
+              <span className="block text-xs mt-1.5"><b>{t('goal.get')}:</b> {t(`goal.get.${kind}` as never)}</span></span>
+          </button>
+          {open === g && (
+            <div className="border-t border-line pt-2 space-y-2">
+              <p className="text-sm font-medium">{g === 'employee' ? t('goal.where') : t('goal.dir')}</p>
+              <div className="flex flex-wrap gap-2">{g === 'employee'
+                ? (['TH', 'CN'] as const).map((c) => <button key={c} className="btn-ghost text-sm" onClick={() => start(c === 'CN' ? 'TH_CN' : 'CN_TH', 'employee')}><CountryBadge c={c} />{t('goal.in', { c: tk('country', c) })}</button>)
+                : (['TH_CN', 'CN_TH'] as Direction[]).map((d) => { const i = dirInfo(d); return <button key={d} className="btn-ghost text-sm" onClick={() => start(d, 'documents')}><CountryBadge c={i.from} />{tk('country', i.from)} → <CountryBadge c={i.to} />{tk('country', i.to)}</button> })}</div>
+            </div>)}
+        </li>))}</ul>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+        <button className="btn-ghost text-sm" onClick={() => { startDemo(); go('plan') }}><Icon name="ai" size={16} />{t('goal.example')}</button>
+        <button className="text-primary underline underline-offset-2 inline-flex items-center min-h-[24px]" onClick={beginNew}>{t('goal.mapAlt')}</button>
+      </div>
+      <p className="text-xs text-muted">{t('goal.soon')}</p>
+    </section>
+  )
+}
+/** A returning user sees their case first. */
+function ContinueCase() {
+  const { t } = useI18n()
+  const { profile, mode } = useStore()
+  const actions = useActions()
+  const route = useRouteText()
+  if (!profile || mode === 'demo') return null
+  return (
+    <section className="card flex flex-wrap items-center gap-3 border-primary/40" aria-labelledby="cont-h">
+      <div className="min-w-0 flex-1 basis-64"><h2 id="cont-h" className="h2">{t('goal.continue.t')}</h2>
+        <p className="text-sm text-muted">{t('goal.continue.d', { name: dv(profile.companyName) || '-', route, done: actions.filter((a) => a.status === 'done').length, total: actions.length })}</p></div>
+      <button className="btn-primary" onClick={() => go('plan')}><Go>{t('goal.continue.go')}</Go></button>
+    </section>
+  )
+}
 export function Landing() {
   const { t } = useI18n()
-  const { startDemo, beginNew } = useStore()
   return (
     <div className="space-y-12 max-w-5xl mx-auto">
       <section className="hero-shell relative overflow-hidden rounded-3xl border border-line px-5 pt-14 pb-10 sm:px-10 md:pt-20 md:pb-14 text-center" aria-labelledby="hero-h">
@@ -45,15 +96,16 @@ export function Landing() {
           <h1 id="hero-h" className="mt-6 text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.15] text-ink">
             <span className="block">{t('hero.h1a')}</span><span className="block text-gradient pb-1">{t('hero.h1b')}</span>
           </h1>
-          <p className="mt-5 text-base sm:text-lg text-muted max-w-2xl mx-auto">{t('land.pos')}</p>
+          <p className="mt-5 text-base sm:text-lg text-ink max-w-2xl mx-auto font-medium">{t('land.value')}</p>
+          <p className="mt-2 text-sm text-muted max-w-2xl mx-auto">{t('land.pos')}</p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-x-5 gap-y-3">
-            <span className="cta-ring"><button className="cta-core text-base" onClick={beginNew}>{t('hero.cta')}<Icon name="next" size={18} /></button></span>
-            <button className="text-sm font-medium text-muted hover:text-ink underline underline-offset-4 py-2" onClick={() => { startDemo(); go('profile') }}>{t('land.demoLink')}</button>
+            <span className="cta-ring"><a href="#goals" className="cta-core text-base" onClick={(e) => { e.preventDefault(); const g = document.getElementById('goals'); g?.scrollIntoView({ behavior: 'smooth' }); g?.querySelector('button')?.focus({ preventScroll: true }) }}>{t('hero.cta')}<Icon name="down" size={18} /></a></span>
           </div>
-          <p className="text-xs text-muted mt-3">{t('land.goNote')}</p>
         </div>
-        <div className="relative max-w-2xl mx-auto mt-12"><HeroPreview /></div>
       </section>
+      <ContinueCase />
+      <Goals />
+      <div className="max-w-2xl mx-auto"><HeroPreview /></div>
       <section aria-labelledby="stands-h" className="space-y-3">
         <h2 id="stands-h" className="h2">{t('brand.stands')}</h2>
         <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">{BRAND_CONCEPTS.map((c, i) => (
@@ -93,7 +145,7 @@ const emptyFor = (q: Q) => (q.type === 'multi' ? [] : '')
 
 export function InterviewPage() {
   const { t } = useI18n()
-  const { direction, profile, answers, employment, set, log, startDemo, originProvince, destinationProvince } = useStore()
+  const { direction, profile, answers, employment, set, log, startDemo, originProvince, destinationProvince, goal } = useStore()
   const route = useRouteText()
   const d: Direction = direction ?? 'TH_CN'
   const info = dirInfo(d)
@@ -121,7 +173,7 @@ export function InterviewPage() {
     const seed: EmploymentInput = { mode, nationality: next.empNat ? `@opt.empNat.${next.empNat}` : '', location: merged.location, duration: next.empDuration ? `@opt.empDuration.${next.empDuration}` : '', salary: String(next.empSalary ?? ''), hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' }
     const emp = prev ? (Object.fromEntries(Object.keys(seed).map((k) => [k, (employment as unknown as Record<string, string>)[k] || (seed as unknown as Record<string, string>)[k]])) as unknown as EmploymentInput) : seed
     set({ profile: merged, answers: next, employment: emp, analysisDone: false, tour: null, ...(prev ? {} : { stepOverrides: {}, actionStatus: {}, actionSnap: {}, docs: {}, docStamp: {} }) })
-    log(prev ? 'hist.profileUpdate' : 'hist.profile'); go('dashboard')
+    log(prev ? 'hist.profileUpdate' : 'hist.profile'); go(goal === 'documents' ? 'navigator' : 'plan')
   }
   const submit = () => {
     let v = val
@@ -141,11 +193,17 @@ export function InterviewPage() {
     if (nextIdx >= nv.length || justFinishedQuickStart) return finalize(next)
     setIdx(nextIdx); setVal((next[nv[nextIdx].id] as string | string[] | undefined) ?? emptyFor(nv[nextIdx]))
   }
+  /** Non-essential questions can be skipped: nothing is stored, the plan lists them under "still missing". */
+  const skip = () => {
+    const nextIdx = idx + 1
+    if (nextIdx >= visible.length) return finalize(answers)
+    setIdx(nextIdx); setVal((answers[visible[nextIdx].id] as string | string[] | undefined) ?? emptyFor(visible[nextIdx])); setErr('')
+  }
   const back = () => { if (idx > 0) { setIdx(idx - 1); const pq = visible[idx - 1]; setVal((answers[pq.id] as string | string[]) ?? emptyFor(pq)); setErr('') } }
   const shown = (x: Q) => { const a = answers[x.id]; return Array.isArray(a) ? a.map((o) => label(x, o)).join(', ') : x.type === 'choice' ? label(x, String(a)) : String(a ?? '') + (x.type === 'pct' ? '%' : '') }
   return (
     <div className="max-w-2xl mx-auto">
-      <PageHead title={t('intv.title')} sub={t('intv.sub', { dir: route || tk('dir', d) })}><button className="btn-ghost" onClick={() => { startDemo(); go('profile') }}>{t('intv.useDemo')}</button></PageHead>
+      <PageHead title={t('intv.title')} sub={t('intv.sub', { dir: route || tk('dir', d) })}><button className="btn-ghost" onClick={() => { startDemo(); go('plan') }}>{t('intv.useDemo')}</button></PageHead>
       <div className="mb-4" aria-live="polite">
         {!core ? <><p className="text-sm font-medium">{t('intv.quickProg', { n: Math.min(idx + 1, coreTotal), total: coreTotal })}</p>
           <div className="h-1.5 rounded bg-surface3 mt-1.5 overflow-hidden"><div className="h-1.5 bg-primary transition-all duration-500" style={{ width: `${(Math.min(idx, coreTotal) / coreTotal) * 100}%` }} /></div>
@@ -158,14 +216,16 @@ export function InterviewPage() {
           <div className="text-xs text-primary mb-1">{tk('cat', String(q.cat))}</div>
           <label className="text-lg font-semibold flex gap-2 items-start" htmlFor="ans" id="q-label"><Icon name="ai" size={20} className="mt-1 text-primary" />{qText(q)}</label>
           {q.help && <p className="text-sm text-muted mt-1">{t(`q.${q.id}.h` as never)}</p>}
+          <p className="text-xs text-muted mt-1.5 flex gap-1.5 items-start"><Icon name="info" size={14} className="mt-0.5 shrink-0" /><span><b>{t('intv.why')}:</b> {t(`q.${q.id}.why` as never)}</span></p>
           <div className="mt-3">
             {(q.type === 'choice' || q.type === 'multi') && <div className="grid sm:grid-cols-2 gap-2" role={q.type === 'choice' ? 'radiogroup' : 'group'} aria-labelledby="q-label">{q.opts!.map((o) => { const sel = q.type === 'multi' ? (val as string[]).includes(o) : val === o; return (
-              <button type="button" key={o} aria-pressed={sel} onClick={() => { setErr(''); setVal((prev) => (q.type === 'multi' ? ((prev as string[]).includes(o) ? (prev as string[]).filter((x) => x !== o) : [...(prev as string[]), o]) : o)) }} className={`text-left px-4 py-3 rounded-lg border min-h-[44px] transition ${sel ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line hover:bg-surface3'}`}><span className="flex items-center gap-2.5"><Icon name={q.type === 'multi' ? (sel ? 'squareCheck' : 'square') : sel ? 'circleDot' : 'circle'} className={sel ? 'text-primary' : 'text-muted'} />{label(q, o)}</span></button>) })}</div>}
+              <button type="button" key={o} aria-pressed={sel} onClick={() => { setErr(''); setVal((prev) => (q.type === 'multi' ? ((prev as string[]).includes(o) ? (prev as string[]).filter((x) => x !== o) : [...(prev as string[]), o]) : o)) }} className={`text-left px-4 py-3 rounded-lg border min-h-[44px] transition ${sel ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}><span className="flex items-center gap-2.5"><Icon name={q.type === 'multi' ? (sel ? 'squareCheck' : 'square') : sel ? 'circleDot' : 'circle'} className={sel ? 'text-primary' : 'text-muted'} />{label(q, o)}</span></button>) })}</div>}
             {q.type === 'text' && <input id="ans" className="input" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
             {(q.type === 'number' || q.type === 'pct') && <input id="ans" type="number" inputMode="numeric" className="input max-w-[180px]" value={val as string} onChange={(e) => { setVal(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />}
           </div>
           {err && <p role="alert" className="text-danger-fg text-sm mt-2">{err}</p>}
-          <div className="flex flex-wrap gap-2 mt-4"><button className="btn-ghost" onClick={back} disabled={idx === 0}><Icon name="back" size={16} />{t('c.back')}</button><button className="btn-primary" onClick={submit}>{idx + 1 >= visible.length || (!profile && coreDone({ ...answers, [q.id]: val }) && !core) ? t('intv.submit') : t('c.next')}<Icon name="next" size={16} /></button></div>
+          {!q.core && <p className="text-xs text-muted mt-3">{t('intv.skipNote')}</p>}
+          <div className="flex flex-wrap gap-2 mt-4">{!q.core && <button className="btn-ghost" onClick={skip}>{t('intv.skip')}</button>}<button className="btn-ghost" onClick={back} disabled={idx === 0}><Icon name="back" size={16} />{t('c.back')}</button><button className="btn-primary" onClick={submit}>{idx + 1 >= visible.length || (!profile && coreDone({ ...answers, [q.id]: val }) && !core) ? t('intv.submit') : t('c.next')}<Icon name="next" size={16} /></button></div>
         </div>
         {core && <div className="flex flex-wrap items-center gap-3"><button className="btn-ghost" onClick={() => finalize(answers)}><Go>{t('intv.finish')}</Go></button><span className="text-xs text-muted">{t('intv.finishNote')}</span></div>}
       </section>

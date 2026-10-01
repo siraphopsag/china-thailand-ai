@@ -113,8 +113,8 @@ export function OwnershipPage() {
       <GuideStrip page="ownership" nextRoute="employment" />
       {/* what the AI found · what it means · what to do next */}
       <section className={`rounded-xl border-2 p-5 space-y-4 ${levelPanel[r.level]}`} aria-label={t('lvl1.found')}>
-        <div><div className="text-xs font-semibold text-muted mb-1">{t('lvl1.found')}</div>
-          <div className="flex flex-wrap items-center gap-3"><StatusBadge level={r.level} /><h2 className="text-lg font-semibold">{r.headline}</h2></div></div>
+        <div><h2 className="text-xs font-semibold text-muted mb-1">{t('lvl1.found')}</h2>
+          <div className="flex flex-wrap items-center gap-3"><StatusBadge level={r.level} /><p className="text-lg font-semibold">{r.headline}</p></div></div>
         <div><div className="text-xs font-semibold text-muted mb-1">{t('lvl2.means')}</div><p className="text-sm">{means}</p></div>
         <div><div className="text-xs font-semibold text-muted mb-1">{t('lvl3.next')}</div>
           <ol className="list-decimal ml-5 text-sm space-y-0.5">{r.next.map((n) => <li key={n}>{n}</li>)}</ol></div>
@@ -134,7 +134,7 @@ export function OwnershipPage() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2">{CATS.map((c) => {
           const n = count(c); const flagged = n > 0
           return (
-            <button key={c} onClick={() => setOpenCat(openCat === c ? null : c)} aria-pressed={openCat === c} className={`rounded-xl border p-3 text-left transition active:scale-[.98] ${openCat === c ? 'ring-2 ring-primary' : ''} ${flagged ? 'border-warn-line bg-warn-bg' : 'border-line bg-surface hover:bg-surface3'}`}>
+            <button key={c} onClick={() => setOpenCat(openCat === c ? null : c)} aria-pressed={openCat === c} className={`rounded-xl border p-3 text-left transition active:scale-[.98] ${openCat === c ? 'ring-2 ring-primary' : ''} ${flagged ? 'border-warn-line bg-warn-bg' : 'border-control bg-surface hover:bg-surface3'}`}>
               <Icon name={CAT_ICON[c]} size={20} className={flagged ? 'text-warn-fg' : 'text-primary'} /><div className="font-semibold text-sm mt-1.5">{tk('nom.cat', c)}</div>
               <div className={`text-xs mt-1 ${flagged ? 'text-warn-fg font-semibold' : 'text-muted'}`}>{!comp ? t('nom.tile.na') : flagged ? t('nom.tile.flag', { n }) : t('nom.tile.ok')}</div>
             </button>)

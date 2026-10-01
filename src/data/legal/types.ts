@@ -4,7 +4,7 @@ export type Trust = 'VERIFIED' | 'UNVERIFIED' | 'STALE' | 'CHANGED' | 'NO_RECORD
 export type ReasonCode =
   | 'no-review' | 'bad-review' | 'no-text-url' | 'no-source-hash' | 'summary-edited' | 'source-changed' | 'review-old' | 'monitor-stale' | 'gap' | 'no-entry'
 
-export type Area = 'investment' | 'employment' | 'immigration' | 'tax' | 'customs'
+export type Area = 'investment' | 'employment' | 'immigration' | 'tax' | 'customs' | 'licensing'
 
 /** One known legal topic/instrument. Display text (authority/topic/title/rule in TH/ZH/EN) lives in locales (reg.<id>.*). */
 export interface LegalEntry {

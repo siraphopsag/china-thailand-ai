@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { go, useStore } from '../store'
-import { BackLink, Disclaimer, EmptyState, ExtLink, Go, PageHead, Warn } from '../components/ui'
+import { BackLink, Disclaimer, EmptyState, ExtLink, Go, LangText, PageHead, Warn } from '../components/ui'
 import { Icon } from '../components/icons'
 import { useRouteText } from '../components/ui'
 import { DOMAINS, authorityOf } from '../data/legal/kb'
@@ -29,26 +29,27 @@ function RequirementCard({ v }: { v: RequirementView }) {
   return (
     <article className="card space-y-3 !p-4" aria-label={v.requirement}>
       <div className="flex flex-wrap justify-between gap-2 items-start">
-        <h3 className="font-semibold min-w-0">{v.requirement}{v.optional && <span className="ml-2 chip bg-surface3 text-muted border-line">{t('nv.optional')}</span>}</h3>
+        <h3 className="font-semibold min-w-0"><LangText text={v.requirement} />{v.optional && <span className="ml-2 chip bg-surface3 text-muted border-line">{t('nv.optional')}</span>}</h3>
         <ReqBadge s={v.status} />
       </div>
-      {row(t('nv.what'), <p>{v.description}</p>)}
+      {row(t('nv.what'), <p><LangText text={v.description} /></p>)}
       <div className="grid sm:grid-cols-2 gap-3">
         {row(t('nv.authority'), <p className="flex flex-wrap items-center gap-x-2">{v.responsible_authority}{v.authority_url && <ExtLink href={v.authority_url}>{t('nv.site')}</ExtLink>}</p>)}
         {row(t('nv.office'), <p className={v.office.resolved ? '' : 'text-warn-fg font-medium'}>{v.office.text}{v.office.local && <span className="block text-xs text-muted">{t('kb.office.verifyArea')}</span>}</p>)}
         {row(t('nv.channel'), <p className="text-warn-fg">{t('nv.channelVerify')}</p>)}
       </div>
-      {row(t('nv.docs'), v.required_documents.length ? (
-        <ul className="space-y-2">{v.required_documents.map((d) => (
-          <li key={d.id} className="card-i !p-2.5"><div className="font-medium">{d.name}</div>
-            <dl className="grid sm:grid-cols-3 gap-x-3 text-xs mt-1"><div><dt className="text-muted">{t('nv.doc.why')}</dt><dd>{d.purpose}</dd></div><div><dt className="text-muted">{t('nv.doc.issuer')}</dt><dd>{d.issuer}</dd></div><div><dt className="text-muted">{t('nv.doc.submit')}</dt><dd>{d.submitTo}</dd></div></dl></li>))}
+      {v.required_documents.some((d) => d.issued) && row(t('nv.receives'), <p><LangText text={v.required_documents.filter((d) => d.issued).map((d) => d.name + ' — ' + d.issuer).join(' · ')} /></p>)}
+      {row(t('nv.docs'), v.required_documents.some((d) => !d.issued) ? (
+        <ul className="space-y-2">{v.required_documents.filter((d) => !d.issued).map((d) => (
+          <li key={d.id} className="card-i !p-2.5"><div className="font-medium"><LangText text={d.name} /></div>
+            <dl className="grid sm:grid-cols-3 gap-x-3 text-xs mt-1"><div><dt className="text-muted">{t('nv.doc.why')}</dt><dd>{d.purpose}</dd></div><div><dt className="text-muted">{t('nv.doc.issuer')}</dt><dd><LangText text={d.issuer} /></dd></div><div><dt className="text-muted">{t('nv.doc.submit')}</dt><dd><LangText text={d.submitTo} /></dd></div></dl></li>))}
           <li className="text-xs text-muted">{t('nv.doc.more')}</li></ul>
       ) : <p className="text-muted">{t('nv.docsNone')}</p>)}
-      {v.required_documents.length > 0 && row(t('nv.prepare'), <p>{v.required_documents.map((d) => d.name).join(' · ')}</p>)}
+      {v.required_documents.some((d) => !d.issued) && row(t('nv.prepare'), <p><LangText text={v.required_documents.filter((d) => !d.issued).map((d) => d.name).join(' · ')} /></p>)}
       {row(t('nv.next'), <p className="font-medium">{v.procedure}</p>)}
-      <div className="text-xs text-muted flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-2">
+      <div className="text-xs text-muted flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-2">
         <span>{t('nv.source')}:</span>
-        {v.official_source.length ? v.official_source.map((s) => <ExtLink key={s.id} href={s.url}>{s.title}</ExtLink>) : <span className="text-warn-fg">{t('nv.noSource')}</span>}
+        {v.official_source.length ? v.official_source.map((s) => <ExtLink key={s.id} href={s.url}><LangText text={s.title} /></ExtLink>) : <span className="text-warn-fg">{t('nv.noSource')}</span>}
         <span>· {t('nv.lastVerified')}: {v.last_verified ?? t('nv.never')}</span>
         {v.effective_date && <span>· {t('nv.effective')}: {v.effective_date}</span>}
       </div>
@@ -122,7 +123,7 @@ export function EmployeeCheckPage() {
         </div>
         <fieldset><legend className="label">{t('ec.f.docs')}</legend>
           <div className="flex flex-wrap gap-2">{EC_OPTIONS.docs.map((d) => { const on = e.docs.includes(d); return (
-            <label key={d} className={`flex items-center gap-2 rounded-lg border px-3 py-2 min-h-[44px] cursor-pointer ${on ? 'border-primary bg-brand text-brandfg' : 'border-line'}`}>
+            <label key={d} className={`flex items-center gap-2 rounded-lg border px-3 py-2 min-h-[44px] cursor-pointer ${on ? 'border-primary bg-brand text-brandfg' : 'border-control'}`}>
               <input type="checkbox" checked={on} onChange={() => up({ docs: on ? e.docs.filter((x) => x !== d) : [...e.docs, d] })} />{tk('ec.o.doc', d)}</label>) })}</div></fieldset>
       </div>
       {items.length > 0 && <section className="space-y-3" aria-label={t('ec.result')}>
@@ -132,7 +133,7 @@ export function EmployeeCheckPage() {
             <div className="flex flex-wrap justify-between gap-2 items-center"><b>{t(K('ec.i.' + i.id + '.t'))}</b><span className={`chip font-medium ${ecChip[i.status]}`}>{tk('ec.s', i.status)}</span></div>
             <p className="text-sm text-muted">{i.note ? t(i.note) : t(K('ec.m.' + i.status))}</p>
             {i.status !== 'NOT_APPLICABLE' && <>
-              {i.evidence.length > 0 && <p className="text-xs"><b>{t('ec.evidence')}:</b> {i.evidence.map((d) => tk('kb.doc', d)).join(' · ')}</p>}
+              {i.evidence.length > 0 && <p className="text-xs"><b>{t('ec.evidence')}:</b> <LangText text={i.evidence.map((d) => tk('kb.doc', d)).join(' · ')} /></p>}
               <p className="text-xs flex flex-wrap gap-x-2 items-center"><b>{t('ec.verifyWith')}:</b>{i.authorityIds.map((a) => { const au = authorityOf(a); return <span key={a}>{tk('kb.a', a)}{au?.url && <> <ExtLink href={au.url}>{t('nv.site')}</ExtLink></>}</span> })}</p>
               {i.status !== 'VERIFIED' && <p className="text-sm"><b>{t('ec.next')}:</b> {t(K('ec.i.' + i.id + '.next'))}</p>}
             </>}

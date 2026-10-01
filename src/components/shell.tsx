@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { LANGS, dv, tk, useI18n } from '../i18n'
 import { useTheme } from '../theme'
-import { go, useStore } from '../store'
+import { go, NavLink, useStore } from '../store'
 import { dirInfo } from '../utils/labels'
 import { tourRoutes } from '../data/culture'
 import { SampleTag } from './ui'
@@ -14,7 +14,7 @@ export const PRIMARY: NavItem[] = [
   { route: 'dashboard', key: 'nav.overview', icon: 'overview', sub: [] },
   { route: 'profile', key: 'nav.business', icon: 'business', sub: ['start', 'direction', 'interview'] },
   { route: 'analysis', key: 'nav.analysisHub', icon: 'ai', sub: ['ownership', 'nominee', 'employment', 'contract', 'navigator', 'employee'] },
-  { route: 'roadmap', key: 'nav.plan', icon: 'plan', sub: ['risk'] },
+  { route: 'plan', key: 'nav.plan', icon: 'plan', sub: ['roadmap', 'risk'] },
   { route: 'documents', key: 'nav.documents', icon: 'documents', sub: [] },
 ]
 export const MORE: NavItem[] = [
@@ -46,7 +46,7 @@ function useOutside(open: boolean, close: () => void) {
   }, [open, close])
   return ref
 }
-const ctrl = 'h-10 whitespace-nowrap rounded-lg border border-line text-onheader hover:bg-surface3 transition active:scale-95 flex items-center justify-center gap-1.5 text-sm'
+const ctrl = 'h-10 whitespace-nowrap rounded-lg border border-control text-onheader hover:bg-surface3 transition active:scale-95 flex items-center justify-center gap-1.5 text-sm'
 
 export function ThemeSwitcher() {
   const { theme, toggle } = useTheme()
@@ -119,12 +119,12 @@ export function Header({ route }: { route: string }) {
   return (
     <header className="bg-header/85 backdrop-blur-md text-onheader sticky top-0 z-40 border-b border-line">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
-        <button onClick={() => go('')} className="flex items-center gap-2 text-left shrink-0" aria-label={t('nav.home')}>
+        <NavLink to="" className="flex items-center gap-2 text-left shrink-0" aria-label={t('nav.home')}>
           <Logo /><span className="leading-tight" lang="en"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
-        </button>
+        </NavLink>
         {started && <nav aria-label={t('nav.main')} className="hidden xl:flex gap-0.5 ml-3 flex-1 min-w-0">
           {PRIMARY.map((n) => (
-            <button key={n.route} onClick={() => go(n.route)} aria-current={isActive(route, n) ? 'page' : undefined} className={`px-2.5 py-2 rounded-lg text-sm min-h-[40px] whitespace-nowrap transition-colors flex items-center gap-1.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3'}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</button>))}
+            <NavLink key={n.route} to={n.route} aria-current={isActive(route, n) ? 'page' : undefined} className={`px-2.5 py-2 rounded-lg text-sm min-h-[40px] whitespace-nowrap transition-colors flex items-center gap-1.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3'}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</NavLink>))}
           <Menu label={t('nav.more')} buttonClass="border-transparent" kind="disclosure">
             {(close) => <ul>{MORE.map((m) => <li key={m.route}><button className={`${item} ${route === m.route ? 'bg-brand text-brandfg font-semibold' : ''}`} onClick={() => { go(m.route); close() }}><Icon name={m.icon} size={17} />{t(m.key as never)}</button></li>)}</ul>}
           </Menu>
@@ -139,7 +139,7 @@ export function Header({ route }: { route: string }) {
         <div className="xl:hidden bg-header px-3 pb-3 border-t border-line max-h-[70vh] overflow-auto">
           <button className="btn-accent w-full my-2 text-sm" onClick={() => { startDemo(); go('profile'); setMenu(false) }}>{t('cta.startDemo')}</button>
           <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-1">
-            {[...PRIMARY, ...MORE].map((n) => <li key={n.route}><button onClick={() => { go(n.route); setMenu(false) }} className={`w-full text-left px-3 py-3 rounded-lg hover:bg-surface3 flex items-center gap-2.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : ''}`}><Icon name={n.icon} size={17} />{t(n.key as never)}</button></li>)}
+            {[...PRIMARY, ...MORE].map((n) => <li key={n.route}><NavLink to={n.route} onNavigate={() => setMenu(false)} aria-current={isActive(route, n) ? 'page' : undefined} className={`w-full text-left px-3 py-3 rounded-lg hover:bg-surface3 flex items-center gap-2.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : ''}`}><Icon name={n.icon} size={17} />{t(n.key as never)}</NavLink></li>)}
           </ul>
         </div>)}
     </header>
@@ -196,9 +196,9 @@ export function BottomNav({ route }: { route: string }) {
   return (
     <nav aria-label={t('nav.mobile')} className="xl:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-line grid grid-cols-5 z-40">
       {PRIMARY.map((n) => (
-        <button key={n.route} onClick={() => go(n.route)} aria-current={isActive(route, n) ? 'page' : undefined} className={`py-2 text-[11px] min-h-[56px] flex flex-col items-center gap-0.5 leading-tight px-0.5 ${isActive(route, n) ? 'text-primary font-semibold' : 'text-muted'}`}>
+        <NavLink key={n.route} to={n.route} aria-current={isActive(route, n) ? 'page' : undefined} className={`py-2 text-[11px] min-h-[56px] flex flex-col items-center gap-0.5 leading-tight px-0.5 ${isActive(route, n) ? 'text-primary font-semibold' : 'text-muted'}`}>
           <Icon name={n.icon} size={21} /><span className="line-clamp-2 max-w-full text-center">{t(n.key as never)}</span>
-        </button>))}
+        </NavLink>))}
     </nav>
   )
 }

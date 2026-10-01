@@ -34,6 +34,18 @@ export const demoContract: ContractInput = {
   job: '@demo.job', location: '@demo.empLocation', startDate: '', duration: '@demo.conDuration', salary: '@demo.empSalary',
   benefits: '', hours: '@demo.empHours', leave: '', probation: '', other: '',
 }
+/** End-to-end example: a Thai SME opening a restaurant in Shanghai (fictional business; all facts are invented for the demo). */
+export const restaurantProfile: Profile = {
+  companyName: '@demo.r.company', direction: 'TH_CN', businessType: 'food', activity: '@demo.r.activity', forms: ['company', 'hire', 'send'], investmentRange: 'lt10',
+  employees: 8, crossBorderWorkers: true,
+  holders: [
+    { id: 'origin', nationality: 'TH', percent: 100, capital: 100, voting: 100, board: 100, economic: 100 },
+    { id: 'partner', nationality: 'CN', percent: 0, capital: 0, voting: 0, board: 0, economic: 0 },
+  ],
+  realInvestor: 'origin', operator: 'origin', sideAgreement: 'no', products: '@demo.r.products', regulatedGoods: 'food', location: '@demo.r.location', crossBorder: ['import'],
+  targetMarket: '@demo.r.market', unknownFacts: [], originProvince: 'TH-10', destProvince: 'CN-SH', isDemo: true,
+}
+export const restaurantEmployment: EmploymentInput = { mode: 'send_th_cn', nationality: '@opt.empNat.TH', location: '@demo.r.location', duration: '', salary: '', hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' }
 export const emptyEmployment: EmploymentInput = { mode: '', nationality: '', location: '', duration: '', salary: '', hours: '', leave: '', socialSecurity: '', workAuth: '', tax: '' }
 export const emptyContract: ContractInput = { employer: '', employee: '', nationality: '', job: '', location: '', startDate: '', duration: '', salary: '', benefits: '', hours: '', leave: '', probation: '', other: '' }
 

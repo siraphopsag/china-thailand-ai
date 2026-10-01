@@ -16,6 +16,7 @@ export const registry: LegalEntry[] = [
   e({ id: 'cn-labor', country: 'CN', area: 'employment', instrument: '中华人民共和国劳动合同法；中华人民共和国社会保险法', originalTerm: '劳动合同法 / 社会保险', agencyUrl: 'https://www.mohrss.gov.cn/', watch: false }),
   e({ id: 'cn-immigration', country: 'CN', area: 'immigration', originalTerm: '外国人工作许可 / 居留许可', agencyUrl: 'https://www.nia.gov.cn/', watch: false }),
   e({ id: 'cn-tax', country: 'CN', area: 'tax', originalTerm: '个人所得税 / 税收居民', agencyUrl: 'https://www.chinatax.gov.cn/', watch: false }),
+  e({ id: 'cn-food-safety', country: 'CN', area: 'licensing', instrument: '中华人民共和国食品安全法', originalTerm: '食品经营许可', agencyUrl: 'https://www.samr.gov.cn/', watch: false }),
   e({ id: 'cn-customs', country: 'CN', area: 'customs', agencyUrl: 'http://english.customs.gov.cn/', watch: false }),
 
   // Coverage gaps for Thai–Chinese employment contracts: instruments known by name only. The app has NO summary of their content.

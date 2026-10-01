@@ -313,7 +313,7 @@ export function StartPage() {
                 <option value="">{t('geo.provNone')}</option>
                 {list.map((p) => <option key={p.code} value={p.code}>{provName(p.code)}</option>)}
               </select>
-              {prov && <button className="text-sm underline text-muted" onClick={() => chooseProv(null)}>{t('geo.provClear')}</button>}
+              {prov && <button className="text-sm underline text-muted min-h-[32px]" onClick={() => chooseProv(null)}>{t('geo.provClear')}</button>}
             </div>
           </div>)
       }
@@ -346,6 +346,7 @@ export function StartPage() {
           {[1, 2, 3, 4].map((n, i) => <li key={n} aria-current={i === stepIdx ? 'step' : undefined} className={'flex items-center gap-1.5 ' + (i === stepIdx ? 'text-ink font-semibold' : i < stepIdx ? 'text-ok-fg' : '')}>{i > 0 && <Icon name="next" size={12} className="text-muted" />}{i < stepIdx && <Icon name="ok" size={13} />}{t(`geo.progress.${n}` as never)}</li>)}
         </ol>
         <h1 className="text-2xl md:text-3xl font-bold">{title}</h1>
+        <button className="btn-ghost !min-h-[44px] text-sm" onClick={() => go('direction')}><Icon name="documents" size={16} />{t('geo.fallback')}</button>
         {picking === 'destination' && origin && !journey && <p className="text-sm text-muted">{t('geo.originTag')}: <b className="text-ink">{crumb(origin, originProv)}</b></p>}
       </header>
 
@@ -353,6 +354,7 @@ export function StartPage() {
         {data && (
           <svg ref={svg} width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="application" aria-label={t('geo.mapLabel')} aria-describedby="geo-state" tabIndex={0} onKeyDown={onKey} onPointerDown={onDown}
             className="block select-none cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
+            <defs><pattern id="g-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" className="g-hatch-bg" /><line x1="0" y1="0" x2="0" y2="7" className="g-hatch-line" /></pattern></defs>
             <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
               {/* the flat map: every country stays a flat 2D shape */}
               {shapes.map((s, i) => <path key={i + ":" + String(s.f.id)} d={s.d} data-code={s.code} className={'g-c ' + paint(s.code)}>{s.code && <title>{name(s.code)}</title>}</path>)}
@@ -407,7 +409,6 @@ export function StartPage() {
         </section>)}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
         <span>{t('geo.attribution')}</span>
-        <button className="underline" onClick={() => go('direction')}>{t('geo.fallback')}</button>
       </div>
     </div>
   )

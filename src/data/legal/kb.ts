@@ -21,7 +21,7 @@ export type OfficeRule =
 export interface Authority { id: string; country: Country; url?: string; office: OfficeRule }
 
 /** Conditions derived from the Shared Business Context. A requirement applies when ALL of its triggers hold. */
-export type Trigger = 'company' | 'foreign_owner' | 'hire' | 'foreign_worker' | 'manufacturing'
+export type Trigger = 'company' | 'foreign_owner' | 'hire' | 'foreign_worker' | 'manufacturing' | 'food_service'
 export interface DocSpec { id: string; country?: Country; issuer: string } // issuer: authority id, or 'origin_state' / 'embassy' / 'parties'
 export interface Requirement {
   id: string
@@ -37,6 +37,10 @@ export interface Requirement {
   optional?: boolean
   /** id of the requirement that replaces this one (status becomes SUPERSEDED) */
   supersededBy?: string
+  /** documents this step results in (an issued licence or certificate), as opposed to documents you bring */
+  issues?: string[]
+  /** requirements that normally come first (only where the order is clear; otherwise left out rather than guessed) */
+  after?: string[]
 }
 
 export const AUTHORITIES: Authority[] = [
@@ -57,6 +61,8 @@ export const AUTHORITIES: Authority[] = [
   { id: 'cn-mohrss', country: 'CN', url: 'https://www.mohrss.gov.cn/', office: { kind: 'provincial' } },
   { id: 'cn-nia', country: 'CN', url: 'https://www.nia.gov.cn/', office: { kind: 'provincial' } },
   { id: 'cn-local-wp', country: 'CN', office: { kind: 'unknown' } }, // local authority for foreigners' work permits: name and office vary by city → verify
+  { id: 'cn-local', country: 'CN', office: { kind: 'unknown' } }, // other local authorities of the city (which ones depends on the premises) → verify
+  { id: 'th-local', country: 'TH', office: { kind: 'unknown' } }, // local administration where the premises are → verify
 ]
 
 export const DOCUMENTS: DocSpec[] = [
@@ -74,32 +80,36 @@ export const DOCUMENTS: DocSpec[] = [
   { id: 'cn_residence_permit', country: 'CN', issuer: 'cn-nia' },
   { id: 'cn_business_license', country: 'CN', issuer: 'cn-samr' },
   { id: 'cn_tax_reg', country: 'CN', issuer: 'cn-sta' },
+  { id: 'cn_food_license', country: 'CN', issuer: 'cn-samr' },
   { id: 'employment_contract', issuer: 'parties' },
 ]
 
 export const REQUIREMENTS: Requirement[] = [
   // ---------- Thailand
-  { id: 'th.company_registration', country: 'TH', domain: 'registration', triggers: ['company'], authority: 'th-dbd', documents: ['th_company_cert'], sources: ['th-dbd-reg'] },
-  { id: 'th.foreign_business', country: 'TH', domain: 'investment', triggers: ['company', 'foreign_owner'], authority: 'th-dbd', documents: ['th_fbl'], sources: ['th-fba'] },
-  { id: 'th.boi', country: 'TH', domain: 'investment', triggers: ['company'], authority: 'th-boi', documents: ['th_boi_cert'], sources: ['th-boi'], optional: true },
-  { id: 'th.factory', country: 'TH', domain: 'industry', triggers: ['manufacturing'], authority: 'th-diw', documents: ['th_factory_license'], sources: [] },
-  { id: 'th.tax_registration', country: 'TH', domain: 'tax', triggers: ['company'], authority: 'th-rd', documents: ['th_tax_id'], sources: ['th-tax'] },
-  { id: 'th.withholding', country: 'TH', domain: 'tax', triggers: ['hire'], authority: 'th-rd', documents: [], sources: ['th-tax'] },
-  { id: 'th.social_security', country: 'TH', domain: 'social', triggers: ['hire'], authority: 'th-sso', documents: ['th_sso_reg'], sources: ['th-sso'] },
+  { id: 'th.company_registration', issues: ['th_company_cert'], country: 'TH', domain: 'registration', triggers: ['company'], authority: 'th-dbd', documents: ['th_company_cert'], sources: ['th-dbd-reg'] },
+  { id: 'th.foreign_business', issues: ['th_fbl'], country: 'TH', domain: 'investment', triggers: ['company', 'foreign_owner'], authority: 'th-dbd', documents: ['th_fbl'], sources: ['th-fba'] },
+  { id: 'th.boi', issues: ['th_boi_cert'], country: 'TH', domain: 'investment', triggers: ['company'], authority: 'th-boi', documents: ['th_boi_cert'], sources: ['th-boi'], optional: true },
+  { id: 'th.factory', issues: ['th_factory_license'], country: 'TH', domain: 'industry', triggers: ['manufacturing'], authority: 'th-diw', documents: ['th_factory_license'], sources: [] },
+  { id: 'th.food_premises', country: 'TH', domain: 'licensing', triggers: ['food_service'], authority: 'th-local', documents: [], sources: [] },
+  { id: 'th.tax_registration', issues: ['th_tax_id'], after: ['th.company_registration'], country: 'TH', domain: 'tax', triggers: ['company'], authority: 'th-rd', documents: ['th_tax_id'], sources: ['th-tax'] },
+  { id: 'th.withholding', after: ['th.tax_registration'], country: 'TH', domain: 'tax', triggers: ['hire'], authority: 'th-rd', documents: [], sources: ['th-tax'] },
+  { id: 'th.social_security', issues: ['th_sso_reg'], after: ['th.company_registration'], country: 'TH', domain: 'social', triggers: ['hire'], authority: 'th-sso', documents: ['th_sso_reg'], sources: ['th-sso'] },
   { id: 'th.employment_terms', country: 'TH', domain: 'contract', triggers: ['hire'], authority: 'th-dlpw', documents: ['employment_contract'], sources: ['th-lpa', 'th-ccc-hire'] },
-  { id: 'th.work_permit', country: 'TH', domain: 'work_auth', triggers: ['foreign_worker'], authority: 'th-doe', documents: ['passport', 'th_work_permit'], sources: ['th-labour'] },
-  { id: 'th.stay_permission', country: 'TH', domain: 'immigration', triggers: ['foreign_worker'], authority: 'th-imm', documents: ['passport', 'th_visa'], sources: ['th-labour'] },
+  { id: 'th.work_permit', issues: ['th_work_permit'], after: ['th.company_registration'], country: 'TH', domain: 'work_auth', triggers: ['foreign_worker'], authority: 'th-doe', documents: ['passport', 'th_work_permit'], sources: ['th-labour'] },
+  { id: 'th.stay_permission', issues: ['th_visa'], country: 'TH', domain: 'immigration', triggers: ['foreign_worker'], authority: 'th-imm', documents: ['passport', 'th_visa'], sources: ['th-labour'] },
   // ---------- China
-  { id: 'cn.company_registration', country: 'CN', domain: 'registration', triggers: ['company'], authority: 'cn-samr', documents: ['cn_business_license'], sources: ['cn-fil'] },
+  { id: 'cn.company_registration', issues: ['cn_business_license'], country: 'CN', domain: 'registration', triggers: ['company'], authority: 'cn-samr', documents: ['cn_business_license'], sources: ['cn-fil'] },
   { id: 'cn.negative_list', country: 'CN', domain: 'investment', triggers: ['company', 'foreign_owner'], authority: 'cn-ndrc', documents: [], sources: ['cn-neglist-2024'] },
-  { id: 'cn.investment_info', country: 'CN', domain: 'investment', triggers: ['company', 'foreign_owner'], authority: 'cn-mofcom', documents: [], sources: ['cn-fil'] },
+  { id: 'cn.investment_info', after: ['cn.company_registration'], country: 'CN', domain: 'investment', triggers: ['company', 'foreign_owner'], authority: 'cn-mofcom', documents: [], sources: ['cn-fil'] },
+  { id: 'cn.food_license', issues: ['cn_food_license'], after: ['cn.company_registration'], country: 'CN', domain: 'licensing', triggers: ['food_service'], authority: 'cn-samr', documents: ['cn_business_license', 'cn_food_license'], sources: ['cn-food-safety'] },
+  { id: 'cn.local_premises', country: 'CN', domain: 'licensing', triggers: ['food_service'], authority: 'cn-local', documents: [], sources: [] },
   { id: 'cn.industry_permits', country: 'CN', domain: 'licensing', triggers: ['manufacturing'], authority: 'cn-samr', documents: [], sources: [] },
-  { id: 'cn.tax_registration', country: 'CN', domain: 'tax', triggers: ['company'], authority: 'cn-sta', documents: ['cn_tax_reg'], sources: ['cn-tax'] },
-  { id: 'cn.iit_withholding', country: 'CN', domain: 'tax', triggers: ['hire'], authority: 'cn-sta', documents: [], sources: ['cn-tax'] },
-  { id: 'cn.social_insurance', country: 'CN', domain: 'social', triggers: ['hire'], authority: 'cn-mohrss', documents: [], sources: ['cn-labor', 'cn-lcl-impl'] },
-  { id: 'cn.labor_contract', country: 'CN', domain: 'contract', triggers: ['hire'], authority: 'cn-mohrss', documents: ['employment_contract'], sources: ['cn-labor'] },
-  { id: 'cn.work_permit', country: 'CN', domain: 'work_auth', triggers: ['foreign_worker'], authority: 'cn-local-wp', documents: ['passport', 'cn_work_permit'], sources: ['cn-immigration'] },
-  { id: 'cn.residence_permit', country: 'CN', domain: 'immigration', triggers: ['foreign_worker'], authority: 'cn-nia', documents: ['passport', 'cn_visa', 'cn_residence_permit'], sources: ['cn-immigration'] },
+  { id: 'cn.tax_registration', issues: ['cn_tax_reg'], after: ['cn.company_registration'], country: 'CN', domain: 'tax', triggers: ['company'], authority: 'cn-sta', documents: ['cn_tax_reg'], sources: ['cn-tax'] },
+  { id: 'cn.iit_withholding', after: ['cn.tax_registration'], country: 'CN', domain: 'tax', triggers: ['hire'], authority: 'cn-sta', documents: [], sources: ['cn-tax'] },
+  { id: 'cn.social_insurance', after: ['cn.company_registration'], country: 'CN', domain: 'social', triggers: ['hire'], authority: 'cn-mohrss', documents: [], sources: ['cn-labor', 'cn-lcl-impl'] },
+  { id: 'cn.labor_contract', after: ['cn.company_registration'], country: 'CN', domain: 'contract', triggers: ['hire'], authority: 'cn-mohrss', documents: ['employment_contract'], sources: ['cn-labor'] },
+  { id: 'cn.work_permit', issues: ['cn_work_permit'], after: ['cn.company_registration'], country: 'CN', domain: 'work_auth', triggers: ['foreign_worker'], authority: 'cn-local-wp', documents: ['passport', 'cn_work_permit'], sources: ['cn-immigration'] },
+  { id: 'cn.residence_permit', issues: ['cn_residence_permit'], after: ['cn.work_permit'], country: 'CN', domain: 'immigration', triggers: ['foreign_worker'], authority: 'cn-nia', documents: ['passport', 'cn_visa', 'cn_work_permit', 'cn_residence_permit'], sources: ['cn-immigration'] },
 ]
 
 export const authorityOf = (id: string) => AUTHORITIES.find((a) => a.id === id)

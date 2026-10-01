@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect, type ReactNode } from 'react'
-import { go, StoreProvider, useRoute, useStore } from './store'
+import { lazy, Suspense, useEffect, useRef, type ReactNode } from 'react'
+import { go, NavLink, StoreProvider, useRoute, useStore } from './store'
 import { LanguageProvider, useI18n } from './i18n'
 import { ThemeProvider } from './theme'
 import { ErrorBoundary } from './ErrorBoundary'
 import { BRAND } from './brand'
+import { pageTitle } from './utils/labels'
 import { BottomNav, ContextStack, Header } from './components/shell'
 import { Landing, DirectionPage, InterviewPage, ProfilePage } from './pages/intake'
 // Landing/interview load immediately; the analysis, employment and operations pages load on demand.
@@ -22,25 +23,46 @@ const MonitoringPage = lazy(() => import('./pages/ops').then((m) => ({ default: 
 const SourcesPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.SourcesPage })))
 const AdminPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.AdminPage })))
 const PricingPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.PricingPage })))
+const PlanPage = lazy(() => import('./pages/plan').then((m) => ({ default: m.PlanPage })))
 const NavigatorPage = lazy(() => import('./pages/compliance').then((m) => ({ default: m.NavigatorPage })))
 const EmployeeCheckPage = lazy(() => import('./pages/compliance').then((m) => ({ default: m.EmployeeCheckPage })))
 const PrivacyPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.PrivacyPage })))
 
+/** footer targets are at least 24 px high (WCAG 2.5.8) */
+const FOOT = 'underline inline-flex items-center min-h-[24px]'
 function Shell({ route, children }: { route: string; children: ReactNode }) {
   const { t } = useI18n()
   const { profile, reset } = useStore()
-  useEffect(() => { document.title = t('app.title') }, [t])
+  const first = useRef(true)
+  // Every view gets its own title (its h1 + the product name), and after a route change focus moves to that h1 so
+  // keyboard and screen-reader users start at the new content and hear which page opened. Pages load lazily, so wait for the h1.
+  useEffect(() => {
+    const main = document.getElementById('main')
+    if (!main) return
+    const moveFocus = !first.current
+    first.current = false
+    let focused = false
+    const apply = () => {
+      const h1 = main.querySelector('h1')
+      document.title = pageTitle(h1?.innerText || h1?.textContent || '', BRAND.name, t('app.title')) // innerText keeps the space a line break makes
+      if (h1 && moveFocus && !focused) { focused = true; h1.setAttribute('tabindex', '-1'); h1.focus({ preventScroll: true }) }
+    }
+    apply()
+    const mo = new MutationObserver(apply)
+    mo.observe(main, { childList: true, subtree: true, characterData: true })
+    return () => mo.disconnect()
+  }, [route, t])
   return (
     <div className="min-h-screen flex flex-col">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:bg-surface focus:text-ink focus:p-2 z-50">{t('nav.skip')}</a>
       <Header route={route} />
       <ContextStack route={route} />
-      <main id="main" className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-6 pb-28 xl:pb-10"><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
+      <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-6 pb-28 xl:pb-10"><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
       <footer className="bg-surface border-t border-line text-xs text-muted px-4 py-6 mb-16 xl:mb-0">
-        <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-1 items-center">
+        <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-2 items-center">
           <span className="font-semibold text-ink" lang="en">{BRAND.title}</span><span>{t('foot.note')}</span>
-          <button className="underline" onClick={() => go('privacy')}>{t('nav.privacy')}</button><button className="underline" onClick={() => go('pricing')}>{t('nav.pricing')}</button><button className="underline" onClick={() => go('admin')}>{t('nav.admin')}</button>
-          {profile && <button className="underline" onClick={() => { if (confirm(t('foot.confirm'))) { reset(); go('') } }}>{t('foot.clear')}</button>}
+          <NavLink to="privacy" className={FOOT}>{t('nav.privacy')}</NavLink><NavLink to="pricing" className={FOOT}>{t('nav.pricing')}</NavLink><NavLink to="admin" className={FOOT}>{t('nav.admin')}</NavLink>
+          {profile && <button className={FOOT} onClick={() => { if (confirm(t('foot.confirm'))) { reset(); go('') } }}>{t('foot.clear')}</button>}
         </div>
       </footer>
       <BottomNav route={route} />
@@ -53,7 +75,7 @@ function Router() {
   const { t } = useI18n()
   const pages: Record<string, ReactNode> = {
     '': <Landing />, start: <StartPage />, direction: <DirectionPage />, interview: <InterviewPage />, profile: <ProfilePage />, dashboard: <Dashboard />, analysis: <AnalysisCenter />,
-    ownership: <OwnershipPage />, nominee: <NomineePage />, employment: <EmploymentPage />, contract: <ContractPage />, language: <LanguagePage />, navigator: <NavigatorPage />, employee: <EmployeeCheckPage />, risk: <RiskPage />,
+    ownership: <OwnershipPage />, nominee: <NomineePage />, employment: <EmploymentPage />, contract: <ContractPage />, language: <LanguagePage />, plan: <PlanPage />, navigator: <NavigatorPage />, employee: <EmployeeCheckPage />, risk: <RiskPage />,
     roadmap: <RoadmapPage />, documents: <DocumentsPage />, monitoring: <MonitoringPage />, sources: <SourcesPage />, pricing: <PricingPage />, privacy: <PrivacyPage />, admin: <AdminPage />,
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>

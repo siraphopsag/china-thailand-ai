@@ -32,3 +32,6 @@ export const dirInfo = (d: Direction) => (d === 'TH_CN' ? { from: 'TH' as const,
 
 export const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string))
+
+/** Browser-tab title of a view: its h1 (whitespace collapsed) + the product name; the fallback when a view has no heading yet. */
+export const pageTitle = (h1: string, brand: string, fallback: string) => { const t = h1.replace(/\s+/g, ' ').trim(); return t ? t + ' · ' + brand : fallback }

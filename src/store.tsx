@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type AnchorHTMLAttributes, type ReactNode } from 'react'
 import type { ActionItem, AlertItem, ContractInput, Direction, EmploymentInput, Profile, StepStatus } from './types'
-import { demoContract, demoEmployment, demoProfile, emptyContract, emptyEmployment, baseAlerts } from './data/demo'
+import { emptyContract, emptyEmployment, baseAlerts, restaurantEmployment, restaurantProfile } from './data/demo'
+import { buildProfile } from './interview'
 import { tourRoutes } from './data/culture'
 import { KEYS, STATE_VERSION, safeGet, safeSet } from './storage'
 import { cleanProfile, isObj, str } from './profileSchema'
@@ -13,9 +14,13 @@ export interface HistoryItem { at: string; key: MsgKey; vars?: Record<string, st
 export type Mode = 'real' | 'demo'
 /** Snapshot of a completed action, so finished work stays counted even if the risk that created it later disappears. */
 export interface ActionSnap { title: string; riskLabel: string; owner: string; riskId: string }
-export type DocState = 'required' | 'have' | 'missing' | 'verified' | 'review'
-export const DOC_STATES: DocState[] = ['required', 'have', 'missing', 'verified', 'review']
+export { DOC_STATES, type DocState } from './services/compliance'
+import { DOC_STATES, type DocState } from './services/compliance'
+/** What the user came to do (chosen on the landing page). Decides where the journey starts and ends. */
+export type Goal = 'expand' | 'employee' | 'documents'
+const GOALS: Goal[] = ['expand', 'employee', 'documents']
 interface State {
+  goal: Goal | null
   direction: Direction | null
   /** ISO 3166-2 code chosen on the map (e.g. TH-20), or null when no province was chosen */
   originProvince: string | null
@@ -42,11 +47,13 @@ interface State {
   history: HistoryItem[]
 }
 const initial: State = {
-  direction: null, originProvince: null, destinationProvince: null, answers: {}, profile: null, employment: emptyEmployment, contract: emptyContract, stepOverrides: {}, actionStatus: {}, actionSnap: {}, tour: null, checks: {}, docs: {}, employeeCheck: emptyEmployeeCheck, docStatus: {}, docLang: {}, docStamp: {},
+  goal: null, direction: null, originProvince: null, destinationProvince: null, answers: {}, profile: null, employment: emptyEmployment, contract: emptyContract, stepOverrides: {}, actionStatus: {}, actionSnap: {}, tour: null, checks: {}, docs: {}, employeeCheck: emptyEmployeeCheck, docStatus: {}, docLang: {}, docStamp: {},
   extraAlerts: [], regChanged: false, analysisDone: false, history: [],
 }
 const now = () => new Date().toISOString()
-const demoState = (): State => ({ ...initial, direction: 'TH_CN', profile: demoProfile, employment: demoEmployment, contract: demoContract, tour: 0, history: [{ at: now(), key: 'hist.demo' }] })
+/** The demo is the end-to-end restaurant example (fictional data, labelled as such). */
+const demoState = (): State => ({ ...initial, goal: 'expand', direction: 'TH_CN', originProvince: 'TH-10', destinationProvince: 'CN-SH', profile: restaurantProfile, employment: restaurantEmployment, analysisDone: true,
+  employeeCheck: { nationality: 'TH', role: '', employer: '', province: 'CN-SH', type: 'fulltime', start: '', stay: 'none', auth: 'no', docs: ['passport'] }, history: [{ at: now(), key: 'hist.demo' }] })
 
 /** Small stable fingerprint of the business data (not security-related). */
 export function fingerprint(...parts: unknown[]): string {
@@ -77,6 +84,7 @@ export function sanitizeState(raw: unknown): State {
   if (!isObj(raw)) return initial
   const profile = cleanProfile(raw.profile)
   return {
+    goal: GOALS.includes(raw.goal as Goal) ? (raw.goal as Goal) : null,
     direction: raw.direction === 'CN_TH' ? 'CN_TH' : raw.direction === 'TH_CN' ? 'TH_CN' : profile ? profile.direction : null,
     originProvince: provCode(raw.originProvince), destinationProvince: provCode(raw.destinationProvince),
     answers: sanitizeAnswers(raw.answers), profile, employment: fill(emptyEmployment, raw.employment), contract: fill(emptyContract, raw.contract),
@@ -110,7 +118,7 @@ interface Ctx extends State {
   beginNew: () => void
   /** Start a new real Business Context for origin → destination (and optional provinces). Asks before replacing an existing real profile; false = the user kept it.
    *  `location` pre-answers the interview question about where the business will operate, so it is not asked again. */
-  chooseDirection: (d: Direction, geo?: { originProvince?: string | null; destinationProvince?: string | null; location?: string }) => boolean
+  chooseDirection: (d: Direction, geo?: { originProvince?: string | null; destinationProvince?: string | null; location?: string; goal?: Goal }) => boolean
   reset: () => void
   log: (key: MsgKey, vars?: Record<string, string>) => void
   /** Change an action's status; completed actions keep a snapshot so progress never goes backwards. */
@@ -148,8 +156,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const existing = mode === 'demo' ? load('real').profile : s.profile
       if (existing && !window.confirm(tr('start.confirm'))) return false
       setMode('real')
-      setS({ ...initial, direction: d, originProvince: provCode(geo?.originProvince), destinationProvince: provCode(geo?.destinationProvince), answers: geo?.location ? { location: geo.location } : {} })
-      go('interview')
+      const goal = geo?.goal ?? 'expand'
+      const base = { ...initial, goal, direction: d, originProvince: provCode(geo?.originProvince), destinationProvince: provCode(geo?.destinationProvince), answers: (geo?.location ? { location: geo.location } : {}) as Record<string, string | string[]> }
+      if (goal === 'employee') {
+        // checking one employee needs no business interview: a minimal context (hiring, in the chosen country) is enough to start
+        const answers = { ...base.answers, forms: ['hire'], btype: 'other' }
+        const { profile } = buildProfile(answers, d)
+        setS({ ...base, answers, profile: { ...profile, destProvince: base.destinationProvince ?? undefined } })
+        go('employee')
+      } else { setS(base); go('interview') }
       return true
     },
     reset: () => setS(mode === 'demo' ? demoState() : initial),
@@ -166,6 +181,10 @@ const current = () => window.location.pathname.split('/').filter(Boolean).join('
 export const go = (r: string) => {
   if (current() !== r) window.history.pushState({}, '', '/' + r)
   window.dispatchEvent(new Event(ROUTE_EVENT)); window.scrollTo(0, 0)
+}
+/** In-app link: a real <a href> (so it is announced as a link and can be opened in a new tab) that routes without a reload on a plain click. */
+export function NavLink({ to, onNavigate, children, ...rest }: { to: string; onNavigate?: () => void; children: ReactNode } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'onClick'>) {
+  return <a href={'/' + to} {...rest} onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); onNavigate?.(); go(to) }}>{children}</a>
 }
 export function useRoute() {
   const [r, setR] = useState(current)

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { go, useStore, DOC_STATES, type DocState } from '../store'
 import { Icon } from './icons'
-import { Go } from './ui'
+import { Go, LangText } from './ui'
 import { contextFrom, requiredDocuments, requirementStatus, retrieveRequirements, stages } from '../services/compliance'
 import { tk, useI18n } from '../i18n'
 
@@ -25,7 +25,7 @@ export function RequiredDocs({ docStatus, onChange }: { docStatus: Record<string
       {!docs.length ? <p className="text-sm text-muted">{t('dc.req.none')}</p> : (
         <ul className="divide-y divide-line">{docs.map((d) => { const st = docStatus[d.id] ?? 'required'; return (
           <li key={d.id} className="py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <div className="min-w-0 flex-1 basis-56"><div className="font-medium text-sm">{tk('kb.doc', d.id)}</div>
+            <div className="min-w-0 flex-1 basis-56"><div className="font-medium text-sm"><LangText text={tk('kb.doc', d.id)} /></div>
               <div className="text-xs text-muted">{t('dc.req.for')}: {d.requirementIds.map((r) => tk('kb.r', r + '.t')).join(' · ')}</div></div>
             <span className={`chip font-medium ${docChip[st]}`}>{tk('dc.s', st)}</span>
             <select aria-label={`${t('c.status')}: ${tk('kb.doc', d.id)}`} className="input !w-auto !py-1 !min-h-[36px] text-sm" value={st} onChange={(e) => onChange(d.id, e.target.value as DocState)}>

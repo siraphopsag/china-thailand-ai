@@ -10,7 +10,7 @@ const emptyEmp: EmploymentInput = { mode: '', nationality: '', location: '', dur
 
 describe('five-step journey', () => {
   it('has exactly five steps that end in Risks & Actions', () => {
-    expect(JOURNEY.map((s) => s.id)).toEqual([1, 2, 3, 4, 5]); expect(JOURNEY[4].route).toBe('roadmap')
+    expect(JOURNEY.map((s) => s.id)).toEqual([1, 2, 3, 4, 5]); expect(JOURNEY[4].route).toBe('plan')
   })
   it('without a business nothing is done and the user is on step 1', () => {
     const d = journeyDone(f({ hasProfile: false }))
