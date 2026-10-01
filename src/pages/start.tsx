@@ -349,7 +349,7 @@ export function StartPage() {
             className="block select-none cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
             <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
               {/* the flat map: every country stays a flat 2D shape */}
-              {shapes.map((s, i) => <path key={String(s.f.id ?? i)} d={s.d} data-code={s.code} className={'g-c ' + paint(s.code)}>{s.code && <title>{name(s.code)}</title>}</path>)}
+              {shapes.map((s, i) => <path key={i + ":" + String(s.f.id)} d={s.d} data-code={s.code} className={'g-c ' + paint(s.code)}>{s.code && <title>{name(s.code)}</title>}</path>)}
               {/* only the selected country rises (while no province is chosen) */}
               {focusShape && <Raised d={focusShape.d} lift={countryLift} k={view.k} side="g-side" top="g-top" />}
               {/* province boundaries of the selected country, sitting on its (raised) surface; names stay hidden */}

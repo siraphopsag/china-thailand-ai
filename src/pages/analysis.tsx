@@ -45,7 +45,7 @@ export function AnalysisCenter() {
       <PageHead title={t('an.title')} sub={t('an.sub')}>{done && <button className="btn-ghost" onClick={run}><Icon name="ai" size={16} />{t('an.rerun')}</button>}</PageHead>
       <JourneyStrip active={done ? 3 : 2} />
       {!done && (
-        <section className="card space-y-3" aria-live="polite" aria-busy={running}>
+        <section className={'card space-y-3 ' + (running ? 'ai-scan' : '')} aria-live="polite" aria-busy={running}>
           <p className="font-semibold flex items-center gap-2"><Icon name="ai" size={18} className="text-primary animate-pulse" />{step < 0 ? t('an.hint') : t('an.working')}</p>
           {step < 0 ? <button className="btn-primary" onClick={run}><Icon name="ai" size={16} />{t('an.run')}</button> : (
             <ul className="space-y-2">{MODULES.map((m, i) => (

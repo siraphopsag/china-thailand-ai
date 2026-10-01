@@ -117,7 +117,7 @@ export function Header({ route }: { route: string }) {
     return () => document.removeEventListener('keydown', esc)
   }, [menu])
   return (
-    <header className="bg-header text-onheader sticky top-0 z-40 border-b border-line">
+    <header className="bg-header/85 backdrop-blur-md text-onheader sticky top-0 z-40 border-b border-line">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
         <button onClick={() => go('')} className="flex items-center gap-2 text-left shrink-0" aria-label={t('nav.home')}>
           <Logo /><span className="leading-tight" lang="en"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>

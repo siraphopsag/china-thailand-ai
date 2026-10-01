@@ -5,18 +5,31 @@ import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead
 import { CountryBadge, Icon } from '../components/icons'
 import { dirInfo } from '../utils/labels'
 import { BRAND, BRAND_CONCEPTS } from '../brand'
+import { Glow, RetroGrid } from '../components/backdrop'
 import { dv, tk, useI18n } from '../i18n'
 import { OWNERSHIP_KEYS, buildProfile, coreDone, firstUnanswered, prune, remaining, visibleQs, type A, type Q } from '../interview'
 
-/* ================= LANDING ================= */
-function CrossBorderVisual() {
+/* ================= LANDING (lobby): the product introduction; the map is the next step, never shown here ================= */
+/** A small, honest preview of how C.A.L.L. works (illustrative, labelled as such): the route, the AI activity, the integrated concerns. */
+function HeroPreview() {
   const { t } = useI18n()
+  const steps: [string, boolean][] = [[t('hero.act.1'), true], [t('hero.act.2'), true], [t('hero.act.3'), true], [t('hero.act.4'), false]]
   return (
-    <div className="flex items-center justify-center gap-2 sm:gap-3 select-none" aria-hidden>
-      <div className="rounded-xl bg-herotile border border-heroline px-3 py-3 text-center w-24 sm:w-28"><div className="text-2xl font-bold tracking-wide">TH</div><div className="text-xs mt-1">{tk('country', 'TH')}</div></div>
-      <div className="flex-1 max-w-[140px] flex items-center"><span className="flex-1 border-t-2 border-dashed border-onhero/40" /><span className="mx-1 rounded-full bg-accent text-onaccent px-2 py-1 animate-pulse"><Icon name="ai" size={16} /></span><span className="flex-1 border-t-2 border-dashed border-onhero/40" /></div>
-      <div className="rounded-xl bg-herotile border border-heroline px-3 py-3 text-center w-24 sm:w-28"><div className="text-2xl font-bold tracking-wide">CN</div><div className="text-xs mt-1">{tk('country', 'CN')}</div></div>
-      <span className="sr-only">{t('dir.TH_CN')}</span>
+    <div className="hero-tilt">
+      <div className="glass rounded-2xl p-4 sm:p-5 shadow-xl text-left space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-sm font-semibold"><CountryBadge c="TH" />{tk('country', 'TH')}
+            <svg width="72" height="18" viewBox="0 0 72 18" aria-hidden className="text-primary"><path d="M2 14 Q36 -4 70 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeDasharray="4 4" /></svg>
+            <CountryBadge c="CN" />{tk('country', 'CN')}</div>
+          <span className="chip bg-surface3 text-muted border-line"><Icon name="ai" size={12} />{t('hero.preview')}</span>
+        </div>
+        <ol className="space-y-2">{steps.map(([txt, done], i) => (
+          <li key={i} className="flex items-center gap-2.5 text-sm">
+            {done ? <Icon name="ok" size={17} className="text-ok-fg shrink-0" /> : <span className="w-[17px] h-[17px] grid place-items-center shrink-0"><span className="w-2 h-2 rounded-full bg-primary animate-pulse" /></span>}
+            <span className={done ? '' : 'font-medium'}>{txt}</span></li>))}</ol>
+        <div className="flex flex-wrap gap-1.5">{(['lang', 'legal', 'risk', 'next'] as const).map((k) => <span key={k} className="chip bg-brand text-brandfg border-line font-medium">{t(('hero.tag.' + k) as never)}</span>)}</div>
+        <p className="text-[11px] text-muted">{t('hero.sample')}</p>
+      </div>
     </div>
   )
 }
@@ -24,24 +37,27 @@ export function Landing() {
   const { t } = useI18n()
   const { startDemo, beginNew } = useStore()
   return (
-    <div className="space-y-10 max-w-5xl mx-auto">
-      <section className="rounded-2xl border border-heroline bg-hero text-onhero px-6 py-12 md:px-12 md:py-16 grid md:grid-cols-[1.4fr_1fr] gap-8 items-center">
-        <div>
-          <p className="text-sm opacity-75 mb-4">{t('land.h1')}</p>
-          <h1 lang="en"><span className="block text-5xl md:text-7xl font-bold tracking-[0.08em] leading-none">{BRAND.name}</span><span className="block text-base md:text-xl font-medium opacity-80 tracking-wide mt-3">{BRAND.full}</span></h1>
-          <p className="mt-6 text-lg opacity-90 max-w-xl">{t('land.pos')}</p>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-3 mt-8">
-            <button className="btn-accent !px-6 !min-h-[52px] text-base" onClick={beginNew}><Go>{t('land.go')}</Go></button>
-            <button className="underline underline-offset-4 text-sm font-medium py-2" onClick={() => { startDemo(); go('profile') }}>{t('land.demoLink')}</button>
+    <div className="space-y-12 max-w-5xl mx-auto">
+      <section className="hero-shell relative overflow-hidden rounded-3xl border border-line px-5 pt-14 pb-10 sm:px-10 md:pt-20 md:pb-14 text-center" aria-labelledby="hero-h">
+        <Glow /><RetroGrid />
+        <div className="relative max-w-3xl mx-auto">
+          <p className="inline-flex items-center gap-2 rounded-full glass px-3.5 py-1.5 text-xs sm:text-sm font-medium" lang="en"><Icon name="globe" size={15} className="text-primary" />{BRAND.title}</p>
+          <h1 id="hero-h" className="mt-6 text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.15] text-ink">
+            <span className="block">{t('hero.h1a')}</span><span className="block text-gradient pb-1">{t('hero.h1b')}</span>
+          </h1>
+          <p className="mt-5 text-base sm:text-lg text-muted max-w-2xl mx-auto">{t('land.pos')}</p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-x-5 gap-y-3">
+            <span className="cta-ring"><button className="cta-core text-base" onClick={beginNew}>{t('hero.cta')}<Icon name="next" size={18} /></button></span>
+            <button className="text-sm font-medium text-muted hover:text-ink underline underline-offset-4 py-2" onClick={() => { startDemo(); go('profile') }}>{t('land.demoLink')}</button>
           </div>
-          <p className="text-xs opacity-70 mt-3">{t('land.goNote')}</p>
+          <p className="text-xs text-muted mt-3">{t('land.goNote')}</p>
         </div>
-        <div className="hidden md:block"><CrossBorderVisual /></div>
+        <div className="relative max-w-2xl mx-auto mt-12"><HeroPreview /></div>
       </section>
       <section aria-labelledby="stands-h" className="space-y-3">
         <h2 id="stands-h" className="h2">{t('brand.stands')}</h2>
         <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">{BRAND_CONCEPTS.map((c, i) => (
-          <li key={i} className="card !p-4 space-y-1.5"><div className="flex items-baseline gap-2" lang="en"><span className="text-2xl font-bold text-primary">{c.letter}</span><span className="font-semibold">{c.word}</span></div><p className="text-sm text-muted">{t(('brand.' + c.key) as never)}</p></li>))}</ul>
+          <li key={i} className="card card-hover !p-4 space-y-1.5"><div className="flex items-baseline gap-2" lang="en"><span className="text-2xl font-bold text-gradient">{c.letter}</span><span className="font-semibold">{c.word}</span></div><p className="text-sm text-muted">{t(('brand.' + c.key) as never)}</p></li>))}</ul>
         <p className="text-xs text-muted">{t('brand.together')}</p>
       </section>
       <section aria-label={t('land.h2')}>

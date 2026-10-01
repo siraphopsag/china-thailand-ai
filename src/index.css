@@ -15,6 +15,8 @@
   --review-bg: 255 237 213; --review-fg: 154 52 18; --review-line: 253 186 116;
   --info-bg: 224 242 254; --info-fg: 7 89 133; --info-line: 125 211 252;
   --globe-bg: 236 241 248; --globe-ocean: 218 226 238; --globe-land: 196 205 219; --globe-soon: 140 163 194; --globe-active: 24 44 79; --globe-line: 255 255 255; --globe-capital: 220 38 38; --globe-route: 24 44 79; --globe-side: 12 24 46; --globe-prov: 37 99 235; --globe-pside: 23 62 150;
+  --grid-line: 15 30 56; --grid-a: .1; --glow-a: 59 130 246; --glow-b: 124 58 237; --glow-k: .16;
+  --grad-a: 29 78 216; --grad-b: 79 70 229; --cta-a: 29 64 175; --cta-b: 67 56 202; --hero-base: 248 250 253;
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -30,21 +32,25 @@
   --review-bg: 70 40 18; --review-fg: 253 186 116; --review-line: 138 78 30;
   --info-bg: 16 52 78; --info-fg: 125 211 252; --info-line: 30 100 150;
   --globe-bg: 8 13 24; --globe-ocean: 16 25 43; --globe-land: 46 59 82; --globe-soon: 72 90 120; --globe-active: 110 154 226; --globe-line: 255 255 255; --globe-capital: 239 68 68; --globe-route: 147 197 253; --globe-side: 52 82 130; --globe-prov: 147 197 253; --globe-pside: 74 116 180;
+  --grid-line: 148 163 184; --grid-a: .16; --glow-a: 59 130 246; --glow-b: 139 92 246; --glow-k: .3;
+  --grad-a: 147 197 253; --grad-b: 196 181 253; --cta-a: 37 99 235; --cta-b: 79 70 229; --hero-base: 7 11 22;
 }
 
 html { scroll-behavior: smooth }
 /* grid children may shrink below their content width (prevents horizontal overflow with long Thai/CJK lines) */
 .grid > * { min-width: 0 }
 body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif; line-height: 1.65; overflow-wrap: break-word;
-  background: rgb(var(--page)); color: rgb(var(--ink)); transition: background-color .25s ease, color .25s ease }
+  background: rgb(var(--page)); color: rgb(var(--ink)); transition: background-color .25s ease, color .25s ease;
+  background-image: radial-gradient(1100px 420px at 50% -120px, rgb(var(--glow-a) / calc(var(--glow-k) * .45)), transparent 70%) ; background-repeat: no-repeat }
 :focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: 2px }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important } }
 
 @layer components {
-  .card { @apply bg-surface border border-line rounded-xl shadow-sm p-5 transition-colors duration-200 }
-  .card-i { @apply bg-surface2 border border-line rounded-lg p-3 }
+  .card { @apply bg-surface border border-line rounded-2xl p-5 transition-[border-color,box-shadow] duration-200; box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 10px 30px -18px rgb(15 30 56 / .18) }
+  .card-hover { @apply hover:border-primary/40; }
+  .card-i { @apply bg-surface2 border border-line rounded-xl p-3 }
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium min-h-[44px] md:min-h-[40px] transition duration-150 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 }
-  .btn-primary { @apply btn bg-primary text-onprimary hover:opacity-90 }
+  .btn-primary { @apply btn bg-primary text-onprimary hover:opacity-95 hover:-translate-y-px hover:shadow-md; background-image: linear-gradient(180deg, rgb(255 255 255 / .1), transparent) }
   .btn-accent { @apply btn bg-accent text-onaccent hover:opacity-90 font-semibold }
   .btn-ghost { @apply btn border border-line bg-surface text-ink hover:bg-surface3 }
   .input { @apply w-full rounded-lg border border-line px-3 py-2 min-h-[44px] md:min-h-[40px] bg-surface text-ink placeholder:text-muted focus:border-primary transition-colors }
@@ -58,7 +64,6 @@ body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","
 }
 
 /* ---------- geographic onboarding (ASEAN + China map) ---------- */
-.map-stage { background: rgb(var(--globe-ocean)) }
 .g-c { stroke: rgb(var(--globe-line) / .75); stroke-width: .8; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: fill .3s ease }
 .g-land { fill: rgb(var(--globe-land) / .55); stroke: rgb(var(--globe-line) / .3) }
 .g-dim { fill: rgb(var(--globe-land) / .55) }
@@ -89,3 +94,35 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
 .globe-ctl { width: 40px; height: 40px; display: grid; place-items: center; border-radius: .6rem; background: rgb(var(--surface) / .92); border: 1px solid rgb(var(--line)); color: rgb(var(--ink)) }
 .globe-ctl:hover { background: rgb(var(--surface3)) }
 @media (prefers-reduced-motion: reduce) { .g-c { transition: none } }
+
+/* ---------- C.A.L.L. hero language: atmosphere, perspective grid, gradient headline, premium CTA ---------- */
+.hero-shell { background: rgb(var(--hero-base)); }
+.hero-glow { background:
+  radial-gradient(600px 320px at 50% 0%, rgb(var(--glow-a) / var(--glow-k)), transparent 70%),
+  radial-gradient(420px 260px at 85% 20%, rgb(var(--glow-b) / calc(var(--glow-k) * .6)), transparent 70%),
+  radial-gradient(420px 260px at 10% 30%, rgb(var(--glow-a) / calc(var(--glow-k) * .5)), transparent 70%) }
+.retro-grid { perspective: 200px; opacity: .9 }
+.retro-plane { position: absolute; inset: 0; transform: rotateX(35deg) }
+.retro-lines { position: absolute; left: -250%; width: 600%; height: 300%; top: 0;
+  background-image: linear-gradient(to right, rgb(var(--grid-line) / var(--grid-a)) 1px, transparent 0), linear-gradient(to bottom, rgb(var(--grid-line) / var(--grid-a)) 1px, transparent 0);
+  background-size: 56px 56px; animation: retro-drift 40s linear infinite; will-change: transform }
+.retro-fade { position: absolute; inset: 0; background: linear-gradient(to top, rgb(var(--hero-base)) 0%, rgb(var(--hero-base) / .5) 35%, transparent 90%), linear-gradient(to bottom, rgb(var(--hero-base) / .6), transparent 25%) }
+@keyframes retro-drift { from { transform: translateY(-50%) } to { transform: translateY(0) } }
+.text-gradient { background: linear-gradient(90deg, rgb(var(--grad-a)), rgb(var(--grad-b))); -webkit-background-clip: text; background-clip: text; color: transparent }
+.cta-ring { position: relative; display: inline-flex; border-radius: 9999px; padding: 1.5px; overflow: hidden; isolation: isolate }
+.cta-ring::before { content: ''; position: absolute; inset: -150%; z-index: -1; background: conic-gradient(from 0deg, transparent 0 55%, rgb(var(--glow-a)) 70%, rgb(var(--glow-b)) 85%, transparent 100%); animation: cta-spin 5s linear infinite }
+.cta-ring::after { content: ''; position: absolute; inset: 0; z-index: -2; border-radius: inherit; background: rgb(var(--line)) }
+@keyframes cta-spin { to { transform: rotate(360deg) } }
+.cta-core { display: inline-flex; align-items: center; gap: .5rem; border-radius: 9999px; padding: .85rem 1.6rem; min-height: 52px; font-weight: 600; color: #fff;
+  background: linear-gradient(135deg, rgb(var(--cta-a)), rgb(var(--cta-b))); box-shadow: 0 8px 24px -10px rgb(var(--cta-b) / .6); transition: transform .15s ease, box-shadow .2s ease }
+.cta-core:hover { transform: translateY(-1px); box-shadow: 0 12px 30px -10px rgb(var(--cta-b) / .75) }
+.cta-core:active { transform: scale(.98) }
+.glass { background: rgb(var(--surface) / .72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgb(var(--line)) }
+.hero-tilt { transform: perspective(1200px) rotateX(8deg); transform-origin: 50% 0 }
+@media (max-width: 640px) { .hero-tilt { transform: none } .retro-lines { background-size: 40px 40px } }
+/* AI activity: a thin scanning line on surfaces where the AI is working */
+.ai-scan { position: relative; overflow: hidden }
+.ai-scan::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, transparent, rgb(var(--glow-a)), rgb(var(--glow-b)), transparent); animation: ai-scan 1.6s ease-in-out infinite }
+@keyframes ai-scan { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
+/* the map uses the same surface language: a faint static grid under the ocean */
+.map-stage { background-color: rgb(var(--globe-ocean)); background-image: linear-gradient(to right, rgb(var(--grid-line) / calc(var(--grid-a) * .7)) 1px, transparent 0), linear-gradient(to bottom, rgb(var(--grid-line) / calc(var(--grid-a) * .7)) 1px, transparent 0); background-size: 48px 48px }
