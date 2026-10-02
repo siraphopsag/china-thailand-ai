@@ -9,6 +9,9 @@ import { BRAND, BRAND_CONCEPTS } from '../brand'
 import { Glow, RetroGrid } from '../components/backdrop'
 import { dv, tk, useI18n } from '../i18n'
 import { OWNERSHIP_KEYS, buildProfile, coreDone, firstUnanswered, prune, remaining, visibleQs, type A, type Q } from '../interview'
+import { usePersona } from '../persona'
+import { PERSONAS, entryFor, type EntryKind } from '../domain/jobboard/personas'
+import { FictionalTag, SimulationNotice } from '../components/jobboard'
 
 /* ================= LANDING (lobby): the product introduction; the map is the next step, never shown here ================= */
 /** A small, honest preview of how C.A.L.L. works (illustrative, labelled as such): the route, the AI activity, the integrated concerns. */
@@ -70,6 +73,26 @@ function Goals() {
     </section>
   )
 }
+/** Job-board PoC entry points: each selects that role's default synthetic persona and opens its page. Never Admin, never submits anything. */
+function JobBoardEntry() {
+  const { t } = useI18n()
+  const { enter } = usePersona()
+  const cards: [EntryKind, 'employment' | 'business'][] = [['worker', 'employment'], ['employer', 'business']]
+  return (
+    <section aria-labelledby="jb-entry-h" className="space-y-3">
+      <div><h2 id="jb-entry-h" className="text-2xl font-bold flex flex-wrap items-center gap-2">{t('jb.lobby.t')}<FictionalTag /></h2><p className="text-muted mt-1">{t('jb.lobby.d')}</p></div>
+      <ul className="grid sm:grid-cols-2 gap-3">{cards.map(([kind, icon]) => (
+        <li key={kind} className="card !p-4">
+          <button className="text-left flex gap-3 items-start group w-full" onClick={() => enter(kind)}>
+            <span className="w-10 h-10 shrink-0 rounded-xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={20} /></span>
+            <span className="min-w-0"><span className="font-semibold text-lg group-hover:underline underline-offset-4 flex items-center gap-1.5">{t(`jb.lobby.${kind}.t` as never)}<Icon name="next" size={16} className="text-primary" /></span>
+              <span className="block text-sm text-muted">{t(`jb.lobby.${kind}.d` as never, { name: PERSONAS.find((p) => p.key === entryFor(kind).key)!.name })}</span></span>
+          </button>
+        </li>))}</ul>
+      <SimulationNotice compact />
+    </section>
+  )
+}
 /** A returning user sees their case first. */
 function ContinueCase() {
   const { t } = useI18n()
@@ -107,6 +130,7 @@ export function Landing() {
       </section>
       <ContinueCase />
       <Goals />
+      <JobBoardEntry />
       <div className="max-w-2xl mx-auto"><HeroPreview /></div>
       <section aria-labelledby="stands-h" className="space-y-3">
         <h2 id="stands-h" className="h2">{t('brand.stands')}</h2>

@@ -7,6 +7,8 @@ import { tourRoutes } from '../data/culture'
 import { SampleTag } from './ui'
 import { BRAND } from '../brand'
 import { CountryBadge, Icon, type IconName } from './icons'
+import { usePersona } from '../persona'
+import { usePersonaLabel } from './jobboard'
 
 type NavItem = { route: string; key: string; icon: IconName; sub: string[] }
 /** Five primary areas that follow the journey. The internal analysis modules (ownership, employment, contract) live inside AI Analysis. */
@@ -60,11 +62,13 @@ export function ThemeSwitcher() {
 }
 
 /** Dropdown: Escape closes and returns focus, ArrowUp/Down/Home/End move between items, Tab leaves the menu. */
-function Menu({ label, icon, children, align = 'right', buttonClass = '', kind = 'menu' }: { label: ReactNode; icon?: IconName; children: (close: () => void) => ReactNode; align?: 'left' | 'right'; buttonClass?: string; kind?: 'menu' | 'disclosure' }) {
+function Menu({ label, icon, children, align = 'right', buttonClass = '', kind = 'menu', ariaLabel, panelClass = 'w-56', refocus = false, rootClass = '' }: { label: ReactNode; icon?: IconName; children: (close: () => void) => ReactNode; align?: 'left' | 'right'; buttonClass?: string; kind?: 'menu' | 'disclosure'; ariaLabel?: string; panelClass?: string; refocus?: boolean; rootClass?: string }) {
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
   const ref = useOutside(open, close)
   const btn = useRef<HTMLButtonElement>(null)
+  /** closing after a choice; with `refocus` the focus returns to the menu button instead of being lost */
+  const choose = useCallback(() => { setOpen(false); if (refocus) btn.current?.focus() }, [refocus])
   useEffect(() => { if (open) ref.current?.querySelector<HTMLElement>('[data-menu-panel] button')?.focus() }, [open, ref])
   const onKey = (e: React.KeyboardEvent) => {
     if (!open) return
@@ -78,9 +82,9 @@ function Menu({ label, icon, children, align = 'right', buttonClass = '', kind =
     else if (e.key === 'End') { e.preventDefault(); items[items.length - 1]?.focus() }
   }
   return (
-    <div ref={ref} className="relative" onKeyDown={onKey}>
-      <button ref={btn} onClick={() => setOpen(!open)} aria-haspopup={kind === 'menu' ? 'menu' : undefined} aria-expanded={open} className={`${ctrl} px-3 ${buttonClass}`}>{icon && <Icon name={icon} size={17} />}{label}<Icon name="down" size={14} /></button>
-      {open && <div data-menu-panel className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-56 bg-surface text-ink border border-line rounded-xl shadow-lg p-1 z-50`}>{children(close)}</div>}
+    <div ref={ref} className={`relative ${rootClass}`} onKeyDown={onKey}>
+      <button ref={btn} onClick={() => setOpen(!open)} aria-haspopup={kind === 'menu' ? 'menu' : undefined} aria-expanded={open} aria-label={ariaLabel} className={`${ctrl} px-3 ${buttonClass}`}>{icon && <Icon name={icon} size={17} />}{label}<Icon name="down" size={14} /></button>
+      {open && <div data-menu-panel className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-2 ${panelClass} bg-surface text-ink border border-line rounded-xl shadow-lg p-1 z-50`}>{children(choose)}</div>}
     </div>
   )
 }
@@ -104,9 +108,49 @@ export function LanguageSwitcher() {
   )
 }
 
+/**
+ * Job-board PoC persona switcher. A simulation control, not a login: it only changes which synthetic persona the
+ * demo pages act as. The selection lives in session state (see persona.tsx).
+ */
+export function PersonaSwitcher({ bar = false }: { bar?: boolean }) {
+  const { t } = useI18n()
+  const { persona, personas, select, reset, invalid } = usePersona()
+  const label = usePersonaLabel()
+  const who = label(persona)
+  // `bar`: full-width row under the header on narrow screens, where the header row has no room for another control
+  const text = bar
+    ? <span className="flex-1 min-w-0 truncate text-left">{t('persona.current', { who })}</span>
+    : <><span className="hidden md:inline max-w-[11rem] truncate">{who}</span><span className="md:hidden max-w-[6rem] truncate">{t(`persona.role.${persona.kind}` as never)}</span></>
+  return (
+    <div role="group" aria-label={t('persona.label')} className={bar ? 'w-full' : ''}>
+      <Menu icon="management" refocus ariaLabel={t('persona.aria', { who })} panelClass="w-72 max-w-[calc(100vw-1.5rem)]" align={bar ? 'left' : 'right'}
+        rootClass={bar ? 'w-full' : ''} buttonClass={bar ? 'w-full !justify-start' : ''}
+        label={<><span className="text-[10px] font-bold rounded px-1 bg-warn-bg text-warn-fg" lang="en">PoC</span>{text}</>}>
+        {(close) => (<>
+          <p className="px-3 pt-2 pb-1 text-xs text-muted">{t('persona.note')}</p>
+          <p className="px-3 pb-2 text-xs text-muted">{t('jb.notice.short')}</p>
+          {invalid && <p role="status" className="px-3 pb-2 text-xs text-danger-fg">{t('persona.invalid')}</p>}
+          <ul role="menu" aria-label={t('persona.label')}>
+            {personas.map((p) => (
+              <li key={p.key} role="none">
+                <button role="menuitemradio" aria-checked={p.key === persona.key} onClick={() => { select(p.key); close() }} className={`${item} ${p.key === persona.key ? 'bg-brand text-brandfg font-semibold' : ''}`}>
+                  <span className="min-w-0"><span className="block">{t(`persona.role.${p.kind}` as never)}</span>{p.name && <span className="block text-xs opacity-80 truncate">{p.name} · {t('persona.fictional')}</span>}</span>
+                  {p.key === persona.key && <Icon name="check" size={16} className="ml-auto" />}
+                </button>
+              </li>))}
+            {/* the simulated review workspace is offered only once the simulated reviewer persona is chosen (it is not a real admin link) */}
+            {persona.kind === 'admin' && <li role="none" className="border-t border-line mt-1 pt-1"><button role="menuitem" className={item} onClick={() => { close(); go('review') }}><Icon name="risk" size={16} />{t('persona.toReview')}</button></li>}
+            <li role="none" className="border-t border-line mt-1 pt-1"><button role="menuitem" className={item} onClick={() => { reset(); close() }}><Icon name="back" size={16} />{t('persona.reset')}</button></li>
+          </ul>
+        </>)}
+      </Menu>
+    </div>
+  )
+}
+
 export function Header({ route }: { route: string }) {
   const { t } = useI18n()
-  const { startDemo, profile } = useStore()
+  const { profile } = useStore()
   const started = !!profile // the menu appears once there is something to navigate
   const [menu, setMenu] = useState(false)
   const menuBtn = useRef<HTMLButtonElement>(null)
@@ -130,15 +174,14 @@ export function Header({ route }: { route: string }) {
           </Menu>
         </nav>}
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          <LanguageSwitcher /><ThemeSwitcher />
-          <button className="btn-accent !py-1.5 !min-h-[40px] text-sm hidden sm:inline-flex" onClick={() => { startDemo(); go('profile') }}>{t('cta.startDemo')}</button>
+          <div className="hidden sm:block"><PersonaSwitcher /></div><LanguageSwitcher /><ThemeSwitcher />
           {started && <button ref={menuBtn} className={`xl:hidden ${ctrl} w-10`} aria-expanded={menu} aria-label={t('nav.menu')} onClick={() => setMenu(!menu)}><Icon name={menu ? 'close' : 'menu'} /></button>}
         </div>
       </div>
+      <div className="sm:hidden border-t border-line px-3 py-1.5"><PersonaSwitcher bar /></div>
       {started && menu && (
         <div className="xl:hidden bg-header px-3 pb-3 border-t border-line max-h-[70vh] overflow-auto">
-          <button className="btn-accent w-full my-2 text-sm" onClick={() => { startDemo(); go('profile'); setMenu(false) }}>{t('cta.startDemo')}</button>
-          <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-1">
+          <ul className="grid mt-2 grid-cols-1 min-[420px]:grid-cols-2 gap-1">
             {[...PRIMARY, ...MORE].map((n) => <li key={n.route}><NavLink to={n.route} onNavigate={() => setMenu(false)} aria-current={isActive(route, n) ? 'page' : undefined} className={`w-full text-left px-3 py-3 rounded-lg hover:bg-surface3 flex items-center gap-2.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : ''}`}><Icon name={n.icon} size={17} />{t(n.key as never)}</NavLink></li>)}
           </ul>
         </div>)}

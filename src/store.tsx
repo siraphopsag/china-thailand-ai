@@ -179,7 +179,8 @@ export const TOUR_LENGTH = tourRoutes.length
 const ROUTE_EVENT = 'app:navigate'
 const current = () => window.location.pathname.split('/').filter(Boolean).join('/')
 export const go = (r: string) => {
-  if (current() !== r) window.history.pushState({}, '', '/' + r)
+  // compare path + query, so going from /jobs?job=… back to /jobs is a real navigation (paths without a query behave as before)
+  if (window.location.pathname + window.location.search !== '/' + r) window.history.pushState({}, '', '/' + r)
   window.dispatchEvent(new Event(ROUTE_EVENT)); window.scrollTo(0, 0)
 }
 /** In-app link: a real <a href> (so it is announced as a link and can be opened in a new tab) that routes without a reload on a plain click. */
@@ -194,4 +195,15 @@ export function useRoute() {
     return () => { window.removeEventListener('popstate', f); window.removeEventListener(ROUTE_EVENT, f) }
   }, [])
   return r
+}
+/** One query-string value of the current URL (e.g. `job` in /jobs?job=job_0001); '' when absent or when there is no window. Treat it as untrusted input. */
+export function useSearchParam(name: string): string {
+  const read = () => (typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get(name) ?? '')
+  const [v, setV] = useState(read)
+  useEffect(() => {
+    const f = () => setV(read())
+    window.addEventListener('popstate', f); window.addEventListener(ROUTE_EVENT, f)
+    return () => { window.removeEventListener('popstate', f); window.removeEventListener(ROUTE_EVENT, f) }
+  }, [name])
+  return v
 }

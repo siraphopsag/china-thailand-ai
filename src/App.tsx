@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useRef, type ReactNode } from 'react'
 import { go, NavLink, StoreProvider, useRoute, useStore } from './store'
 import { LanguageProvider, useI18n } from './i18n'
 import { ThemeProvider } from './theme'
+import { PersonaProvider } from './persona'
+import { JobBoardProvider } from './jobboardData'
 import { ErrorBoundary } from './ErrorBoundary'
 import { BRAND } from './brand'
 import { pageTitle } from './utils/labels'
@@ -27,6 +29,9 @@ const PlanPage = lazy(() => import('./pages/plan').then((m) => ({ default: m.Pla
 const NavigatorPage = lazy(() => import('./pages/compliance').then((m) => ({ default: m.NavigatorPage })))
 const EmployeeCheckPage = lazy(() => import('./pages/compliance').then((m) => ({ default: m.EmployeeCheckPage })))
 const PrivacyPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.PrivacyPage })))
+const JobsPage = lazy(() => import('./pages/jobboard').then((m) => ({ default: m.JobsPage })))
+const EmployerPage = lazy(() => import('./pages/jobboard').then((m) => ({ default: m.EmployerPage })))
+const ReviewPage = lazy(() => import('./pages/review').then((m) => ({ default: m.ReviewPage })))
 
 /** footer targets are at least 24 px high (WCAG 2.5.8) */
 const FOOT = 'underline inline-flex items-center min-h-[24px]'
@@ -77,7 +82,8 @@ function Router() {
     '': <Landing />, start: <StartPage />, direction: <DirectionPage />, interview: <InterviewPage />, profile: <ProfilePage />, dashboard: <Dashboard />, analysis: <AnalysisCenter />,
     ownership: <OwnershipPage />, nominee: <NomineePage />, employment: <EmploymentPage />, contract: <ContractPage />, language: <LanguagePage />, plan: <PlanPage />, navigator: <NavigatorPage />, employee: <EmployeeCheckPage />, risk: <RiskPage />,
     roadmap: <RoadmapPage />, documents: <DocumentsPage />, monitoring: <MonitoringPage />, sources: <SourcesPage />, pricing: <PricingPage />, privacy: <PrivacyPage />, admin: <AdminPage />,
+    jobs: <JobsPage />, employer: <EmployerPage />, review: <ReviewPage />, // job-board PoC (simulated); /review is separate from the legal-status /admin
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>
 }
-export default function App() { return <ThemeProvider><LanguageProvider><StoreProvider><Router /></StoreProvider></LanguageProvider></ThemeProvider> }
+export default function App() { return <ThemeProvider><LanguageProvider><StoreProvider><PersonaProvider><JobBoardProvider><Router /></JobBoardProvider></PersonaProvider></StoreProvider></LanguageProvider></ThemeProvider> }
