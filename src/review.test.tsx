@@ -38,10 +38,10 @@ describe('P5 route and the legacy /admin page', () => {
     expect(src('./pages/ops.tsx')).toMatch(/export function AdminPage\(\)[\s\S]*t\('adm\.title'\)/)
     expect(src('./pages/ops.tsx')).not.toMatch(/from '\.\/(jobboard|review)'|components\/jobboard|jobboardData|domain\/jobboard/) // the legal page was not mixed with the simulation
   })
-  it('the page always shows the full simulation notice and the "not real verification" disclaimer', () => {
+  it('the page always shows the simulation notice (compact, with every limitation in its details) and the "not real verification" disclaimer', () => {
     for (const p of [undefined, 'worker:wkr_0001', ADMIN]) {
       const page = html(<ReviewPage />, p)
-      for (const k of ['rv.title', 'jb.notice.t', 'jb.notice.1', 'jb.notice.3', 'jb.notice.4', 'rv.disclaimer'] as const) expect(page, `${p} ${k}`).toContain(T(k))
+      for (const k of ['rv.title', 'jb.notice.short', 'jb.notice.1', 'jb.notice.3', 'jb.notice.4', 'rv.disclaimer'] as const) expect(page, `${p} ${k}`).toContain(T(k))
       expect(page).toContain('href="/jobs"'); expect(page).toContain('href="/"')
     }
   })

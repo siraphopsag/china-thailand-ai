@@ -7,6 +7,7 @@ export const review = {
   'rv.gate': ['คิวตรวจและประวัติการตรวจจะแสดงเมื่อเลือกบทบาทผู้ตรวจสอบ (จำลอง) เท่านั้น การเปลี่ยนบทบาทไม่ได้ตรวจหรือแก้ข้อมูลใด', '仅在选择“审核员（模拟）”角色时显示审核队列和审核记录。切换角色不会进行审核或修改任何数据。', 'The review queues and history appear only with the simulated reviewer role. Switching roles reviews or changes nothing.'],
   'rv.toLobby': ['กลับหน้าแรก', '返回首页', 'Back to the home page'],
   'rv.loadError': ['โหลดคิวตรวจไม่ได้ในบทบาทนี้', '当前角色无法加载审核队列', 'The review queues cannot be loaded for this role'],
+  'rv.sum': ['สรุปงานที่รอตรวจ', '待审核概览', 'Waiting for review'],
   // ---------- queues
   'rv.org.h': ['องค์กรที่รอตรวจ (สมมติ)', '待审核机构（虚构）', 'Organisations waiting for review (fictional)'],
   'rv.org.empty': ['ไม่มีองค์กรที่รอตรวจ จะมีรายการเมื่อนายจ้างตัวอย่างขอรับการตรวจ หรือหลังรีเซ็ตข้อมูลจำลอง', '没有待审核的机构。示例雇主申请审核或重置模拟数据后会出现项目。', 'No organisations are waiting. Items appear when a sample employer requests a review, or after resetting the simulation data.'],

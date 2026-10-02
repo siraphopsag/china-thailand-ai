@@ -92,11 +92,11 @@ describe('P3 Lobby entry points', () => {
     // (the /jobs page may submit, but only from its confirmation dialog — checked in jobboard-p4.test.tsx)
     for (const f of ['./persona.tsx', './domain/jobboard/personas.ts', './components/jobboard.tsx']) expect(src(f), f).not.toMatch(/submitApplication|createMemoryRepo|repo\./)
   })
-  // (entry-UX fix: the Worker/Employer entries moved from the Lobby to /choose-role, which the main CTA opens — see entry.test.tsx)
+  // (design pass: the main CTA opens /choose-role, and the hero also offers the two role paths once each — see design.test.tsx)
   it('the Lobby\'s main CTA opens /choose-role, and every business-planning entry point is kept', () => {
     const page = html(<Landing />)
     expect(page).toMatch(new RegExp(`href="/choose-role"[^>]*>${T('hero.cta')}`))
-    for (const k of ['jb.lobby.worker.t', 'jb.lobby.employer.t'] as const) expect(page, k).not.toContain(T(k)) // not duplicated on the Lobby
+    for (const k of ['jb.lobby.worker.t', 'jb.lobby.employer.t'] as const) expect(page.split(T(k)).length - 1, k).toBe(1) // one quick path each, not duplicated
     for (const k of ['hero.cta', 'goal.th_cn.t', 'goal.cn_th.t', 'goal.employee.t', 'goal.documents.t', 'goal.example', 'goal.mapAlt'] as const) expect(page, k).toContain(T(k))
   })
 })

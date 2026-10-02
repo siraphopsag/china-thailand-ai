@@ -30,7 +30,7 @@ export function ReviewPage() {
         <NavLink to="jobs" className="btn-ghost text-sm">{t('jb.toJobs')}</NavLink>
         <NavLink to="" className="btn-ghost text-sm"><Icon name="home" size={16} />{t('rv.toLobby')}</NavLink>
       </PageHead>
-      <SimulationNotice />
+      <SimulationNotice compact />
       <Warn>{t('rv.disclaimer')}</Warn>
       <DataBar />
       <RoleGate kind="admin" note={t('rv.gate')}><ReviewWorkspace /></RoleGate>
@@ -72,6 +72,10 @@ export function ReviewWorkspace() {
   )
   return (
     <div className="space-y-6">
+      <ul className="grid grid-cols-2 gap-3 max-w-md" aria-label={t('rv.sum')}>
+        <li className="card !p-4"><p className="text-2xl font-bold">{organizations.length}</p><p className="text-sm text-muted">{t('rv.org.h')}</p></li>
+        <li className="card !p-4"><p className="text-2xl font-bold">{jobs.length}</p><p className="text-sm text-muted">{t('rv.job.h')}</p></li>
+      </ul>
       <Outcome o={out} />
       <section className="space-y-3" aria-labelledby="rv-org-h">
         <h2 id="rv-org-h" className="h2">{t('rv.org.h')}</h2>

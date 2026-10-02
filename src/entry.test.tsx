@@ -27,7 +27,7 @@ describe('entry flow: Lobby → /choose-role', () => {
   it('the Lobby\'s primary CTA is a link to /choose-role, a registered route', () => {
     expect(ROUTES.has('choose-role')).toBe(true)
     expect(src('./App.tsx')).toMatch(/'choose-role': <ChooseRolePage \/>/)
-    expect(html(<Landing />)).toMatch(new RegExp(`<a href="/choose-role" class="cta-core[^"]*">${T('hero.cta')}`))
+    expect(html(<Landing />)).toMatch(new RegExp(`<a href="/choose-role" class="btn-primary[^"]*">${T('hero.cta')}`))
     expect(src('./pages/intake.tsx')).not.toMatch(/onClick=\{beginNew\}>\{t\('hero\.cta'\)/) // the CTA no longer jumps straight into the map/interview
   })
   it('the choice page shows the question, the Worker and Employer options first, then business planning', () => {
@@ -73,7 +73,7 @@ describe('entry flow: persona selection and destinations', () => {
     expect(src('./pages/choose.tsx')).toMatch(/failed && <Warn tone="danger">\{t\('choose\.error'\)\}/)
   })
   it('the business-planning choice uses the existing flow unchanged (beginNew → map /start → interview)', () => {
-    expect(src('./pages/choose.tsx')).toMatch(/onClick=\{beginNew\}/)
+    expect(src('./pages/choose.tsx')).toMatch(/onClick=\{\(\) => \{ reset\(\); beginNew\(\) \}\}/) // clears the simulated persona, then the existing flow
     expect(src('./store.tsx')).toMatch(/beginNew: \(\) => \{\s*if \(mode === 'demo'\) \{ setMode\('real'\); setS\(load\('real'\)\) \}\s*go\('start'\)/)
     expect(src('./store.tsx')).toMatch(/setS\(base\); go\('interview'\)/)
     for (const r of ['start', 'interview', 'direction', 'profile', 'plan', 'navigator', 'employee', 'documents', 'sources', 'admin']) expect(ROUTES.has(r), r).toBe(true)

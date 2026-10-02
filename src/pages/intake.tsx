@@ -2,41 +2,20 @@ import { useMemo, useState } from 'react'
 import { useActions } from '../hooks'
 import type { Direction, EmploymentInput, Profile } from '../types'
 import { go, NavLink, useStore } from '../store'
-import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead, useRouteText } from '../components/ui'
+import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead, Warn, useRouteText } from '../components/ui'
 import { CountryBadge, Icon } from '../components/icons'
 import { dirInfo } from '../utils/labels'
-import { BRAND, BRAND_CONCEPTS } from '../brand'
-import { Glow, RetroGrid } from '../components/backdrop'
+import { BRAND_CONCEPTS } from '../brand'
+import { RetroGrid } from '../components/backdrop'
 import { dv, tk, useI18n } from '../i18n'
+import { usePersona } from '../persona'
+import type { MsgKey } from '../locales'
 import { OWNERSHIP_KEYS, buildProfile, coreDone, firstUnanswered, prune, remaining, visibleQs, type A, type Q } from '../interview'
 
-/* ================= LANDING (lobby): the product introduction; the map is the next step, never shown here ================= */
-/** A small, honest preview of how C.A.L.L. works (illustrative, labelled as such): the route, the AI activity, the integrated concerns. */
-function HeroPreview() {
-  const { t } = useI18n()
-  const steps: [string, boolean][] = [[t('hero.act.1'), true], [t('hero.act.2'), true], [t('hero.act.3'), true], [t('hero.act.4'), false]]
-  return (
-    <div className="hero-tilt">
-      <div className="glass rounded-2xl p-4 sm:p-5 shadow-xl text-left space-y-4">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 text-sm font-semibold"><CountryBadge c="TH" />{tk('country', 'TH')}
-            <svg width="72" height="18" viewBox="0 0 72 18" aria-hidden className="text-primary"><path d="M2 14 Q36 -4 70 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeDasharray="4 4" /></svg>
-            <CountryBadge c="CN" />{tk('country', 'CN')}</div>
-          <span className="chip bg-surface3 text-muted border-line"><Icon name="ai" size={12} />{t('hero.preview')}</span>
-        </div>
-        <ol className="space-y-2">{steps.map(([txt, done], i) => (
-          <li key={i} className="flex items-center gap-2.5 text-sm">
-            {done ? <Icon name="ok" size={17} className="text-ok-fg shrink-0" /> : <span className="w-[17px] h-[17px] grid place-items-center shrink-0"><span className="w-2 h-2 rounded-full bg-primary animate-pulse" /></span>}
-            <span className={done ? '' : 'font-medium'}>{txt}</span></li>))}</ol>
-        <div className="flex flex-wrap gap-1.5">{(['lang', 'legal', 'risk', 'next'] as const).map((k) => <span key={k} className="chip bg-brand text-brandfg border-line font-medium">{t(('hero.tag.' + k) as never)}</span>)}</div>
-        <p className="text-[11px] text-muted">{t('hero.sample')}</p>
-      </div>
-    </div>
-  )
-}
+/* ================= LANDING (lobby): employment-first introduction; business planning stays available as a secondary area ================= */
 type GoalCard = 'th_cn' | 'cn_th' | 'employee' | 'documents'
-/** Goal-first entry: each option says in plain words what C.A.L.L. will help with and what you get. */
-function Goals() {
+/** Business-planning goals (the existing tool). `heading` is false when the page already titles this area. */
+function Goals({ heading = true }: { heading?: boolean }) {
   const { t } = useI18n()
   const { chooseDirection, beginNew, startDemo } = useStore()
   const [open, setOpen] = useState<GoalCard | null>(null)
@@ -44,13 +23,13 @@ function Goals() {
   const pick = (g: GoalCard) => (g === 'th_cn' ? start('TH_CN', 'expand') : g === 'cn_th' ? start('CN_TH', 'expand') : setOpen(open === g ? null : g))
   const cards: [GoalCard, 'expand' | 'employee' | 'documents', 'globe' | 'employment' | 'documents'][] = [['th_cn', 'expand', 'globe'], ['cn_th', 'expand', 'globe'], ['employee', 'employee', 'employment'], ['documents', 'documents', 'documents']]
   return (
-    <section id="goals" aria-labelledby="goals-h" className="space-y-4 scroll-mt-24">
-      <div><h2 id="goals-h" className="text-2xl font-bold">{t('goal.title')}</h2><p className="text-muted mt-1">{t('goal.sub')}</p></div>
+    <div id="goals" className="space-y-4 scroll-mt-24">
+      {heading && <div><h2 id="goals-h" className="text-2xl font-bold">{t('goal.title')}</h2><p className="text-muted mt-1">{t('goal.sub')}</p></div>}
       <ul className="grid sm:grid-cols-2 gap-3">{cards.map(([g, kind, icon]) => (
         <li key={g} className="card !p-4 flex flex-col gap-2">
           <button className="text-left flex gap-3 items-start group" aria-expanded={g === 'employee' || g === 'documents' ? open === g : undefined} onClick={() => pick(g)}>
-            <span className="w-10 h-10 shrink-0 rounded-xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={20} /></span>
-            <span className="min-w-0"><span className="font-semibold text-lg group-hover:underline underline-offset-4 flex items-center gap-1.5">{t(`goal.${g}.t` as never)}<Icon name="next" size={16} className="text-primary" /></span>
+            <span className="w-10 h-10 shrink-0 rounded-xl bg-surface3 text-ink grid place-items-center"><Icon name={icon} size={20} /></span>
+            <span className="min-w-0"><span className="font-semibold group-hover:underline underline-offset-4 flex items-center gap-1.5">{t(`goal.${g}.t` as never)}<Icon name="next" size={16} className="text-primary" /></span>
               <span className="block text-sm text-muted">{t(`goal.${g}.d` as never)}</span>
               <span className="block text-xs mt-1.5"><b>{t('goal.get')}:</b> {t(`goal.get.${kind}` as never)}</span></span>
           </button>
@@ -67,10 +46,10 @@ function Goals() {
         <button className="text-primary underline underline-offset-2 inline-flex items-center min-h-[24px]" onClick={beginNew}>{t('goal.mapAlt')}</button>
       </div>
       <p className="text-xs text-muted">{t('goal.soon')}</p>
-    </section>
+    </div>
   )
 }
-/** A returning user sees their case first. */
+/** A returning business-planning user sees their case first. */
 function ContinueCase() {
   const { t } = useI18n()
   const { profile, mode } = useStore()
@@ -79,44 +58,81 @@ function ContinueCase() {
   if (!profile || mode === 'demo') return null
   return (
     <section className="card flex flex-wrap items-center gap-3 border-primary/40" aria-labelledby="cont-h">
-      <div className="min-w-0 flex-1 basis-64"><h2 id="cont-h" className="h2">{t('goal.continue.t')}</h2>
+      <div className="min-w-0 flex-1 basis-64"><h3 id="cont-h" className="h2">{t('goal.continue.t')}</h3>
         <p className="text-sm text-muted">{t('goal.continue.d', { name: dv(profile.companyName) || '-', route, done: actions.filter((a) => a.status === 'done').length, total: actions.length })}</p></div>
       <button className="btn-primary" onClick={() => go('plan')}><Go>{t('goal.continue.go')}</Go></button>
     </section>
   )
 }
+/**
+ * Worker / Employer quick entries in the hero: select that role's seeded persona and open its page (simulated; changes no records).
+ * Business planning is offered as a quieter link that clears the simulated persona first.
+ */
+function RolePaths() {
+  const { t } = useI18n()
+  const { enter, reset } = usePersona()
+  const { beginNew } = useStore()
+  const [failed, setFailed] = useState(false)
+  const items = [['worker', 'employment', 'choose.worker.get'], ['employer', 'business', 'choose.employer.get']] as const
+  return (
+    <div className="card !p-4 sm:!p-5 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-muted">{t('home.paths')}</h2><span className="chip bg-warn-bg text-warn-fg border-warn-line">{t('choose.simBadge')}</span></div>
+      <ul className="space-y-2">{items.map(([kind, icon, get]) => (
+        <li key={kind}>
+          <button type="button" className="w-full text-left flex items-center gap-3 rounded-xl border border-line bg-surface2 px-3 py-3 transition-colors hover:border-primary/50 group" onClick={() => setFailed(!enter(kind))}>
+            <span className="w-10 h-10 shrink-0 rounded-xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={20} /></span>
+            <span className="min-w-0 flex-1"><span className="block font-semibold group-hover:underline underline-offset-4">{t(`jb.lobby.${kind}.t` as never)}</span><span className="block text-xs text-muted mt-0.5">{t(get)}</span></span>
+            <Icon name="next" size={18} className="text-primary" />
+          </button>
+        </li>))}</ul>
+      <div role="alert">{failed && <Warn tone="danger">{t('choose.error')}</Warn>}</div>
+      <button type="button" className="text-sm text-primary underline underline-offset-2 inline-flex items-center gap-1.5 min-h-[24px]" onClick={() => { reset(); beginNew() }}><Icon name="globe" size={14} />{t('home.orBiz')}</button>
+    </div>
+  )
+}
 export function Landing() {
   const { t } = useI18n()
+  const links: Partial<Record<string, [string, MsgKey]>> = { language: ['language', 'home.go.lang'], legal: ['sources', 'home.go.legal'] }
   return (
-    <div className="space-y-12 max-w-5xl mx-auto">
-      <section className="hero-shell relative overflow-hidden rounded-3xl border border-line px-5 pt-14 pb-10 sm:px-10 md:pt-20 md:pb-14 text-center" aria-labelledby="hero-h">
-        <Glow /><RetroGrid />
-        <div className="relative max-w-3xl mx-auto">
-          <p className="inline-flex items-center gap-2 rounded-full glass px-3.5 py-1.5 text-xs sm:text-sm font-medium" lang="en"><Icon name="globe" size={15} className="text-primary" />{BRAND.title}</p>
-          <h1 id="hero-h" className="mt-6 text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.15] text-ink">
-            <span className="block">{t('hero.h1a')}</span><span className="block text-gradient pb-1">{t('hero.h1b')}</span>
-          </h1>
-          <p className="mt-5 text-base sm:text-lg text-ink max-w-2xl mx-auto font-medium">{t('land.value')}</p>
-          <p className="mt-2 text-sm text-muted max-w-2xl mx-auto">{t('land.pos')}</p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-x-5 gap-y-3">
+    <div className="space-y-14 max-w-6xl mx-auto">
+      <section className="hero-shell relative overflow-hidden rounded-3xl border border-line px-5 py-9 sm:px-10 md:py-12" aria-labelledby="hero-h">
+        <RetroGrid />
+        <div className="relative grid lg:grid-cols-[1.45fr_1fr] gap-8 items-center">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs sm:text-sm font-medium"><Icon name="globe" size={15} className="text-primary" />{t('home.eyebrow')}</p>
+            <h1 id="hero-h" className="mt-5 text-[1.7rem] sm:text-3xl md:text-4xl font-bold leading-[1.25] text-ink">
+              <span className="block">{t('home.h1a')}</span><span className="block text-gradient pb-1">{t('home.h1b')}</span>
+            </h1>
+            <p className="mt-4 text-base sm:text-lg text-muted max-w-xl">{t('home.sub')}</p>
             {/* the main start first asks what the visitor wants to do (/choose-role): find work, hire, or plan a business (map → interview, as before) */}
-            <span className="cta-ring"><NavLink to="choose-role" className="cta-core text-base">{t('hero.cta')}<Icon name="next" size={18} /></NavLink></span>
+            <div className="mt-6"><NavLink to="choose-role" className="btn-primary !px-6 !min-h-[52px] text-base">{t('hero.cta')}<Icon name="next" size={18} /></NavLink></div>
+            <p className="mt-3 text-xs text-muted flex items-start gap-1.5"><Icon name="info" size={14} className="mt-0.5" />{t('home.proto')}</p>
           </div>
+          <RolePaths />
         </div>
       </section>
-      <ContinueCase />
-      <Goals />
-      <div className="max-w-2xl mx-auto"><HeroPreview /></div>
-      <section aria-labelledby="stands-h" className="space-y-3">
-        <h2 id="stands-h" className="h2">{t('brand.stands')}</h2>
-        <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">{BRAND_CONCEPTS.map((c, i) => (
-          <li key={i} className="card card-hover !p-4 space-y-1.5"><div className="flex items-baseline gap-2" lang="en"><span className="text-2xl font-bold text-gradient">{c.letter}</span><span className="font-semibold">{c.word}</span></div><p className="text-sm text-muted">{t(('brand.' + c.key) as never)}</p></li>))}</ul>
+      <section aria-labelledby="stands-h" className="space-y-4">
+        <div><h2 id="stands-h" className="text-2xl font-bold">{t('brand.stands')}</h2><p className="text-muted mt-1">{t('home.pillars.sub')}</p></div>
+        <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{BRAND_CONCEPTS.map((c, i) => {
+          const link = links[c.key]
+          return (
+            <li key={i} className="card !p-4 flex flex-col gap-2">
+              <div className="flex items-baseline gap-2" lang="en"><span className="text-2xl font-bold text-primary">{c.letter}</span><span className="font-semibold">{c.word}</span></div>
+              <p className="text-sm text-muted flex-1">{t(('brand.' + c.key) as never)}</p>
+              {link && <NavLink to={link[0]} className="text-sm text-primary underline underline-offset-2 inline-flex items-center gap-1 min-h-[24px]">{t(link[1])}<Icon name="next" size={14} /></NavLink>}
+            </li>)
+        })}</ul>
         <p className="text-xs text-muted">{t('brand.together')}</p>
       </section>
-      <section aria-label={t('land.h2')}>
-        <ol className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">{[1, 2, 3, 4, 5].map((n) => (
-          <li key={n} className="flex gap-3 items-start"><span className="w-8 h-8 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center font-semibold">{n}</span><span className="pt-1 font-medium">{tk('journey', String(n))}</span></li>))}</ol>
-        <p className="text-sm text-muted mt-4">{t('land.tip')}</p>
+      <section aria-labelledby="steps-h" className="space-y-4">
+        <h2 id="steps-h" className="text-2xl font-bold">{t('home.steps.h')}</h2>
+        <ol className="grid md:grid-cols-3 gap-3">{[1, 2, 3].map((n) => (
+          <li key={n} className="card !p-4 flex gap-3 items-start"><span className="w-8 h-8 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center font-semibold">{n}</span><span className="pt-1 font-medium">{t(`home.step.${n}` as never)}</span></li>))}</ol>
+      </section>
+      <section aria-labelledby="biz-h" className="space-y-4 border-t border-line pt-10">
+        <div><h2 id="biz-h" className="text-xl font-bold flex items-center gap-2"><Icon name="globe" size={20} className="text-muted" />{t('home.biz.h')}</h2><p className="text-muted mt-1 max-w-3xl">{t('home.biz.d')}</p></div>
+        <ContinueCase />
+        <Goals heading={false} />
       </section>
       <Disclaimer />
     </div>

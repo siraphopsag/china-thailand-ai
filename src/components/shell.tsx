@@ -11,7 +11,7 @@ import { usePersona } from '../persona'
 import { usePersonaLabel } from './jobboard'
 
 type NavItem = { route: string; key: string; icon: IconName; sub: string[] }
-/** Five primary areas that follow the journey. The internal analysis modules (ownership, employment, contract) live inside AI Analysis. */
+/** The business-planning tool's own areas (secondary part of C.A.L.L.). Shown as a sub-navigation only inside business-planning routes. */
 export const PRIMARY: NavItem[] = [
   { route: 'dashboard', key: 'nav.overview', icon: 'overview', sub: [] },
   { route: 'profile', key: 'nav.business', icon: 'business', sub: ['start', 'direction', 'interview'] },
@@ -19,10 +19,18 @@ export const PRIMARY: NavItem[] = [
   { route: 'plan', key: 'nav.plan', icon: 'plan', sub: ['roadmap', 'risk'] },
   { route: 'documents', key: 'nav.documents', icon: 'documents', sub: [] },
 ]
-export const MORE: NavItem[] = [
-  { route: 'monitoring', key: 'nav.monitoring', icon: 'monitor', sub: [] },
-  { route: 'sources', key: 'nav.sources', icon: 'sources', sub: [] },
-  { route: 'language', key: 'tabs.language', icon: 'culture', sub: [] },
+/** Every route that belongs to the business-planning tool (map, interview, analysis, plans, documents). */
+export const BUSINESS_ROUTES = PRIMARY.flatMap((n) => [n.route, ...n.sub])
+export const isBusinessRoute = (route: string) => BUSINESS_ROUTES.includes(route)
+type MainItem = { key: string; icon: IconName; to: (hasProfile: boolean) => string; match: string[] }
+/** Main navigation, employment first: jobs, employers, preparation (language & culture), legal information, then business planning. */
+export const MAIN_NAV: MainItem[] = [
+  { key: 'nav.jobs', icon: 'employment', to: () => 'jobs', match: ['jobs'] },
+  { key: 'nav.employerArea', icon: 'business', to: () => 'employer', match: ['employer'] },
+  { key: 'tabs.language', icon: 'culture', to: () => 'language', match: ['language'] },
+  { key: 'nav.legalInfo', icon: 'legal', to: () => 'sources', match: ['sources', 'monitoring'] },
+  // business planning opens its overview when a business case exists, otherwise its first step (the map)
+  { key: 'nav.bizPlanning', icon: 'globe', to: (p) => (p ? 'dashboard' : 'start'), match: BUSINESS_ROUTES },
 ]
 const isActive = (route: string, n: NavItem) => route === n.route || n.sub.includes(route)
 
@@ -151,7 +159,7 @@ export function PersonaSwitcher({ bar = false }: { bar?: boolean }) {
 export function Header({ route }: { route: string }) {
   const { t } = useI18n()
   const { profile } = useStore()
-  const started = !!profile // the menu appears once there is something to navigate
+  const biz = isBusinessRoute(route)
   const [menu, setMenu] = useState(false)
   const menuBtn = useRef<HTMLButtonElement>(null)
   useEffect(() => {
@@ -160,32 +168,53 @@ export function Header({ route }: { route: string }) {
     document.addEventListener('keydown', esc)
     return () => document.removeEventListener('keydown', esc)
   }, [menu])
+  useEffect(() => setMenu(false), [route]) // a new page closes the mobile menu
+  const on = (n: MainItem) => n.match.includes(route)
   return (
-    <header className="bg-header/85 backdrop-blur-md text-onheader sticky top-0 z-40 border-b border-line">
+    <header className="bg-header/90 backdrop-blur-md text-onheader sticky top-0 z-40 border-b border-line">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
         <NavLink to="" className="flex items-center gap-2 text-left shrink-0" aria-label={t('nav.home')}>
-          <Logo /><span className="leading-tight" lang="en"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
+          <Logo /><span className="leading-tight" lang="en"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block xl:hidden 2xl:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
         </NavLink>
-        {started && <nav aria-label={t('nav.main')} className="hidden xl:flex gap-0.5 ml-3 flex-1 min-w-0">
-          {PRIMARY.map((n) => (
-            <NavLink key={n.route} to={n.route} aria-current={isActive(route, n) ? 'page' : undefined} className={`px-2.5 py-2 rounded-lg text-sm min-h-[40px] whitespace-nowrap transition-colors flex items-center gap-1.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3'}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</NavLink>))}
-          <Menu label={t('nav.more')} buttonClass="border-transparent" kind="disclosure">
-            {(close) => <ul>{MORE.map((m) => <li key={m.route}><button className={`${item} ${route === m.route ? 'bg-brand text-brandfg font-semibold' : ''}`} onClick={() => { go(m.route); close() }}><Icon name={m.icon} size={17} />{t(m.key as never)}</button></li>)}</ul>}
-          </Menu>
-        </nav>}
+        <nav aria-label={t('nav.main')} className="hidden xl:flex gap-0.5 ml-2 flex-1 min-w-0">
+          {MAIN_NAV.map((n) => (
+            <NavLink key={n.key} to={n.to(!!profile)} aria-current={on(n) ? 'page' : undefined} className={`px-2.5 py-2 rounded-lg text-sm min-h-[40px] whitespace-nowrap transition-colors flex items-center gap-1.5 ${on(n) ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3'} ${n.key === 'nav.bizPlanning' ? 'text-muted' : ''}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</NavLink>))}
+        </nav>
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          <div className="hidden sm:block"><PersonaSwitcher /></div><LanguageSwitcher /><ThemeSwitcher />
-          {started && <button ref={menuBtn} className={`xl:hidden ${ctrl} w-10`} aria-expanded={menu} aria-label={t('nav.menu')} onClick={() => setMenu(!menu)}><Icon name={menu ? 'close' : 'menu'} /></button>}
+          {/* the simulated persona belongs to the job board; it is hidden inside the business-planning tool so it never looks like that tool's account */}
+          {!biz && <div className="hidden sm:block"><PersonaSwitcher /></div>}
+          <LanguageSwitcher /><ThemeSwitcher />
+          <button ref={menuBtn} className={`xl:hidden ${ctrl} w-10`} aria-expanded={menu} aria-label={t('nav.menu')} onClick={() => setMenu(!menu)}><Icon name={menu ? 'close' : 'menu'} /></button>
         </div>
       </div>
-      <div className="sm:hidden border-t border-line px-3 py-1.5"><PersonaSwitcher bar /></div>
-      {started && menu && (
-        <div className="xl:hidden bg-header px-3 pb-3 border-t border-line max-h-[70vh] overflow-auto">
+      {!biz && <div className="sm:hidden border-t border-line px-3 py-1.5"><PersonaSwitcher bar /></div>}
+      {menu && (
+        <nav aria-label={t('nav.mobile')} className="xl:hidden bg-header px-3 pb-3 border-t border-line max-h-[70vh] overflow-auto">
           <ul className="grid mt-2 grid-cols-1 min-[420px]:grid-cols-2 gap-1">
-            {[...PRIMARY, ...MORE].map((n) => <li key={n.route}><NavLink to={n.route} onNavigate={() => setMenu(false)} aria-current={isActive(route, n) ? 'page' : undefined} className={`w-full text-left px-3 py-3 rounded-lg hover:bg-surface3 flex items-center gap-2.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : ''}`}><Icon name={n.icon} size={17} />{t(n.key as never)}</NavLink></li>)}
+            {MAIN_NAV.map((n) => <li key={n.key}><NavLink to={n.to(!!profile)} onNavigate={() => setMenu(false)} aria-current={on(n) ? 'page' : undefined} className={`w-full text-left px-3 py-3 rounded-lg hover:bg-surface3 flex items-center gap-2.5 ${on(n) ? 'bg-brand text-brandfg font-semibold' : ''}`}><Icon name={n.icon} size={17} />{t(n.key as never)}</NavLink></li>)}
           </ul>
-        </div>)}
+          {profile && <>
+            <p className="mt-3 mb-1 px-1 text-xs font-semibold text-muted">{t('nav.bizTools')}</p>
+            <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-1">
+              {PRIMARY.map((n) => <li key={n.route}><NavLink to={n.route} onNavigate={() => setMenu(false)} aria-current={isActive(route, n) ? 'page' : undefined} className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface3 flex items-center gap-2.5 text-sm ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : ''}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</NavLink></li>)}
+            </ul>
+          </>}
+        </nav>)}
     </header>
+  )
+}
+
+/** The business-planning tool's own sub-navigation (desktop), shown only inside that tool once a business case exists. */
+function BusinessSubNav({ route }: { route: string }) {
+  const { t } = useI18n()
+  return (
+    <div className="hidden xl:block bg-surface2 border-b border-line">
+      <nav aria-label={t('nav.bizTools')} className="max-w-7xl mx-auto px-4 py-1.5 flex items-center gap-1">
+        <span className="text-xs font-semibold text-muted mr-2 inline-flex items-center gap-1.5"><Icon name="globe" size={14} />{t('nav.bizTools')}</span>
+        {PRIMARY.map((n) => (
+          <NavLink key={n.route} to={n.route} aria-current={isActive(route, n) ? 'page' : undefined} className={`px-2.5 py-1.5 rounded-lg text-sm min-h-[36px] whitespace-nowrap flex items-center gap-1.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3'}`}><Icon name={n.icon} size={15} />{t(n.key as never)}</NavLink>))}
+      </nav>
+    </div>
   )
 }
 
@@ -193,13 +222,17 @@ export function Header({ route }: { route: string }) {
 export function ContextStack({ route }: { route: string }) {
   const { t } = useI18n()
   const { profile, tour, set, mode, exitDemo } = useStore()
-  const hideCtx = ['', 'start', 'direction', 'interview', 'privacy', 'pricing'].includes(route)
-  const showTour = tour !== null && tour < tourRoutes.length
-  const demo = mode === 'demo'
-  if ((hideCtx || !profile) && !showTour && !demo) return null
+  // everything here belongs to the business-planning tool, so it stays inside that tool's routes (not on the job board or the home page)
+  const biz = isBusinessRoute(route)
+  const hideCtx = !biz || ['start', 'direction', 'interview'].includes(route)
+  const showTour = biz && tour !== null && tour < tourRoutes.length
+  const demo = biz && mode === 'demo'
+  const sub = biz && !!profile
+  if ((hideCtx || !profile) && !showTour && !demo && !sub) return null
   const d = profile ? dirInfo(profile.direction) : null
   return (
     <div className="md:sticky md:top-16 z-30">
+      {sub && <BusinessSubNav route={route} />}
       {demo && (
         <div className="bg-info-bg text-info-fg border-b border-info-line" role="status">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 py-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"><Icon name="info" size={14} /><span className="flex-1 min-w-[200px]">{t('demo.mode')}</span>
@@ -235,9 +268,9 @@ export function ContextStack({ route }: { route: string }) {
 export function BottomNav({ route }: { route: string }) {
   const { t } = useI18n()
   const { profile } = useStore()
-  if (!profile) return null
+  if (!profile || !isBusinessRoute(route)) return null // the business tool's own tabs; other areas use the header menu
   return (
-    <nav aria-label={t('nav.mobile')} className="xl:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-line grid grid-cols-5 z-40">
+    <nav aria-label={t('nav.bizTools')} className="xl:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-line grid grid-cols-5 z-40">
       {PRIMARY.map((n) => (
         <NavLink key={n.route} to={n.route} aria-current={isActive(route, n) ? 'page' : undefined} className={`py-2 text-[11px] min-h-[56px] flex flex-col items-center gap-0.5 leading-tight px-0.5 ${isActive(route, n) ? 'text-primary font-semibold' : 'text-muted'}`}>
           <Icon name={n.icon} size={21} /><span className="line-clamp-2 max-w-full text-center">{t(n.key as never)}</span>

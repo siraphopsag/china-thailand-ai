@@ -164,6 +164,11 @@ export function JobFacts({ job }: { job: Job }) {
   return <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">{rows.map(([k, v]) => <div key={k} className="contents"><dt className="text-muted">{k}</dt><dd>{v}</dd></div>)}</dl>
 }
 
+export function SkillChips({ skills }: { skills: Skill[] }) {
+  const L = useLabels()
+  return <ul className="flex flex-wrap gap-1.5">{skills.map((s) => <li key={s} className="chip bg-surface2 text-ink border-line font-medium">{L.skill(s)}</li>)}</ul>
+}
+
 /* ---------------- worker: /jobs ---------------- */
 type WorkerTab = 'list' | 'profile' | 'applications'
 export function JobsPage() {
@@ -203,7 +208,7 @@ export function JobList() {
   if (!jobs.length) return <div className="card text-muted">{t('jb.empty')}</div>
   return (
     <section className="space-y-3" aria-label={t('jb.tab.list')}>
-      <div className="card !p-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="card !p-4 grid sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-3">
         <label className="block text-sm"><span className="label">{t('jb.search')}</span><input type="search" className="input" value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} /></label>
         <label className="block text-sm"><span className="label">{t('jb.f.province')}</span><select className="input" value={prov} onChange={(e) => setProv(e.target.value)}><option value="">{t('jb.f.all')}</option>{opts(jobs.map((j) => j.province), L.province)}</select></label>
         <label className="block text-sm"><span className="label">{t('jb.f.industry')}</span><select className="input" value={ind} onChange={(e) => setInd(e.target.value)}><option value="">{t('jb.f.all')}</option>{opts(jobs.map((j) => j.industry), L.industry)}</select></label>
@@ -213,11 +218,17 @@ export function JobList() {
         {filtered && <button type="button" className="underline text-primary inline-flex items-center min-h-[24px]" onClick={() => { setQ(''); setProv(''); setInd(''); setSkill('') }}>{t('jb.f.clear')}</button>}</div>
       {!shown.length ? <div className="card text-muted">{t('jb.noResults')}</div> : (
         <ul className="grid md:grid-cols-2 gap-3">{shown.map((j) => (
-          <li key={j.id} className="card !p-4 space-y-2">
-            <div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold text-lg">{stripSynthetic(j.title)}</h3><FictionalTag /><Chip tone={REVIEW_TONE[j.review]}>{L.review(j.review)}</Chip></div>
-            <p className="text-sm text-muted">{t('jb.field.org')}: {orgName(j.organizationId)}</p>
-            <JobFacts job={j} />
-            <NavLink to={`jobs?job=${j.id}`} className="btn-ghost text-sm inline-flex">{t('jb.open')}<Icon name="next" size={16} /></NavLink>
+          <li key={j.id} className="card card-hover !p-4 flex flex-col gap-3">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold text-lg leading-snug">{stripSynthetic(j.title)}</h3><FictionalTag /></div>
+              <p className="text-sm text-muted flex flex-wrap items-center gap-x-1.5"><Icon name="target" size={14} />{L.province(j.province)} · {L.industry(j.industry)} · {orgName(j.organizationId)}</p>
+            </div>
+            <SkillChips skills={j.skills} />
+            <p className="text-sm">{t('jb.minYearsShort', { n: j.minYears })} · {t('jb.contractShort', { n: j.contractMonths })}</p>
+            <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
+              <Chip tone={REVIEW_TONE[j.review]}>{L.review(j.review)}</Chip>
+              <NavLink to={`jobs?job=${j.id}`} className="btn-ghost text-sm inline-flex" aria-label={`${t('jb.open')}: ${stripSynthetic(j.title)}`}>{t('jb.open')}<Icon name="next" size={16} /></NavLink>
+            </div>
           </li>))}</ul>)}
     </section>
   )
@@ -238,15 +249,40 @@ export function JobDetail({ id }: { id: string }) {
   }
   const job = res.value
   const org = repo.getOrganization(actor, job.organizationId)
+  // hierarchy: title and location → organisation and status → requirements → skills and category → preparation → the simulated application
   return (
     <section className="space-y-4" aria-labelledby="jb-detail-h">
       {back}
-      <article className="card space-y-3">
-        <div className="flex flex-wrap items-center gap-2"><h2 id="jb-detail-h" ref={head} tabIndex={-1} className="h2 outline-none">{stripSynthetic(job.title)}</h2><FictionalTag /><Chip tone={REVIEW_TONE[job.review]}>{L.review(job.review)}</Chip></div>
-        <p className="text-sm text-muted">{t('jb.field.org')}: {org.ok ? stripSynthetic(org.value.name) : '—'}</p>
-        <JobFacts job={job} />
-      </article>
-      <ApplyBox job={job} />
+      <div className="grid lg:grid-cols-[1fr_20rem] gap-4 items-start">
+        <article className="card space-y-5">
+          <header className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2"><h2 id="jb-detail-h" ref={head} tabIndex={-1} className="text-xl sm:text-2xl font-bold outline-none">{stripSynthetic(job.title)}</h2><FictionalTag /></div>
+            <p className="text-muted flex flex-wrap items-center gap-x-1.5"><Icon name="target" size={15} />{L.province(job.province)}</p>
+            <p className="text-sm flex flex-wrap items-center gap-2"><span className="text-muted">{t('jb.field.org')}:</span> {org.ok ? stripSynthetic(org.value.name) : '—'} <Chip tone={REVIEW_TONE[job.review]}>{L.review(job.review)}</Chip></p>
+          </header>
+          <section aria-labelledby="jb-req-h" className="space-y-2">
+            <h3 id="jb-req-h" className="font-semibold">{t('jb.req.h')}</h3>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+              <dt className="text-muted">{t('jb.field.minYears')}</dt><dd>{t('jb.years', { n: job.minYears })}</dd>
+              <dt className="text-muted">{t('jb.field.contract')}</dt><dd>{t('jb.months', { n: job.contractMonths })}</dd>
+              <dt className="text-muted">{t('jb.field.industry')}</dt><dd>{L.industry(job.industry)}</dd>
+            </dl>
+          </section>
+          <section aria-labelledby="jb-skills-h" className="space-y-2">
+            <h3 id="jb-skills-h" className="font-semibold">{t('jb.field.skills')}</h3>
+            <SkillChips skills={job.skills} />
+          </section>
+          <section aria-labelledby="jb-prep-h" className="space-y-2 border-t border-line pt-4">
+            <h3 id="jb-prep-h" className="font-semibold">{t('jb.prep.h')}</h3>
+            <p className="text-sm text-muted">{t('jb.prep.d')}</p>
+            <div className="flex flex-wrap gap-2">
+              <NavLink to="language" className="btn-ghost text-sm inline-flex"><Icon name="culture" size={16} />{t('home.go.lang')}</NavLink>
+              <NavLink to="sources" className="btn-ghost text-sm inline-flex"><Icon name="legal" size={16} />{t('home.go.legal')}</NavLink>
+            </div>
+          </section>
+        </article>
+        <div className="lg:sticky lg:top-24"><ApplyBox job={job} /></div>
+      </div>
     </section>
   )
 }
@@ -263,10 +299,12 @@ function ApplyBox({ job }: { job: Job }) {
   if (actor.kind !== 'worker') body = <><p>{t('jb.apply.asWorker')}</p><button type="button" className="btn-ghost" onClick={() => select(entryFor('worker').key)}>{t('jb.switchTo', { role: t('persona.role.worker') })}</button></>
   else if (mine) body = <><p>{t('jb.apply.already', { s: L.status(mine.status) })}</p><NavLink to="jobs?view=applications" className="btn-ghost inline-flex">{t('jb.apply.viewApps')}</NavLink></>
   else if (job.review !== 'approved') body = <p>{t('jb.detail.closed')}</p>
-  else body = <button type="button" className="btn-primary" onClick={() => setOpen(true)}>{t('jb.apply')}</button>
+  else body = <button type="button" className="btn-primary w-full" onClick={() => setOpen(true)}>{t('jb.apply')}</button>
   return (
-    <div className="card space-y-2">
-      <div className="flex flex-wrap items-center gap-2">{body}</div>
+    <div className="card space-y-3">
+      <h3 className="font-semibold">{t('jb.apply.h')}</h3>
+      <div className="flex flex-wrap items-center gap-2 text-sm">{body}</div>
+      <p className="text-xs text-muted flex items-start gap-1.5"><Icon name="info" size={13} className="mt-0.5" />{t('jb.notice.2')}</p>
       <Outcome o={out} />
       {/* the application is created only here, after the worker confirms; `confirmed: true` is what the repository requires */}
       <ConfirmDialog open={open} title={t('jb.apply.dlg.t')} body={t('jb.apply.dlg.d')} ok={t('jb.apply.dlg.ok')} onClose={() => setOpen(false)}
@@ -395,14 +433,26 @@ function useOwnOrg(): Result<Organization> | null {
 export function OrgOverview() {
   const { t } = useI18n()
   const L = useLabels()
-  const { mutate } = useJobBoard()
+  const { repo, version, mutate } = useJobBoard()
   const { actor } = usePersona()
   const { out, report } = useOutcome()
   const org = useOwnOrg()
+  // workspace summary, counted from what the repository returns for this employer (its own posts and the applications to them)
+  const stats = useMemo(() => {
+    if (actor.kind !== 'employer') return null
+    const jobs = repo.listJobs(actor), apps = repo.listApplications(actor)
+    if (!jobs.ok || !apps.ok) return null
+    const own = jobs.value.filter((j) => j.organizationId === actor.organizationId)
+    const n = (r: JobReview) => own.filter((j) => j.review === r).length
+    return [[L.review('draft'), n('draft')], [L.review('pending_review'), n('pending_review')], [L.review('approved'), n('approved')], [t('jb.tab.review'), apps.value.length]] as [string, number][]
+  }, [repo, version, actor, L, t])
   if (!org) return null
   if (!org.ok) return <Warn tone="danger">{t('jb.err.unauthorized')}</Warn>
   const o = org.value
   return (
+    <div className="space-y-4">
+    {stats && <ul className="grid grid-cols-2 md:grid-cols-4 gap-3" aria-label={t('jb.sum')}>{stats.map(([label, n]) => (
+      <li key={label} className="card !p-4"><p className="text-2xl font-bold">{n}</p><p className="text-sm text-muted">{label}</p></li>))}</ul>}
     <section className="card space-y-3" aria-labelledby="jb-org-h">
       <div className="flex flex-wrap items-center gap-2"><h2 id="jb-org-h" className="h2">{t('jb.org.t')}: {stripSynthetic(o.name)}</h2><FictionalTag /></div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
@@ -414,6 +464,7 @@ export function OrgOverview() {
       {can(actor, 'org.requestVerification', { organization: o }) && <button type="button" className="btn-ghost" onClick={() => report(mutate((rp) => rp.requestVerification(actor)), t('jb.org.requested'))}>{t('jb.org.request')}</button>}
       <Outcome o={out} />
     </section>
+    </div>
   )
 }
 
@@ -482,16 +533,23 @@ function JobForm({ initial, isNew, onSave, onCancel }: { initial: JobInput; isNe
   return (
     <form className="card space-y-3 border-primary/40" onSubmit={submit} aria-labelledby={`${id}-h`}>
       <div className="flex flex-wrap items-center gap-2"><h2 id={`${id}-h`} className="h2">{isNew ? t('jb.ej.new') : t('jb.ej.edit')}</h2><FictionalTag /></div>
-      <label className="block"><span className="label">{t('jb.ej.title')}</span><input className="input" required minLength={3} maxLength={120} value={title} aria-describedby={`${id}-hint`} onChange={(e) => setTitle(e.target.value)} />
-        <span id={`${id}-hint`} className="block text-xs text-muted mt-1">{t('jb.ej.titleHint')}</span></label>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <label className="block"><span className="label">{t('jb.field.industry')}</span><select className="input" value={industry} onChange={(e) => setIndustry(e.target.value as JobInput['industry'])}>{INDUSTRIES.map((x) => <option key={x} value={x}>{L.industry(x)}</option>)}</select></label>
-        <label className="block"><span className="label">{t('jb.field.province')}</span><select className="input" value={province} onChange={(e) => setProvince(e.target.value)}>{CN_PROVINCES.map((c) => <option key={c} value={c}>{L.province(c)}</option>)}</select></label>
-        <label className="block"><span className="label">{t('jb.ej.minYears')}</span><input type="number" className="input" min={0} max={50} step={1} value={minYears} onChange={(e) => setMinYears(e.target.value)} /></label>
-        <label className="block"><span className="label">{t('jb.ej.contract')}</span><input type="number" className="input" min={1} max={60} step={1} value={months} onChange={(e) => setMonths(e.target.value)} /></label>
-      </div>
-      <fieldset><legend className="label">{t('jb.field.skills')}</legend>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-1">{SKILLS.map((s) => <label key={s} className="flex items-center gap-2 text-sm min-h-[32px]"><input type="checkbox" checked={skills.includes(s)} onChange={() => setSkills(skills.includes(s) ? skills.filter((x) => x !== s) : [...skills, s])} />{L.skill(s)}</label>)}</div>
+      <fieldset className="space-y-3"><legend className="font-semibold mb-1">{t('jb.ej.g.role')}</legend>
+        <label className="block"><span className="label">{t('jb.ej.title')}</span><input className="input" required minLength={3} maxLength={120} value={title} aria-describedby={`${id}-hint`} onChange={(e) => setTitle(e.target.value)} />
+          <span id={`${id}-hint`} className="block text-xs text-muted mt-1">{t('jb.ej.titleHint')}</span></label>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="block"><span className="label">{t('jb.field.industry')}</span><select className="input" value={industry} onChange={(e) => setIndustry(e.target.value as JobInput['industry'])}>{INDUSTRIES.map((x) => <option key={x} value={x}>{L.industry(x)}</option>)}</select></label>
+          <label className="block"><span className="label">{t('jb.field.province')}</span><select className="input" value={province} onChange={(e) => setProvince(e.target.value)}>{CN_PROVINCES.map((c) => <option key={c} value={c}>{L.province(c)}</option>)}</select></label>
+        </div>
+      </fieldset>
+      <fieldset className="space-y-3 border-t border-line pt-3"><legend className="font-semibold mb-1">{t('jb.req.h')}</legend>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="block"><span className="label">{t('jb.ej.minYears')}</span><input type="number" className="input" min={0} max={50} step={1} value={minYears} onChange={(e) => setMinYears(e.target.value)} /></label>
+          <label className="block"><span className="label">{t('jb.ej.contract')}</span><input type="number" className="input" min={1} max={60} step={1} value={months} onChange={(e) => setMonths(e.target.value)} /></label>
+        </div>
+        <fieldset aria-describedby={`${id}-skills`}><legend className="label">{t('jb.field.skills')}</legend>
+          <p id={`${id}-skills`} className="text-xs text-muted mb-1">{t('jb.ej.skillsHint')}</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-1">{SKILLS.map((s) => <label key={s} className="flex items-center gap-2 text-sm min-h-[32px]"><input type="checkbox" checked={skills.includes(s)} onChange={() => setSkills(skills.includes(s) ? skills.filter((x) => x !== s) : [...skills, s])} />{L.skill(s)}</label>)}</div>
+        </fieldset>
       </fieldset>
       <div className="flex flex-wrap gap-2"><button type="submit" className="btn-primary">{isNew ? t('jb.ej.create') : t('jb.ej.update')}</button><button type="button" className="btn-ghost" onClick={onCancel}>{t('jb.cancel')}</button></div>
     </form>

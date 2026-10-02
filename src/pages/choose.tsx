@@ -20,7 +20,7 @@ const ROLE_CARDS: { kind: EntryKind; icon: IconName; get: 'choose.worker.get' | 
 
 export function ChooseRolePage() {
   const { t } = useI18n()
-  const { enter } = usePersona()
+  const { enter, reset } = usePersona()
   const { beginNew } = useStore()
   const [failed, setFailed] = useState(false)
   const name = (kind: EntryKind) => { const e = resolveEntry(kind); return e ? PERSONAS.find((p) => p.key === e.key)!.name : '' }
@@ -51,8 +51,9 @@ export function ChooseRolePage() {
       </section>
       <section aria-labelledby="choose-biz-h" className="space-y-2">
         <h2 id="choose-biz-h" className="text-base font-semibold text-muted">{t('choose.business.h')}</h2>
-        {/* the existing business-planning flow, exactly as before: leaves the demo if active and opens the map (/start) */}
-        <button type="button" className="card card-hover !p-4 w-full text-left flex gap-3 items-start group" onClick={beginNew}>
+        {/* the existing business-planning flow, exactly as before (leaves the demo if active and opens the map /start);
+            the simulated job-board persona is cleared first, because business planning is not part of a worker or employer role */}
+        <button type="button" className="card card-hover !p-4 w-full text-left flex gap-3 items-start group" onClick={() => { reset(); beginNew() }}>
           <span className="w-10 h-10 shrink-0 rounded-xl bg-surface3 text-ink grid place-items-center"><Icon name="globe" size={20} /></span>
           <span className="min-w-0 flex-1">
             <span className="block font-semibold group-hover:underline underline-offset-4">{t('choose.business.t')}</span>
