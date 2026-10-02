@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useActions } from '../hooks'
 import type { Direction, EmploymentInput, Profile } from '../types'
-import { go, useStore } from '../store'
+import { go, NavLink, useStore } from '../store'
 import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead, useRouteText } from '../components/ui'
 import { CountryBadge, Icon } from '../components/icons'
 import { dirInfo } from '../utils/labels'
@@ -9,9 +9,6 @@ import { BRAND, BRAND_CONCEPTS } from '../brand'
 import { Glow, RetroGrid } from '../components/backdrop'
 import { dv, tk, useI18n } from '../i18n'
 import { OWNERSHIP_KEYS, buildProfile, coreDone, firstUnanswered, prune, remaining, visibleQs, type A, type Q } from '../interview'
-import { usePersona } from '../persona'
-import { PERSONAS, entryFor, type EntryKind } from '../domain/jobboard/personas'
-import { FictionalTag, SimulationNotice } from '../components/jobboard'
 
 /* ================= LANDING (lobby): the product introduction; the map is the next step, never shown here ================= */
 /** A small, honest preview of how C.A.L.L. works (illustrative, labelled as such): the route, the AI activity, the integrated concerns. */
@@ -73,26 +70,6 @@ function Goals() {
     </section>
   )
 }
-/** Job-board PoC entry points: each selects that role's default synthetic persona and opens its page. Never Admin, never submits anything. */
-function JobBoardEntry() {
-  const { t } = useI18n()
-  const { enter } = usePersona()
-  const cards: [EntryKind, 'employment' | 'business'][] = [['worker', 'employment'], ['employer', 'business']]
-  return (
-    <section aria-labelledby="jb-entry-h" className="space-y-3">
-      <div><h2 id="jb-entry-h" className="text-2xl font-bold flex flex-wrap items-center gap-2">{t('jb.lobby.t')}<FictionalTag /></h2><p className="text-muted mt-1">{t('jb.lobby.d')}</p></div>
-      <ul className="grid sm:grid-cols-2 gap-3">{cards.map(([kind, icon]) => (
-        <li key={kind} className="card !p-4">
-          <button className="text-left flex gap-3 items-start group w-full" onClick={() => enter(kind)}>
-            <span className="w-10 h-10 shrink-0 rounded-xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={20} /></span>
-            <span className="min-w-0"><span className="font-semibold text-lg group-hover:underline underline-offset-4 flex items-center gap-1.5">{t(`jb.lobby.${kind}.t` as never)}<Icon name="next" size={16} className="text-primary" /></span>
-              <span className="block text-sm text-muted">{t(`jb.lobby.${kind}.d` as never, { name: PERSONAS.find((p) => p.key === entryFor(kind).key)!.name })}</span></span>
-          </button>
-        </li>))}</ul>
-      <SimulationNotice compact />
-    </section>
-  )
-}
 /** A returning user sees their case first. */
 function ContinueCase() {
   const { t } = useI18n()
@@ -110,7 +87,6 @@ function ContinueCase() {
 }
 export function Landing() {
   const { t } = useI18n()
-  const { beginNew } = useStore()
   return (
     <div className="space-y-12 max-w-5xl mx-auto">
       <section className="hero-shell relative overflow-hidden rounded-3xl border border-line px-5 pt-14 pb-10 sm:px-10 md:pt-20 md:pb-14 text-center" aria-labelledby="hero-h">
@@ -123,14 +99,13 @@ export function Landing() {
           <p className="mt-5 text-base sm:text-lg text-ink max-w-2xl mx-auto font-medium">{t('land.value')}</p>
           <p className="mt-2 text-sm text-muted max-w-2xl mx-auto">{t('land.pos')}</p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-x-5 gap-y-3">
-            {/* the main start goes through the geographic map (/start), as before; the goal cards below are shortcuts */}
-            <span className="cta-ring"><button className="cta-core text-base" onClick={beginNew}>{t('hero.cta')}<Icon name="next" size={18} /></button></span>
+            {/* the main start first asks what the visitor wants to do (/choose-role): find work, hire, or plan a business (map → interview, as before) */}
+            <span className="cta-ring"><NavLink to="choose-role" className="cta-core text-base">{t('hero.cta')}<Icon name="next" size={18} /></NavLink></span>
           </div>
         </div>
       </section>
       <ContinueCase />
       <Goals />
-      <JobBoardEntry />
       <div className="max-w-2xl mx-auto"><HeroPreview /></div>
       <section aria-labelledby="stands-h" className="space-y-3">
         <h2 id="stands-h" className="h2">{t('brand.stands')}</h2>

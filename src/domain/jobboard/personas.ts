@@ -56,3 +56,12 @@ export function entryFor(kind: EntryKind): { key: PersonaKey; route: string } {
   const p = PERSONAS.find((x) => x.kind === kind)!
   return { key: p.key, route: ENTRIES[kind] }
 }
+/**
+ * Safe version for entry buttons: the role's default persona and page, or null when no persona of exactly that role exists
+ * (then the caller must not navigate). Only 'worker' and 'employer' are entry roles; anything else (e.g. 'admin') gives null.
+ */
+export function resolveEntry(kind: unknown, personas: readonly Persona[] = PERSONAS): { key: PersonaKey; route: string } | null {
+  if (kind !== 'worker' && kind !== 'employer') return null
+  const p = personas.find((x) => x.kind === kind && x.actor.kind === kind)
+  return p ? { key: p.key, route: ENTRIES[kind] } : null
+}

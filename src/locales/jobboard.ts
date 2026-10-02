@@ -23,8 +23,6 @@ export const jobboard = {
   'jb.notice.4': ['C.A.L.L. ไม่ได้รับรองคุณสมบัติทางกฎหมาย และไม่รับประกันผลใด ๆ', 'C.A.L.L. 不认证法律资格，也不保证任何结果', 'C.A.L.L. does not certify legal eligibility or guarantee any outcome.'],
   'jb.notice.more': ['อ่านรายละเอียด', '查看详情', 'Read the details'],
   // ---------- Lobby entry points
-  'jb.lobby.t': ['ลองใช้กระดานงานไทย → จีน (จำลอง)', '体验泰国 → 中国求职板（模拟）', 'Try the Thailand → China job board (simulation)'],
-  'jb.lobby.d': ['ดูว่าระบบจะช่วยคนไทยและนายจ้างในจีนอย่างไร ด้วยข้อมูลที่แต่งขึ้นทั้งหมด', '用完全虚构的数据，看看系统将如何帮助泰国求职者和中国雇主', 'See how the platform will help Thai professionals and employers in China, using invented data only'],
   'jb.lobby.worker.t': ['ฉันเป็นคนไทยที่อยากทำงานในจีน', '我是想去中国工作的泰国人', 'I am a Thai professional interested in working in China'],
   'jb.lobby.worker.d': ['เข้าในบทบาทคนหางานตัวอย่าง: {name}', '以示例求职者身份进入：{name}', 'Enter as the sample worker: {name}'],
   'jb.lobby.employer.t': ['ฉันเป็นนายจ้างในจีน', '我是中国的雇主', 'I am an employer in China'],

@@ -35,8 +35,8 @@ function html(node: ReactNode, initialKey?: string): string {
 }
 const Probe = () => { const { actor, persona } = usePersona(); return <output data-key={persona.key}>{JSON.stringify(actor)}</output> }
 
-/** route keys of the app router (App.tsx `pages` object) */
-const ROUTES = new Set([...src('./App.tsx').slice(src('./App.tsx').indexOf('const pages')).matchAll(/(?:^|[\s{,])(\w+): </g)].map((m) => m[1]).concat(''))
+/** route keys of the app router (App.tsx `pages` object), including quoted ones such as 'choose-role' */
+const ROUTES = new Set([...src('./App.tsx').slice(src('./App.tsx').indexOf('const pages')).matchAll(/(?:^|[\s{,])'?([\w-]+)'?: </g)].map((m) => m[1]).concat(''))
 
 describe('P3 persona state', () => {
   it('lists exactly the seeded personas, derived from SEED_PERSONAS (Visitor, 2 workers, employers, Admin)', () => {
@@ -92,10 +92,11 @@ describe('P3 Lobby entry points', () => {
     // (the /jobs page may submit, but only from its confirmation dialog — checked in jobboard-p4.test.tsx)
     for (const f of ['./persona.tsx', './domain/jobboard/personas.ts', './components/jobboard.tsx']) expect(src(f), f).not.toMatch(/submitApplication|createMemoryRepo|repo\./)
   })
-  it('the Lobby shows the two entries with the simulation notice, and keeps every business-planning entry point', () => {
+  // (entry-UX fix: the Worker/Employer entries moved from the Lobby to /choose-role, which the main CTA opens — see entry.test.tsx)
+  it('the Lobby\'s main CTA opens /choose-role, and every business-planning entry point is kept', () => {
     const page = html(<Landing />)
-    for (const k of ['jb.lobby.t', 'jb.lobby.worker.t', 'jb.lobby.employer.t', 'jb.notice.short'] as const) expect(page, k).toContain(T(k))
-    expect(page).toContain(T('jb.lobby.worker.d', { name: 'Ploy' }))
+    expect(page).toMatch(new RegExp(`href="/choose-role"[^>]*>${T('hero.cta')}`))
+    for (const k of ['jb.lobby.worker.t', 'jb.lobby.employer.t'] as const) expect(page, k).not.toContain(T(k)) // not duplicated on the Lobby
     for (const k of ['hero.cta', 'goal.th_cn.t', 'goal.cn_th.t', 'goal.employee.t', 'goal.documents.t', 'goal.example', 'goal.mapAlt'] as const) expect(page, k).toContain(T(k))
   })
 })
@@ -156,7 +157,7 @@ describe('P3 localization and links', () => {
     }
   })
   it('every message key used by the new and changed UI exists, including computed ones', () => {
-    const files = ['./persona.tsx', './components/jobboard.tsx', './pages/jobboard.tsx', './components/shell.tsx', './pages/intake.tsx']
+    const files = ['./persona.tsx', './components/jobboard.tsx', './pages/jobboard.tsx', './components/shell.tsx', './pages/intake.tsx', './pages/choose.tsx']
     const used = new Set(files.flatMap((f) => [...src(f).matchAll(/\bt\('([\w.]+)'/g), ...src(f).matchAll(/'((?:jb|persona)\.[\w.]+)'/g)].map((m) => m[1])))
     for (const kind of ['visitor', 'worker', 'employer', 'admin']) used.add(`persona.role.${kind}`)
     for (const kind of ['worker', 'employer']) { used.add(`jb.lobby.${kind}.t`); used.add(`jb.lobby.${kind}.d`) }
@@ -174,7 +175,7 @@ describe('P3 localization and links', () => {
     })
   })
   it('no new link or navigation points to a missing route', () => {
-    for (const f of ['./pages/jobboard.tsx', './pages/intake.tsx', './components/shell.tsx', './persona.tsx']) {
+    for (const f of ['./pages/jobboard.tsx', './pages/intake.tsx', './components/shell.tsx', './persona.tsx', './pages/choose.tsx']) {
       const s = src(f)
       const targets = [...s.matchAll(/go\('([^']*)'\)/g), ...s.matchAll(/NavLink[^>]*\sto="([^"]*)"/g)].map((m) => m[1])
       for (const r of targets) expect(ROUTES.has(r.split('?')[0]), `${f} → /${r}`).toBe(true)
