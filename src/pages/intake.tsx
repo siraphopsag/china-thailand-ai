@@ -2,20 +2,18 @@ import { useMemo, useState } from 'react'
 import { useActions } from '../hooks'
 import type { Direction, EmploymentInput, Profile } from '../types'
 import { go, NavLink, useStore } from '../store'
-import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead, Warn, useRouteText } from '../components/ui'
+import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead, useRouteText } from '../components/ui'
 import { CountryBadge, Icon } from '../components/icons'
 import { dirInfo } from '../utils/labels'
-import { BRAND_CONCEPTS } from '../brand'
-import { RetroGrid } from '../components/backdrop'
+import { BRAND, BRAND_CONCEPTS } from '../brand'
+import { Glow, RetroGrid } from '../components/backdrop'
 import { dv, tk, useI18n } from '../i18n'
-import { usePersona } from '../persona'
-import type { MsgKey } from '../locales'
 import { OWNERSHIP_KEYS, buildProfile, coreDone, firstUnanswered, prune, remaining, visibleQs, type A, type Q } from '../interview'
 
 /* ================= LANDING (lobby): employment-first introduction; business planning stays available as a secondary area ================= */
 type GoalCard = 'th_cn' | 'cn_th' | 'employee' | 'documents'
 /** Business-planning goals (the existing tool). `heading` is false when the page already titles this area. */
-function Goals({ heading = true }: { heading?: boolean }) {
+export function Goals({ heading = true }: { heading?: boolean }) {
   const { t } = useI18n()
   const { chooseDirection, beginNew, startDemo } = useStore()
   const [open, setOpen] = useState<GoalCard | null>(null)
@@ -50,7 +48,7 @@ function Goals({ heading = true }: { heading?: boolean }) {
   )
 }
 /** A returning business-planning user sees their case first. */
-function ContinueCase() {
+export function ContinueCase() {
   const { t } = useI18n()
   const { profile, mode } = useStore()
   const actions = useActions()
@@ -64,75 +62,34 @@ function ContinueCase() {
     </section>
   )
 }
-/**
- * Worker / Employer quick entries in the hero: select that role's seeded persona and open its page (simulated; changes no records).
- * Business planning is offered as a quieter link that clears the simulated persona first.
- */
-function RolePaths() {
-  const { t } = useI18n()
-  const { enter, reset } = usePersona()
-  const { beginNew } = useStore()
-  const [failed, setFailed] = useState(false)
-  const items = [['worker', 'employment', 'choose.worker.get'], ['employer', 'business', 'choose.employer.get']] as const
-  return (
-    <div className="card !p-4 sm:!p-5 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-muted">{t('home.paths')}</h2><span className="chip bg-warn-bg text-warn-fg border-warn-line">{t('choose.simBadge')}</span></div>
-      <ul className="space-y-2">{items.map(([kind, icon, get]) => (
-        <li key={kind}>
-          <button type="button" className="w-full text-left flex items-center gap-3 rounded-xl border border-line bg-surface2 px-3 py-3 transition-colors hover:border-primary/50 group" onClick={() => setFailed(!enter(kind))}>
-            <span className="w-10 h-10 shrink-0 rounded-xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={20} /></span>
-            <span className="min-w-0 flex-1"><span className="block font-semibold group-hover:underline underline-offset-4">{t(`jb.lobby.${kind}.t` as never)}</span><span className="block text-xs text-muted mt-0.5">{t(get)}</span></span>
-            <Icon name="next" size={18} className="text-primary" />
-          </button>
-        </li>))}</ul>
-      <div role="alert">{failed && <Warn tone="danger">{t('choose.error')}</Warn>}</div>
-      <button type="button" className="text-sm text-primary underline underline-offset-2 inline-flex items-center gap-1.5 min-h-[24px]" onClick={() => { reset(); beginNew() }}><Icon name="globe" size={14} />{t('home.orBiz')}</button>
-    </div>
-  )
-}
 export function Landing() {
   const { t } = useI18n()
-  const links: Partial<Record<string, [string, MsgKey]>> = { language: ['language', 'home.go.lang'], legal: ['sources', 'home.go.legal'] }
   return (
-    <div className="space-y-14 max-w-6xl mx-auto">
-      <section className="hero-shell relative overflow-hidden rounded-3xl border border-line px-5 py-9 sm:px-10 md:py-12" aria-labelledby="hero-h">
-        <RetroGrid />
-        <div className="relative grid lg:grid-cols-[1.45fr_1fr] gap-8 items-center">
-          <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs sm:text-sm font-medium"><Icon name="globe" size={15} className="text-primary" />{t('home.eyebrow')}</p>
-            <h1 id="hero-h" className="mt-5 text-[1.7rem] sm:text-3xl md:text-4xl font-bold leading-[1.25] text-ink">
-              <span className="block">{t('home.h1a')}</span><span className="block text-gradient pb-1">{t('home.h1b')}</span>
-            </h1>
-            <p className="mt-4 text-base sm:text-lg text-muted max-w-xl">{t('home.sub')}</p>
-            {/* the main start first asks what the visitor wants to do (/choose-role): find work, hire, or plan a business (map → interview, as before) */}
-            <div className="mt-6"><NavLink to="choose-role" className="btn-primary !px-6 !min-h-[52px] text-base">{t('hero.cta')}<Icon name="next" size={18} /></NavLink></div>
-            <p className="mt-3 text-xs text-muted flex items-start gap-1.5"><Icon name="info" size={14} className="mt-0.5" />{t('home.proto')}</p>
+    <div className="space-y-14 max-w-5xl mx-auto">
+      <section className="hero-shell relative overflow-hidden rounded-3xl border border-line px-5 pt-14 pb-10 sm:px-10 md:pt-20 md:pb-14 text-center" aria-labelledby="hero-h">
+        <Glow /><RetroGrid />
+        <div className="relative max-w-3xl mx-auto">
+          <p className="inline-flex items-center gap-2 rounded-full glass px-3.5 py-1.5 text-xs sm:text-sm font-medium" lang="en"><Icon name="globe" size={15} className="text-primary" />{BRAND.title}</p>
+          <h1 id="hero-h" className="mt-6 text-3xl sm:text-5xl font-bold leading-[1.2] text-ink">
+            <span className="block">{t('m.hero.h1a')}</span><span className="block text-gradient pb-1">{t('m.hero.h1b')}</span>
+          </h1>
+          <p className="mt-5 text-base sm:text-lg text-ink max-w-2xl mx-auto">{t('m.hero.sub')}</p>
+          <div className="mt-8 flex justify-center">
+            <span className="cta-ring"><NavLink to="choose-role" className="cta-core text-base">{t('hero.cta')}<Icon name="next" size={18} /></NavLink></span>
           </div>
-          <RolePaths />
+          <p className="mt-4 text-xs text-muted">{t('m.proto')}</p>
         </div>
       </section>
       <section aria-labelledby="stands-h" className="space-y-4">
-        <div><h2 id="stands-h" className="text-2xl font-bold">{t('brand.stands')}</h2><p className="text-muted mt-1">{t('home.pillars.sub')}</p></div>
-        <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{BRAND_CONCEPTS.map((c, i) => {
-          const link = links[c.key]
-          return (
-            <li key={i} className="card !p-4 flex flex-col gap-2">
-              <div className="flex items-baseline gap-2" lang="en"><span className="text-2xl font-bold text-primary">{c.letter}</span><span className="font-semibold">{c.word}</span></div>
-              <p className="text-sm text-muted flex-1">{t(('brand.' + c.key) as never)}</p>
-              {link && <NavLink to={link[0]} className="text-sm text-primary underline underline-offset-2 inline-flex items-center gap-1 min-h-[24px]">{t(link[1])}<Icon name="next" size={14} /></NavLink>}
-            </li>)
-        })}</ul>
+        <div><h2 id="stands-h" className="text-2xl font-bold">{t('m.problems.h')}</h2><p className="text-muted mt-1">{t('brand.stands')} Cross · ASEAN · Language · Legal</p></div>
+        <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{BRAND_CONCEPTS.map((c, i) => (
+          <li key={i} className="card !p-4 space-y-1.5"><div className="flex items-baseline gap-2" lang="en"><span className="text-2xl font-bold text-gradient">{c.letter}</span><span className="font-semibold">{c.word}</span></div><p className="text-sm text-muted">{t(('brand.' + c.key) as never)}</p></li>))}</ul>
         <p className="text-xs text-muted">{t('brand.together')}</p>
       </section>
-      <section aria-labelledby="steps-h" className="space-y-4">
-        <h2 id="steps-h" className="text-2xl font-bold">{t('home.steps.h')}</h2>
-        <ol className="grid md:grid-cols-3 gap-3">{[1, 2, 3].map((n) => (
-          <li key={n} className="card !p-4 flex gap-3 items-start"><span className="w-8 h-8 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center font-semibold">{n}</span><span className="pt-1 font-medium">{t(`home.step.${n}` as never)}</span></li>))}</ol>
-      </section>
-      <section aria-labelledby="biz-h" className="space-y-4 border-t border-line pt-10">
-        <div><h2 id="biz-h" className="text-xl font-bold flex items-center gap-2"><Icon name="globe" size={20} className="text-muted" />{t('home.biz.h')}</h2><p className="text-muted mt-1 max-w-3xl">{t('home.biz.d')}</p></div>
-        <ContinueCase />
-        <Goals heading={false} />
+      <section aria-labelledby="how-h" className="space-y-4">
+        <h2 id="how-h" className="text-2xl font-bold">{t('m.how.h')}</h2>
+        <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{[1, 2, 3, 4].map((n) => (
+          <li key={n} className="card !p-4 flex gap-3 items-start"><span className="w-8 h-8 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center font-semibold">{n}</span><span className="pt-1 text-sm font-medium">{t(`m.how.${n}` as never)}</span></li>))}</ol>
       </section>
       <Disclaimer />
     </div>

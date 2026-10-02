@@ -205,10 +205,9 @@ describe('P5 localization and navigation', () => {
     for (const k of used) expect(k in messages, k).toBe(true)
     for (const k of Object.keys(review)) expect(used.has(k), `unused ${k}`).toBe(true)
   })
-  it('the review link appears only in the persona menu for the simulated reviewer; the footer keeps the legal /admin link', () => {
-    const shell = src('./components/shell.tsx')
-    expect(shell).toMatch(/persona\.kind === 'admin' && <li[^>]*><button role="menuitem"[^>]*onClick=\{\(\) => \{ close\(\); go\('review'\) \}\}/)
-    expect(src('./App.tsx')).toMatch(/<NavLink to="admin"/)
-    expect(src('./App.tsx')).not.toMatch(/to="review"/)
+  // (owner review, Oct 2026: administrators now log in from the header; the earlier /review page is kept but no longer linked)
+  it('nothing in the app shell links to the earlier /review page or the legal /admin page', () => {
+    for (const f of ['./App.tsx', './components/sidenav.tsx']) { expect(src(f), f).not.toMatch(/to="review"|to="admin"/) }
+    expect(src('./components/sidenav.tsx')).toMatch(/to: 'backoffice'/)
   })
 })

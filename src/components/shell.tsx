@@ -9,6 +9,7 @@ import { BRAND } from '../brand'
 import { CountryBadge, Icon, type IconName } from './icons'
 import { usePersona } from '../persona'
 import { usePersonaLabel } from './jobboard'
+import { LoginButton } from './sidenav'
 
 type NavItem = { route: string; key: string; icon: IconName; sub: string[] }
 /** The business-planning tool's own areas (secondary part of C.A.L.L.). Shown as a sub-navigation only inside business-planning routes. */
@@ -156,50 +157,23 @@ export function PersonaSwitcher({ bar = false }: { bar?: boolean }) {
   )
 }
 
-export function Header({ route }: { route: string }) {
+/**
+ * Header: the side-menu button and the C.A.L.L. mark on the left (the mark is not a link — "home" is in the side menu),
+ * language, theme and log-in on the right. No top navigation and no simulated-role control.
+ */
+export function Header({ menuOpen, onMenu }: { route?: string; menuOpen?: boolean; onMenu?: () => void }) {
   const { t } = useI18n()
-  const { profile } = useStore()
-  const biz = isBusinessRoute(route)
-  const [menu, setMenu] = useState(false)
-  const menuBtn = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    if (!menu) return
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setMenu(false); menuBtn.current?.focus() } }
-    document.addEventListener('keydown', esc)
-    return () => document.removeEventListener('keydown', esc)
-  }, [menu])
-  useEffect(() => setMenu(false), [route]) // a new page closes the mobile menu
-  const on = (n: MainItem) => n.match.includes(route)
   return (
     <header className="bg-header/90 backdrop-blur-md text-onheader sticky top-0 z-40 border-b border-line">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
-        <NavLink to="" className="flex items-center gap-2 text-left shrink-0" aria-label={t('nav.home')}>
-          <Logo /><span className="leading-tight" lang="en"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block xl:hidden 2xl:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
-        </NavLink>
-        <nav aria-label={t('nav.main')} className="hidden xl:flex gap-0.5 ml-2 flex-1 min-w-0">
-          {MAIN_NAV.map((n) => (
-            <NavLink key={n.key} to={n.to(!!profile)} aria-current={on(n) ? 'page' : undefined} className={`px-2.5 py-2 rounded-lg text-sm min-h-[40px] whitespace-nowrap transition-colors flex items-center gap-1.5 ${on(n) ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3'} ${n.key === 'nav.bizPlanning' ? 'text-muted' : ''}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</NavLink>))}
-        </nav>
+      <div className="px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
+        <button type="button" className={`${ctrl} w-10 shrink-0`} aria-expanded={!!menuOpen} aria-label={t('m.menu')} title={t('m.menu')} onClick={onMenu}><Icon name={menuOpen ? 'close' : 'menu'} /></button>
+        <div className="flex items-center gap-2 shrink-0" lang="en">
+          <Logo /><span className="leading-tight"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
+        </div>
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          {/* the simulated persona belongs to the job board; it is hidden inside the business-planning tool so it never looks like that tool's account */}
-          {!biz && <div className="hidden sm:block"><PersonaSwitcher /></div>}
-          <LanguageSwitcher /><ThemeSwitcher />
-          <button ref={menuBtn} className={`xl:hidden ${ctrl} w-10`} aria-expanded={menu} aria-label={t('nav.menu')} onClick={() => setMenu(!menu)}><Icon name={menu ? 'close' : 'menu'} /></button>
+          <LanguageSwitcher /><ThemeSwitcher /><LoginButton />
         </div>
       </div>
-      {!biz && <div className="sm:hidden border-t border-line px-3 py-1.5"><PersonaSwitcher bar /></div>}
-      {menu && (
-        <nav aria-label={t('nav.mobile')} className="xl:hidden bg-header px-3 pb-3 border-t border-line max-h-[70vh] overflow-auto">
-          <ul className="grid mt-2 grid-cols-1 min-[420px]:grid-cols-2 gap-1">
-            {MAIN_NAV.map((n) => <li key={n.key}><NavLink to={n.to(!!profile)} onNavigate={() => setMenu(false)} aria-current={on(n) ? 'page' : undefined} className={`w-full text-left px-3 py-3 rounded-lg hover:bg-surface3 flex items-center gap-2.5 ${on(n) ? 'bg-brand text-brandfg font-semibold' : ''}`}><Icon name={n.icon} size={17} />{t(n.key as never)}</NavLink></li>)}
-          </ul>
-          {profile && <>
-            <p className="mt-3 mb-1 px-1 text-xs font-semibold text-muted">{t('nav.bizTools')}</p>
-            <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-1">
-              {PRIMARY.map((n) => <li key={n.route}><NavLink to={n.route} onNavigate={() => setMenu(false)} aria-current={isActive(route, n) ? 'page' : undefined} className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface3 flex items-center gap-2.5 text-sm ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : ''}`}><Icon name={n.icon} size={16} />{t(n.key as never)}</NavLink></li>)}
-            </ul>
-          </>}
-        </nav>)}
     </header>
   )
 }

@@ -10,6 +10,8 @@ import { StoreProvider, useStore } from './store'
 import { ThemeProvider } from './theme'
 import { PersonaProvider, usePersona } from './persona'
 import { JobBoardProvider } from './jobboardData'
+import { MatchProvider } from './matchData'
+import { seedState } from './domain/match/seed'
 import { messages, type MsgKey } from './locales/index'
 import { jobboard } from './locales/jobboard'
 import { JOBBOARD_SEED, SEED_PERSONAS } from './data/seed/jobboard'
@@ -30,7 +32,7 @@ function html(node: ReactNode, initialKey?: string): string {
   const had = 'document' in g, prev = g.document
   g.document = { documentElement: { getAttribute: () => null, setAttribute: () => {}, lang: 'th' } }
   try {
-    return renderToStaticMarkup(<ThemeProvider><LanguageProvider><StoreProvider><PersonaProvider initialKey={initialKey}><JobBoardProvider storage={null}>{node}</JobBoardProvider></PersonaProvider></StoreProvider></LanguageProvider></ThemeProvider>)
+    return renderToStaticMarkup(<ThemeProvider><LanguageProvider><StoreProvider><PersonaProvider initialKey={initialKey}><JobBoardProvider storage={null}><MatchProvider initial={seedState()}>{node}</MatchProvider></JobBoardProvider></PersonaProvider></StoreProvider></LanguageProvider></ThemeProvider>)
   } finally { if (had) g.document = prev; else delete g.document }
 }
 const Probe = () => { const { actor, persona } = usePersona(); return <output data-key={persona.key}>{JSON.stringify(actor)}</output> }
@@ -92,12 +94,11 @@ describe('P3 Lobby entry points', () => {
     // (the /jobs page may submit, but only from its confirmation dialog — checked in jobboard-p4.test.tsx)
     for (const f of ['./persona.tsx', './domain/jobboard/personas.ts', './components/jobboard.tsx']) expect(src(f), f).not.toMatch(/submitApplication|createMemoryRepo|repo\./)
   })
-  // (design pass: the main CTA opens /choose-role, and the hero also offers the two role paths once each — see design.test.tsx)
-  it('the Lobby\'s main CTA opens /choose-role, and every business-planning entry point is kept', () => {
+  // (owner review, Oct 2026: the Lobby only explains C.A.L.L.; role choice is on /choose-role and business planning is no longer offered — see match.test.tsx)
+  it('the Lobby\'s main CTA opens /choose-role, with no role shortcuts and no business-planning cards', () => {
     const page = html(<Landing />)
     expect(page).toMatch(new RegExp(`href="/choose-role"[^>]*>${T('hero.cta')}`))
-    for (const k of ['jb.lobby.worker.t', 'jb.lobby.employer.t'] as const) expect(page.split(T(k)).length - 1, k).toBe(1) // one quick path each, not duplicated
-    for (const k of ['hero.cta', 'goal.th_cn.t', 'goal.cn_th.t', 'goal.employee.t', 'goal.documents.t', 'goal.example', 'goal.mapAlt'] as const) expect(page, k).toContain(T(k))
+    for (const k of ['jb.lobby.worker.t', 'jb.lobby.employer.t', 'goal.th_cn.t', 'goal.example', 'goal.mapAlt'] as const) expect(page, k).not.toContain(T(k))
   })
 })
 
@@ -137,7 +138,8 @@ describe('P3 Demo entry removal', () => {
     for (const l of LANGS) expect(head, l).not.toContain(esc(tr('cta.startDemo', undefined, l)))
     expect(src('./components/shell.tsx')).not.toMatch(/cta\.startDemo|startDemo\(/)
     expect(head).toContain(T('lang.choose'))
-    expect(head).toContain('>PoC<')
+    expect(head).not.toContain('>PoC<') // owner review: the simulated-role control is removed from the header
+    expect(head).toContain(T('m.login'))
   })
   it('the legacy demo state and its remaining entry points are kept for the business-planning flows', () => {
     const StoreProbe = () => { const s = useStore(); return <i>{typeof s.startDemo}-{typeof s.exitDemo}-{s.mode}</i> }

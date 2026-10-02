@@ -138,3 +138,8 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
 .map-ocean { background-color: rgb(var(--globe-ocean)) }
 .map-tilt { position: absolute; inset: 0; transform: perspective(1600px) rotateX(14deg) scale(1.06); transform-origin: 50% 55% }
 .map-stage { background-color: rgb(var(--globe-ocean)); background-image: linear-gradient(to right, rgb(var(--grid-line) / calc(var(--grid-a) * .4)) 1px, transparent 0), linear-gradient(to bottom, rgb(var(--grid-line) / calc(var(--grid-a) * .4)) 1px, transparent 0); background-size: 56px 56px }
+
+/* matching prototype: pins on the map (mine = a seeker's pin, post = an employer post) */
+.g-pin { fill: rgb(var(--danger-fg)); stroke: rgb(var(--page)); stroke-width: 1.5 }
+.g-pin-post { fill: rgb(var(--primary)); stroke: rgb(var(--page)); stroke-width: 1.5 }
+.g-pin-dot { fill: rgb(var(--page)) }
