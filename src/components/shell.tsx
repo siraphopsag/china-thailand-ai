@@ -166,7 +166,7 @@ export function Header({ menuOpen, onMenu }: { route?: string; menuOpen?: boolea
   return (
     <header className="bg-header/90 backdrop-blur-md text-onheader sticky top-0 z-40 border-b border-line">
       <div className="px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
-        <button type="button" className={`${ctrl} w-10 shrink-0`} aria-expanded={!!menuOpen} aria-label={t('m.menu')} title={t('m.menu')} onClick={onMenu}><Icon name={menuOpen ? 'close' : 'menu'} /></button>
+        <button type="button" className={`${ctrl} w-10 shrink-0`} data-menu-button aria-expanded={!!menuOpen} aria-label={t('m.menu')} title={t('m.menu')} onClick={onMenu}><Icon name={menuOpen ? 'close' : 'menu'} /></button>
         <div className="flex items-center gap-2 shrink-0" lang="en">
           <Logo /><span className="leading-tight"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
         </div>

@@ -43,13 +43,33 @@ export function SideNav({ route, open, onClose }: { route: string; open: boolean
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', esc); return () => document.removeEventListener('keydown', esc)
   }, [open, onClose])
+  // small screens: the drawer is modal (WCAG 2.4.3, 2.4.11) — the page behind it is inert, focus moves into the drawer and,
+  // unless a link was followed (the new page focuses its heading), returns to the menu button when the drawer closes
+  const drawer = useRef<HTMLElement>(null)
+  const followed = useRef(false)
+  useEffect(() => {
+    const wide = window.matchMedia('(min-width: 1024px)')
+    if (!open || wide.matches) return
+    const body = document.getElementById('page-body')
+    body?.setAttribute('inert', '')
+    followed.current = false
+    drawer.current?.querySelector<HTMLElement>('a[href]')?.focus()
+    const resize = () => { if (wide.matches) onClose() }
+    wide.addEventListener('change', resize)
+    return () => {
+      wide.removeEventListener('change', resize)
+      body?.removeAttribute('inert')
+      if (!followed.current) document.querySelector<HTMLElement>('[data-menu-button]')?.focus()
+    }
+  }, [open, onClose])
+  const follow = () => { followed.current = true; onClose() }
   const list = (wide: boolean) => (
     <ul className="space-y-1">{items.map((n) => {
       const on = n.match.includes(route)
       const badge = n.key === 'm.notif' && unread > 0
       return (
         <li key={n.key}>
-          <NavLink to={n.to} onNavigate={onClose} aria-current={on ? 'page' : undefined} title={wide ? undefined : t(n.key as never)} aria-label={badge ? `${t(n.key as never)} · ${t('m.unread', { n: unread })}` : t(n.key as never)}
+          <NavLink to={n.to} onNavigate={follow} aria-current={on ? 'page' : undefined} title={wide ? undefined : t(n.key as never)} aria-label={badge ? `${t(n.key as never)} · ${t('m.unread', { n: unread })}` : t(n.key as never)}
             className={`relative flex items-center gap-3 rounded-xl min-h-[44px] transition-colors ${wide ? 'px-3' : 'justify-center w-11 mx-auto'} ${on ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3 text-ink'}`}>
             <Icon name={n.icon} size={20} />
             {wide && <span className="text-sm">{t(n.key as never)}</span>}
@@ -66,7 +86,7 @@ export function SideNav({ route, open, onClose }: { route: string; open: boolean
       {open && (
         <div className="lg:hidden fixed inset-0 top-16 z-40">
           <button type="button" className="absolute inset-0 bg-black/40" aria-label={t('m.menu')} onClick={onClose} tabIndex={-1} />
-          <nav aria-label={t('m.side')} className="relative h-full w-64 max-w-[80vw] bg-surface border-r border-line p-3 overflow-auto">{list(true)}</nav>
+          <nav ref={drawer} aria-label={t('m.side')} className="relative h-full w-64 max-w-[80vw] bg-surface border-r border-line p-3 overflow-auto">{list(true)}</nav>
         </div>)}
     </>
   )

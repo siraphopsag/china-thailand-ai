@@ -183,3 +183,24 @@ describe('reviewed shell and pages', () => {
     for (const k of [...files.matchAll(/\bt\('(m\.[\w.]+)'/g)].map((m) => m[1])) expect(k in messages, k).toBe(true)
   })
 })
+
+describe('accessibility audit, round 1 (#1, #2, #7)', () => {
+  const css = src('./index.css')
+  it('#1 the start button shows a focus ring although its decorative ring clips its contents', () => {
+    expect(css).toMatch(/\.cta-ring:has\(\.cta-core:focus-visible\)\s*\{[^}]*outline:\s*3px solid/)
+    expect(css).toMatch(/\.cta-ring\s*\{[^}]*overflow:\s*hidden/) // the reason the ring, not the button, carries the outline
+  })
+  it('#2 the small-screen drawer is modal: the page behind is inert, focus moves in and returns to the menu button', () => {
+    const nav = src('./components/sidenav.tsx')
+    expect(src('./App.tsx')).toContain('id="page-body"')
+    expect(nav).toMatch(/getElementById\('page-body'\)[\s\S]*setAttribute\('inert', ''\)/)
+    expect(nav).toContain("removeAttribute('inert')")
+    expect(nav).toMatch(/drawer\.current\?\.querySelector<HTMLElement>\('a\[href\]'\)\?\.focus\(\)/)
+    expect(nav).toContain("querySelector<HTMLElement>('[data-menu-button]')?.focus()")
+    expect(nav).toContain("matchMedia('(min-width: 1024px)')") // the large-screen rail never makes the page inert
+    expect(html(<Header route="" />)).toContain('data-menu-button')
+  })
+  it('#7 focused controls scroll clear of the 64px sticky header', () => {
+    expect(css).toMatch(/html\s*\{\s*scroll-padding-top:\s*5rem\s*\}/)
+  })
+})
