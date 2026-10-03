@@ -46,6 +46,18 @@ export const match = {
   'm.role.employer.d': ['ฉันกำลังมองหาบุคลากรมาทำงานให้ฉัน', '我在寻找为我工作的人才', 'I am looking for people to work for me'],
   'm.role.seeker': ['ผู้หางาน', '求职者', 'Job seeker'],
   'm.role.seeker.d': ['ฉันกำลังมองหางาน', '我在寻找工作', 'I am looking for a job'],
+  // what each role can do (owner approved the Thai text, Oct 2026)
+  'm.role.employer.p1': ['ปักพื้นที่ร้านหรือบริษัทบนแผนที่', '在地图上标出店铺或公司所在地区', 'Pin your shop or company area on the map'],
+  'm.role.employer.p2': ['บอกตำแหน่ง ความสามารถ และประสบการณ์ที่ต้องการ', '说明所需职位、技能与经验', 'Describe the role, skills and experience needed'],
+  'm.role.employer.p3': ['ระบบแจ้งผู้หางานที่ตรงพื้นที่และสายงานก่อน', '系统先通知地区与专业相符的求职者', 'Job seekers in the same area and field hear first'],
+  'm.role.employer.p4': ['ไม่มีค่าใช้จ่ายในช่วงต้นแบบ', '原型阶段免费使用', 'No fees during the prototype'],
+  'm.role.seeker.p1': ['ปักหมุดพื้นที่ที่อยากทำงานได้ไม่เกิน 5 แห่ง', '最多标记 5 个想工作的地区', 'Pin up to 5 places you want to work'],
+  'm.role.seeker.p2': ['เลือกสายงานและความสามารถของคุณ', '选择您的专业与技能', 'Choose your field and skills'],
+  'm.role.seeker.p3': ['รับแจ้งเตือนเมื่อมีงานตรงพื้นที่ แล้วกดรับงานได้', '有对口工作时收到通知，并可直接接受', 'Get notified about matching work and accept it'],
+  'm.role.seeker.p4': ['มีข้อมูลเตรียมตัวด้านภาษา วัฒนธรรม และกฎหมาย', '提供语言、文化与法律方面的准备信息', 'Get ready with language, culture and legal info'],
+  'm.role.start.employer': ['เริ่มในฐานะนายจ้าง', '以雇主身份开始', 'Start as an employer'],
+  'm.role.start.seeker': ['เริ่มในฐานะผู้หางาน', '以求职者身份开始', 'Start as a job seeker'],
+  'm.role.change': ['เปลี่ยนบทบาทได้ภายหลังที่หน้าโปรไฟล์', '之后可在个人资料页更改角色', 'You can change your role later on your profile'],
   // ---------- shared map steps
   'm.country': ['ประเทศ', '国家', 'Country'],
   'm.province': ['จังหวัด / มณฑล', '府 / 省', 'Province'],

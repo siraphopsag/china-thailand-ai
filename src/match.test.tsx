@@ -306,7 +306,7 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
     expect(seek).toMatch(/<form class="card space-y-4"/); expect(seek).toContain('<div class="glass-card p-5 text-muted">')
   })
   it('glass on the other short-reading cards (roles, prepare, notifications, lists, profile, help, empty states); settings stays solid; footer band reaches both edges', () => {
-    expect(html(<ChooseRolePage />).match(/<button type="button" class="glass-card/g)?.length).toBe(2)
+    expect(html(<ChooseRolePage />).match(/<li class="glass-card role-card/g)?.length).toBe(2)
     const m = src('./pages/match.tsx')
     for (const s of ['className="glass-card p-5 flex gap-4 items-start h-full"', '<li key={p.id} className="glass-card p-4 space-y-2">', '<li key={p.id} className="glass-card glass-lite p-4 space-y-3">', '<section className="glass-card p-5 space-y-3 text-sm">', '<div className="glass-card p-5 flex flex-col items-center'])
       expect(m, s).toContain(s)
@@ -329,6 +329,45 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
       }
       const drop = mix([255, 255, 255], pal(th, 'primary'), 0.15)
       expect(cr(pal(th, 'onprimary'), drop), `${th} drop text`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+})
+
+describe('role page redesign (owner, Oct 2026)', () => {
+  const css = src('./index.css')
+  const pal = (theme: 'light' | 'dark', name: string) => {
+    const i = theme === 'light' ? css.indexOf(":root, :root[data-theme='light'] {") : css.indexOf(":root[data-theme='dark'] {")
+    const blockStart = css.slice(i)
+    const m = blockStart.match(new RegExp(`--${name}: ([\\d.]+) ([\\d.]+) ([\\d.]+)`))
+    return m!.slice(1, 4).map(Number)
+  }
+  const role = (theme: 'light' | 'dark', name: string) => {
+    const at = theme === 'light' ? css.search(/:root, :root\[data-theme='light'\] \{ --seeker/) : css.search(/:root\[data-theme='dark'\] \{ --seeker/)
+    return css.slice(at).match(new RegExp(`--${name}: ([\\d.]+) ([\\d.]+) ([\\d.]+)`))!.slice(1, 4).map(Number)
+  }
+  const L = (c: number[]) => { const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }); return 0.2126 * r + 0.7152 * g + 0.0722 * b }
+  const cr = (a: number[], b: number[]) => { const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) }
+  const mix = (a: number[], b: number[], t: number) => a.map((v, i) => v * t + b[i] * (1 - t))
+  it('each card: role heading + description, 4 things you can do, a "Start as …" button that covers the card; note about changing later', () => {
+    const page = html(<ChooseRolePage />)
+    for (const r of ['employer', 'seeker'] as const) {
+      expect(page).toContain(`<h2 id="role-${r}-t"`)
+      for (const n of [1, 2, 3, 4]) expect(page, `${r} p${n}`).toContain(T(`m.role.${r}.p${n}` as MsgKey))
+      expect(page).toMatch(new RegExp(`<button type="button" class="role-cta mt-auto" aria-describedby="role-${r}-d">${T(`m.role.start.${r}` as MsgKey)}`))
+    }
+    expect(page.split('<button').length - 1).toBe(2)
+    expect(page).toContain(T('m.role.change'))
+    expect(css).toMatch(/\.role-cta::after \{ content: ''; position: absolute; inset: 0/)
+    expect(css).toMatch(/\.role-card:has\(\.role-cta:focus-visible\) \{ outline: 3px solid/)
+  })
+  it('role colours: text on the glass buttons ≥ 4.5:1 and ticks ≥ 3:1 against the glass, in both themes', () => {
+    for (const th of ['light', 'dark'] as const) {
+      const glassAt = th === 'light' ? css.search(/:root, :root\[data-theme='light'\] \{\s*--glass-tint/) : css.search(/:root\[data-theme='dark'\] \{\s*--glass-tint/)
+      const glass = css.slice(glassAt).match(/--glass-tint: ([\d.]+) ([\d.]+) ([\d.]+)/)!.slice(1, 4).map(Number)
+      for (const [c, on] of [[pal(th, 'primary'), pal(th, 'onprimary')], [role(th, 'seeker'), role(th, 'onseeker')]]) {
+        expect(cr(on, mix([255, 255, 255], c, 0.15)), `${th} button text`).toBeGreaterThanOrEqual(4.5)
+        expect(cr(c, glass), `${th} tick`).toBeGreaterThanOrEqual(3)
+      }
     }
   })
 })

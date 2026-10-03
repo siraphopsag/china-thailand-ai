@@ -237,6 +237,26 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .glass-drop { display: grid; place-items: center; border-radius: 9999px; font-weight: 700; color: rgb(var(--onprimary));
   background: radial-gradient(90% 55% at 50% 0%, rgb(255 255 255 / .15), transparent 70%), rgb(var(--primary));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .45), inset 0 -2px 4px rgb(0 0 0 / .18), 0 6px 14px -6px rgb(var(--primary) / .9) }
+/* role choice (owner, Oct 2026): each role has its own colour — employer = indigo, job seeker = sky — used on the icon drop,
+   the ticks, the glass "Start as …" button and the hover glow. Text on the drops/buttons ≥ 4.5:1 (shine kept faint). */
+:root, :root[data-theme='light'] { --seeker: 7 89 133; --onseeker: 255 255 255 } /* sky-800: white text with the shine stays ≥ 4.5:1 */
+:root[data-theme='dark'] { --seeker: 125 211 252; --onseeker: 10 10 20 }
+.role-card { --role: var(--primary); --onrole: var(--onprimary) }
+.role-seeker { --role: var(--seeker); --onrole: var(--onseeker) }
+.role-drop, .role-cta { color: rgb(var(--onrole)); background: radial-gradient(90% 55% at 50% 0%, rgb(255 255 255 / .15), transparent 70%), rgb(var(--role));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .45), inset 0 -2px 4px rgb(0 0 0 / .18), 0 10px 22px -10px rgb(var(--role) / .95) }
+.role-drop { display: grid; place-items: center; border-radius: 9999px }
+.role-tick { color: rgb(var(--role)) }
+.role-cta { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 48px; padding: 0 1.15rem; border-radius: 9999px; font-weight: 600; transition: box-shadow .2s ease }
+/* the whole card is the button's click area */
+.role-cta::after { content: ''; position: absolute; inset: 0; border-radius: 1rem }
+.role-cta:focus-visible { outline: none }
+.role-arrow { transition: transform .2s ease }
+.role-card:hover, .role-card:has(.role-cta:focus-visible) { transform: translateY(-3px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / var(--glass-rim-hi)), 0 0 0 1px rgb(var(--role) / .55), 0 26px 52px -22px rgb(var(--role) / .6) }
+.role-card:has(.role-cta:focus-visible) { outline: 3px solid rgb(var(--role)); outline-offset: 3px }
+.role-card:hover .role-arrow, .role-card:has(.role-cta:focus-visible) .role-arrow { transform: translateX(4px) }
+
 /* lighter glass for long lists (back office): less blur, so many cards stay smooth on phones */
 .glass-lite { backdrop-filter: blur(10px) saturate(1.5); -webkit-backdrop-filter: blur(10px) saturate(1.5) }
 /* (the coloured light now lives in the page background — the earlier box behind the Lobby cards showed hard edges) */
