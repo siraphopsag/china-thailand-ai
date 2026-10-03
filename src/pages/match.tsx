@@ -12,6 +12,7 @@ import { GeoMap, type MapPin } from '../components/geomap'
 import { ListSelect } from '../components/listselect'
 import { Warn } from '../components/ui'
 import { Icon, type IconName } from '../components/icons'
+import { motionOff, setMotionOff } from '../components/ui/background-paths'
 
 /**
  * Pages of the matching prototype. Data stay in this browser (see matchData.tsx); forwarding to agencies is simulated and
@@ -352,11 +353,15 @@ export function SettingsPage() {
   const { theme, toggle } = useTheme()
   const { reset } = useMatch()
   const [done, setDone] = useState(false)
+  const [motion, setMotion] = useState(() => !motionOff())
   return (
     <Page title={t('m.settings.title')}>
       <section className="card space-y-4">
         <fieldset><legend className="label">{t('m.settings.lang')}</legend><div className="flex flex-wrap gap-2">{LANGS.map((l) => <button key={l.id} type="button" lang={l.html} aria-pressed={lang === l.id} onClick={() => setLang(l.id)} className={`min-h-[44px] px-4 rounded-lg border ${lang === l.id ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{l.label}</button>)}</div></fieldset>
         <fieldset><legend className="label">{t('m.settings.theme')}</legend><div className="flex gap-2">{(['light', 'dark'] as const).map((m) => <button key={m} type="button" aria-pressed={theme === m} onClick={() => theme !== m && toggle()} className={`min-h-[44px] px-4 rounded-lg border flex items-center gap-2 ${theme === m ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}><Icon name={m} size={16} />{t(m === 'light' ? 'm.settings.light' : 'm.settings.dark')}</button>)}</div></fieldset>
+        {/* the home hero's moving lines (WCAG 2.2.2: a way to stop them; owner asked for no button on the hero itself) */}
+        <fieldset aria-describedby="motion-hint"><legend className="label">{t('m.settings.motion')}</legend><div className="flex gap-2">{([true, false] as const).map((on) => <button key={String(on)} type="button" aria-pressed={motion === on} onClick={() => { setMotion(on); setMotionOff(!on) }} className={`min-h-[44px] px-4 rounded-lg border ${motion === on ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(on ? 'm.settings.on' : 'm.settings.off')}</button>)}</div>
+          <p id="motion-hint" className="text-xs text-muted mt-1">{t('m.settings.motion.d')}</p></fieldset>
         <div className="border-t border-line pt-3 space-y-2"><p className="text-sm text-muted">{t('m.settings.reset.d')}</p>
           <button type="button" className="btn-ghost" onClick={() => { if (window.confirm(t('m.settings.reset.d'))) { reset(); setDone(true) } }}>{t('m.settings.reset')}</button>
           <p role="status" className="text-sm">{done && t('m.settings.resetDone')}</p></div>

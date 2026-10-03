@@ -81,7 +81,7 @@ export function Landing() {
           </div>
           <p className="mt-4 text-xs text-muted">{t('m.proto')}</p>
         </div>
-        {/* after the content so the pause button comes after the main button in keyboard order; the lines sit behind (z-index) */}
+        {/* the moving lines sit behind the content (z-index); their on/off switch is in Settings */}
         <BackgroundPaths />
       </section>
       {/* liquid-glass cards (owner, Oct 2026); the soft coloured light they show comes from the page background */}

@@ -51,16 +51,15 @@ describe('language level picker', () => {
 describe('Background Paths in the home hero (still lines + moving light: A runs along the lines, B sweeps across)', () => {
   const html = renderToStaticMarkup(<LanguageProvider><BackgroundPaths /></LanguageProvider>)
   afterEach(() => { vi.unstubAllGlobals() })
-  it('A by default: 72 still lines + 36 running lights (every other line); hidden from screen readers; play/pause after the hero content', () => {
+  it('A by default: 72 still lines + 36 running lights (every other line); hidden from screen readers', () => {
     expect(html).toMatch(/<div data-fx="a" class="bg-paths [^"]*is-on[^"]*" aria-hidden="true">/) // moves by default
     expect(html.match(/<path /g)).toHaveLength(72 + 36)
     expect(html).toContain('<div class="bg-sheen-wrap"><svg class="bg-paths-svg bg-flow"')
     expect(html.match(/pathLength="1"/g)).toHaveLength(36)
     expect(html).toMatch(/style="--d:\d+s;--delay:-[\d.]+s"/)
-    expect(html).toMatch(/<button type="button" class="bg-paths-toggle globe-ctl" aria-label="[^"]+" title="[^"]+">/)
     expect(html).not.toContain('framer') // no new library
     const intake = src('./pages/intake.tsx')
-    expect(intake.indexOf('<BackgroundPaths />')).toBeGreaterThan(intake.indexOf("t('m.proto')")) // keyboard order: main button first
+    expect(intake.indexOf('<BackgroundPaths />')).toBeGreaterThan(intake.indexOf("t('m.proto')")) // placed after the content, drawn behind it
     expect(intake).not.toContain('RetroGrid')
   })
   it('A: each light runs one way in a seamless loop (dash pattern repeats every 1), no reversing, no flicker', () => {
@@ -117,23 +116,28 @@ describe('Background Paths in the home hero (still lines + moving light: A runs 
     expect(css).toContain('.bg-paths.is-away .bg-sheen, .bg-paths.is-away .bg-sheen-lines { animation-play-state: paused !important }')
     expect(css).not.toContain('@keyframes bg-path ') // the old per-line dash animation (broken-looking lines) is gone
   })
-  it('"reduce motion" devices start still but can press play; the choice is remembered', () => {
-    const c = src('./components/ui/background-paths.tsx')
-    expect(c).toContain("matchMedia('(prefers-reduced-motion: reduce)').matches")
-    expect(c).toContain("localStorage.setItem(KEY, p ? '0' : '1')")
-    expect(css).not.toContain('.bg-paths-toggle { display: none }') // the button is always there
-    expect(tr('m.motion.play', undefined, 'th')).toBe('เล่นภาพเคลื่อนไหว'); expect(tr('m.motion.pause', undefined, 'th')).toBe('หยุดภาพเคลื่อนไหว')
+  it('no button on the hero (owner); the on/off switch is in Settings, next to language and theme (WCAG 2.2.2)', () => {
+    expect(html).not.toContain('<button')
+    expect(css).not.toContain('bg-paths-toggle')
+    const m = src('./pages/match.tsx')
+    expect(m).toContain("<legend className=\"label\">{t('m.settings.motion')}</legend>")
+    expect(m).toContain('aria-pressed={motion === on} onClick={() => { setMotion(on); setMotionOff(!on) }}')
+    expect(tr('m.settings.motion', undefined, 'th')).toBe('ภาพเคลื่อนไหวหน้าแรก')
+    expect([tr('m.settings.on', undefined, 'th'), tr('m.settings.off', undefined, 'th')]).toEqual(['เปิด', 'ปิด'])
+    expect(src('./components/ui/background-paths.tsx')).toContain("matchMedia('(prefers-reduced-motion: reduce)').matches")
   })
-  it('with "reduce motion" on, it renders still with a play button; a stored choice wins over the device setting', () => {
-    const g = globalThis as { matchMedia?: unknown; localStorage?: unknown }
+  it('with "reduce motion" on it starts off; the Settings choice wins over the device setting, both ways', async () => {
+    const { setMotionOff } = await import('./components/ui/background-paths')
     const store: Record<string, string> = {}
-    g.matchMedia = () => ({ matches: true }); g.localStorage = { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v } }
-    try {
-      const still = renderToStaticMarkup(<LanguageProvider><BackgroundPaths /></LanguageProvider>)
-      expect(still).not.toContain('is-on'); expect(still).toContain(`aria-label="${tr('m.motion.play', undefined, 'th')}"`)
-      store['call.motion.paused'] = '0' // the visitor pressed play earlier
-      expect(renderToStaticMarkup(<LanguageProvider><BackgroundPaths /></LanguageProvider>)).toContain('is-on')
-    } finally { delete g.matchMedia; delete g.localStorage }
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v } })
+    const render = () => renderToStaticMarkup(<LanguageProvider><BackgroundPaths /></LanguageProvider>)
+    expect(render()).not.toContain('is-on')
+    setMotionOff(false) // Settings → On
+    expect(store['call.motion.paused']).toBe('0'); expect(render()).toContain('is-on')
+    vi.stubGlobal('matchMedia', () => ({ matches: false }))
+    setMotionOff(true) // Settings → Off on a normal device
+    expect(render()).not.toContain('is-on')
   })
   it('text over the lines keeps ≥ 4.5:1 in both themes (still lines + light band at full strength, 15 % over the text column)', () => {
     for (const t of [light, dark]) {

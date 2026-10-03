@@ -182,7 +182,6 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
 @keyframes bg-flow { from { stroke-dashoffset: 0 } to { stroke-dashoffset: -1 } }
 @keyframes bg-sheen { 0% { transform: translateX(-100%) } 70%, 100% { transform: translateX(250%) } }
 @keyframes bg-sheen-lines { 0% { transform: translateX(40%) } 70%, 100% { transform: translateX(-100%) } }
-.bg-paths-toggle { position: absolute; right: .75rem; bottom: .75rem; z-index: 1 }
 .hero-title { font-size: clamp(1.75rem, 1rem + 3vw, 3rem); line-height: 1.2; letter-spacing: -.01em }
 .hero-title > span { text-wrap: balance }
 html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /* Latin words are longer per idea than Thai/Chinese */

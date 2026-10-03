@@ -28,8 +28,8 @@ describe('accessibility audit fixes (WCAG 2.2 A/AA)', () => {
   })
   it('#11 no decorative animation runs forever without a way to pause it (WCAG 2.2.2)', () => {
     expect(css).not.toMatch(/animation:[^;]*(retro-drift|cta-spin)[^;]*infinite/)
-    // the only endless one is the hero's Background Paths light band (owner, Oct 2026): it runs only while .is-on, which the
-    // play/pause button controls (reduce-motion devices start paused)
+    // the only endless one is the hero's Background Paths light band (owner, Oct 2026): it runs only while .is-on, which the on/off switch in Settings
+    // controls (reduce-motion devices start off)
     const endless = [...css.matchAll(/animation:\s*([a-z-]+)[^;}]*infinite/g)].map((m) => m[1])
     // (ai-scan is a busy indicator, shown only while the AI is working)
     expect(endless.sort()).toEqual(['ai-scan', 'bg-flow', 'bg-sheen', 'bg-sheen-lines'])

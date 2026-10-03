@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { useI18n } from '../../i18n'
-import { Icon } from '../icons'
 
 /* Background Paths (owner, Oct 2026): two sets of 36 curved lines after the shadcn "background-paths" component, kept in
  * components/ui (the shadcn convention) but without framer-motion. The lines are drawn whole and stay still; light moves on them.
@@ -11,12 +9,14 @@ import { Icon } from '../icons'
  *  B: a band of light sweeps across — a brighter copy of the lines seen through a moving window that slides back by the same
  *    amount; only transforms move (GPU, no repaint), so it is smooth almost everywhere.
  *  Prototype only: ?fx=a or ?fx=b forces a mode (no guard) so the owner can compare.
- * Accessibility: decorative (aria-hidden); faded over the text column so contrast holds; WCAG 2.2.2 — play/pause button,
- * remembered in this browser; "reduce motion" devices start still and can press play; nothing moves off-screen. */
+ * Accessibility: decorative (aria-hidden); faded over the text column so contrast holds; WCAG 2.2.2 — the on/off switch lives in
+ * Settings (owner: no button on the hero), remembered in this browser; "reduce motion" devices start off and can switch it on
+ * there; nothing moves off-screen. */
 
 type Fx = 'a' | 'b'
 const KEY = 'call.motion.paused', SLOW = 'call.fx.slow'
-const startPaused = () => {
+/** the visitor's choice (Settings), else the device's "reduce motion" setting */
+export const motionOff = () => {
   try { const v = localStorage.getItem(KEY); if (v === '1' || v === '0') return v === '1' } catch { /* storage blocked: use the device setting */ }
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
@@ -27,6 +27,8 @@ const lowSpec = () => {
   return n.connection?.saveData === true || (n.deviceMemory ?? 8) <= 2 || (n.hardwareConcurrency || 8) <= 2
 }
 const startFx = (): Fx => { try { if (sessionStorage.getItem(SLOW) === '1') return 'b' } catch { /* no storage */ } return lowSpec() ? 'b' : 'a' }
+
+export const setMotionOff = (off: boolean) => { try { localStorage.setItem(KEY, off ? '1' : '0') } catch { /* private mode: the choice just isn't remembered */ } }
 
 /** Frame-rate guard: feed it animation-frame timestamps. After a warm-up, it counts frames in half-second buckets and calls
  *  onSlow once when `need` buckets in a row fall below `min` fps. reset() starts over (e.g. after the tab was hidden). */
@@ -69,8 +71,7 @@ const Svg = ({ every, className = '' }: { every?: number; className?: string }) 
 )
 
 export function BackgroundPaths() {
-  const { t } = useI18n()
-  const [paused, setPaused] = useState(startPaused)
+  const [paused] = useState(motionOff)
   const [forced] = useState(forcedFx)
   const [fx, setFx] = useState<Fx>(() => forced ?? startFx())
   const [away, setAway] = useState(false)
@@ -89,19 +90,12 @@ export function BackgroundPaths() {
     document.addEventListener('visibilitychange', vis)
     return () => { cancelAnimationFrame(id); document.removeEventListener('visibilitychange', vis) }
   }, [paused, away, fx, forced])
-  const toggle = () => setPaused((p) => { try { localStorage.setItem(KEY, p ? '0' : '1') } catch { /* private mode: the choice just isn't remembered */ } return !p })
-  const label = t(paused ? 'm.motion.play' : 'm.motion.pause')
   return (
-    <>
-      <div ref={box} data-fx={fx} className={'bg-paths pointer-events-none absolute inset-0' + (paused ? '' : ' is-on') + (away ? ' is-away' : '')} aria-hidden>
-        <Svg />
-        <div className="bg-sheen-wrap">
-          {fx === 'a' ? <Svg every={2} className="bg-flow" /> : <div className="bg-sheen"><div className="bg-sheen-lines"><Svg /></div></div>}
-        </div>
+    <div ref={box} data-fx={fx} className={'bg-paths pointer-events-none absolute inset-0' + (paused ? '' : ' is-on') + (away ? ' is-away' : '')} aria-hidden>
+      <Svg />
+      <div className="bg-sheen-wrap">
+        {fx === 'a' ? <Svg every={2} className="bg-flow" /> : <div className="bg-sheen"><div className="bg-sheen-lines"><Svg /></div></div>}
       </div>
-      <button type="button" className="bg-paths-toggle globe-ctl" onClick={toggle} aria-label={label} title={label}>
-        <Icon name={paused ? 'play' : 'pause'} size={16} />
-      </button>
-    </>
+    </div>
   )
 }
