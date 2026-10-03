@@ -120,7 +120,7 @@ function SkillPicker({ skills, onChange, idp, fe }: { skills: Skill[]; onChange:
   const N = useNames()
   return (
     <fieldset aria-describedby={fe.describe(idp)}><legend className="label">{t('m.skills')}</legend>
-      <div className="grid grid-cols-2 gap-2">{SKILLS.map((s, i) => (
+      <div className="grid grid-cols-2 auto-rows-fr gap-2">{SKILLS.map((s, i) => (
         <label key={s} className="chip-check">
           <input id={i === 0 ? `${idp}-0` : undefined} type="checkbox" className="sr-only" aria-invalid={fe.invalid(idp)} checked={skills.includes(s)} onChange={() => onChange(skills.includes(s) ? skills.filter((x) => x !== s) : [...skills, s])} />
           <span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.skill(s)}
@@ -136,8 +136,10 @@ const IndustrySelect = ({ value, onChange, label }: { value: Industry; onChange:
 /** step pills: done = tick, current = bold + aria-current (not colour alone) */
 const Steps = ({ items, at }: { items: string[]; at: number }) => (
   <ol className="flex flex-wrap gap-2">{items.map((s, i) => (
-    <li key={s} aria-current={i === at ? 'step' : undefined} className={`inline-flex items-center gap-2 rounded-full border pl-1 pr-3 py-1 text-xs sm:text-sm ${i === at ? 'border-primary bg-brand text-brandfg font-semibold' : i < at ? 'border-ok-line bg-ok-bg text-ok-fg' : 'border-line bg-surface text-muted'}`}>
-      <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold ${i === at ? 'bg-primary text-onprimary' : i < at ? 'bg-ok-fg text-ok-bg' : 'bg-surface3 text-muted'}`}>{i < at ? <Icon name="check" size={13} /> : i + 1}</span>{s}
+    <li key={s} aria-current={i === at ? 'step' : undefined} className={`inline-flex items-center gap-2 rounded-full border pl-1 ${i === at ? 'pr-3' : 'pr-1 sm:pr-3'} py-1 text-xs sm:text-sm ${i === at ? 'border-primary bg-brand text-brandfg font-semibold' : i < at ? 'border-ok-line bg-ok-bg text-ok-fg' : 'border-line bg-surface text-muted'}`}>
+      <span className={`w-6 h-6 shrink-0 rounded-full grid place-items-center text-[11px] font-bold ${i === at ? 'bg-primary text-onprimary' : i < at ? 'bg-ok-fg text-ok-bg' : 'bg-surface3 text-muted'}`}>{i < at ? <Icon name="check" size={13} /> : i + 1}</span>
+      {/* phones: only the current step shows its name, so the row fits in every language (screen readers still hear every name) */}
+      <span className={i === at ? undefined : 'sr-only sm:not-sr-only'}>{s}</span>
     </li>))}</ol>
 )
 /** two columns on large screens: the map stays in view on the left while the steps scroll on the right */

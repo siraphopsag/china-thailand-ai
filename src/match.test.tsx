@@ -252,11 +252,42 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
 })
 
 describe('design pass (owner review, Oct 2026)', () => {
-  it('the map opens framed on Thailand + China, seen through an oblique camera with haze', () => {
+  it('the map opens framed on Thailand + China, seen through an oblique camera — without edge haze (owner, Oct 2026)', () => {
     const geo = src('./components/geomap.tsx')
     expect(geo).toMatch(/x\.code === 'TH' \|\| x\.code === 'CN'/)
-    expect(geo).toContain('<div className="map-haze" aria-hidden />')
+    expect(geo).not.toContain('map-haze')
+    expect(src('./index.css')).not.toContain('map-haze')
     expect(geo).toContain('rotateX(${tilt}deg)')
+  })
+})
+
+describe('languages look alike (owner, Oct 2026)', () => {
+  const css = src('./index.css')
+  it('each language has its own font family from the device; English no longer falls back to a Chinese font', () => {
+    expect(css).toMatch(/html:lang\(th\) body, \[lang\|="th"\] \{ font-family: "Noto Sans Thai", "Leelawadee UI"/)
+    expect(css).toMatch(/html:lang\(zh\) body, \[lang\|="zh"\] \{ font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei"/)
+    const en = css.match(/html:lang\(en\) body, \[lang\|="en"\] \{ font-family: ([^}]*)\}/)?.[1] ?? ''
+    expect(en.startsWith('"Segoe UI", system-ui')).toBe(true)
+    expect(en).not.toContain('YaHei')
+    expect(src('../index.html')).not.toMatch(/fonts\.googleapis|fonts\.gstatic/) // nothing downloaded
+  })
+  it('headings break evenly; the Lobby headline scales with the screen and is a little smaller in English', () => {
+    expect(css).toMatch(/h1, h2, h3 \{ text-wrap: balance \}/)
+    expect(css).toMatch(/\.hero-title \{ font-size: clamp\(/)
+    expect(css).toMatch(/html:lang\(en\) \.hero-title \{ font-size: clamp\(/)
+    expect(html(<Landing />)).toContain('class="hero-title mt-6 font-bold text-ink"')
+  })
+  it('on phones only the current step pill shows its name (others keep it for screen readers)', () => {
+    const page = html(<SeekPage />, { ...seedState(NOW), role: 'seeker', me: seeker([]) })
+    // the origin is already set in this state, so step 2 is current
+    expect(page).toContain('<span>' + T('m.seek.s2') + '</span>')
+    expect(page).toContain('<span class="sr-only sm:not-sr-only">' + T('m.seek.s1') + '</span>')
+    expect(page).toContain('<span class="sr-only sm:not-sr-only">' + T('m.seek.s3') + '</span>')
+  })
+  it('skill chips in a row share one height; narrow-rail labels may wrap tidily', () => {
+    expect(src('./pages/match.tsx')).toContain('grid grid-cols-2 auto-rows-fr gap-2')
+    expect(css).toMatch(/\.chip-check \{[^}]*height: 100%/)
+    expect(src('./components/sidenav.tsx')).toContain("'block w-full text-[11px] leading-tight tracking-tight break-words [hyphens:auto]'")
   })
 })
 

@@ -68,9 +68,10 @@ export function Landing() {
     <div className="space-y-14 max-w-5xl mx-auto">
       <section className="hero-shell relative overflow-hidden rounded-3xl border border-line px-5 pt-14 pb-10 sm:px-10 md:pt-20 md:pb-14 text-center" aria-labelledby="hero-h">
         <Glow /><RetroGrid />
-        <div className="relative max-w-3xl mx-auto">
+        <div className="relative max-w-4xl mx-auto">
           <p className="inline-flex items-center gap-2 rounded-full glass px-3.5 py-1.5 text-xs sm:text-sm font-medium" lang="en"><Icon name="globe" size={15} className="text-primary" />{BRAND.title}</p>
-          <h1 id="hero-h" className="mt-6 text-3xl sm:text-5xl font-bold leading-[1.2] text-ink">
+          {/* size follows the screen width, so the longer English headline keeps about the same number of lines as Thai and Chinese */}
+          <h1 id="hero-h" className="hero-title mt-6 font-bold text-ink">
             <span className="block">{t('m.hero.h1a')}</span><span className="block text-gradient pb-1">{t('m.hero.h1b')}</span>
           </h1>
           <p className="mt-5 text-base sm:text-lg text-ink max-w-2xl mx-auto">{t('m.hero.sub')}</p>

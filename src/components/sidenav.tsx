@@ -75,7 +75,7 @@ export function SideNav({ route, open, onClose }: { route: string; open: boolean
             {on && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary" aria-hidden />}
             <Icon name={n.icon} size={20} />
             {/* the label is always visible, also in the narrow rail */}
-            <span className={wide ? 'text-sm' : 'text-[11px] leading-tight'}>{t(n.key as never)}</span>
+            <span className={wide ? 'text-sm' : 'block w-full text-[11px] leading-tight tracking-tight break-words [hyphens:auto]'}>{t(n.key as never)}</span>
             {badge && <span className={`absolute ${wide ? 'right-3' : 'top-1 right-3'} min-w-[18px] h-[18px] px-1 rounded-full bg-danger-fg text-page text-[11px] font-bold grid place-items-center`} aria-hidden>{unread}</span>}
           </NavLink>
         </li>)

@@ -170,7 +170,6 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
             </g>
           </svg>
         </div>)}
-      {data && <div className="map-haze" aria-hidden />}
       {/* upright layer: names, capitals and pins stand straight while the map below leans back */}
       {data && (
         <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="absolute inset-0 pointer-events-none" aria-hidden>
