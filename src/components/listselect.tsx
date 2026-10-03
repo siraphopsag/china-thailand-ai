@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { Icon } from './icons'
+import { Icon, type IconName } from './icons'
 
 /**
  * Select-only combobox (WAI-ARIA APG pattern) whose list always opens BELOW the field, with optional groups and a limited
@@ -10,8 +10,13 @@ import { Icon } from './icons'
  * Enter / Space pick; Esc closes; Tab leaves. Focus stays on the field; the highlighted option is announced via
  * aria-activedescendant.
  */
-export interface ListGroup { label?: string; muted?: boolean; options: { value: string; label: string }[] }
-const ROW = 40, HEAD = 28
+/**
+ * A group of options. `muted` marks a planned group (owner, Oct 2026: "coming soon" must be clearly not open yet): a thin rule
+ * above it, a darker band, grey names, a small icon after each name (`itemIcon`), a header icon and note, and `badge` shown
+ * inside the field when one of its options is chosen. `dot` puts a status dot before an open group's header.
+ */
+export interface ListGroup { label?: string; muted?: boolean; dot?: boolean; icon?: IconName; note?: string; badge?: string; itemIcon?: IconName; options: { value: string; label: string }[] }
+const ROW = 40, HEAD = 28, NOTE = 16
 
 export function ListSelect({ id, labelId, value, onChange, groups, placeholder, disabled, maxRows, invalid, describedBy, required }: {
   id: string; labelId: string; value: string | null; onChange: (v: string) => void; groups: ListGroup[]; placeholder: string
@@ -70,8 +75,9 @@ export function ListSelect({ id, labelId, value, onChange, groups, placeholder, 
     const hit = flat.findIndex((o) => o.label.toLocaleLowerCase().startsWith(q))
     if (hit >= 0) setActive(hit)
   }
-  const heads = groups.filter((g) => g.label).length
-  const maxHeight = maxRows * ROW + heads * HEAD + 8
+  const heads = groups.filter((g) => g.label).length, notes = groups.filter((g) => g.note).length
+  const maxHeight = maxRows * ROW + heads * HEAD + notes * NOTE + 12
+  const badge = selected ? groups[selected.gi]?.badge : undefined
 
   return (
     <div ref={box} className="relative">
@@ -80,7 +86,10 @@ export function ListSelect({ id, labelId, value, onChange, groups, placeholder, 
         disabled={disabled} onClick={() => (open ? setOpen(false) : show())} onKeyDown={onKey}
         className="input flex items-center justify-between gap-2 text-left disabled:opacity-60 disabled:cursor-not-allowed">
         <span className={`truncate ${selected ? '' : 'text-muted'}`}>{selected ? selected.label : placeholder}</span>
-        <Icon name={open ? 'up' : 'down'} size={18} className="shrink-0 text-muted" />
+        <span className="flex items-center gap-2 shrink-0">
+          {badge && <span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="clock" size={12} />{badge}</span>}
+          <Icon name={open ? 'up' : 'down'} size={18} className="text-muted" />
+        </span>
       </button>
       <ul ref={list} id={listId} role="listbox" aria-labelledby={labelId} hidden={!open} style={{ maxHeight }}
         className="list-pop absolute z-30 left-0 right-0 top-full mt-1.5 overflow-y-auto overscroll-contain rounded-xl border border-line p-1">
@@ -92,11 +101,15 @@ export function ListSelect({ id, labelId, value, onChange, groups, placeholder, 
               onPointerDown={(e) => e.preventDefault()} onClick={() => pick(i)} onPointerMove={() => active !== i && setActive(i)}
               className={`flex items-center justify-between gap-2 rounded-lg px-3 cursor-pointer text-sm ${o.muted ? 'text-muted' : 'text-ink'} ${i === active ? 'bg-surface3' : ''} ${o.value === value ? 'font-semibold' : ''}`}
               style={{ minHeight: ROW }}>
-              <span className="truncate">{o.label}</span>{o.value === value && <Icon name="check" size={16} className="shrink-0 text-primary" />}
+              <span className="truncate">{o.label}</span>
+              {o.value === value ? <Icon name="check" size={16} className="shrink-0 text-primary" /> : g.itemIcon && <Icon name={g.itemIcon} size={14} className="shrink-0 text-muted" />}
             </li>))
           return g.label ? (
-            <li key={gi} role="presentation">
-              <div id={headId} className={`px-3 flex items-center text-xs font-semibold ${g.muted ? 'text-muted' : 'text-ink'}`} style={{ height: HEAD }}>{g.label}</div>
+            <li key={gi} role="presentation" className={g.muted ? 'list-group-muted' : undefined}>
+              <div id={headId} className={`px-3 pt-1.5 text-xs font-semibold ${g.muted ? 'text-muted' : 'text-ink'}`} style={{ minHeight: HEAD }}>
+                <span className="flex items-center gap-1.5">{g.dot && <span className="w-2 h-2 rounded-full bg-ok-fg" aria-hidden />}{g.icon && <Icon name={g.icon} size={13} />}{g.label}</span>
+                {g.note && <span className="block font-normal" style={{ lineHeight: `${NOTE}px` }}>{g.note}</span>}
+              </div>
               <ul role="group" aria-labelledby={headId}>{rows}</ul>
             </li>
           ) : rows

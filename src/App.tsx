@@ -35,7 +35,8 @@ const JobsPage = lazy(() => import('./pages/jobboard').then((m) => ({ default: m
 const EmployerPage = lazy(() => import('./pages/jobboard').then((m) => ({ default: m.EmployerPage })))
 const ReviewPage = lazy(() => import('./pages/review').then((m) => ({ default: m.ReviewPage })))
 const SeekPage = lazy(() => import('./pages/match').then((m) => ({ default: m.SeekPage })))
-const HirePage = lazy(() => import('./pages/match').then((m) => ({ default: m.HirePage })))
+const HirePage = lazy(() => import('./pages/hire').then((m) => ({ default: m.HirePage })))
+const PostPage = lazy(() => import('./pages/hire').then((m) => ({ default: m.PostPage })))
 const NotificationsPage = lazy(() => import('./pages/match').then((m) => ({ default: m.NotificationsPage })))
 const MePage = lazy(() => import('./pages/match').then((m) => ({ default: m.MePage })))
 const PreparePage = lazy(() => import('./pages/match').then((m) => ({ default: m.PreparePage })))
@@ -97,7 +98,7 @@ function Router() {
     ownership: <OwnershipPage />, nominee: <NomineePage />, employment: <EmploymentPage />, contract: <ContractPage />, language: <LanguagePage />, plan: <PlanPage />, navigator: <NavigatorPage />, employee: <EmployeeCheckPage />, risk: <RiskPage />,
     roadmap: <RoadmapPage />, documents: <DocumentsPage />, monitoring: <MonitoringPage />, sources: <SourcesPage />, pricing: <PricingPage />, privacy: <PrivacyPage />, admin: <AdminPage />,
     jobs: <JobsPage />, employer: <EmployerPage />, review: <ReviewPage />, 'choose-role': <ChooseRolePage />, // earlier job-board PoC pages (no longer linked)
-    seek: <SeekPage />, hire: <HirePage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, // matching prototype
+    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, // matching prototype
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>
 }

@@ -142,7 +142,8 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
     el.addEventListener('wheel', wheel, { passive: false }); return () => el.removeEventListener('wheel', wheel)
   }) // re-bound each render so zoomAt sees the current size
 
-  const paint = (c: GeoCode | undefined) => (!c ? 'g-dim' : c === country ? 'g-footprint' : GEO[c].status === 'active' ? 'g-active' : 'g-soon')
+  // a chosen planned country is raised in grey, not indigo, so it never looks open (owner, Oct 2026)
+  const paint = (c: GeoCode | undefined) => (!c ? 'g-dim' : c === country ? (GEO[c].status === 'active' ? 'g-footprint' : 'g-soon') : GEO[c].status === 'active' ? 'g-active' : 'g-soon')
   const focusShape = country ? shapes.find((s) => s.code === country) : undefined
   const provShape = province ? provs.find((p) => p.code === province) : undefined
   const Lc = countryLift / view.k
@@ -164,7 +165,7 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
             className="block select-none cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
             <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
               {shapes.map((s, i) => <path key={i} d={s.d} data-code={s.code} className={'g-c ' + paint(s.code)}>{s.code && <title>{name(s.code)}</title>}</path>)}
-              {focusShape && <Raised d={focusShape.d} lift={countryLift} k={view.k} side={GEO[focusShape.code!].status === 'active' ? 'g-side' : 'g-side-soon'} top="g-top" />}
+              {focusShape && <Raised d={focusShape.d} lift={countryLift} k={view.k} side={GEO[focusShape.code!].status === 'active' ? 'g-side' : 'g-side-soon'} top={GEO[focusShape.code!].status === 'active' ? 'g-top' : 'g-top-soon'} />}
               {country && <g transform={`translate(0,${-Lc})`}>{provs.filter((p) => p.country === country).map((p) => <path key={p.code} d={p.d} data-prov={p.code} className={'g-prov' + (p.code === province ? ' is-sel' : '')}><title>{t(`prov.${p.code}` as never)}</title></path>)}</g>}
               {provShape && <Raised d={provShape.d} lift={provLift} k={view.k} side="g-pside" top="g-ptop" />}
             </g>
@@ -182,7 +183,8 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
           })}
           {shownCapitals.map((c) => { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); return inView(p) ? (
             <g key={c.country}><circle cx={p[0]} cy={p[1]} r={5.5} className="g-capital" /><text x={p[0] + 9} y={p[1] + 4} className="g-city">{cityName(c)}</text></g>) : null })}
-          {provShape && (() => { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); return p ? <text x={p[0]} y={p[1] - 16} textAnchor="middle" className="g-name">{t(`prov.${provShape.code}` as never)}</text> : null })()}
+          {provShape && (() => { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); const up = pins.some((pn) => pn.province === provShape.code) ? 30 : 0 /* a pin stands on the same spot: lift the name above it */
+            return p ? <text x={p[0]} y={p[1] - 16 - up} textAnchor="middle" className="g-name">{t(`prov.${provShape.code}` as never)}</text> : null })()}
           {pins.map((pn, i) => {
             const pv = provs.find((x) => x.code === pn.province); if (!pv) return null
             const p = geoPt(pv.c[0], pv.c[1], (pn.province === province ? provLift : 0) + (pn.country === country ? countryLift : 0)); if (!inView(p)) return null

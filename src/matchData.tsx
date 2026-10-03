@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { accept, addPin, forward, makePost, nowWith, parseState, removePin, type Outcome, type PostInput } from './domain/match/logic'
+import { accept, addPin, canPost, forward, makePost, nowWith, parseState, removePin, type Outcome, type PostInput } from './domain/match/logic'
 import { seedState } from './domain/match/seed'
 import { ME, MY_EMPLOYER, type Acceptance, type Industry, type MatchState, type Place, type Post, type Role, type Skill } from './domain/match/types'
 
@@ -29,6 +29,8 @@ interface Ctx {
   unpin: (id: string) => void
   setCompany: (name: string) => void
   post: (input: PostInput) => Outcome<Post>
+  /** membership package (simulated: free in the prototype, no payment) */
+  subscribe: () => void
   acceptOffer: (postId: string) => Outcome<Acceptance>
   isAdmin: boolean
   login: (id: string, password: string) => boolean
@@ -52,7 +54,11 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     pin: (input) => { const r = addPin(st.me, input, uid('pin'), at()); if (r.ok) setSt((s) => ({ ...s, me: r.value })); return r },
     unpin: (id) => setSt((s) => ({ ...s, me: removePin(s.me, id) })),
     setCompany: (myCompany) => setSt((s) => ({ ...s, myCompany })),
-    post: (input) => { const r = makePost(input, uid('post'), MY_EMPLOYER, at()); if (r.ok) setSt((s) => ({ ...s, myCompany: input.company, posts: [r.value, ...s.posts] })); return r },
+    post: (input) => {
+      if (!canPost(st, now)) return { ok: false, problem: 'quota' } as const // weekly allowance reached
+      const r = makePost(input, uid('post'), MY_EMPLOYER, at()); if (r.ok) setSt((s) => ({ ...s, myCompany: input.company, posts: [r.value, ...s.posts] })); return r
+    },
+    subscribe: () => setSt((s) => ({ ...s, member: true })),
     acceptOffer: (postId) => { const r = accept(st, postId, ME, uid('acc'), at()); if (r.ok) setSt((s) => ({ ...s, acceptances: [...s.acceptances, r.value] })); return r },
     login: (id, password) => {
       const ok = checkAdmin(id, password)

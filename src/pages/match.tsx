@@ -5,13 +5,13 @@ import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { provinces } from '../locales/provinces'
 import { isCountry, isTaken, offersFor, reachTier, tierOf, isVisibleTo, type Problem } from '../domain/match/logic'
-import { INDUSTRIES, MAX_PINS, ME, MY_EMPLOYER, SKILLS, type Country, type Industry, type Post, type Skill, type Tier } from '../domain/match/types'
+import { INDUSTRIES, MAX_PINS, ME, MY_EMPLOYER, SKILLS, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Salary, type Skill, type Tier } from '../domain/match/types'
 import { ACTIVE, GEO, SOON, type GeoCode } from '../geo'
 import capitalsData from '../data/geo/capitals.json'
 import { GeoMap, type MapPin } from '../components/geomap'
 import { ListSelect } from '../components/listselect'
 import { Warn } from '../components/ui'
-import { Icon } from '../components/icons'
+import { Icon, type IconName } from '../components/icons'
 
 /**
  * Pages of the matching prototype. Data stay in this browser (see matchData.tsx); forwarding to agencies is simulated and
@@ -20,7 +20,7 @@ import { Icon } from '../components/icons'
 const CAPITALS = capitalsData as { country: GeoCode; name: string }[]
 const AGENCIES = [{ key: 'm.agency.doe', url: 'https://www.doe.go.th/' }, { key: 'm.agency.dsd', url: 'https://www.dsd.go.th/' }] as const
 
-function useNames() {
+export function useNames() {
   const { t, lang } = useI18n()
   const collator = useMemo(() => new Intl.Collator(lang === 'zh' ? 'zh-CN' : lang), [lang])
   return {
@@ -29,20 +29,50 @@ function useNames() {
     skill: (s: Skill) => t(`jb.skill.${s}` as never), industry: (i: Industry) => t(`jb.industry.${i}` as never),
     provList: (c: Country) => Object.keys(provinces).filter((k) => k.startsWith(`prov.${c}-`)).map((k) => k.slice(5)).sort((a, b) => collator.compare(t(`prov.${a}` as never), t(`prov.${b}` as never))),
     problem: (p: Problem) => t(`m.err.${p}` as never),
+    employment: (e: Employment) => t(`m.emp.type.${e}` as never),
+    edu: (e: Edu) => t((e === 'none' || e === 'secondary' ? `m.edu.${e}` : `jb.edu.${e}`) as never),
+    lang: (l: LanguageSkill['lang']) => t(`jb.lang.${l}` as never), level: (l: LanguageSkill['level']) => t(`jb.level.${l}` as never),
+    benefit: (b: Benefit) => t(`m.ben.${b}` as never),
+    money: (s: Salary) => { const f = new Intl.NumberFormat(locale(lang)); return `${f.format(s.min)}–${f.format(s.max)} ${t(`m.cur.${s.currency}` as never)}${t('m.perMonth')}` },
+    day: (d: string) => new Intl.DateTimeFormat(locale(lang), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(d.length === 10 ? d + 'T00:00:00Z' : d)),
   }
 }
-function Page({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) {
+const locale = (l: string) => (l === 'zh' ? 'zh-CN' : l === 'th' ? 'th-TH' : 'en-GB')
+/**
+ * The details an employer gives (Oct 2026): people, type, salary, start, languages, education, benefits. Posts saved before
+ * these fields existed show "not stated". Used on my posts, the post page, job seekers' notifications and the back office.
+ */
+export function PostFacts({ post, compact }: { post: Post; compact?: boolean }) {
+  const { t } = useI18n()
+  const N = useNames()
+  const ns = t('m.notStated')
+  const rows: [IconName, string, string][] = [
+    ['user', t('m.f.headcount'), post.headcount === null ? ns : t('m.people', { n: post.headcount })],
+    ['posts', t('m.f.employment'), post.employment ? N.employment(post.employment) : ns],
+    ['funding', t('m.f.salary'), post.salary ? N.money(post.salary) : ns],
+    ['plan', t('m.f.start'), post.startDate ? N.day(post.startDate) : ns],
+    ['language', t('m.f.languages'), post.languages.length ? post.languages.map((l) => `${N.lang(l.lang)}: ${N.level(l.level)}`).join(' · ') : ns],
+    ['culture', t('m.f.education'), N.edu(post.education)],
+    ['ok', t('m.f.benefits'), post.benefits.length ? post.benefits.map(N.benefit).join(' · ') : ns],
+  ]
+  if (compact) return <p className="text-sm text-muted">{rows.filter(([, , v]) => v !== ns).map(([, , v]) => v).join(' · ') || ns}</p>
+  return (
+    <dl className="grid sm:grid-cols-2 gap-x-5 gap-y-2.5 text-sm">{rows.map(([icon, k, v]) => (
+      <div key={k} className="flex items-start gap-2.5"><Icon name={icon} size={16} className="text-primary mt-0.5 shrink-0" /><div><dt className="text-muted text-xs">{k}</dt><dd className="font-medium">{v}</dd></div></div>))}</dl>
+  )
+}
+export function Page({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) {
   return <div className="space-y-5"><div><h1 className="h1">{title}</h1>{sub && <p className="text-muted mt-1 max-w-3xl">{sub}</p>}</div>{children}</div>
 }
 /** a short message in a live region (pin added, posted, accepted …) */
-function Toast({ msg }: { msg: { tone: 'info' | 'danger'; text: string } | null }) {
+export function Toast({ msg }: { msg: { tone: 'info' | 'danger'; text: string } | null }) {
   return <div role="status" aria-live="polite">{msg && <Warn tone={msg.tone}>{msg.text}</Warn>}</div>
 }
 /**
  * WCAG 3.3.1 / 1.3.1: a form error is shown under the field it belongs to, the field is marked invalid and described by it,
  * and focus moves to that field. `key` names the field group, `focus` the control to focus.
  */
-function useFieldError() {
+export function useFieldError() {
   const [err, setErr] = useState<{ key: string; focus: string; text: string } | null>(null)
   useEffect(() => { if (err) document.getElementById(err.focus)?.focus() }, [err])
   return {
@@ -53,14 +83,14 @@ function useFieldError() {
     msg: (key: string) => err?.key === key ? <p id={`${key}-err`} className="text-sm text-danger-fg flex items-center gap-1.5 mt-1"><Icon name="alert" size={15} />{err.text}</p> : null,
   }
 }
-type FieldError = ReturnType<typeof useFieldError>
+export type FieldError = ReturnType<typeof useFieldError>
 /** WCAG 3.3.2: required fields say so in their label */
-function Req() {
+export function Req() {
   const { t } = useI18n()
   return <span className="font-normal text-muted"> ({t('m.req')})</span>
 }
 /** nothing to show yet: say why and offer the next step, so no page is a dead end */
-function Empty({ icon, text, to, action }: { icon: 'bell' | 'pin' | 'posts'; text: string; to?: string; action?: string }) {
+export function Empty({ icon, text, to, action }: { icon: 'bell' | 'pin' | 'posts'; text: string; to?: string; action?: string }) {
   return (
     <div className="glass-card p-5 flex flex-col items-center text-center gap-3 !py-8">
       <span className="w-12 h-12 rounded-2xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={22} /></span>
@@ -69,7 +99,7 @@ function Empty({ icon, text, to, action }: { icon: 'bell' | 'pin' | 'posts'; tex
     </div>
   )
 }
-function NeedRole({ role }: { role: 'seeker' | 'employer' }) {
+export function NeedRole({ role }: { role: 'seeker' | 'employer' }) {
   const { t } = useI18n()
   return <div className="glass-card p-5 space-y-3"><p>{t('m.profile.none')}</p><NavLink to="choose-role" className="btn-primary inline-flex">{t(role === 'seeker' ? 'm.role.seeker' : 'm.role.employer')}<Icon name="next" size={16} /></NavLink></div>
 }
@@ -79,7 +109,7 @@ function NeedRole({ role }: { role: 'seeker' | 'employer' }) {
  * Country list with every ASEAN country (+ China). Only Thailand and China are open today; choosing another one frames it on the
  * map, shows its capital and a "coming soon" note, and keeps the province list and the next step closed. Nothing is saved for it.
  */
-function PlaceFields({ country, province, onCountry, onProvince, idp, fe }: { country: GeoCode | null; province: string | null; onCountry: (c: GeoCode) => void; onProvince: (p: string | null) => void; idp: string; fe: FieldError }) {
+export function PlaceFields({ country, province, onCountry, onProvince, idp, fe }: { country: GeoCode | null; province: string | null; onCountry: (c: GeoCode) => void; onProvince: (p: string | null) => void; idp: string; fe: FieldError }) {
   const { t } = useI18n()
   const N = useNames()
   const open = isCountry(country)
@@ -90,7 +120,7 @@ function PlaceFields({ country, province, onCountry, onProvince, idp, fe }: { co
         <div><label id={`${idp}-cl`} htmlFor={`${idp}-c`} className="label">{t('m.country')}<Req /></label>
           <ListSelect id={`${idp}-c`} labelId={`${idp}-cl`} required invalid={fe.invalid(idp)} describedBy={fe.describe(idp)} value={country} placeholder={t('m.chooseCountry')} maxRows={7}
             onChange={(v) => { if (v in GEO) onCountry(v as GeoCode) }}
-            groups={[{ label: t('m.countryOpen'), options: ACTIVE.map((c) => ({ value: c, label: N.country(c) })) }, { label: t('geo.soon'), muted: true, options: SOON.map((c) => ({ value: c, label: N.country(c) })) }]} /></div>
+            groups={[{ label: t('m.countryOpen'), dot: true, options: ACTIVE.map((c) => ({ value: c, label: N.country(c) })) }, { label: t('geo.soon'), note: t('m.soonNote'), icon: 'clock', itemIcon: 'clock', badge: t('geo.soon'), muted: true, options: SOON.map((c) => ({ value: c, label: N.country(c) })) }]} /></div>
         <div><label id={`${idp}-pl`} htmlFor={idp} className="label">{t('m.province')}<Req /></label>
           <ListSelect id={idp} labelId={`${idp}-pl`} required disabled={!open} invalid={fe.invalid(idp)} describedBy={fe.describe(idp)} value={province} placeholder={t('m.chooseProv')} maxRows={10}
             onChange={(v) => onProvince(v)} groups={[{ options: isCountry(country) ? N.provList(country).map((p) => ({ value: p, label: N.prov(p) })) : [] }]} /></div>
@@ -113,7 +143,7 @@ export function SoonNote({ country }: { country: GeoCode }) {
     </div>
   )
 }
-function SkillPicker({ skills, onChange, idp, fe }: { skills: Skill[]; onChange: (s: Skill[]) => void; idp: string; fe: FieldError }) {
+export function SkillPicker({ skills, onChange, idp, fe }: { skills: Skill[]; onChange: (s: Skill[]) => void; idp: string; fe: FieldError }) {
   const { t } = useI18n()
   const N = useNames()
   return (
@@ -127,12 +157,12 @@ function SkillPicker({ skills, onChange, idp, fe }: { skills: Skill[]; onChange:
     </fieldset>
   )
 }
-const IndustrySelect = ({ value, onChange, label }: { value: Industry; onChange: (i: Industry) => void; label: string }) => {
+export const IndustrySelect = ({ value, onChange, label }: { value: Industry; onChange: (i: Industry) => void; label: string }) => {
   const N = useNames()
   return <label className="block"><span className="label">{label}</span><select className="input" value={value} onChange={(e) => onChange(e.target.value as Industry)}>{INDUSTRIES.map((i) => <option key={i} value={i}>{N.industry(i)}</option>)}</select></label>
 }
 /** step pills: done = tick, current = bold + aria-current (not colour alone) */
-const Steps = ({ items, at }: { items: string[]; at: number }) => (
+export const Steps = ({ items, at }: { items: string[]; at: number }) => (
   <ol className="flex flex-wrap gap-2">{items.map((s, i) => (
     <li key={s} aria-current={i === at ? 'step' : undefined} className={`inline-flex items-center gap-2 rounded-full border pl-1 ${i === at ? 'pr-3' : 'pr-1'} py-1 text-xs sm:text-sm ${i === at ? 'border-primary bg-brand text-brandfg font-semibold' : i < at ? 'border-ok-line bg-ok-bg text-ok-fg' : 'border-line bg-surface text-muted'}`}>
       <span className={`w-6 h-6 shrink-0 rounded-full grid place-items-center text-[11px] font-bold ${i === at ? 'bg-primary text-onprimary' : i < at ? 'bg-ok-fg text-ok-bg' : 'bg-surface3 text-muted'}`}>{i < at ? <Icon name="check" size={13} /> : i + 1}</span>
@@ -142,8 +172,8 @@ const Steps = ({ items, at }: { items: string[]; at: number }) => (
     </li>))}</ol>
 )
 /** two columns on large screens: the map stays in view on the left while the steps scroll on the right */
-const MAP_SIZE = 'h-[300px] sm:h-[380px] lg:h-[calc(100vh-11rem)] lg:min-h-[420px] lg:max-h-[640px]'
-function MapLayout({ map, children }: { map: ReactNode; children: ReactNode }) {
+export const MAP_SIZE = 'h-[300px] sm:h-[380px] lg:h-[calc(100vh-11rem)] lg:min-h-[420px] lg:max-h-[640px]'
+export function MapLayout({ map, children }: { map: ReactNode; children: ReactNode }) {
   return (
     <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-5 items-start">
       <div className="lg:sticky lg:top-20 space-y-2">{map}</div>
@@ -230,7 +260,7 @@ export function SeekPage() {
 }
 
 /* ================= employer: place on the map → company and needs → post ================= */
-function PostStatus({ post }: { post: Post }) {
+export function PostStatus({ post }: { post: Post }) {
   const { t } = useI18n()
   const { st, now } = useMatch()
   const acc = st.acceptances.filter((a) => a.postId === post.id)
@@ -243,74 +273,6 @@ function PostStatus({ post }: { post: Post }) {
     </div>
   )
 }
-export function HirePage() {
-  const { t } = useI18n()
-  const N = useNames()
-  const { st, post } = useMatch()
-  const [c, setC] = useState<GeoCode | null>(null), [p, setP] = useState<string | null>(null)
-  const [form, setForm] = useState(false)
-  const [company, setCompany] = useState(st.myCompany), [position, setPosition] = useState('')
-  const [industry, setIndustry] = useState<Industry>('manufacturing'), [skills, setSkills] = useState<Skill[]>([])
-  const [years, setYears] = useState('0'), [details, setDetails] = useState('')
-  const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
-  const fe = useFieldError()
-  if (st.role !== 'employer') return <Page title={t('m.emp.title')}><NeedRole role="employer" /></Page>
-  const mine = st.posts.filter((x) => x.employerId === MY_EMPLOYER)
-  const FIELD: Partial<Record<Problem, [string, string]>> = {
-    company: ['emp-company', 'emp-company'], position: ['emp-position', 'emp-position'], years: ['emp-years', 'emp-years'],
-    details: ['emp-details', 'emp-details'], contact: ['emp-details', 'emp-details'], skills: ['emp-skills', 'emp-skills-0'],
-  }
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    setMsg(null)
-    if (!isCountry(c) || !p) { setMsg({ tone: 'danger', text: N.problem('place') }); return }
-    const r = post({ place: { country: c, province: p }, company: company.trim(), position: position.trim(), industry, skills, minYears: Number(years), details: details.trim() })
-    if (r.ok) { fe.clear(); setMsg({ tone: 'info', text: t('m.emp.done') }); setForm(false); setPosition(''); setSkills([]); setDetails(''); setP(null); return }
-    const f = FIELD[r.problem]
-    if (f) fe.set(f[0], f[1], N.problem(r.problem)); else { fe.clear(); setMsg({ tone: 'danger', text: N.problem(r.problem) }) }
-  }
-  return (
-    <Page title={t('m.emp.title')}>
-      <MapLayout map={<>
-        <GeoMap className={MAP_SIZE} label={t('m.mapLabel')} country={c} province={p} pins={mine.map((x) => ({ country: x.country, province: x.province, label: `${x.position} · ${N.place(x.country, x.province)}`, tone: 'post' }))}
-          onPickCountry={(x) => { setC(x); setP(null); setForm(false) }} onPickProvince={(x) => { setP(x); setForm(false) }} />
-        <p className="text-xs text-muted">{t('m.mapHint')}</p></>}>
-      <Steps items={[t('m.emp.s1'), t('m.emp.s2')]} at={form ? 1 : 0} />
-      <Toast msg={msg} />
-      {!form ? (
-        <section className="card space-y-3" aria-labelledby="e1h">
-          <h2 id="e1h" className="h2">{t('m.emp.s1')}</h2>
-          <PlaceFields idp="emp-prov" fe={fe} country={c} province={p} onCountry={(x) => { setC(x); setP(null) }} onProvince={setP} />
-          <button type="button" className="btn-primary" disabled={!isCountry(c) || !p} onClick={() => { setForm(true); setMsg(null) }}><Icon name="posts" size={16} />{t('m.emp.fill')}</button>
-        </section>
-      ) : (
-        <form className="card space-y-3" onSubmit={submit} aria-labelledby="e2h">
-          <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="e2h" className="h2">{t('m.emp.s2')}</h2><p className="text-sm text-muted">{c && p && N.place(c, p)} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => setForm(false)}>{t('m.edit')}</button></p></div>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div><label className="block"><span className="label">{t('m.emp.company')}<Req /></span><input id="emp-company" className="input" required maxLength={80} aria-invalid={fe.invalid('emp-company')} aria-describedby={fe.describe('emp-company', 'emp-company-hint')} value={company} onChange={(e) => { setCompany(e.target.value); fe.clear() }} /></label>
-              <span id="emp-company-hint" className="block text-xs text-muted mt-1">{t('m.hint.company')}</span>{fe.msg('emp-company')}</div>
-            <div><label className="block"><span className="label">{t('m.emp.position')}<Req /></span><input id="emp-position" className="input" required maxLength={80} aria-invalid={fe.invalid('emp-position')} aria-describedby={fe.describe('emp-position', 'emp-position-hint')} value={position} onChange={(e) => { setPosition(e.target.value); fe.clear() }} /></label>
-              <span id="emp-position-hint" className="block text-xs text-muted mt-1">{t('m.hint.position')}</span>{fe.msg('emp-position')}</div>
-            <IndustrySelect value={industry} onChange={setIndustry} label={t('jb.field.industry')} />
-            <div><label className="block"><span className="label">{t('m.emp.years')}</span><input id="emp-years" className="input" type="number" min={0} max={40} step={1} aria-invalid={fe.invalid('emp-years')} aria-describedby={fe.describe('emp-years')} value={years} onChange={(e) => { setYears(e.target.value); fe.clear() }} /></label>{fe.msg('emp-years')}</div>
-          </div>
-          <SkillPicker idp="emp-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); fe.clear() }} />
-          <div><label className="block"><span className="label">{t('m.emp.details')}</span><textarea id="emp-details" className="input min-h-[96px]" maxLength={600} aria-invalid={fe.invalid('emp-details')} aria-describedby={fe.describe('emp-details', 'det-hint')} value={details} onChange={(e) => { setDetails(e.target.value); fe.clear() }} /></label>
-            <span id="det-hint" className="block text-xs text-muted mt-1">{t('m.emp.detailsHint')}</span>{fe.msg('emp-details')}</div>
-          <div className="flex flex-wrap items-center gap-3"><button type="submit" className="btn-primary"><Icon name="send" size={16} />{t('m.emp.post')}</button><span className="text-xs text-muted">{t('m.emp.noPay')}</span></div>
-        </form>
-      )}
-      <section className="space-y-2" aria-labelledby="myposts-h">
-        <h2 id="myposts-h" className="h2">{t('m.posts')}</h2>
-        {!mine.length ? <div className="glass-card p-5 text-muted">{t('m.posts.none')}</div> : (
-          <ul className="space-y-2">{mine.map((x) => (
-            <li key={x.id} className="glass-card p-4 space-y-2"><div><h3 className="font-semibold">{x.position}</h3><p className="text-sm text-muted">{x.company} · {N.place(x.country, x.province)} · {N.industry(x.industry)}</p></div><PostStatus post={x} /></li>))}</ul>)}
-      </section>
-      </MapLayout>
-    </Page>
-  )
-}
-
 /* ================= notifications ================= */
 export function NotificationsPage() {
   const { t } = useI18n()
@@ -341,6 +303,7 @@ export function NotificationsPage() {
               <p className="text-xs font-semibold text-primary flex items-center gap-1.5"><Icon name="bell" size={14} />{t('m.offer.new')} · {why(reachTier(p, st.me))}</p>
               <div><h2 className="font-semibold text-lg">{p.position}</h2><p className="text-sm text-muted">{p.company} · {N.place(p.country, p.province)} · {N.industry(p.industry)}</p></div>
               <p className="text-sm">{t('jb.minYearsShort', { n: p.minYears })} · {p.skills.map(N.skill).join(', ')}</p>
+              <PostFacts post={p} compact />
               {p.details && <p className="text-sm text-muted">{p.details}</p>}
               {mineAcc ? (
                 <div className="space-y-2 border-t border-line pt-2">
@@ -367,6 +330,7 @@ export function MePage() {
         <p><span className="text-muted">{t('m.profile.role')}:</span> <b>{st.role ? t(st.role === 'seeker' ? 'm.role.seeker' : 'm.role.employer') : t('m.profile.none')}</b></p>
         {st.role === 'seeker' && st.me.origin && <p className="text-sm">{t('m.seek.from', { p: N.place(st.me.origin.country, st.me.origin.province) })} · {t('m.pin.count', { n: st.me.pins.length })}</p>}
         {st.role === 'employer' && st.myCompany && <p className="text-sm">{t('m.emp.company')}: {st.myCompany}</p>}
+        {st.role === 'employer' && <p className="text-sm flex items-center gap-2"><Icon name="shield" size={15} className="text-primary" />{t(st.member ? 'm.pk.statusMember' : 'm.pk.statusFree')}</p>}
         <NavLink to="choose-role" className="btn-ghost inline-flex">{t('m.profile.change')}</NavLink>
         <p className="text-xs text-muted">{t('m.profile.note')}</p>
       </section>
@@ -426,7 +390,7 @@ export function BackofficePage() {
           return (
             <li key={p.id} className="glass-card glass-lite p-4 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <div><h3 className="font-semibold">{p.position} · {p.company} {p.employerId !== MY_EMPLOYER && <span className="chip bg-surface3 text-muted border-line ml-1">{t('m.adm.sample')}</span>}</h3><p className="text-sm text-muted">{N.place(p.country, p.province)} · {N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p></div>
+                <div><h3 className="font-semibold">{p.position} · {p.company} {p.employerId !== MY_EMPLOYER && <span className="chip bg-surface3 text-muted border-line ml-1">{t('m.adm.sample')}</span>}</h3><p className="text-sm text-muted">{N.place(p.country, p.province)} · {N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p><PostFacts post={p} compact /></div>
                 <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(`m.tier.${tier}` as never)}</span>
               </div>
               <div className="grid sm:grid-cols-2 gap-3 text-sm">

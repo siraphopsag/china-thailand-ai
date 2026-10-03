@@ -193,7 +193,7 @@ function BusinessSubNav({ route }: { route: string }) {
 
 /** Compact "which business is the AI analysing" bar + guided-demo strip. */
 /** where "Back" leads when the page was opened directly (no earlier in-app page to return to) */
-const PARENT: Record<string, string> = { seek: 'choose-role', hire: 'choose-role', language: 'prepare', sources: 'prepare', monitoring: 'sources' }
+const PARENT: Record<string, string> = { seek: 'choose-role', hire: 'choose-role', post: 'hire', language: 'prepare', sources: 'prepare', monitoring: 'sources' }
 /** "Back" on every page except the Lobby, so nobody has to return to the Lobby to go one step back */
 export function BackButton({ route }: { route: string }) {
   const { t } = useI18n()

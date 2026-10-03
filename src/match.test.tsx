@@ -35,6 +35,8 @@ function html(node: ReactNode, st?: MatchState): string {
 }
 const NOW = Date.parse('2026-10-03T08:00:00.000Z')
 const at = (days: number) => new Date(NOW + days * DAY_MS).toISOString()
+/** the post details added in Oct 2026, filled with valid sample values */
+const EXTRA = { headcount: 1, employment: 'permanent' as const, salary: null, startDate: at(1).slice(0, 10), languages: [{ lang: 'zh' as const, level: 'basic' as const }], education: 'none' as const, benefits: [] }
 const seeker = (pins: Seeker['pins']): Seeker => ({ id: ME, name: 'you', origin: { country: 'TH', province: 'TH-10' }, pins, synthetic: true })
 const ROUTES = new Set([...src('./App.tsx').slice(src('./App.tsx').indexOf('const pages')).matchAll(/(?:^|[\s{,])'?([\w-]+)'?: </g)].map((m) => m[1]).concat(''))
 
@@ -62,7 +64,7 @@ describe('pins', () => {
 })
 
 describe('the step-by-step release', () => {
-  const post = makePost({ place: { country: 'CN', province: 'CN-SH' }, company: 'Sample Co', position: 'QC Engineer', industry: 'manufacturing', skills: ['quality_control'], minYears: 1, details: '' }, 'post-x', 'employer:me', at(0))
+  const post = makePost({ ...EXTRA, place: { country: 'CN', province: 'CN-SH' }, company: 'Sample Co', position: 'QC Engineer', industry: 'manufacturing', skills: ['quality_control'], minYears: 1, details: '' }, 'post-x', 'employer:me', at(0))
   if (!post.ok) throw new Error('post')
   const P = post.value
   const area = seeker([{ id: 'a', country: 'CN', province: 'CN-SH', industry: 'manufacturing', skills: ['quality_control'], at: at(0) }])
@@ -104,7 +106,7 @@ describe('accepting and forwarding (simulated)', () => {
     expect(src('./domain/match/logic.ts') + src('./matchData.tsx')).not.toMatch(/fetch\(|XMLHttpRequest|sendBeacon|WebSocket/)
   })
   it('posts refuse contact details and missing fields', () => {
-    const base = { place: { country: 'CN' as const, province: 'CN-SH' }, company: 'Sample Co', position: 'Chef', industry: 'food_service' as const, skills: ['culinary_arts' as const], minYears: 1, details: '' }
+    const base = { ...EXTRA, place: { country: 'CN' as const, province: 'CN-SH' }, company: 'Sample Co', position: 'Chef', industry: 'food_service' as const, skills: ['culinary_arts' as const], minYears: 1, details: '' }
     const r = [makePost({ ...base, details: 'call 081 234 5678' }, 'a', 'employer:me', at(0)), makePost({ ...base, company: 'x' }, 'a', 'employer:me', at(0)), makePost({ ...base, skills: [] }, 'a', 'employer:me', at(0)), makePost({ ...base, minYears: 99 }, 'a', 'employer:me', at(0))]
     expect(r.map((x) => (x.ok ? 'ok' : x.problem))).toEqual(['contact', 'company', 'skills', 'years'])
   })
@@ -249,8 +251,9 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
     expect(page).toMatch(/<input id="seek-skills-0" type="checkbox" class="sr-only"/)
     const m = src('./pages/match.tsx')
     expect(m).toMatch(/useEffect\(\(\) => \{ if \(err\) document\.getElementById\(err\.focus\)\?\.focus\(\) \}, \[err\]\)/)
-    expect(m).toContain("aria-describedby={fe.describe('emp-company', 'emp-company-hint')}")
-    expect(m).toContain("contact: ['emp-details', 'emp-details']")
+    const hire = src('./pages/hire.tsx') // the employer form moved here (Oct 2026)
+    expect(hire).toContain("aria-describedby={fe.describe('emp-company', 'emp-company-hint')}")
+    expect(hire).toContain("contact: ['emp-details', 'emp-details']")
     expect(css).toMatch(/\.chip-check:has\(input:focus-visible\)\s*\{\s*outline:\s*3px solid/)
     expect(css).toMatch(/\.chip-check:has\(input:checked\) \.chip-box svg\s*\{\s*opacity:\s*1/)
   })
@@ -449,9 +452,9 @@ describe('map review 2 (owner, Oct 2026): lean, upright labels, all ASEAN countr
     const page = html(<SeekPage />, { ...seedState(NOW), role: 'seeker', me: seeker([]) })
     const sel = page.slice(page.indexOf('<button id="dest-prov-c"'), page.indexOf('<button id="dest-prov"'))
     expect(sel.match(/role="option"/g)?.length).toBe(12)
-    expect(sel).toContain(`>${T('m.countryOpen')}</div>`)
-    expect(sel).toMatch(new RegExp(`class="[^"]*text-muted"[^>]*>${T('geo.soon')}</div>`)) // the group header, once
-    expect(sel.split(T('geo.soon')).length - 1).toBe(1) // no "· coming soon" after each name
+    expect(sel).toContain(`${T('m.countryOpen')}</span>`)
+    expect(sel).toMatch(new RegExp(`<li role="presentation" class="list-group-muted"><div id="[^"]+" class="[^"]*text-muted"[^]*?${T('geo.soon')}</span>`)) // the planned group header, once
+    expect(sel.split(T('geo.soon')).length - 1).toBe(1) // no "· coming soon" after each name (the field badge only appears once one is chosen)
     for (const c of ['TH', 'CN', 'VN', 'SG', 'TL']) expect(sel, c).toContain(`<span class="truncate">${T(`geo.c.${c}` as MsgKey)}</span>`)
     expect(sel.match(/role="option" aria-selected="false" class="[^"]*text-muted/g)?.length).toBe(10) // the 10 planned countries are grey
   })
@@ -460,7 +463,7 @@ describe('map review 2 (owner, Oct 2026): lean, upright labels, all ASEAN countr
     expect(page).toMatch(/<button id="dest-prov-c" type="button" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="[^"]+" aria-labelledby="dest-prov-cl"/)
     expect(page).toMatch(/<ul id="[^"]+" role="listbox" aria-labelledby="dest-prov-cl" hidden="" style="max-height:(\d+)px"/)
     const heights = [...page.matchAll(/role="listbox" aria-labelledby="dest-prov-(c|p)l" hidden="" style="max-height:(\d+)px"/g)].map((m) => [m[1], Number(m[2])])
-    expect(heights).toEqual([['c', 7 * 40 + 2 * 28 + 8], ['p', 10 * 40 + 8]])
+    expect(heights).toEqual([['c', 7 * 40 + 2 * 28 + 16 + 12], ['p', 10 * 40 + 12]]) // + one header note line
     const ls = src('./components/listselect.tsx')
     expect(ls).toContain('top-full mt-1.5') // below the field, never over it
     for (const k of ["'ArrowDown'", "'ArrowUp'", "'Home'", "'End'", "'PageDown'", "'Escape'", "'Enter'"]) expect(ls, k).toContain(k)
@@ -475,7 +478,7 @@ describe('map review 2 (owner, Oct 2026): lean, upright labels, all ASEAN countr
     expect(m).toContain('disabled={!open}') // no provinces for a planned country
     expect(m).toContain('disabled={!!oc && !isCountry(oc)} onClick={confirmOrigin}')
     expect(m).toContain("disabled={st.me.pins.length >= MAX_PINS || (!!dc && !isCountry(dc))}")
-    expect(m).toContain('disabled={!isCountry(c) || !p}')
+    expect(src('./pages/hire.tsx')).toContain('disabled={!isCountry(c) || !p}')
   })
   it('7–9 capitals: Bangkok and Beijing on the overview, otherwise the chosen country; names in 3 languages', () => {
     expect(geo).toContain("(country ? [capitalOf(country)] : [capitalOf('TH'), capitalOf('CN')])")

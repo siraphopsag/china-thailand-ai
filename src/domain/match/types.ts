@@ -4,9 +4,24 @@
  * the admin forwards the case to the employment authority (simulated — nothing is sent anywhere).
  * Everything here is synthetic prototype data kept in this browser. No identity documents or contact details are collected.
  */
-import { INDUSTRIES, SKILLS, type Industry, type Skill } from '../jobboard/types'
+import { INDUSTRIES, LANGS, LANG_LEVELS, SKILLS, type Industry, type LanguageSkill, type Skill } from '../jobboard/types'
 
-export { INDUSTRIES, SKILLS, type Industry, type Skill }
+export { INDUSTRIES, LANGS, LANG_LEVELS, SKILLS, type Industry, type LanguageSkill, type Skill }
+/* employer post details added Oct 2026 (owner: "the form feels too short") */
+export const EMPLOYMENT = ['permanent', 'contract', 'temporary', 'internship'] as const
+export type Employment = (typeof EMPLOYMENT)[number]
+/** minimum education; 'none' = not required */
+export const EDU = ['none', 'secondary', 'vocational', 'bachelor', 'master'] as const
+export type Edu = (typeof EDU)[number]
+export const BENEFITS = ['housing', 'meals', 'insurance', 'workDocs'] as const
+export type Benefit = (typeof BENEFITS)[number]
+export const CURRENCIES = ['THB', 'CNY'] as const
+export type Currency = (typeof CURRENCIES)[number]
+/** monthly salary range (optional) */
+export interface Salary { min: number; max: number; currency: Currency }
+/** free posts per rolling 7 days, and with the membership package (price to be announced; free in the prototype) */
+export const FREE_POSTS_PER_WEEK = 3
+export const MEMBER_POSTS_PER_WEEK = 10
 export type Country = 'TH' | 'CN'
 export const COUNTRIES: Country[] = ['TH', 'CN']
 export type Role = 'seeker' | 'employer'
@@ -33,6 +48,15 @@ export interface Post extends Place {
   skills: Skill[]
   minYears: number
   details: string
+  /* added Oct 2026 — null / empty on posts saved before then ("not stated") */
+  headcount: number | null
+  employment: Employment | null
+  salary: Salary | null
+  /** YYYY-MM-DD */
+  startDate: string | null
+  languages: LanguageSkill[]
+  education: Edu
+  benefits: Benefit[]
   createdAt: string
   synthetic: true
 }
@@ -46,6 +70,8 @@ export interface MatchState {
   dayOffset: number
   me: Seeker
   myCompany: string
+  /** employer membership package (simulated, no payment): 10 posts per rolling 7 days instead of 3 */
+  member: boolean
   seekers: Seeker[]
   posts: Post[]
   acceptances: Acceptance[]
