@@ -150,7 +150,8 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
   radial-gradient(600px 320px at 50% 0%, rgb(var(--glow-a) / var(--glow-k)), transparent 70%),
   radial-gradient(420px 260px at 85% 20%, rgb(var(--glow-b) / calc(var(--glow-k) * .6)), transparent 70%),
   radial-gradient(420px 260px at 10% 30%, rgb(var(--glow-a) / calc(var(--glow-k) * .5)), transparent 70%) }
-/* Background Paths (components/ui/background-paths.tsx) — option B: still lines + a soft band of light sweeping across.
+/* Background Paths (components/ui/background-paths.tsx): still lines + moving light — A (default, below) runs lights along
+ * the lines; B (fallback when frames drop, see the component) sweeps a soft band of light across.
  * Lines: full strength at the sides, faded to 15 % over the centred text column (phones/tablets: the column is the whole width).
  * The band is a brighter copy of the lines inside a moving window (.bg-sheen); the copy (.bg-sheen-lines) moves back by the same
  * distance so the light stays on the lines. Only transform is animated (GPU, no per-frame redraw). Both keyframes share one
@@ -159,7 +160,7 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
   -webkit-mask-image: linear-gradient(to right, #000, rgb(0 0 0 / .15) calc(50% - min(440px, 46%)), rgb(0 0 0 / .15) calc(50% + min(440px, 46%)), #000);
   mask-image: linear-gradient(to right, #000, rgb(0 0 0 / .15) calc(50% - min(440px, 46%)), rgb(0 0 0 / .15) calc(50% + min(440px, 46%)), #000) }
 .bg-paths-svg { position: absolute; inset: 0; width: 100%; height: 100% }
-.bg-paths > .bg-paths-svg { opacity: .4 }
+.bg-paths > .bg-paths-svg { opacity: .3 }
 .bg-sheen { position: absolute; top: 0; bottom: 0; left: 0; width: 40%; overflow: hidden; display: none; color: rgb(var(--paths-sheen)); will-change: transform;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 45%, #000 55%, transparent); mask-image: linear-gradient(to right, transparent, #000 45%, #000 55%, transparent) }
 .bg-sheen-lines { position: absolute; top: 0; bottom: 0; left: 0; width: 250%; opacity: 1; will-change: transform }
@@ -171,6 +172,14 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
 .bg-paths.is-on .bg-sheen { display: block; animation: bg-sheen 14s ease-in-out infinite !important }
 .bg-paths.is-on .bg-sheen-lines { animation: bg-sheen-lines 14s ease-in-out infinite !important }
 .bg-paths.is-away .bg-sheen, .bg-paths.is-away .bg-sheen-lines { animation-play-state: paused !important }
+/* option A (default): one short soft light per line, running one way; the dash pattern repeats every 1 (pathLength=1), so
+ * 0 → -1 loops with no jump. Speed and start come from --d / --delay on each path. */
+.bg-flow { display: none; color: rgb(var(--paths-sheen)) }
+.bg-flow path { stroke-dasharray: .22 .78; stroke-linecap: round }
+.bg-paths.is-on .bg-flow { display: block }
+.bg-paths.is-on .bg-flow path { animation: bg-flow var(--d, 22s) linear var(--delay, 0s) infinite !important }
+.bg-paths.is-away .bg-flow path { animation-play-state: paused !important }
+@keyframes bg-flow { from { stroke-dashoffset: 0 } to { stroke-dashoffset: -1 } }
 @keyframes bg-sheen { 0% { transform: translateX(-100%) } 70%, 100% { transform: translateX(250%) } }
 @keyframes bg-sheen-lines { 0% { transform: translateX(40%) } 70%, 100% { transform: translateX(-100%) } }
 .bg-paths-toggle { position: absolute; right: .75rem; bottom: .75rem; z-index: 1 }

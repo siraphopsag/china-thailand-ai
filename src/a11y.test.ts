@@ -32,7 +32,7 @@ describe('accessibility audit fixes (WCAG 2.2 A/AA)', () => {
     // play/pause button controls (reduce-motion devices start paused)
     const endless = [...css.matchAll(/animation:\s*([a-z-]+)[^;}]*infinite/g)].map((m) => m[1])
     // (ai-scan is a busy indicator, shown only while the AI is working)
-    expect(endless.sort()).toEqual(['ai-scan', 'bg-sheen', 'bg-sheen-lines'])
+    expect(endless.sort()).toEqual(['ai-scan', 'bg-flow', 'bg-sheen', 'bg-sheen-lines'])
     expect(css).toContain('.bg-paths.is-on .bg-sheen { display: block; animation: bg-sheen')
   })
   it('#6 a source title is never a raw message key', () => {

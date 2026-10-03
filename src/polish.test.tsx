@@ -1,6 +1,6 @@
 // Owner review, Oct 2026: more education levels (incl. doctorate), the language level picker overlapping the text below,
 // and the shadcn-style "Background Paths" behind the home hero (rebuilt in CSS, no framer-motion).
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { LanguageProvider } from './i18n'
@@ -9,7 +9,7 @@ import { makePost, parseState, type PostInput } from './domain/match/logic'
 import { seedState } from './domain/match/seed'
 import { EDU, MY_EMPLOYER } from './domain/match/types'
 import type { MsgKey } from './locales/index'
-import { BackgroundPaths } from './components/ui/background-paths'
+import { BackgroundPaths, fpsGuard } from './components/ui/background-paths'
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
 const css = src('./index.css')
@@ -48,19 +48,62 @@ describe('language level picker', () => {
   })
 })
 
-describe('Background Paths in the home hero (option B: still lines + a sweeping band of light)', () => {
+describe('Background Paths in the home hero (still lines + moving light: A runs along the lines, B sweeps across)', () => {
   const html = renderToStaticMarkup(<LanguageProvider><BackgroundPaths /></LanguageProvider>)
-  it('2 sets × 36 still curved lines + the same lines again inside the light band; hidden from screen readers; play/pause after the hero content', () => {
-    expect(html.match(/<path /g)).toHaveLength(144)
-    expect(html).toMatch(/<div class="bg-paths [^"]*is-on[^"]*" aria-hidden="true">/) // moves by default
-    expect(html).toContain('<div class="bg-sheen-wrap"><div class="bg-sheen"><div class="bg-sheen-lines">')
+  afterEach(() => { vi.unstubAllGlobals() })
+  it('A by default: 72 still lines + 36 running lights (every other line); hidden from screen readers; play/pause after the hero content', () => {
+    expect(html).toMatch(/<div data-fx="a" class="bg-paths [^"]*is-on[^"]*" aria-hidden="true">/) // moves by default
+    expect(html.match(/<path /g)).toHaveLength(72 + 36)
+    expect(html).toContain('<div class="bg-sheen-wrap"><svg class="bg-paths-svg bg-flow"')
+    expect(html.match(/pathLength="1"/g)).toHaveLength(36)
+    expect(html).toMatch(/style="--d:\d+s;--delay:-[\d.]+s"/)
     expect(html).toMatch(/<button type="button" class="bg-paths-toggle globe-ctl" aria-label="[^"]+" title="[^"]+">/)
     expect(html).not.toContain('framer') // no new library
     const intake = src('./pages/intake.tsx')
     expect(intake.indexOf('<BackgroundPaths />')).toBeGreaterThan(intake.indexOf("t('m.proto')")) // keyboard order: main button first
     expect(intake).not.toContain('RetroGrid')
   })
-  it('only transforms move (smooth on low-end phones), the light stays on the lines, and it stops off-screen', () => {
+  it('A: each light runs one way in a seamless loop (dash pattern repeats every 1), no reversing, no flicker', () => {
+    expect(css).toContain('.bg-flow path { stroke-dasharray: .22 .78; stroke-linecap: round }')
+    expect(.22 + .78).toBe(1)
+    expect(css).toContain('@keyframes bg-flow { from { stroke-dashoffset: 0 } to { stroke-dashoffset: -1 } }')
+    expect(css).toContain('.bg-paths.is-on .bg-flow path { animation: bg-flow var(--d, 22s) linear var(--delay, 0s) infinite !important }')
+    expect(css).toContain('.bg-paths.is-away .bg-flow path { animation-play-state: paused !important }')
+    expect(css).not.toMatch(/@keyframes bg-flow[^\n]*opacity/)
+  })
+  it('frame-rate guard: smooth 60 fps never trips; sustained < 45 fps switches after the 2 s warm-up + 1.5 s; one hiccup does not; reset starts over', () => {
+    const run = (fps: number, ms: number, g = fpsGuard(() => { slow++ })) => { for (let t = 0; t <= ms; t += 1000 / fps) g.frame(t); return g }
+    let slow = 0
+    run(60, 10000); expect(slow).toBe(0)
+    run(58, 10000); expect(slow).toBe(0)
+    run(30, 3400); expect(slow).toBe(0) // warming up, then not yet 1.5 s of slow frames
+    run(30, 4100); expect(slow).toBe(1)
+    slow = 0; const g = fpsGuard(() => { slow++ }); let t = 0
+    for (; t < 3000; t += 16.7) g.frame(t)
+    g.frame(t += 400) // one 400 ms hiccup (e.g. garbage collection)
+    for (; t < 8000; t += 16.7) g.frame(t)
+    expect(slow).toBe(0)
+    const h = fpsGuard(() => { slow++ }); for (t = 0; t < 3300; t += 33) h.frame(t)
+    h.reset(); for (t = 5000; t < 8300; t += 33) h.frame(t) // after reset the warm-up starts again
+    expect(slow).toBe(0)
+  })
+  it('B for devices that report low memory or data saver, and for the rest of the session once A was too slow; ?fx= forces a mode', () => {
+    const render = () => renderToStaticMarkup(<LanguageProvider><BackgroundPaths /></LanguageProvider>)
+    vi.stubGlobal('navigator', { deviceMemory: 2, hardwareConcurrency: 8 })
+    expect(render()).toContain('data-fx="b"')
+    vi.stubGlobal('navigator', { connection: { saveData: true } })
+    expect(render()).toContain('data-fx="b"')
+    vi.unstubAllGlobals()
+    vi.stubGlobal('sessionStorage', { getItem: (k: string) => (k === 'call.fx.slow' ? '1' : null), setItem: () => {} })
+    const b = render()
+    expect(b).toContain('data-fx="b"'); expect(b).toContain('<div class="bg-sheen-wrap"><div class="bg-sheen"><div class="bg-sheen-lines">')
+    vi.stubGlobal('location', { search: '?fx=a' })
+    expect(render()).toContain('data-fx="a"') // forced, even though this session was marked slow
+    const c = src('./components/ui/background-paths.tsx')
+    expect(c).toContain("if (paused || away || fx !== 'a' || forced || typeof requestAnimationFrame !== 'function') return")
+    expect(c).toContain("sessionStorage.setItem(SLOW, '1')")
+  })
+  it('B: only transforms move (smooth on low-end phones), the light stays on the lines, and it stops off-screen', () => {
     const kf = (n: string) => { const i = css.indexOf(`@keyframes ${n} {`); return css.slice(i + `@keyframes ${n} {`.length, css.indexOf('\n', i)).replace(/\r$/, '') }
     for (const n of ['bg-sheen', 'bg-sheen-lines']) { expect(kf(n)).toMatch(/transform: translateX/); expect(kf(n)).not.toMatch(/stroke|opacity|width|left/) }
     // window -100% → 250% of its 40 % width; copy +40% → -100% of its full (250 %) width: the two always cancel
@@ -94,7 +137,7 @@ describe('Background Paths in the home hero (option B: still lines + a sweeping 
   })
   it('text over the lines keeps ≥ 4.5:1 in both themes (still lines + light band at full strength, 15 % over the text column)', () => {
     for (const t of [light, dark]) {
-      const m = 0.15 * t['paths-a'][0], still = 0.4 * m, band = 1 * m * 0.5 // band: full copy × the extra .5 over the text column
+      const m = 0.15 * t['paths-a'][0], still = 0.3 * m, band = 1 * m * 0.5 // band: full copy × the extra .5 over the text column
       for (const base of [t['hero-base'], t.surface2]) {
         const lined = mix(mix(base, t['paths-c'], still), t['paths-sheen'], band) // a pixel where a still line and the band overlap
         const glowed = mix(mix(mix(base, t['glow-a'], t['glow-k'][0]), t['paths-c'], still), t['paths-sheen'], band)
@@ -103,6 +146,6 @@ describe('Background Paths in the home hero (option B: still lines + a sweeping 
       }
     }
     expect(css).toContain('rgb(0 0 0 / .15) calc(50% - min(440px, 46%))')
-    expect(css).toContain('.bg-paths > .bg-paths-svg { opacity: .4 }'); expect(css).toContain('width: 250%; opacity: 1;'); expect(css).toContain('rgb(0 0 0 / .5) calc(50% - min(440px, 46%))')
+    expect(css).toContain('.bg-paths > .bg-paths-svg { opacity: .3 }'); expect(css).toContain('width: 250%; opacity: 1;'); expect(css).toContain('rgb(0 0 0 / .5) calc(50% - min(440px, 46%))')
   })
 })
