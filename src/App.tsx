@@ -76,13 +76,14 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <div id="page-body" className="flex-1 flex flex-col md:pl-24">
       <ContextStack route={route} />
       <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 md:pb-10"><BackButton route={route} /><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
-      <footer className="bg-surface border-t border-line text-xs text-muted px-4 py-6 mb-20 md:mb-0">
+      </div>
+      {/* the footer band runs to both screen edges; its text keeps clear of the menu capsule */}
+      <footer className="bg-surface border-t border-line text-xs text-muted px-4 md:pl-28 py-6 mb-20 md:mb-0">
         <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-2 items-center">
           <span className="font-semibold text-ink" lang="en">{BRAND.title}</span><span>{t('foot.note')}</span>
           <NavLink to="privacy" className={FOOT}>{t('nav.privacy')}</NavLink>
         </div>
       </footer>
-      </div>
       <BottomNav route={route} />
     </div>
   )

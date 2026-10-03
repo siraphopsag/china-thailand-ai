@@ -299,9 +299,21 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
     const page = html(<Landing />)
     expect(page.match(/<li class="glass-card/g)?.length).toBe(8)
     expect(page.match(/class="glass-drop w-/g)?.length).toBe(8)
-    expect(page).toContain('<div class="glass-orbs" aria-hidden="true"></div>')
+    expect(page).not.toContain('glass-orbs') // the box of light showed hard edges; the light now lives in the page background
+    expect(css).toMatch(/radial-gradient\(42vw 38vh at 8% 55%, rgb\(var\(--glow-a\) \/ calc\(var\(--orb-a\) \* \.8\)\), transparent 72%\)/)
+    // forms keep solid cards; their lists and empty states are glass
     const seek = html(<SeekPage />, { ...seedState(NOW), role: 'seeker', me: seeker([]) })
-    expect(seek).not.toContain('glass-card'); expect(seek).toContain('class="card')
+    expect(seek).toMatch(/<form class="card space-y-4"/); expect(seek).toContain('<div class="glass-card p-5 text-muted">')
+  })
+  it('glass on the other short-reading cards (roles, prepare, notifications, lists, profile, help, empty states); settings stays solid; footer band reaches both edges', () => {
+    expect(html(<ChooseRolePage />).match(/<button type="button" class="glass-card/g)?.length).toBe(2)
+    const m = src('./pages/match.tsx')
+    for (const s of ['className="glass-card p-5 flex gap-4 items-start h-full"', '<li key={p.id} className="glass-card p-4 space-y-2">', '<li key={p.id} className="glass-card glass-lite p-4 space-y-3">', '<section className="glass-card p-5 space-y-3 text-sm">', '<div className="glass-card p-5 flex flex-col items-center'])
+      expect(m, s).toContain(s)
+    expect(m).toContain('<section className="card space-y-4">') // settings
+    const app = src('./App.tsx')
+    expect(app.indexOf('<footer')).toBeGreaterThan(app.indexOf('</main>'))
+    expect(app).toMatch(/<\/div>\s*\{\/\* the footer band runs to both screen edges[\s\S]*?<footer className="[^"]*md:pl-28/)
   })
   it('text on the glass cards stays ≥ 4.5:1 even over the strongest coloured light, and on the drops, in both themes', () => {
     const num = (th: 'light' | 'dark', name: string) => {
@@ -313,7 +325,7 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
       const page = pal(th, 'page'), glass = tok(th, 'glass-tint'), orbA = num(th, 'orb-a'), cardA = num(th, 'glass-card-a2')
       for (const orb of [pal(th, 'glow-a'), pal(th, 'glow-b'), pal(th, 'primary')]) {
         const behind = mix(orb, page, orbA), bg = mix(glass, behind, cardA)
-        for (const txt of ['ink', 'muted']) expect(cr(pal(th, txt), bg), `${th} ${txt}`).toBeGreaterThanOrEqual(4.5)
+        for (const txt of ['ink', 'muted', 'primary', 'ok-fg']) expect(cr(pal(th, txt), bg), `${th} ${txt}`).toBeGreaterThanOrEqual(4.5)
       }
       const drop = mix([255, 255, 255], pal(th, 'primary'), 0.15)
       expect(cr(pal(th, 'onprimary'), drop), `${th} drop text`).toBeGreaterThanOrEqual(4.5)

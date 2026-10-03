@@ -81,9 +81,8 @@ export function Landing() {
           <p className="mt-4 text-xs text-muted">{t('m.proto')}</p>
         </div>
       </section>
-      {/* liquid-glass cards (owner, Oct 2026) over soft, still light behind them, so the glass has something to show */}
-      <div className="relative isolate space-y-14">
-        <div className="glass-orbs" aria-hidden />
+      {/* liquid-glass cards (owner, Oct 2026); the soft coloured light they show comes from the page background */}
+      <div className="space-y-14">
         <section aria-labelledby="stands-h" className="space-y-4">
           <div><h2 id="stands-h" className="text-2xl font-bold">{t('m.problems.h')}</h2><p className="text-muted mt-1">{t('brand.stands')} Cross · ASEAN · Language · Legal</p></div>
           <ul className="grid sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-3">{BRAND_CONCEPTS.map((c, i) => (

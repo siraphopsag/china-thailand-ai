@@ -55,12 +55,16 @@ html { scroll-behavior: smooth }
 .grid > * { min-width: 0 }
 body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif; line-height: 1.65; overflow-wrap: break-word;
   background-color: rgb(var(--page)); color: rgb(var(--ink)); transition: background-color .25s ease, color .25s ease;
-  /* depth behind everything: two soft light sources and a faint dot texture, fixed while the page scrolls */
+  /* depth behind everything: soft pools of indigo and sky light across the whole screen (they fade out before any edge, so
+     nothing looks cut) and a faint dot texture, fixed while the page scrolls. Glass cards on any page show this light. */
   background-image:
     radial-gradient(900px 520px at 12% -10%, rgb(var(--glow-a) / calc(var(--glow-k) * .55)), transparent 70%),
     radial-gradient(800px 480px at 95% 0%, rgb(var(--glow-b) / calc(var(--glow-k) * .4)), transparent 70%),
+    radial-gradient(42vw 38vh at 8% 55%, rgb(var(--glow-a) / calc(var(--orb-a) * .8)), transparent 72%),
+    radial-gradient(40vw 36vh at 92% 62%, rgb(var(--glow-b) / calc(var(--orb-a) * .75)), transparent 72%),
+    radial-gradient(38vw 30vh at 55% 100%, rgb(var(--primary) / calc(var(--orb-a) * .55)), transparent 72%),
     radial-gradient(circle at 1px 1px, rgb(var(--grid-line) / calc(var(--grid-a) * .9)) 1px, transparent 0);
-  background-size: auto, auto, 22px 22px; background-attachment: fixed }
+  background-size: auto, auto, auto, auto, auto, 22px 22px; background-attachment: fixed }
 /* one font family per language, from fonts already on the device (nothing is downloaded). Without this, Latin text fell through
    to a Chinese font (Microsoft YaHei on Windows), so English looked larger and wider than Thai or Chinese. */
 html:lang(th) body, [lang|="th"] { font-family: "Noto Sans Thai", "Leelawadee UI", Leelawadee, Sarabun, "Segoe UI", system-ui, sans-serif }
@@ -233,10 +237,9 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .glass-drop { display: grid; place-items: center; border-radius: 9999px; font-weight: 700; color: rgb(var(--onprimary));
   background: radial-gradient(90% 55% at 50% 0%, rgb(255 255 255 / .15), transparent 70%), rgb(var(--primary));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .45), inset 0 -2px 4px rgb(0 0 0 / .18), 0 6px 14px -6px rgb(var(--primary) / .9) }
-/* soft, still coloured light behind the glass cards (decorative) */
-.glass-orbs { position: absolute; inset: -3rem -2rem; z-index: -1; pointer-events: none;
-  background: radial-gradient(38% 30% at 12% 22%, rgb(var(--glow-a) / var(--orb-a)), transparent 70%), radial-gradient(34% 28% at 88% 40%, rgb(var(--glow-b) / var(--orb-a)), transparent 70%),
-    radial-gradient(30% 26% at 30% 78%, rgb(var(--glow-b) / calc(var(--orb-a) * .8)), transparent 70%), radial-gradient(32% 26% at 75% 88%, rgb(var(--primary) / calc(var(--orb-a) * .7)), transparent 70%) }
+/* lighter glass for long lists (back office): less blur, so many cards stay smooth on phones */
+.glass-lite { backdrop-filter: blur(10px) saturate(1.5); -webkit-backdrop-filter: blur(10px) saturate(1.5) }
+/* (the coloured light now lives in the page background — the earlier box behind the Lobby cards showed hard edges) */
 @media (prefers-reduced-transparency: reduce) {
   .nav-pill, .glass-pop, .glass-card { background: rgb(var(--surface)); backdrop-filter: none; -webkit-backdrop-filter: none }
   .nav-pill::before, .glass-pop::before, .glass-card::before { display: none }

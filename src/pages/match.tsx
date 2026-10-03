@@ -62,7 +62,7 @@ function Req() {
 /** nothing to show yet: say why and offer the next step, so no page is a dead end */
 function Empty({ icon, text, to, action }: { icon: 'bell' | 'pin' | 'posts'; text: string; to?: string; action?: string }) {
   return (
-    <div className="card flex flex-col items-center text-center gap-3 !py-8">
+    <div className="glass-card p-5 flex flex-col items-center text-center gap-3 !py-8">
       <span className="w-12 h-12 rounded-2xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={22} /></span>
       <p className="text-muted max-w-sm">{text}</p>
       {to && action && <NavLink to={to} className="btn-primary">{action}<Icon name="next" size={16} /></NavLink>}
@@ -71,7 +71,7 @@ function Empty({ icon, text, to, action }: { icon: 'bell' | 'pin' | 'posts'; tex
 }
 function NeedRole({ role }: { role: 'seeker' | 'employer' }) {
   const { t } = useI18n()
-  return <div className="card space-y-3"><p>{t('m.profile.none')}</p><NavLink to="choose-role" className="btn-primary inline-flex">{t(role === 'seeker' ? 'm.role.seeker' : 'm.role.employer')}<Icon name="next" size={16} /></NavLink></div>
+  return <div className="glass-card p-5 space-y-3"><p>{t('m.profile.none')}</p><NavLink to="choose-role" className="btn-primary inline-flex">{t(role === 'seeker' ? 'm.role.seeker' : 'm.role.employer')}<Icon name="next" size={16} /></NavLink></div>
 }
 
 /** country buttons + province list, shown next to the map */
@@ -216,9 +216,9 @@ export function SeekPage() {
         {/* how many of the 5 queue places are used (the number is in the heading; the bar is a visual aid) */}
         <div className="h-1.5 rounded-full bg-surface3 overflow-hidden" aria-hidden><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(st.me.pins.length / MAX_PINS) * 100}%` }} /></div>
         <p className="text-xs text-muted">{t('m.pin.why')}</p>
-        {!st.me.pins.length ? <div className="card text-muted">{t('m.pin.none')}</div> : (
+        {!st.me.pins.length ? <div className="glass-card p-5 text-muted">{t('m.pin.none')}</div> : (
           <ul className="grid sm:grid-cols-2 gap-2">{st.me.pins.map((p) => (
-            <li key={p.id} className="card !p-3 flex items-start gap-3">
+            <li key={p.id} className="glass-card p-3 flex items-start gap-3">
               <Icon name="pin" size={20} className="text-danger-fg mt-0.5" />
               <div className="min-w-0 flex-1"><h3 className="font-semibold">{N.place(p.country, p.province)}</h3><p className="text-sm text-muted">{N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p></div>
               <button type="button" className="w-9 h-9 rounded-lg border border-control grid place-items-center hover:bg-surface3" aria-label={`${t('m.pin.remove')}: ${N.place(p.country, p.province)}`} title={t('m.pin.remove')} onClick={() => { unpin(p.id); setMsg({ tone: 'info', text: t('m.pin.removed') }) }}><Icon name="close" size={16} /></button>
@@ -302,9 +302,9 @@ export function HirePage() {
       )}
       <section className="space-y-2" aria-labelledby="myposts-h">
         <h2 id="myposts-h" className="h2">{t('m.posts')}</h2>
-        {!mine.length ? <div className="card text-muted">{t('m.posts.none')}</div> : (
+        {!mine.length ? <div className="glass-card p-5 text-muted">{t('m.posts.none')}</div> : (
           <ul className="space-y-2">{mine.map((x) => (
-            <li key={x.id} className="card !p-4 space-y-2"><div><h3 className="font-semibold">{x.position}</h3><p className="text-sm text-muted">{x.company} · {N.place(x.country, x.province)} · {N.industry(x.industry)}</p></div><PostStatus post={x} /></li>))}</ul>)}
+            <li key={x.id} className="glass-card p-4 space-y-2"><div><h3 className="font-semibold">{x.position}</h3><p className="text-sm text-muted">{x.company} · {N.place(x.country, x.province)} · {N.industry(x.industry)}</p></div><PostStatus post={x} /></li>))}</ul>)}
       </section>
       </MapLayout>
     </Page>
@@ -324,7 +324,7 @@ export function NotificationsPage() {
       <Page title={t('m.notif.title')}>
         {!acc.length ? <Empty icon="bell" text={t('m.notif.none')} to="hire" action={t('m.posts')} /> : (
           <ul className="space-y-2">{acc.map((a) => { const p = st.posts.find((x) => x.id === a.postId)!; return (
-            <li key={a.id} className="card !p-4 flex items-start gap-3"><Icon name="bell" size={20} className="text-primary mt-0.5" /><div><p className="font-semibold">{t('m.empNotif', { p: p.position })}</p><p className="text-sm text-muted">{t(a.status === 'forwarded' ? 'm.st.forwarded' : 'm.st.accepted')}</p></div></li>) })}</ul>)}
+            <li key={a.id} className="glass-card p-4 flex items-start gap-3"><Icon name="bell" size={20} className="text-primary mt-0.5" /><div><p className="font-semibold">{t('m.empNotif', { p: p.position })}</p><p className="text-sm text-muted">{t(a.status === 'forwarded' ? 'm.st.forwarded' : 'm.st.accepted')}</p></div></li>) })}</ul>)}
       </Page>)
   }
   if (st.role !== 'seeker') return <Page title={t('m.notif.title')}><Empty icon="bell" text={t('m.notif.none')} to="choose-role" action={t('hero.cta')} /></Page>
@@ -337,7 +337,7 @@ export function NotificationsPage() {
         <ul className="space-y-3">{offers.map((p) => {
           const mineAcc = st.acceptances.find((a) => a.postId === p.id && a.seekerId === ME)
           return (
-            <li key={p.id} className="card !p-4 space-y-2">
+            <li key={p.id} className="glass-card p-4 space-y-2">
               <p className="text-xs font-semibold text-primary flex items-center gap-1.5"><Icon name="bell" size={14} />{t('m.offer.new')} · {why(reachTier(p, st.me))}</p>
               <div><h2 className="font-semibold text-lg">{p.position}</h2><p className="text-sm text-muted">{p.company} · {N.place(p.country, p.province)} · {N.industry(p.industry)}</p></div>
               <p className="text-sm">{t('jb.minYearsShort', { n: p.minYears })} · {p.skills.map(N.skill).join(', ')}</p>
@@ -363,7 +363,7 @@ export function MePage() {
   const { st } = useMatch()
   return (
     <Page title={t('m.profile.title')}>
-      <section className="card space-y-2">
+      <section className="glass-card p-5 space-y-2">
         <p><span className="text-muted">{t('m.profile.role')}:</span> <b>{st.role ? t(st.role === 'seeker' ? 'm.role.seeker' : 'm.role.employer') : t('m.profile.none')}</b></p>
         {st.role === 'seeker' && st.me.origin && <p className="text-sm">{t('m.seek.from', { p: N.place(st.me.origin.country, st.me.origin.province) })} · {t('m.pin.count', { n: st.me.pins.length })}</p>}
         {st.role === 'employer' && st.myCompany && <p className="text-sm">{t('m.emp.company')}: {st.myCompany}</p>}
@@ -379,7 +379,7 @@ export function PreparePage() {
   return (
     <Page title={t('m.prepare.title')}>
       <ul className="grid md:grid-cols-2 gap-3">{cards.map(([to, icon, h, d]) => (
-        <li key={to}><NavLink to={to} className="card card-hover !p-5 flex gap-4 items-start h-full"><span className="w-11 h-11 shrink-0 rounded-xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={22} /></span><span><span className="block font-semibold text-lg">{t(h)}</span><span className="block text-sm text-muted mt-1">{t(d)}</span></span></NavLink></li>))}</ul>
+        <li key={to}><NavLink to={to} className="glass-card p-5 flex gap-4 items-start h-full"><span className="w-11 h-11 shrink-0 rounded-xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={22} /></span><span><span className="block font-semibold text-lg">{t(h)}</span><span className="block text-sm text-muted mt-1">{t(d)}</span></span></NavLink></li>))}</ul>
     </Page>
   )
 }
@@ -402,7 +402,7 @@ export function SettingsPage() {
 }
 export function HelpPage() {
   const { t } = useI18n()
-  return <Page title={t('m.help.title')}><section className="card space-y-3 text-sm"><p>{t('m.help.seeker')}</p><p>{t('m.help.employer')}</p><p className="text-muted">{t('m.proto')}</p></section></Page>
+  return <Page title={t('m.help.title')}><section className="glass-card p-5 space-y-3 text-sm"><p>{t('m.help.seeker')}</p><p>{t('m.help.employer')}</p><p className="text-muted">{t('m.proto')}</p></section></Page>
 }
 
 /* ================= admin back office ================= */
@@ -424,7 +424,7 @@ export function BackofficePage() {
           const waiting = people.filter((s) => { const r = reachTier(p, s); return r !== null && !isVisibleTo(p, s, now, st.acceptances) })
           const acc = st.acceptances.filter((a) => a.postId === p.id)
           return (
-            <li key={p.id} className="card !p-4 space-y-3">
+            <li key={p.id} className="glass-card glass-lite p-4 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div><h3 className="font-semibold">{p.position} · {p.company} {p.employerId !== MY_EMPLOYER && <span className="chip bg-surface3 text-muted border-line ml-1">{t('m.adm.sample')}</span>}</h3><p className="text-sm text-muted">{N.place(p.country, p.province)} · {N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p></div>
                 <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(`m.tier.${tier}` as never)}</span>

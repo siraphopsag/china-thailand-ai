@@ -24,7 +24,7 @@ export function ChooseRolePage() {
       </div>
       <ul className="grid sm:grid-cols-2 gap-4">{ROLES.map((r) => (
         <li key={r.role}>
-          <button type="button" className="card card-hover !p-6 w-full h-full text-left flex flex-col gap-3 group" onClick={() => { setRole(r.role); go(r.to) }}>
+          <button type="button" className="glass-card !p-6 w-full h-full text-left flex flex-col gap-3 group" onClick={() => { setRole(r.role); go(r.to) }}>
             <span className="w-14 h-14 rounded-2xl bg-brand text-brandfg grid place-items-center"><Icon name={r.icon} size={28} /></span>
             <span className="block text-2xl font-bold group-hover:underline underline-offset-4">{t(r.t)}{lang !== 'en' && <span className="text-base font-medium text-muted" lang="en"> ({r.en})</span>}</span>
             <span className="block text-muted">{t(r.d)}</span>
