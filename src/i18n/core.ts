@@ -10,7 +10,6 @@ export const LANGS: { id: Lang; label: string; short: string; html: string }[] =
 const IDX: Record<Lang, number> = { th: 0, zh: 1, en: 2 }
 
 let current: Lang = 'th'
-export const getLang = () => current
 export const setCurrentLang = (l: Lang) => { current = l }
 export type Vars = Record<string, string | number>
 
@@ -19,12 +18,6 @@ export function tr(key: MsgKey, vars?: Vars, lang: Lang = current): string {
   let s = e ? e[IDX[lang]] || e[0] : String(key)
   if (vars) s = s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''))
   return s
-}
-/** Run synchronous code with a specific language (serverless API, document generation). */
-export function withLang<T>(lang: Lang, fn: () => T): T {
-  const prev = current
-  current = lang
-  try { return fn() } finally { current = prev }
 }
 /** Dynamic key helper, e.g. tk('level', 'HIGH'). */
 export const tk = (prefix: string, id: string, vars?: Vars) => tr(`${prefix}.${id}` as MsgKey, vars)

@@ -11,4 +11,7 @@ import '@fontsource/noto-sans-thai/latin-700.css'
 import './index.css'
 import App from './App'
 import { ErrorBoundary } from './ErrorBoundary'
+import { clearStaleData } from './storage'
+
+clearStaleData() // forget data of removed prototypes
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><App /></ErrorBoundary></StrictMode>)

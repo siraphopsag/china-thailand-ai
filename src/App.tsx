@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, type ReactNode } from 'react'
-import { go, NavLink, StoreProvider, useRoute } from './store'
+import { go, NavLink, useRoute } from './store'
 import { LanguageProvider, useI18n } from './i18n'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
@@ -7,28 +7,12 @@ import { SideNav } from './components/sidenav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { BRAND } from './brand'
 import { pageTitle } from './utils/labels'
-import { BackButton, BottomNav, ContextStack, Header } from './components/shell'
-import { Landing, DirectionPage, InterviewPage, ProfilePage } from './pages/intake'
-// Landing/interview load immediately; the analysis, employment and operations pages load on demand.
-const StartPage = lazy(() => import('./pages/start').then((m) => ({ default: m.StartPage })))
-const AnalysisCenter = lazy(() => import('./pages/analysis').then((m) => ({ default: m.AnalysisCenter })))
-const OwnershipPage = lazy(() => import('./pages/analysis').then((m) => ({ default: m.OwnershipPage })))
-const NomineePage = lazy(() => import('./pages/analysis').then((m) => ({ default: m.NomineePage })))
-const EmploymentPage = lazy(() => import('./pages/employment').then((m) => ({ default: m.EmploymentPage })))
-const ContractPage = lazy(() => import('./pages/employment').then((m) => ({ default: m.ContractPage })))
-const LanguagePage = lazy(() => import('./pages/employment').then((m) => ({ default: m.LanguagePage })))
-const Dashboard = lazy(() => import('./pages/ops').then((m) => ({ default: m.Dashboard })))
-const RiskPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.RiskPage })))
-const RoadmapPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.RoadmapPage })))
-const DocumentsPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.DocumentsPage })))
-const MonitoringPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.MonitoringPage })))
-const SourcesPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.SourcesPage })))
-const AdminPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.AdminPage })))
-const PricingPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.PricingPage })))
-const PlanPage = lazy(() => import('./pages/plan').then((m) => ({ default: m.PlanPage })))
-const NavigatorPage = lazy(() => import('./pages/compliance').then((m) => ({ default: m.NavigatorPage })))
-const EmployeeCheckPage = lazy(() => import('./pages/compliance').then((m) => ({ default: m.EmployeeCheckPage })))
-const PrivacyPage = lazy(() => import('./pages/ops').then((m) => ({ default: m.PrivacyPage })))
+import { BackButton, Header } from './components/shell'
+import { Landing } from './pages/home'
+// the home page loads immediately; every other page loads on demand
+const LanguagePage = lazy(() => import('./pages/info').then((m) => ({ default: m.LanguagePage })))
+const SourcesPage = lazy(() => import('./pages/info').then((m) => ({ default: m.SourcesPage })))
+const PrivacyPage = lazy(() => import('./pages/info').then((m) => ({ default: m.PrivacyPage })))
 const SeekPage = lazy(() => import('./pages/match').then((m) => ({ default: m.SeekPage })))
 const HirePage = lazy(() => import('./pages/hire').then((m) => ({ default: m.HirePage })))
 const PostPage = lazy(() => import('./pages/hire').then((m) => ({ default: m.PostPage })))
@@ -70,7 +54,6 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <SideNav route={route} />
       {/* room for the menu capsule: on the left from 768 px, below the content on phones */}
       <div id="page-body" className="flex-1 flex flex-col md:pl-24">
-      <ContextStack route={route} />
       <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 md:pb-10"><BackButton route={route} /><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
       </div>
       {/* the footer band runs to both screen edges; its text keeps clear of the menu capsule */}
@@ -80,7 +63,6 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
           <NavLink to="privacy" className={FOOT}>{t('nav.privacy')}</NavLink>
         </div>
       </footer>
-      <BottomNav route={route} />
     </div>
   )
 }
@@ -89,12 +71,10 @@ function Router() {
   const r = useRoute()
   const { t } = useI18n()
   const pages: Record<string, ReactNode> = {
-    '': <Landing />, start: <StartPage />, direction: <DirectionPage />, interview: <InterviewPage />, profile: <ProfilePage />, dashboard: <Dashboard />, analysis: <AnalysisCenter />,
-    ownership: <OwnershipPage />, nominee: <NomineePage />, employment: <EmploymentPage />, contract: <ContractPage />, language: <LanguagePage />, plan: <PlanPage />, navigator: <NavigatorPage />, employee: <EmployeeCheckPage />, risk: <RiskPage />,
-    roadmap: <RoadmapPage />, documents: <DocumentsPage />, monitoring: <MonitoringPage />, sources: <SourcesPage />, pricing: <PricingPage />, privacy: <PrivacyPage />, admin: <AdminPage />,
+    '': <Landing />, language: <LanguagePage />, sources: <SourcesPage />, privacy: <PrivacyPage />,
     'choose-role': <ChooseRolePage />,
     seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, // matching prototype
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>
 }
-export default function App() { return <ThemeProvider><LanguageProvider><StoreProvider><MatchProvider><Router /></MatchProvider></StoreProvider></LanguageProvider></ThemeProvider> }
+export default function App() { return <ThemeProvider><LanguageProvider><MatchProvider><Router /></MatchProvider></LanguageProvider></ThemeProvider> }

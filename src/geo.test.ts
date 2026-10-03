@@ -1,20 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { ACTIVE, GEO, HOME, SOON, arcPoint, checkDestination, clampView, codeOfIso, directionOf, lerpView, viewForBox, type GeoCode } from './geo'
+import { ACTIVE, GEO, HOME, SOON, clampView, codeOfIso, lerpView, viewForBox } from './geo'
 import capitals from './data/geo/capitals.json'
 import region from './data/geo/region-asean-china.json'
 import { messages } from './locales/index'
 
 describe('geographic onboarding rules', () => {
-  it('only Thailand and China are routes today, and they map onto the existing Business Context direction', () => {
+  it('only Thailand and China are open today', () => {
     expect(ACTIVE).toEqual(['TH', 'CN'])
-    expect(directionOf('CN', 'TH')).toBe('CN_TH'); expect(directionOf('TH', 'CN')).toBe('TH_CN')
-    expect(directionOf('TH', 'TH')).toBeNull(); expect(directionOf('CN', 'CN')).toBeNull()
-    expect(directionOf('TH', 'VN')).toBeNull(); expect(directionOf(null, 'TH')).toBeNull()
-  })
-  it('the same country can never be both origin and destination; planned countries are "coming soon", not errors', () => {
-    expect(checkDestination('TH', 'TH')).toBe('same'); expect(checkDestination('CN', 'CN')).toBe('same')
-    expect(checkDestination('CN', 'TH')).toBe('ok'); expect(checkDestination('TH', 'CN')).toBe('ok')
-    for (const c of ['VN', 'MM', 'LA', 'SG'] as GeoCode[]) expect(checkDestination('TH', c)).toBe('soon')
   })
   it('countries resolve from Natural Earth ISO numeric ids (with or without leading zeros)', () => {
     expect(codeOfIso('764')).toBe('TH'); expect(codeOfIso('156')).toBe('CN'); expect(codeOfIso(96)).toBe('BN'); expect(codeOfIso('250')).toBeUndefined()
@@ -32,12 +24,9 @@ describe('2D map view', () => {
     expect(v.k).toBeGreaterThan(1)
     expect(v.x + v.k * 320).toBeCloseTo(400, 0); expect(v.y + v.k * 230).toBeCloseTo(250, 0)
   })
-  it('animations land exactly on the target; the route arc starts at the origin and ends at the destination', () => {
+  it('animations land exactly on the target', () => {
     const to = { k: 4, x: -300, y: -120 }
     expect(lerpView(HOME, to, 1)).toEqual(to)
-    const a: [number, number] = [100, 300], b: [number, number] = [400, 100]
-    expect(arcPoint(a, b, 0)).toMatchObject({ x: 100, y: 300 }); expect(arcPoint(a, b, 1)).toMatchObject({ x: 400, y: 100 })
-    const mid = arcPoint(a, b, 0.5); expect(Math.hypot(mid.x - 250, mid.y - 200)).toBeGreaterThan(10) // it bends, it is not a straight line
   })
 })
 
@@ -78,16 +67,5 @@ describe('provinces and the shared Business Context', () => {
     expect(codes.filter((c) => c.startsWith('TH-')).length).toBe(77)
     const m = messages as Record<string, readonly string[]>
     for (const c of codes) expect(m[`prov.${c}`]?.every((s) => s.length > 0), c).toBe(true)
-  })
-  it('a destination province chosen on the map answers the interview question about location, so it is not asked again', async () => {
-    const { visibleQs, isAnswered } = await import('./interview')
-    const a = { name: 'Acme', btype: 'manufacturing', forms: ['company'], location: 'Shanghai' }
-    expect(visibleQs(a).filter((q) => !isAnswered(a, q)).some((q) => q.id === 'location')).toBe(false)
-  })
-  it('stored provinces are validated: only real-looking TH/CN ISO codes survive', async () => {
-    const { sanitizeState } = await import('./store')
-    const s = sanitizeState({ direction: 'TH_CN', originProvince: 'TH-20', destinationProvince: '<script>' })
-    expect(s.originProvince).toBe('TH-20'); expect(s.destinationProvince).toBeNull()
-    expect(sanitizeState({}).originProvince).toBeNull()
   })
 })

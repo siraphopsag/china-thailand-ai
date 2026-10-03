@@ -5,12 +5,14 @@
 
 | ไฟล์ | แสดงอะไร | วาดจาก |
 | --- | --- | --- |
-| [01-system-now.svg](01-system-now.svg) | โครงสร้างระบบตอนนี้ (ต้นแบบ): อะไรทำงานในเบราว์เซอร์ อะไรอยู่ภายนอก | `src/App.tsx`, `src/matchData.tsx`, `src/domain/match/precheck.ts`, `src/data/legal/`, `api/analyze-business.ts`, `.github/workflows/legal-watch.yml` |
+| [01-system-now.svg](01-system-now.svg) | โครงสร้างระบบตอนนี้ (ต้นแบบ): อะไรทำงานในเบราว์เซอร์ อะไรอยู่ภายนอก (ยังไม่มีเซิร์ฟเวอร์ API — ตัวเดิมของเครื่องมือรุ่นแรกถูกลบแล้ว) | `src/App.tsx`, `src/matchData.tsx`, `src/domain/match/precheck.ts`, `src/data/legal/`, `.github/workflows/legal-watch.yml` |
 | [02-matching-flow.svg](02-matching-flow.svg) | ขั้นตอนจับคู่งาน: นายจ้างโพสต์ → แจ้งผู้หางาน 3 ขั้นตามวัน → รับงาน → ส่งต่อ (จำลอง) | `src/pages/hire.tsx`, `src/domain/match/logic.ts` (`canPost`, `tierOf`, `reachTier`, `accept`, `forward`) |
 | [03-future-architecture.svg](03-future-architecture.svg) | โครงสร้างที่เสนอสำหรับอนาคต: ทุกบริการภายนอกเชื่อมผ่านเซิร์ฟเวอร์ API ตัวกลาง | แผนที่เสนอ — ยังไม่ได้สร้าง |
 | [04-integration-roadmap.svg](04-integration-roadmap.svg) | ลำดับการเชื่อมต่อ: ต้นแบบ → เฟส 1 รากฐาน → เฟส 2 AI + แจ้งเตือน → เฟส 3 เปิดใช้จริง → เฟส 4 ขยายอาเซียน | แผนที่เสนอ — ยังไม่ได้สร้าง |
 
-ภาพ 01–02 ตรงกับโค้ดที่คอมมิต `c880695` (กิ่ง `poc/jobboard`) — ถ้าไฟล์ในคอลัมน์ "วาดจาก" เปลี่ยน ให้อัปเดตภาพด้วย
+ภาพ 01–02 ตรงกับโค้ดหลังลบเครื่องมือวางแผนธุรกิจรุ่นแรก (ต.ค. 2569, กิ่ง `poc/jobboard`) — ถ้าไฟล์ในคอลัมน์ "วาดจาก" เปลี่ยน ให้อัปเดตภาพด้วย
+
+สร้างภาพใหม่: แก้ข้อความใน [generate.cjs](generate.cjs) แล้วรัน `node docs/diagrams/generate.cjs docs/diagrams` จากโฟลเดอร์โปรเจกต์
 
 ## ตอนทำหน้าแอดมิน
 

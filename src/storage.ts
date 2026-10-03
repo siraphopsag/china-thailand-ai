@@ -1,10 +1,16 @@
-/** Browser storage keys. Real data and demo data live in separate slots so the demo can never overwrite real work. */
-export const KEYS = { real: 'cnth-real-v3', demo: 'cnth-demo-v3', mode: 'cnth-mode-v3', legacy: 'cnth-prototype-v2', interview: 'cnth-interview-v3' } as const
-export const STATE_VERSION = 3
+/** Browser storage of C.A.L.L. (this browser only — nothing is sent anywhere). */
+import { MATCH_KEY } from './matchData'
 
-export const safeGet = (k: string): string | null => { try { return localStorage.getItem(k) } catch { return null } }
-export const safeSet = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* storage unavailable */ } }
-/** Removes saved business data (not the language/theme preferences). */
+/** Keys left behind by removed prototypes (the business-planning tool and the first job board, removed Oct 2026). */
+export const STALE_KEYS = ['cnth-real-v3', 'cnth-demo-v3', 'cnth-mode-v3', 'cnth-prototype-v2', 'cnth-interview-v3', 'call.jobboard.poc.v1'] as const
+
+/** Run once at start-up: forget data of removed prototypes so it does not linger in visitors' browsers. */
+export function clearStaleData() {
+  try { STALE_KEYS.forEach((k) => localStorage.removeItem(k)) } catch { /* storage blocked: nothing to clear */ }
+}
+
+/** "Clear data and start again" (error page): removes the prototype data; keeps language, theme and animation preferences. */
 export function clearSavedData() {
-  try { Object.values(KEYS).forEach((k) => localStorage.removeItem(k)) } catch { /* ignore */ }
+  clearStaleData()
+  try { localStorage.removeItem(MATCH_KEY); sessionStorage.removeItem('call.admin.poc') } catch { /* storage blocked */ }
 }

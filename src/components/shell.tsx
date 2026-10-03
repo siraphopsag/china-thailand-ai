@@ -1,27 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { LANGS, dv, tk, useI18n } from '../i18n'
+import { LANGS, useI18n } from '../i18n'
 import { useTheme } from '../theme'
-import { go, goBack, NavLink, useStore } from '../store'
-import { dirInfo } from '../utils/labels'
-import { tourRoutes } from '../data/culture'
-import { SampleTag } from './ui'
+import { goBack } from '../store'
 import { BRAND } from '../brand'
-import { CountryBadge, Icon, type IconName } from './icons'
+import { Icon, type IconName } from './icons'
 import { LoginButton } from './sidenav'
-
-type NavItem = { route: string; key: string; icon: IconName; sub: string[] }
-/** The business-planning tool's own areas (secondary part of C.A.L.L.). Shown as a sub-navigation only inside business-planning routes. */
-export const PRIMARY: NavItem[] = [
-  { route: 'dashboard', key: 'nav.overview', icon: 'overview', sub: [] },
-  { route: 'profile', key: 'nav.business', icon: 'business', sub: ['start', 'direction', 'interview'] },
-  { route: 'analysis', key: 'nav.analysisHub', icon: 'ai', sub: ['ownership', 'nominee', 'employment', 'contract', 'navigator', 'employee'] },
-  { route: 'plan', key: 'nav.plan', icon: 'plan', sub: ['roadmap', 'risk'] },
-  { route: 'documents', key: 'nav.documents', icon: 'documents', sub: [] },
-]
-/** Every route that belongs to the business-planning tool (map, interview, analysis, plans, documents). */
-export const BUSINESS_ROUTES = PRIMARY.flatMap((n) => [n.route, ...n.sub])
-export const isBusinessRoute = (route: string) => BUSINESS_ROUTES.includes(route)
-const isActive = (route: string, n: NavItem) => route === n.route || n.sub.includes(route)
 
 /** C.A.L.L. mark: two linked rings (two sides of a border, two languages) joined by one line. Follows the theme. */
 export function Logo({ size = 32 }: { size?: number }) {
@@ -125,23 +108,8 @@ export function Header(_: { route?: string }) {
   )
 }
 
-/** The business-planning tool's own sub-navigation (desktop), shown only inside that tool once a business case exists. */
-function BusinessSubNav({ route }: { route: string }) {
-  const { t } = useI18n()
-  return (
-    <div className="hidden xl:block bg-surface2 border-b border-line">
-      <nav aria-label={t('nav.bizTools')} className="max-w-7xl mx-auto px-4 py-1.5 flex items-center gap-1">
-        <span className="text-xs font-semibold text-muted mr-2 inline-flex items-center gap-1.5"><Icon name="globe" size={14} />{t('nav.bizTools')}</span>
-        {PRIMARY.map((n) => (
-          <NavLink key={n.route} to={n.route} aria-current={isActive(route, n) ? 'page' : undefined} className={`px-2.5 py-1.5 rounded-lg text-sm min-h-[36px] whitespace-nowrap flex items-center gap-1.5 ${isActive(route, n) ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3'}`}><Icon name={n.icon} size={15} />{t(n.key as never)}</NavLink>))}
-      </nav>
-    </div>
-  )
-}
-
-/** Compact "which business is the AI analysing" bar + guided-demo strip. */
 /** where "Back" leads when the page was opened directly (no earlier in-app page to return to) */
-const PARENT: Record<string, string> = { seek: 'choose-role', hire: 'choose-role', post: 'hire', language: 'prepare', sources: 'prepare', monitoring: 'sources' }
+const PARENT: Record<string, string> = { seek: 'choose-role', hire: 'choose-role', post: 'hire', language: 'prepare', sources: 'prepare', privacy: '' }
 /** "Back" on every page except the Lobby, so nobody has to return to the Lobby to go one step back */
 export function BackButton({ route }: { route: string }) {
   const { t } = useI18n()
@@ -151,65 +119,5 @@ export function BackButton({ route }: { route: string }) {
       className="mb-3 -ml-1 inline-flex items-center gap-1.5 rounded-lg px-2 min-h-[40px] text-sm font-medium text-muted hover:text-ink hover:bg-surface3 transition-colors">
       <Icon name="back" size={16} />{t('m.back')}
     </button>
-  )
-}
-
-export function ContextStack({ route }: { route: string }) {
-  const { t } = useI18n()
-  const { profile, tour, set, mode, exitDemo } = useStore()
-  // everything here belongs to the business-planning tool, so it stays inside that tool's routes (not on the job board or the home page)
-  const biz = isBusinessRoute(route)
-  const hideCtx = !biz || ['start', 'direction', 'interview'].includes(route)
-  const showTour = biz && tour !== null && tour < tourRoutes.length
-  const demo = biz && mode === 'demo'
-  const sub = biz && !!profile
-  if ((hideCtx || !profile) && !showTour && !demo && !sub) return null
-  const d = profile ? dirInfo(profile.direction) : null
-  return (
-    <div className="md:sticky md:top-16 z-30">
-      {sub && <BusinessSubNav route={route} />}
-      {demo && (
-        <div className="bg-info-bg text-info-fg border-b border-info-line" role="status">
-          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"><Icon name="info" size={14} /><span className="flex-1 min-w-[200px]">{t('demo.mode')}</span>
-            <button className="underline font-semibold" onClick={() => { exitDemo(); go('') }}>{t('demo.exit')}</button></div>
-        </div>)}
-      {!hideCtx && profile && d && (
-        <div className="bg-surface border-b border-line" role="region" aria-label={t('ctx.aria')}>
-          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center gap-x-4 gap-y-1 flex-wrap text-sm">
-            <span className="font-semibold truncate max-w-[60vw] inline-flex items-center gap-1.5"><Icon name="business" size={16} className="text-primary" />{dv(profile.companyName)}</span>
-            <span className="flex items-center gap-1.5" aria-label={t(`dir.${profile.direction}` as never)}><CountryBadge c={d.from} />{tk('country', d.from)}<Icon name="next" size={14} className="text-primary" /><CountryBadge c={d.to} />{tk('country', d.to)}</span>
-            <span className="text-muted hidden sm:inline">{profile.businessType === 'other' && profile.businessTypeOther ? profile.businessTypeOther : tk('opt.btype', profile.businessType)}</span>
-            {profile.isDemo && <SampleTag text={t('c.demoTag')} />}
-            <span className="ml-auto text-xs text-muted hidden md:inline-flex items-center gap-1.5"><Icon name="ai" size={13} className="text-primary" />{t('ctx.analyzing')}</span>
-          </div>
-        </div>)}
-      {showTour && tour !== null && (
-        <div role="region" aria-label={t('tour.aria')} className="bg-warn-bg border-b border-warn-line text-warn-fg">
-          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-            <span className="font-semibold">{t('tour.label')} · {t('tour.step', { n: tour + 1, total: tourRoutes.length })}: {t(`tour.${tour}.t` as never)}</span>
-            <span className="hidden md:block flex-1 min-w-[200px] text-ink">{t(`tour.${tour}.c` as never)}</span>
-            <details className="md:hidden w-full text-ink"><summary className="cursor-pointer text-xs underline">{t('ui.show')}</summary><p className="mt-1">{t(`tour.${tour}.c` as never)}</p></details>
-            <span className="flex gap-2">
-              <button className="btn-ghost !py-1 !min-h-[36px]" disabled={tour === 0} onClick={() => { set({ tour: tour - 1 }); go(tourRoutes[tour - 1]) }}><Icon name="back" size={15} />{t('c.prev')}</button>
-              <button className="btn-primary !py-1 !min-h-[36px]" onClick={() => { if (tour + 1 < tourRoutes.length) { set({ tour: tour + 1 }); go(tourRoutes[tour + 1]) } else set({ tour: null }) }}>{tour + 1 < tourRoutes.length ? t('c.next') : t('tour.finish')}{tour + 1 < tourRoutes.length && <Icon name="next" size={15} />}</button>
-              <button className="btn-ghost !py-1 !min-h-[36px]" onClick={() => set({ tour: null })}>{t('tour.exit')}</button>
-            </span>
-          </div>
-        </div>)}
-    </div>
-  )
-}
-
-export function BottomNav({ route }: { route: string }) {
-  const { t } = useI18n()
-  const { profile } = useStore()
-  if (!profile || !isBusinessRoute(route)) return null // the business tool's own tabs; other areas use the header menu
-  return (
-    <nav aria-label={t('nav.bizTools')} className="xl:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-line grid grid-cols-5 z-40">
-      {PRIMARY.map((n) => (
-        <NavLink key={n.route} to={n.route} aria-current={isActive(route, n) ? 'page' : undefined} className={`py-2 text-[11px] min-h-[56px] flex flex-col items-center gap-0.5 leading-tight px-0.5 ${isActive(route, n) ? 'text-primary font-semibold' : 'text-muted'}`}>
-          <Icon name={n.icon} size={21} /><span className="line-clamp-2 max-w-full text-center">{t(n.key as never)}</span>
-        </NavLink>))}
-    </nav>
   )
 }

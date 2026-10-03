@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { isValidElement, type ReactElement } from 'react'
 import { langRuns } from './components/ui'
-import { REQUIREMENTS } from './data/legal/kb'
-import { viewRequirement } from './services/compliance'
 
 const css = readFileSync(new URL('./index.css', import.meta.url), 'utf8')
 const tokens = (sel: string) => { const i = css.indexOf(sel); const b = css.slice(i, css.indexOf('}', i)); return Object.fromEntries([...b.matchAll(/--([\w-]+):\s*(\d+) (\d+) (\d+)/g)].map((m) => [m[1], [+m[2], +m[3], +m[4]]])) as Record<string, number[]> }
@@ -34,9 +32,6 @@ describe('accessibility audit fixes (WCAG 2.2 A/AA)', () => {
     // (ai-scan is a busy indicator, shown only while the AI is working)
     expect(endless.sort()).toEqual(['ai-scan', 'bg-flow', 'bg-sheen', 'bg-sheen-lines'])
     expect(css).toContain('.bg-paths.is-on .bg-sheen { display: block; animation: bg-sheen')
-  })
-  it('#6 a source title is never a raw message key', () => {
-    for (const r of REQUIREMENTS) for (const l of ['th', 'zh', 'en'] as const) for (const s of viewRequirement(r, null, l).official_source) expect(s.title, r.id).not.toMatch(/^reg\./)
   })
   it('#13 Chinese inside Thai text (and Thai inside Chinese text) is marked with its own language', () => {
     const out = langRuns('ใบอนุญาตประกอบธุรกิจ (营业执照)', 'th')

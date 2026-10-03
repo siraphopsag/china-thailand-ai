@@ -7,7 +7,6 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { LanguageProvider } from './i18n'
 import { tr } from './i18n/core'
-import { StoreProvider } from './store'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
 import { DAY_MS, canPost, makePost, parseState, postLimit, postsThisWeek, type PostInput } from './domain/match/logic'
@@ -28,7 +27,7 @@ function html(node: ReactNode, st?: MatchState): string {
   const g = globalThis as { document?: unknown }
   const had = 'document' in g, prev = g.document
   g.document = { documentElement: { getAttribute: () => null, setAttribute: () => {}, lang: 'th' } }
-  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><StoreProvider><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></StoreProvider></LanguageProvider></ThemeProvider>) }
+  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></LanguageProvider></ThemeProvider>) }
   finally { if (had) g.document = prev; else delete g.document }
 }
 const good: PostInput = {

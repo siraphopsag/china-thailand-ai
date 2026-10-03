@@ -94,7 +94,6 @@ export const match = {
   'm.emp.details': ['ข้อมูลที่ผู้หางานควรรู้', '求职者应了解的信息', 'What job seekers should know'],
   'm.emp.detailsHint': ['เช่น ลักษณะงาน เวลาทำงาน ภาษาที่ใช้ ห้ามใส่อีเมล ลิงก์ หรือเบอร์โทร', '例如工作内容、工作时间、使用语言。请勿填写邮箱、链接或电话。', 'E.g. the work, hours, languages used. No e-mail, links or phone numbers.'],
   'm.emp.post': ['ตรวจและโพสต์', '检查并发布', 'Check and post'],
-  'm.emp.done': ['โพสต์แล้ว ระบบกำลังแจ้งผู้หางานที่ปักหมุดพื้นที่นี้และตรงสาย', '已发布，系统正在通知标记该地区且专业对口的求职者', 'Posted. Job seekers who pinned this area in the same field are being notified.'],
   'm.emp.noPay': ['โพสต์ฟรี 3 ครั้งต่อสัปดาห์', '每周可免费发布 3 次', '3 free posts per week'],
   // ---------- release steps and statuses
   'm.tier.1': ['ขั้น 1: แจ้งคนที่ปักหมุดพื้นที่นี้และตรงสาย', '第 1 步：通知标记该地区且专业对口的人', 'Step 1: people who pinned this area in the same field'],
@@ -122,8 +121,6 @@ export const match = {
   'm.empNotif': ['ผู้หางานรับงาน “{p}” แล้ว', '有求职者接受了“{p}”', 'A job seeker accepted “{p}”'],
   // ---------- mine / profile / prepare / settings / help
   'm.posts.none': ['ยังไม่มีประกาศ', '还没有发布', 'No posts yet'],
-  'm.newPost': ['โพสต์ใหม่', '新发布', 'New post'],
-  'm.addPin': ['ปักหมุดเพิ่ม', '添加标记', 'Add a pin'],
   'm.profile.title': ['โปรไฟล์', '个人资料', 'Profile'],
   'm.profile.role': ['บทบาท', '角色', 'Role'],
   'm.profile.none': ['ยังไม่ได้เลือกบทบาท', '尚未选择角色', 'No role chosen yet'],

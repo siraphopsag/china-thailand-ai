@@ -6,7 +6,6 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { LanguageProvider } from './i18n'
 import { tr } from './i18n/core'
-import { StoreProvider } from './store'
 import { ThemeProvider } from './theme'
 import { MatchProvider, checkAdmin } from './matchData'
 import { DAY_MS, accept, addPin, forward, isVisibleTo, makePost, offersFor, parseState, reachTier, tierOf } from './domain/match/logic'
@@ -14,7 +13,7 @@ import { seedState } from './domain/match/seed'
 import { ME, type MatchState, type Seeker } from './domain/match/types'
 import { messages, type MsgKey } from './locales/index'
 import { match } from './locales/match'
-import { Landing } from './pages/intake'
+import { Landing } from './pages/home'
 import { ChooseRolePage } from './pages/choose'
 import { BackofficePage, NotificationsPage, SeekPage, SoonNote } from './pages/match'
 import { TILT, leanPoint } from './components/geomap'
@@ -28,7 +27,7 @@ function html(node: ReactNode, st?: MatchState): string {
   const g = globalThis as { document?: unknown }
   const had = 'document' in g, prev = g.document
   g.document = { documentElement: { getAttribute: () => null, setAttribute: () => {}, lang: 'th' } }
-  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><StoreProvider><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></StoreProvider></LanguageProvider></ThemeProvider>) }
+  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></LanguageProvider></ThemeProvider>) }
   finally { if (had) g.document = prev; else delete g.document }
 }
 const NOW = Date.parse('2026-10-03T08:00:00.000Z')
@@ -180,7 +179,7 @@ describe('reviewed shell and pages', () => {
       expect(th, k).toMatch(/[฀-๿]/); expect(zh, k).toMatch(/[一-鿿]/); expect(en, k).toMatch(/[A-Za-z]/)
       expect(messages[k as MsgKey], k).toBe(match[k as keyof typeof match])
     }
-    const files = ['./pages/match.tsx', './components/sidenav.tsx', './pages/intake.tsx', './pages/choose.tsx', './components/shell.tsx'].map(src).join('\n')
+    const files = ['./pages/match.tsx', './components/sidenav.tsx', './pages/home.tsx', './pages/choose.tsx', './components/shell.tsx'].map(src).join('\n')
     for (const k of [...files.matchAll(/\bt\('(m\.[\w.]+)'/g)].map((m) => m[1])) expect(k in messages, k).toBe(true)
   })
 })

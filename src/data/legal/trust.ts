@@ -71,7 +71,6 @@ export const assess = (id: string, now = new Date()): TrustResult =>
 export const toVerification = (t: Trust): Verification =>
   ({ VERIFIED: 'VERIFIED', UNVERIFIED: 'EXPERT', STALE: 'STALE', CHANGED: 'CHANGED', NO_RECORD: 'NO_SOURCE', GAP: 'NO_SOURCE' } as const)[t]
 
-export const isVerified = (t: Trust) => t === 'VERIFIED'
 
 export interface LegalView {
   has(id: string): boolean
@@ -99,10 +98,4 @@ export function makeLegalView(entries: LegalEntry[], revs: LegalReview[], obs: R
   }
 }
 export const liveLegal: LegalView = makeLegalView(registry, liveReviews, liveObserved)
-export const citationFor = (id: string, lang?: Lang) => liveLegal.cite(id, lang)
 
-export function trustSummary(now = new Date()) {
-  const rows = registry.map((e) => assess(e.id, now))
-  const n = (t: Trust) => rows.filter((r) => r.trust === t).length
-  return { total: rows.length, verified: n('VERIFIED'), unverified: n('UNVERIFIED'), needsReview: n('STALE') + n('CHANGED'), gaps: n('GAP'), rows }
-}

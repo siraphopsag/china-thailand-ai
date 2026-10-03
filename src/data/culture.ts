@@ -11,5 +11,3 @@ export const terms = [
 /** Business-situation guidance: sit.S.t title, sit.S.i intro, sit.S.p.K.t/d considerations, sit.S.a suggested approach. */
 export const situations = [0, 1, 2, 3]
 export const situationPoints = [0, 1, 2, 3]
-/** One demo story: business → AI checks → ownership issue → employment issue → tasks → documents → home shows the updated state. */
-export const tourRoutes = ['profile', 'analysis', 'ownership', 'employment', 'roadmap', 'documents', 'dashboard']

@@ -58,7 +58,7 @@ describe('Background Paths in the home hero (still lines + moving light: A runs 
     expect(html.match(/pathLength="1"/g)).toHaveLength(36)
     expect(html).toMatch(/style="--d:\d+s;--delay:-[\d.]+s"/)
     expect(html).not.toContain('framer') // no new library
-    const intake = src('./pages/intake.tsx')
+    const intake = src('./pages/home.tsx')
     expect(intake.indexOf('<BackgroundPaths />')).toBeGreaterThan(intake.indexOf("t('m.proto')")) // placed after the content, drawn behind it
     expect(intake).not.toContain('RetroGrid')
   })

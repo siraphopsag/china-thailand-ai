@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
-import { NavLink, go, useStore } from '../store'
-import { isBusinessRoute } from './shell'
+import { NavLink, go } from '../store'
 import { useMatch } from '../matchData'
 import { offersFor } from '../domain/match/logic'
 import { MY_EMPLOYER } from '../domain/match/types'
@@ -37,7 +36,6 @@ export const MORE_KEYS = ['m.settings', 'm.help', 'm.admin']
 export function SideNav({ route }: { route: string }) {
   const { t } = useI18n()
   const { st, isAdmin } = useMatch()
-  const { profile } = useStore()
   const unread = useUnread()
   const items = sideItems(st.role, isAdmin)
   const main = items.filter((n) => !MORE_KEYS.includes(n.key)), more = items.filter((n) => MORE_KEYS.includes(n.key))
@@ -63,8 +61,6 @@ export function SideNav({ route }: { route: string }) {
       </NavLink>)
   }
   const moreOn = more.some((n) => n.match.includes(route))
-  // the hidden business-planning pages keep their own bottom bar; never stack two bars
-  const ownBar = !!profile && isBusinessRoute(route)
   return (
     <>
       {/* computers and tablets: floating capsule on the left, vertically centred */}
@@ -72,25 +68,23 @@ export function SideNav({ route }: { route: string }) {
         <ul className="flex flex-col gap-1.5">{items.map((n) => <li key={n.key}>{iconLink(n, 'lg')}</li>)}</ul>
       </nav>
       {/* phones: floating capsule at the bottom — 5 places + More */}
-      {!ownBar && (
-        <nav aria-label={t('m.side')} className="nav-pill md:hidden fixed inset-x-3 z-40 rounded-full px-2 py-1.5" style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-          <ul className="flex items-center justify-around">
-            {main.map((n) => <li key={n.key}>{iconLink(n, 'sm')}</li>)}
-            <li>
-              <button ref={moreBtn} type="button" aria-label={t('m.more')} aria-expanded={moreOpen} aria-controls="nav-more" onClick={() => setMoreOpen((o) => !o)}
-                className={`nav-item w-11 h-11 ${moreOn ? 'nav-on' : ''}`}><Icon name="more" size={21} /></button>
-            </li>
-          </ul>
-        </nav>)}
+      <nav aria-label={t('m.side')} className="nav-pill md:hidden fixed inset-x-3 z-40 rounded-full px-2 py-1.5" style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        <ul className="flex items-center justify-around">
+          {main.map((n) => <li key={n.key}>{iconLink(n, 'sm')}</li>)}
+          <li>
+            <button ref={moreBtn} type="button" aria-label={t('m.more')} aria-expanded={moreOpen} aria-controls="nav-more" onClick={() => setMoreOpen((o) => !o)}
+              className={`nav-item w-11 h-11 ${moreOn ? 'nav-on' : ''}`}><Icon name="more" size={21} /></button>
+          </li>
+        </ul>
+      </nav>
       {/* the "More" list sits outside the capsule so its own glass can blur the page (a glass element cannot blur through
           another glass element); it comes right after the More button in the reading and Tab order */}
-      {!ownBar && (
-        <ul ref={moreList} id="nav-more" hidden={!moreOpen} className="glass-pop md:hidden fixed right-3 z-40 w-52 rounded-3xl p-1.5"
-          style={{ bottom: 'calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.5rem)' }}>
-          {more.map((n) => { const on = n.match.includes(route); return (
-            <li key={n.key}><NavLink to={n.to} aria-current={on ? 'page' : undefined}
-              className={`nav-item !flex !justify-start gap-3 !rounded-2xl px-3 min-h-[44px] text-sm ${on ? 'nav-on font-semibold' : ''}`}><Icon name={n.icon} size={18} />{t(n.key as never)}</NavLink></li>) })}
-        </ul>)}
+      <ul ref={moreList} id="nav-more" hidden={!moreOpen} className="glass-pop md:hidden fixed right-3 z-40 w-52 rounded-3xl p-1.5"
+        style={{ bottom: 'calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.5rem)' }}>
+        {more.map((n) => { const on = n.match.includes(route); return (
+          <li key={n.key}><NavLink to={n.to} aria-current={on ? 'page' : undefined}
+            className={`nav-item !flex !justify-start gap-3 !rounded-2xl px-3 min-h-[44px] text-sm ${on ? 'nav-on font-semibold' : ''}`}><Icon name={n.icon} size={18} />{t(n.key as never)}</NavLink></li>) })}
+      </ul>
     </>
   )
 }

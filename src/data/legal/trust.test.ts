@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { registry, getEntry } from './registry'
 import { reviews } from './reviews'
 import { observed } from './observed'
-import { MAX_MONITOR_AGE_DAYS, MAX_REVIEW_AGE_DAYS, assess, assessWith, contentFingerprint, fingerprint, localText, makeLegalView, toVerification, trustSummary } from './trust'
+import { MAX_MONITOR_AGE_DAYS, MAX_REVIEW_AGE_DAYS, assess, assessWith, contentFingerprint, fingerprint, localText, makeLegalView, toVerification } from './trust'
 import type { LegalEntry, LegalReview, Observation } from './types'
 
 const NOW = new Date('2026-10-01T12:00:00Z')
@@ -109,8 +109,6 @@ describe('registry and live data integrity', () => {
       const t = assess(e.id, NOW)
       if (t.trust === 'VERIFIED') { expect(t.review?.reviewer.trim().length).toBeGreaterThan(4); expect(e.textUrl).toBeTruthy() }
     }
-    const s = trustSummary(NOW)
-    expect(s.total).toBe(registry.length); expect(s.verified + s.unverified + s.needsReview + s.gaps).toBe(s.total)
   })
   it('the employment-contract gaps are listed by name for both countries', () => {
     const gaps = registry.filter((e) => e.gap && e.area === 'employment')
