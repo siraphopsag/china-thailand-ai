@@ -186,6 +186,9 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .g-pin-post { fill: rgb(var(--primary)); stroke: rgb(var(--page)); stroke-width: 2.5 }
 .g-pin-dot { fill: rgb(var(--page)) }
 
+/* drop-down list of ListSelect: a raised panel under the field */
+.list-pop { background: rgb(var(--surface)); box-shadow: var(--elev-hi), var(--elev-3); scrollbar-width: thin; scrollbar-color: rgb(var(--control-line)) transparent }
+
 /* skill choices: large tappable chips with a visible tick (the checkbox itself stays for keyboards and screen readers) */
 .chip-check { position: relative; display: flex; align-items: center; gap: .6rem; min-height: 44px; height: 100%; line-height: 1.3; padding: .5rem .75rem; border: 1px solid rgb(var(--control-line)); border-radius: .75rem; font-size: .875rem; cursor: pointer; transition: background-color .15s ease }
 .chip-check:hover { background: rgb(var(--surface3)) }

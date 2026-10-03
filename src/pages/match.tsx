@@ -9,6 +9,7 @@ import { INDUSTRIES, MAX_PINS, ME, MY_EMPLOYER, SKILLS, type Country, type Indus
 import { ACTIVE, GEO, SOON, type GeoCode } from '../geo'
 import capitalsData from '../data/geo/capitals.json'
 import { GeoMap, type MapPin } from '../components/geomap'
+import { ListSelect } from '../components/listselect'
 import { Warn } from '../components/ui'
 import { Icon } from '../components/icons'
 
@@ -85,17 +86,14 @@ function PlaceFields({ country, province, onCountry, onProvince, idp, fe }: { co
   return (
     <div className="space-y-3">
       <div className="grid sm:grid-cols-2 gap-3">
-        <label className="block"><span className="label">{t('m.country')}<Req /></span>
-          <select id={`${idp}-c`} className="input" aria-required="true" aria-invalid={fe.invalid(idp)} aria-describedby={fe.describe(idp)} value={country ?? ''} onChange={(e) => { const v = e.target.value; if (v in GEO) onCountry(v as GeoCode) }}>
-            <option value="" disabled>{t('m.chooseCountry')}</option>
-            <optgroup label={t('m.countryOpen')}>{ACTIVE.map((c) => <option key={c} value={c}>{N.country(c)}</option>)}</optgroup>
-            <optgroup label={t('geo.soon')}>{SOON.map((c) => <option key={c} value={c}>{N.country(c)} · {t('geo.soon')}</option>)}</optgroup>
-          </select></label>
-        <label className="block"><span className="label">{t('m.province')}<Req /></span>
-          <select id={idp} className="input" disabled={!open} aria-required="true" aria-invalid={fe.invalid(idp)} aria-describedby={fe.describe(idp)} value={province ?? ''} onChange={(e) => onProvince(e.target.value || null)}>
-            <option value="">{t('m.chooseProv')}</option>
-            {isCountry(country) && N.provList(country).map((p) => <option key={p} value={p}>{N.prov(p)}</option>)}
-          </select></label>
+        {/* the lists open below the field: countries = open now + ~5 coming soon (greyed, scroll for more); provinces = 10 rows, scroll for more */}
+        <div><label id={`${idp}-cl`} htmlFor={`${idp}-c`} className="label">{t('m.country')}<Req /></label>
+          <ListSelect id={`${idp}-c`} labelId={`${idp}-cl`} required invalid={fe.invalid(idp)} describedBy={fe.describe(idp)} value={country} placeholder={t('m.chooseCountry')} maxRows={7}
+            onChange={(v) => { if (v in GEO) onCountry(v as GeoCode) }}
+            groups={[{ label: t('m.countryOpen'), options: ACTIVE.map((c) => ({ value: c, label: N.country(c) })) }, { label: t('geo.soon'), muted: true, options: SOON.map((c) => ({ value: c, label: N.country(c) })) }]} /></div>
+        <div><label id={`${idp}-pl`} htmlFor={idp} className="label">{t('m.province')}<Req /></label>
+          <ListSelect id={idp} labelId={`${idp}-pl`} required disabled={!open} invalid={fe.invalid(idp)} describedBy={fe.describe(idp)} value={province} placeholder={t('m.chooseProv')} maxRows={10}
+            onChange={(v) => onProvince(v)} groups={[{ options: isCountry(country) ? N.provList(country).map((p) => ({ value: p, label: N.prov(p) })) : [] }]} /></div>
       </div>
       {country && !open && <SoonNote country={country} />}
       {fe.msg(idp)}
@@ -136,10 +134,11 @@ const IndustrySelect = ({ value, onChange, label }: { value: Industry; onChange:
 /** step pills: done = tick, current = bold + aria-current (not colour alone) */
 const Steps = ({ items, at }: { items: string[]; at: number }) => (
   <ol className="flex flex-wrap gap-2">{items.map((s, i) => (
-    <li key={s} aria-current={i === at ? 'step' : undefined} className={`inline-flex items-center gap-2 rounded-full border pl-1 ${i === at ? 'pr-3' : 'pr-1 sm:pr-3'} py-1 text-xs sm:text-sm ${i === at ? 'border-primary bg-brand text-brandfg font-semibold' : i < at ? 'border-ok-line bg-ok-bg text-ok-fg' : 'border-line bg-surface text-muted'}`}>
+    <li key={s} aria-current={i === at ? 'step' : undefined} className={`inline-flex items-center gap-2 rounded-full border pl-1 ${i === at ? 'pr-3' : 'pr-1'} py-1 text-xs sm:text-sm ${i === at ? 'border-primary bg-brand text-brandfg font-semibold' : i < at ? 'border-ok-line bg-ok-bg text-ok-fg' : 'border-line bg-surface text-muted'}`}>
       <span className={`w-6 h-6 shrink-0 rounded-full grid place-items-center text-[11px] font-bold ${i === at ? 'bg-primary text-onprimary' : i < at ? 'bg-ok-fg text-ok-bg' : 'bg-surface3 text-muted'}`}>{i < at ? <Icon name="check" size={13} /> : i + 1}</span>
-      {/* phones: only the current step shows its name, so the row fits in every language (screen readers still hear every name) */}
-      <span className={i === at ? undefined : 'sr-only sm:not-sr-only'}>{s}</span>
+      {/* only the current step shows its name, on every screen, so the row stays one line in every language
+          (compared both ways on 1280 px: full names wrapped to 2 rows in English; screen readers still hear every name) */}
+      <span className={i === at ? undefined : 'sr-only'}>{s}</span>
     </li>))}</ol>
 )
 /** two columns on large screens: the map stays in view on the left while the steps scroll on the right */

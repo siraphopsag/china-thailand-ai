@@ -235,7 +235,7 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
   it('#6 #8 the pin form marks required fields, offers tick chips and ties errors to their field', () => {
     const page = html(<SeekPage />, { ...seekerState(), me: seeker([]) })
     expect(page).toContain(`(${T('m.req')})`)
-    expect(page).toMatch(/<select id="dest-prov"[^>]*aria-required="true"/)
+    expect(page).toMatch(/<button id="dest-prov" type="button" role="combobox"[^>]*aria-required="true"/)
     expect(page).toContain('id="dest-prov-c"') // focus target when no country is chosen yet
     expect(page.match(/class="chip-check"/g)?.length).toBe(12)
     expect(page).toMatch(/<input id="seek-skills-0" type="checkbox" class="sr-only"/)
@@ -277,12 +277,13 @@ describe('languages look alike (owner, Oct 2026)', () => {
     expect(css).toMatch(/html:lang\(en\) \.hero-title \{ font-size: clamp\(/)
     expect(html(<Landing />)).toContain('class="hero-title mt-6 font-bold text-ink"')
   })
-  it('on phones only the current step pill shows its name (others keep it for screen readers)', () => {
+  it('on every screen only the current step pill shows its name (others keep it for screen readers)', () => {
     const page = html(<SeekPage />, { ...seedState(NOW), role: 'seeker', me: seeker([]) })
     // the origin is already set in this state, so step 2 is current
     expect(page).toContain('<span>' + T('m.seek.s2') + '</span>')
-    expect(page).toContain('<span class="sr-only sm:not-sr-only">' + T('m.seek.s1') + '</span>')
-    expect(page).toContain('<span class="sr-only sm:not-sr-only">' + T('m.seek.s3') + '</span>')
+    expect(page).toContain('<span class="sr-only">' + T('m.seek.s1') + '</span>')
+    expect(page).toContain('<span class="sr-only">' + T('m.seek.s3') + '</span>')
+    expect(page).not.toContain('sm:not-sr-only')
   })
   it('skill chips in a row share one height; narrow-rail labels may wrap tidily', () => {
     expect(src('./pages/match.tsx')).toContain('grid grid-cols-2 auto-rows-fr gap-2')
@@ -320,13 +321,26 @@ describe('map review 2 (owner, Oct 2026): lean, upright labels, all ASEAN countr
       expect(r.ok ? 'ok' : r.problem, c).toBe('place')
     }
   })
-  it('4 the country list has all 12 countries: open now (2) and coming soon (10)', () => {
+  it('4 the country list has all 12 countries: open now (2) and a greyed "coming soon" group (10), no suffix on names', () => {
     const page = html(<SeekPage />, { ...seedState(NOW), role: 'seeker', me: seeker([]) })
-    const sel = page.slice(page.indexOf('<select id="dest-prov-c"'), page.indexOf('</select>', page.indexOf('<select id="dest-prov-c"')))
-    expect(sel).toContain(`<optgroup label="${T('m.countryOpen')}">`)
-    expect(sel).toContain(`<optgroup label="${T('geo.soon')}">`)
-    expect(sel.match(/<option value="[A-Z]{2}"/g)?.length).toBe(12)
-    for (const c of ['TH', 'CN', 'VN', 'MM', 'LA', 'SG', 'KH', 'MY', 'ID', 'PH', 'BN', 'TL']) expect(sel, c).toContain(`value="${c}"`)
+    const sel = page.slice(page.indexOf('<button id="dest-prov-c"'), page.indexOf('<button id="dest-prov"'))
+    expect(sel.match(/role="option"/g)?.length).toBe(12)
+    expect(sel).toContain(`>${T('m.countryOpen')}</div>`)
+    expect(sel).toMatch(new RegExp(`class="[^"]*text-muted"[^>]*>${T('geo.soon')}</div>`)) // the group header, once
+    expect(sel.split(T('geo.soon')).length - 1).toBe(1) // no "· coming soon" after each name
+    for (const c of ['TH', 'CN', 'VN', 'SG', 'TL']) expect(sel, c).toContain(`<span class="truncate">${T(`geo.c.${c}` as MsgKey)}</span>`)
+    expect(sel.match(/role="option" aria-selected="false" class="[^"]*text-muted/g)?.length).toBe(10) // the 10 planned countries are grey
+  })
+  it('A the lists open below the field, closed by default, sized to ~7 country rows and 10 province rows (the rest scrolls)', () => {
+    const page = html(<SeekPage />, { ...seedState(NOW), role: 'seeker', me: seeker([]) })
+    expect(page).toMatch(/<button id="dest-prov-c" type="button" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="[^"]+" aria-labelledby="dest-prov-cl"/)
+    expect(page).toMatch(/<ul id="[^"]+" role="listbox" aria-labelledby="dest-prov-cl" hidden="" style="max-height:(\d+)px"/)
+    const heights = [...page.matchAll(/role="listbox" aria-labelledby="dest-prov-(c|p)l" hidden="" style="max-height:(\d+)px"/g)].map((m) => [m[1], Number(m[2])])
+    expect(heights).toEqual([['c', 7 * 40 + 2 * 28 + 8], ['p', 10 * 40 + 8]])
+    const ls = src('./components/listselect.tsx')
+    expect(ls).toContain('top-full mt-1.5') // below the field, never over it
+    for (const k of ["'ArrowDown'", "'ArrowUp'", "'Home'", "'End'", "'PageDown'", "'Escape'", "'Enter'"]) expect(ls, k).toContain(k)
+    expect(ls).toContain("document.addEventListener('pointerdown', away)") // a press outside closes
   })
   it('5 choosing a planned country shows a coming-soon note with its capital', () => {
     const note = html(<SoonNote country="VN" />)
