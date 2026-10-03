@@ -194,9 +194,7 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
       {data && (
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
           <button type="button" className="globe-ctl" onClick={() => zoomAt(1.3)} aria-label={t('geo.zoomIn')} title={t('geo.zoomIn')}><Icon name="plus" size={18} /></button>
-          <button type="button" className="globe-ctl" onClick={() => zoomAt(1 / 1.3)} aria-label={t('geo.zoomOut')} title={t('geo.zoomOut')}><Icon name="minus" size={18} /></button>
-          <button type="button" className="globe-ctl" onClick={() => flyTo(target)} aria-label={t('geo.resetView')} title={t('geo.resetView')}><Icon name="target" size={18} /></button>
-        </div>)}
+          <button type="button" className="globe-ctl" onClick={() => zoomAt(1 / 1.3)} aria-label={t('geo.zoomOut')} title={t('geo.zoomOut')}><Icon name="minus" size={18} /></button>        </div>)}
     </div>
   )
 }

@@ -221,7 +221,7 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
   it('#4 (revised with the owner) the view moves with single taps: tapping a country or province frames it; zoom and back-to-view buttons; no arrow pad', () => {
     const geo = src('./components/geomap.tsx')
     expect(geo).not.toContain('m.pan')
-    expect(geo).toContain("onClick={() => flyTo(target)} aria-label={t('geo.resetView')}")
+    expect(geo).not.toContain('geo.resetView') // owner removed it (its icon looked like "my location"); choosing a place re-frames the view
     expect(geo).toMatch(/aria-label=\{t\('geo\.zoomIn'\)\}[\s\S]*aria-label=\{t\('geo\.zoomOut'\)\}/)
     expect(geo).toMatch(/onPickProvince\(d\.prov === province \? null : d\.prov\)/) // a tap picks (and frames) a province
     expect(geo).toMatch(/onPickCountry\(d\.code as GeoCode\)/)
@@ -284,6 +284,18 @@ describe('languages look alike (owner, Oct 2026)', () => {
     expect(page).toContain('<span class="sr-only">' + T('m.seek.s1') + '</span>')
     expect(page).toContain('<span class="sr-only">' + T('m.seek.s3') + '</span>')
     expect(page).not.toContain('sm:not-sr-only')
+  })
+  it('Lobby cards: every "how it works" step has a short title + one short sentence; C/A/L/L sentences are short in all languages', () => {
+    const page = html(<Landing />)
+    for (const n of [1, 2, 3, 4]) {
+      expect(page, `title ${n}`).toContain(`<span class="block font-semibold leading-snug">${T(`m.how.${n}.t` as MsgKey)}</span>`)
+      expect(page, `text ${n}`).toContain(`<span class="block text-sm text-muted mt-1">${T(`m.how.${n}` as MsgKey)}</span>`)
+    }
+    for (const k of ['m.how.1', 'm.how.2', 'm.how.3', 'm.how.4', 'brand.cross', 'brand.asean', 'brand.language', 'brand.legal'] as const) {
+      const [th, zh, en] = messages[k] as readonly string[]
+      expect(th.length, k).toBeLessThanOrEqual(80); expect(zh.length, k).toBeLessThanOrEqual(30); expect(en.length, k).toBeLessThanOrEqual(75)
+    }
+    for (const n of [1, 2, 3, 4]) { const [th, , en] = messages[`m.how.${n}.t` as MsgKey] as readonly string[]; expect(th.length).toBeLessThanOrEqual(24); expect(en.split(' ').length).toBeLessThanOrEqual(4) }
   })
   it('skill chips in a row share one height; narrow-rail labels may wrap tidily', () => {
     expect(src('./pages/match.tsx')).toContain('grid grid-cols-2 auto-rows-fr gap-2')

@@ -90,7 +90,8 @@ export function Landing() {
       <section aria-labelledby="how-h" className="space-y-4">
         <h2 id="how-h" className="text-2xl font-bold">{t('m.how.h')}</h2>
         <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{[1, 2, 3, 4].map((n) => (
-          <li key={n} className="card !p-4 flex gap-3 items-start"><span className="w-8 h-8 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center font-semibold">{n}</span><span className="pt-1 text-sm font-medium">{t(`m.how.${n}` as never)}</span></li>))}</ol>
+          <li key={n} className="card !p-4 flex gap-3 items-start"><span className="w-8 h-8 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center font-semibold">{n}</span>
+            <span className="pt-1 min-w-0"><span className="block font-semibold leading-snug">{t(`m.how.${n}.t` as never)}</span><span className="block text-sm text-muted mt-1">{t(`m.how.${n}` as never)}</span></span></li>))}</ol>
       </section>
       <Disclaimer />
     </div>
