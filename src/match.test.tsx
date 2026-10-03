@@ -293,7 +293,31 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
       const glass = tok(th, 'glass-tint'), hi = tok(th, 'primary-hi'), base = pal(th, 'primary'), on = pal(th, 'onprimary')
       for (const c of [hi, base]) { expect(cr(c, glass), `${th} drop`).toBeGreaterThanOrEqual(3); expect(cr(on, c), `${th} icon`).toBeGreaterThanOrEqual(3) }
     }
-    expect(css).toMatch(/@media \(prefers-reduced-transparency: reduce\) \{\s*\.nav-pill, \.glass-pop \{ background: rgb\(var\(--surface\)\); backdrop-filter: none/)
+    expect(css).toMatch(/@media \(prefers-reduced-transparency: reduce\) \{\s*\.nav-pill, \.glass-pop, \.glass-card \{ background: rgb\(var\(--surface\)\); backdrop-filter: none/)
+  })
+  it('Lobby: the 8 short-reading cards are glass over still coloured light; letters and numbers sit on indigo drops; forms stay solid', () => {
+    const page = html(<Landing />)
+    expect(page.match(/<li class="glass-card/g)?.length).toBe(8)
+    expect(page.match(/class="glass-drop w-/g)?.length).toBe(8)
+    expect(page).toContain('<div class="glass-orbs" aria-hidden="true"></div>')
+    const seek = html(<SeekPage />, { ...seedState(NOW), role: 'seeker', me: seeker([]) })
+    expect(seek).not.toContain('glass-card'); expect(seek).toContain('class="card')
+  })
+  it('text on the glass cards stays ≥ 4.5:1 even over the strongest coloured light, and on the drops, in both themes', () => {
+    const num = (th: 'light' | 'dark', name: string) => {
+      const at = th === 'light' ? css.search(/:root, :root\[data-theme='light'\] \{ --glass-card-a1/) : css.search(/:root\[data-theme='dark'\] \{ --glass-card-a1/)
+      return Number(css.slice(at).match(new RegExp(`--${name}: ([\\d.]+)`))![1])
+    }
+    const mix = (a: number[], b: number[], t: number) => a.map((v, i) => v * t + b[i] * (1 - t))
+    for (const th of ['light', 'dark'] as const) {
+      const page = pal(th, 'page'), glass = tok(th, 'glass-tint'), orbA = num(th, 'orb-a'), cardA = num(th, 'glass-card-a2')
+      for (const orb of [pal(th, 'glow-a'), pal(th, 'glow-b'), pal(th, 'primary')]) {
+        const behind = mix(orb, page, orbA), bg = mix(glass, behind, cardA)
+        for (const txt of ['ink', 'muted']) expect(cr(pal(th, txt), bg), `${th} ${txt}`).toBeGreaterThanOrEqual(4.5)
+      }
+      const drop = mix([255, 255, 255], pal(th, 'primary'), 0.15)
+      expect(cr(pal(th, 'onprimary'), drop), `${th} drop text`).toBeGreaterThanOrEqual(4.5)
+    }
   })
 })
 

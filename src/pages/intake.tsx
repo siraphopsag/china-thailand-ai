@@ -81,18 +81,22 @@ export function Landing() {
           <p className="mt-4 text-xs text-muted">{t('m.proto')}</p>
         </div>
       </section>
-      <section aria-labelledby="stands-h" className="space-y-4">
-        <div><h2 id="stands-h" className="text-2xl font-bold">{t('m.problems.h')}</h2><p className="text-muted mt-1">{t('brand.stands')} Cross · ASEAN · Language · Legal</p></div>
-        <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{BRAND_CONCEPTS.map((c, i) => (
-          <li key={i} className="card !p-4 space-y-1.5"><div className="flex items-baseline gap-2" lang="en"><span className="text-2xl font-bold text-gradient">{c.letter}</span><span className="font-semibold">{c.word}</span></div><p className="text-sm text-muted">{t(('brand.' + c.key) as never)}</p></li>))}</ul>
-        <p className="text-xs text-muted">{t('brand.together')}</p>
-      </section>
-      <section aria-labelledby="how-h" className="space-y-4">
-        <h2 id="how-h" className="text-2xl font-bold">{t('m.how.h')}</h2>
-        <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{[1, 2, 3, 4].map((n) => (
-          <li key={n} className="card !p-4 flex gap-3 items-start"><span className="w-8 h-8 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center font-semibold">{n}</span>
-            <span className="pt-1 min-w-0"><span className="block font-semibold leading-snug">{t(`m.how.${n}.t` as never)}</span><span className="block text-sm text-muted mt-1">{t(`m.how.${n}` as never)}</span></span></li>))}</ol>
-      </section>
+      {/* liquid-glass cards (owner, Oct 2026) over soft, still light behind them, so the glass has something to show */}
+      <div className="relative isolate space-y-14">
+        <div className="glass-orbs" aria-hidden />
+        <section aria-labelledby="stands-h" className="space-y-4">
+          <div><h2 id="stands-h" className="text-2xl font-bold">{t('m.problems.h')}</h2><p className="text-muted mt-1">{t('brand.stands')} Cross · ASEAN · Language · Legal</p></div>
+          <ul className="grid sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-3">{BRAND_CONCEPTS.map((c, i) => (
+            <li key={i} className="glass-card !p-4 space-y-2"><div className="flex items-center gap-2.5" lang="en"><span className="glass-drop w-9 h-9 text-lg">{c.letter}</span><span className="font-semibold">{c.word}</span></div><p className="text-sm text-muted">{t(('brand.' + c.key) as never)}</p></li>))}</ul>
+          <p className="text-xs text-muted">{t('brand.together')}</p>
+        </section>
+        <section aria-labelledby="how-h" className="space-y-4">
+          <h2 id="how-h" className="text-2xl font-bold">{t('m.how.h')}</h2>
+          <ol className="grid sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-3">{[1, 2, 3, 4].map((n) => (
+            <li key={n} className="glass-card !p-4 flex gap-3 items-start"><span className="glass-drop w-8 h-8 shrink-0">{n}</span>
+              <span className="pt-1 min-w-0"><span className="block font-semibold leading-snug">{t(`m.how.${n}.t` as never)}</span><span className="block text-sm text-muted mt-1">{t(`m.how.${n}` as never)}</span></span></li>))}</ol>
+        </section>
+      </div>
       <Disclaimer />
     </div>
   )
