@@ -12,5 +12,5 @@ export function clearStaleData() {
 /** "Clear data and start again" (error page): removes the prototype data; keeps language, theme and animation preferences. */
 export function clearSavedData() {
   clearStaleData()
-  try { localStorage.removeItem(MATCH_KEY); sessionStorage.removeItem('call.admin.poc') } catch { /* storage blocked */ }
+  try { localStorage.removeItem(MATCH_KEY); sessionStorage.removeItem('call.admin.poc') /* old prototype admin flag */ } catch { /* storage blocked */ }
 }

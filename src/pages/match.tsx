@@ -3,6 +3,7 @@ import { LANGS, useI18n } from '../i18n'
 import { useTheme } from '../theme'
 import { NavLink } from '../store'
 import { useMatch } from '../matchData'
+import { useAuth } from '../auth'
 import { provinces } from '../locales/provinces'
 import { isCountry, isTaken, offersFor, reachTier, tierOf, isVisibleTo, type Problem } from '../domain/match/logic'
 import { INDUSTRIES, MAX_PINS, ME, MY_EMPLOYER, SKILLS, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Salary, type Skill, type Tier } from '../domain/match/types'
@@ -335,7 +336,26 @@ export function MePage() {
         <NavLink to="choose-role" className="btn-ghost inline-flex">{t('m.profile.change')}</NavLink>
         <p className="text-xs text-muted">{t('m.profile.note')}</p>
       </section>
+      <AccountSection />
     </Page>
+  )
+}
+/** signed-in account: name, e-mail, role, and "delete my account" (PDPA right to erasure); hidden when sign-in is not set up */
+function AccountSection() {
+  const { t } = useI18n()
+  const { status, user, isAdmin, deleteAccount } = useAuth()
+  const [msg, setMsg] = useState<'done' | 'fail' | null>(null)
+  if (status === 'off' || status === 'loading') return null
+  return (
+    <section className="glass-card p-5 space-y-2" aria-labelledby="account-h">
+      <h2 id="account-h" className="h2">{t('m.auth.account')}</h2>
+      {user ? (<>
+        <p className="font-medium">{user.name} <span className="text-sm text-muted">· {user.email}</span></p>
+        {isAdmin && <p className="text-sm inline-flex items-center gap-1.5 text-primary"><Icon name="shield" size={15} />{t('m.auth.admin')}</p>}
+        <div><button type="button" className="btn-ghost text-danger-fg" onClick={async () => { if (window.confirm(t('m.auth.delete.confirm'))) setMsg((await deleteAccount()) ? 'done' : 'fail') }}>{t('m.auth.delete')}</button></div>
+      </>) : <p className="text-sm text-muted">{t('m.auth.signedOut')} · {t('m.auth.optional')}</p>}
+      <p role="status" className="text-sm">{msg === 'done' ? t('m.auth.delete.done') : msg === 'fail' ? t('m.auth.delete.fail') : ''}</p>
+    </section>
   )
 }
 export function PreparePage() {
@@ -378,7 +398,8 @@ export function HelpPage() {
 export function BackofficePage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, isAdmin, advanceDay, forwardCase } = useMatch()
+  const { st, now, advanceDay, forwardCase } = useMatch()
+  const { isAdmin } = useAuth()
   if (!isAdmin) return <Page title={t('m.adm.title')}><Warn>{t('m.adm.gate')}</Warn></Page>
   const people = [{ ...st.me, name: t('m.adm.you') }, ...st.seekers]
   return (

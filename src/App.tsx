@@ -3,6 +3,7 @@ import { go, NavLink, useRoute } from './store'
 import { LanguageProvider, useI18n } from './i18n'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
+import { AuthProvider } from './auth'
 import { SideNav } from './components/sidenav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { BRAND } from './brand'
@@ -77,4 +78,4 @@ function Router() {
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>
 }
-export default function App() { return <ThemeProvider><LanguageProvider><MatchProvider><Router /></MatchProvider></LanguageProvider></ThemeProvider> }
+export default function App() { return <ThemeProvider><LanguageProvider><AuthProvider><MatchProvider><Router /></MatchProvider></AuthProvider></LanguageProvider></ThemeProvider> }

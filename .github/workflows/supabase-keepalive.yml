@@ -1,0 +1,35 @@
+name: Supabase keep-alive
+
+# The free Supabase plan pauses a project after 7 days without database activity (owner, Oct 2026: the judges may open the
+# site 1–2 weeks after the deadline). Twice a day this calls public.ping() — a function that only returns the time.
+# Needs two repository secrets (Settings → Secrets and variables → Actions): SUPABASE_URL and SUPABASE_ANON_KEY
+# (the same public values as the site's VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY). Without them it does nothing.
+# Scheduled workflows run from the default branch (main) only.
+on:
+  schedule:
+    - cron: '23 1,13 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Supabase secrets are not set yet; nothing to ping."
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SUPABASE_URL/rest/v1/rpc/ping" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" -H "Content-Type: application/json" -d '{}')
+          echo "ping → HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::warning::Supabase did not answer (HTTP $code). If the project is paused, open the Supabase dashboard and press Resume."
+            exit 1
+          fi

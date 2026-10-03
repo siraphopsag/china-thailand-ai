@@ -9,6 +9,7 @@ import { LanguageProvider } from './i18n'
 import { tr } from './i18n/core'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
+import { AuthProvider } from './auth'
 import { DAY_MS, canPost, makePost, parseState, postLimit, postsThisWeek, type PostInput } from './domain/match/logic'
 import { precheck } from './domain/match/precheck'
 import { seedState } from './domain/match/seed'
@@ -27,7 +28,7 @@ function html(node: ReactNode, st?: MatchState): string {
   const g = globalThis as { document?: unknown }
   const had = 'document' in g, prev = g.document
   g.document = { documentElement: { getAttribute: () => null, setAttribute: () => {}, lang: 'th' } }
-  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></LanguageProvider></ThemeProvider>) }
+  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><AuthProvider enabled={false}><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></AuthProvider></LanguageProvider></ThemeProvider>) }
   finally { if (had) g.document = prev; else delete g.document }
 }
 const good: PostInput = {
@@ -176,6 +177,6 @@ describe('F. map pins and the next post (browser check, Oct 2026)', () => {
   })
   it('the profile note no longer says there is "no membership" next to the membership status', () => {
     expect(tr('m.profile.note', undefined, 'th')).not.toContain('ระบบสมาชิก')
-    expect(tr('m.profile.note', undefined, 'en')).toContain('including membership')
+    expect(tr('m.profile.note', undefined, 'en')).toMatch(/membership\).*database/)
   })
 })

@@ -1,7 +1,9 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go } from '../store'
 import { useMatch } from '../matchData'
+import { useAuth } from '../auth'
+import { Modal } from './modal'
 import { offersFor } from '../domain/match/logic'
 import { MY_EMPLOYER } from '../domain/match/types'
 import { Icon, type IconName } from './icons'
@@ -35,7 +37,8 @@ export const MORE_KEYS = ['m.settings', 'm.help', 'm.admin']
  */
 export function SideNav({ route }: { route: string }) {
   const { t } = useI18n()
-  const { st, isAdmin } = useMatch()
+  const { st } = useMatch()
+  const { isAdmin } = useAuth()
   const unread = useUnread()
   const items = sideItems(st.role, isAdmin)
   const main = items.filter((n) => !MORE_KEYS.includes(n.key)), more = items.filter((n) => MORE_KEYS.includes(n.key))
@@ -89,44 +92,75 @@ export function SideNav({ route }: { route: string }) {
   )
 }
 
-/** Header button: "Log in" (administrator sign-in for now) or the signed-in state with log out. */
+/**
+ * Header account control (owner, Oct 2026: Google sign-in first). Signed out: "Log in" opens a short notice of what is kept
+ * (PDPA) and continues to Google. Signed in: the picture (or initial) opens a menu with the name, profile, back office for
+ * administrators and log out. Without a configured sign-in service nothing is shown; if the service is down, the notice says so.
+ */
 export function LoginButton() {
   const { t } = useI18n()
-  const { isAdmin, login, logout } = useMatch()
+  const { status, user, isAdmin, failed, signIn, signOut } = useAuth()
   const [open, setOpen] = useState(false)
-  const [id, setId] = useState(''), [pw, setPw] = useState('')
-  const [bad, setBad] = useState(false)
-  const ref = useRef<HTMLDialogElement>(null)
-  const uidp = useId()
+  const [menu, setMenu] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const btn = useRef<HTMLButtonElement>(null), list = useRef<HTMLDivElement>(null)
+  const close = useCallback(() => setOpen(false), [])
   useEffect(() => {
-    const d = ref.current; if (!d) return
-    if (open && !d.open) d.showModal()
-    if (!open && d.open) d.close()
-    const cancel = (e: Event) => { e.preventDefault(); setOpen(false) }
-    d.addEventListener('cancel', cancel); return () => d.removeEventListener('cancel', cancel)
-  }, [open])
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    if (login(id, pw)) { setOpen(false); setPw(''); setBad(false); go('backoffice') } else setBad(true)
+    if (!menu) return
+    list.current?.querySelector<HTMLElement>('a[href], button')?.focus()
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setMenu(false); btn.current?.focus() } }
+    const away = (e: PointerEvent) => { const tg = e.target as Node; if (!list.current?.contains(tg) && !btn.current?.contains(tg)) setMenu(false) }
+    document.addEventListener('keydown', esc); document.addEventListener('pointerdown', away)
+    return () => { document.removeEventListener('keydown', esc); document.removeEventListener('pointerdown', away) }
+  }, [menu])
+  if (status === 'off') return null
+  if (status === 'loading') return <span className="h-10 w-10 rounded-full bg-surface3 animate-pulse" aria-hidden />
+  if (status === 'signedIn' && user) {
+    const item = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2.5 min-h-[44px] hover:bg-surface3 text-sm'
+    return (
+      <div className="relative">
+        <button ref={btn} type="button" aria-label={t('m.auth.menu', { name: user.name })} aria-expanded={menu} aria-controls="account-menu" onClick={() => setMenu((m) => !m)}
+          className="h-10 w-10 rounded-full overflow-hidden border border-control bg-brand text-brandfg grid place-items-center font-semibold hover:opacity-90">
+          {user.avatar ? <img src={user.avatar} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : <span aria-hidden>{user.name.slice(0, 1).toUpperCase()}</span>}
+        </button>
+        <div ref={list} id="account-menu" hidden={!menu} className="glass-pop absolute right-0 top-12 z-50 w-64 rounded-2xl p-1.5">
+          <div className="px-3 py-2"><p className="font-semibold truncate">{user.name}</p><p className="text-xs text-muted truncate">{user.email}</p>
+            {isAdmin && <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary"><Icon name="shield" size={13} />{t('m.auth.admin')}</p>}</div>
+          <NavLink to="me" className={item} onNavigate={() => setMenu(false)}><Icon name="profile" size={17} />{t('m.profile')}</NavLink>
+          {isAdmin && <NavLink to="backoffice" className={item} onNavigate={() => setMenu(false)}><Icon name="shield" size={17} />{t('m.admin')}</NavLink>}
+          <button type="button" className={item} onClick={async () => { setMenu(false); await signOut(); go('') }}><Icon name="logout" size={17} />{t('m.logout')}</button>
+        </div>
+      </div>
+    )
   }
-  if (isAdmin) return (
-    <div className="flex items-center gap-1.5">
-      <NavLink to="backoffice" aria-label={t('m.admin')} title={t('m.admin')} className="h-10 px-3 rounded-lg border border-control text-sm flex items-center gap-1.5 hover:bg-surface3"><Icon name="shield" size={17} /><span className="hidden sm:inline">{t('m.admin')}</span></NavLink>
-      <button type="button" className="h-10 w-10 rounded-lg border border-control grid place-items-center hover:bg-surface3" onClick={() => { logout(); go('') }} aria-label={t('m.logout')} title={t('m.logout')}><Icon name="logout" size={17} /></button>
-    </div>)
   return (
     <>
-      <button type="button" className="h-10 px-3 rounded-lg bg-primary text-onprimary text-sm font-medium flex items-center gap-1.5 hover:opacity-95" onClick={() => { setBad(false); setOpen(true) }}><Icon name="login" size={17} /><span className="hidden sm:inline">{t('m.login')}</span><span className="sr-only sm:hidden">{t('m.login')}</span></button>
-      <dialog ref={ref} aria-labelledby={`${uidp}-t`} className="!m-auto rounded-2xl border border-line bg-surface text-ink p-0 w-[calc(100%-2rem)] max-w-sm backdrop:bg-black/50" onClose={() => setOpen(false)}>
-        <form className="p-5 space-y-3" onSubmit={submit}>
-          <h2 id={`${uidp}-t`} className="h2">{t('m.login.t')}</h2>
-          <p className="text-sm text-muted">{t('m.login.d')}</p>
-          <label className="block"><span className="label">{t('m.login.id')}</span><input className="input" autoComplete="username" value={id} onChange={(e) => setId(e.target.value)} required /></label>
-          <label className="block"><span className="label">{t('m.login.pw')}</span><input className="input" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} required /></label>
-          <div role="alert">{bad && <p className="text-sm text-danger-fg">{t('m.login.bad')}</p>}</div>
-          <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setOpen(false)}>{t('jb.cancel')}</button><button type="submit" className="btn-primary">{t('m.login.go')}</button></div>
-        </form>
-      </dialog>
+      <button type="button" className="h-10 px-3 rounded-lg bg-primary text-onprimary text-sm font-medium flex items-center gap-1.5 hover:opacity-95" onClick={() => setOpen(true)}>
+        <Icon name="login" size={17} /><span className="sr-only sm:not-sr-only">{t('m.login')}</span>
+      </button>
+      <Modal open={open} onClose={close}>{(id) => (<>
+        <h2 id={id} className="h2">{t('m.auth.google')}</h2>
+        <p className="text-sm">{t('m.auth.d')}</p>
+        <ul className="text-xs text-muted space-y-1 list-disc pl-5"><li>{t('m.auth.optional')}</li><li>{t('m.auth.china')}</li></ul>
+        <NavLink to="privacy" className="text-sm font-medium text-primary underline underline-offset-4 inline-flex min-h-[24px] items-center" onNavigate={close}>{t('m.auth.privacy')}</NavLink>
+        <div role="status">{failed && <p className="text-sm text-danger-fg">{t('m.auth.fail')}</p>}</div>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          <button type="button" className="btn-ghost" onClick={close}>{t('jb.cancel')}</button>
+          <button type="button" className="btn-primary" disabled={busy} onClick={async () => { setBusy(true); await signIn(); setBusy(false) }}>
+            <GoogleMark />{t('m.auth.google')}</button>
+        </div>
+      </>)}</Modal>
     </>
+  )
+}
+/** Google "G" mark (Google sign-in branding), drawn inline so no image is fetched from Google before the visitor agrees */
+function GoogleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden className="bg-white rounded-full p-0.5">
+      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17z" />
+      <path fill="#FBBC05" d="M10.6 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.3.8-4.7l-7.9-6.1C1 16.5 0 20.1 0 24s1 7.5 2.7 10.8l7.9-6.1z" />
+      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
+    </svg>
   )
 }

@@ -7,7 +7,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { LanguageProvider } from './i18n'
 import { tr } from './i18n/core'
 import { ThemeProvider } from './theme'
-import { MatchProvider, checkAdmin } from './matchData'
+import { MatchProvider } from './matchData'
+import { AuthProvider } from './auth'
 import { DAY_MS, accept, addPin, forward, isVisibleTo, makePost, offersFor, parseState, reachTier, tierOf } from './domain/match/logic'
 import { seedState } from './domain/match/seed'
 import { ME, type MatchState, type Seeker } from './domain/match/types'
@@ -27,7 +28,7 @@ function html(node: ReactNode, st?: MatchState): string {
   const g = globalThis as { document?: unknown }
   const had = 'document' in g, prev = g.document
   g.document = { documentElement: { getAttribute: () => null, setAttribute: () => {}, lang: 'th' } }
-  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></LanguageProvider></ThemeProvider>) }
+  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><AuthProvider enabled={false}><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></AuthProvider></LanguageProvider></ThemeProvider>) }
   finally { if (had) g.document = prev; else delete g.document }
 }
 const NOW = Date.parse('2026-10-03T08:00:00.000Z')
@@ -122,11 +123,8 @@ describe('stored data is validated', () => {
   })
 })
 
-describe('admin gate (prototype)', () => {
-  it('only the owner-provided test credentials open the back office', () => {
-    expect(checkAdmin('AdminCALL', 'AdminCALL101')).toBe(true)
-    expect(checkAdmin(' AdminCALL ', 'AdminCALL101')).toBe(true)
-    for (const [i, p] of [['AdminCALL', 'admincall101'], ['admin', 'AdminCALL101'], ['', '']]) expect(checkAdmin(i, p)).toBe(false)
+describe('admin gate', () => {
+  it('without an administrator account signed in, the back office stays closed (Google sign-in + database role, see auth.test)', () => {
     const page = html(<BackofficePage />)
     expect(page).toContain(T('m.adm.gate'))
     expect(page).not.toContain('Sample Riverside Hotels')
@@ -138,7 +136,7 @@ describe('reviewed shell and pages', () => {
     const h = html(<Header route="" />)
     expect(h).not.toContain(`aria-label="${T('m.menu')}"`)
     expect(h).not.toContain('data-menu-button')
-    expect(h).toContain(T('m.login'))
+    expect(h).not.toContain(T('m.login')) // sign-in is hidden until the service is configured (see auth.test for the other states)
     expect(h).not.toContain('>PoC<')
     for (const k of ['nav.jobs', 'nav.employerArea', 'nav.bizPlanning'] as const) expect(h, k).not.toContain(T(k))
     expect(h).not.toMatch(/<a [^>]*href="\/"/) // the logo is no longer a link
