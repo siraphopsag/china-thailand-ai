@@ -9,7 +9,7 @@ import { SideNav } from './components/sidenav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { BRAND } from './brand'
 import { pageTitle } from './utils/labels'
-import { BottomNav, ContextStack, Header } from './components/shell'
+import { BackButton, BottomNav, ContextStack, Header } from './components/shell'
 import { Landing, DirectionPage, InterviewPage, ProfilePage } from './pages/intake'
 // Landing/interview load immediately; the analysis, employment and operations pages load on demand.
 const StartPage = lazy(() => import('./pages/start').then((m) => ({ default: m.StartPage })))
@@ -76,7 +76,7 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <SideNav route={route} open={menu} onClose={closeMenu} />
       <div id="page-body" className="flex-1 flex flex-col lg:pl-20">
       <ContextStack route={route} />
-      <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 xl:pb-10"><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
+      <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 xl:pb-10"><BackButton route={route} /><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
       <footer className="bg-surface border-t border-line text-xs text-muted px-4 py-6 mb-16 xl:mb-0">
         <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-2 items-center">
           <span className="font-semibold text-ink" lang="en">{BRAND.title}</span><span>{t('foot.note')}</span>

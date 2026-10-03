@@ -84,7 +84,7 @@ export function SideNav({ route, open, onClose }: { route: string; open: boolean
   return (
     <>
       {/* large screens: always-visible rail, widened when opened */}
-      <nav aria-label={t('m.side')} className={`hidden lg:block fixed left-0 top-16 bottom-0 z-30 border-r border-line bg-surface py-3 overflow-y-auto transition-[width] ${open ? 'w-56 px-2' : 'w-20'}`}>{list(open)}</nav>
+      <nav aria-label={t('m.side')} className={`hidden lg:block fixed left-0 top-16 bottom-0 z-30 border-r border-line bg-surface/80 backdrop-blur-xl py-3 overflow-y-auto transition-[width] ${open ? 'w-56 px-2' : 'w-20'}`}>{list(open)}</nav>
       {/* small screens: drawer */}
       {open && (
         <div className="lg:hidden fixed inset-0 top-16 z-40">

@@ -1,50 +1,66 @@
 @tailwind base; @tailwind components; @tailwind utilities;
 
-/* ---------- Design tokens (RGB triplets) ---------- */
+/* ---------- Design tokens (RGB triplets) ----------
+ * Two neutral bases with depth: light = white paper on soft grey, dark = graphite panels on near-black.
+ * One indigo accent (actions, selection) and a sky tint (glows, gradients). Depth comes from layered surfaces,
+ * a top highlight and soft two-step shadows, never from a flat colour block. */
 :root, :root[data-theme='light'] {
   color-scheme: light;
-  --page: 243 246 251; --surface: 255 255 255; --surface2: 247 249 252; --surface3: 232 238 247; --line: 214 222 235;
+  --page: 243 244 247; --surface: 255 255 255; --surface2: 249 250 251; --surface3: 236 238 242; --line: 225 228 234;
   /* borders of things you can press or type into (WCAG 1.4.11: ≥ 3:1 against every surface) */
-  --control-line: 120 134 158;
-  --ink: 15 30 56; --muted: 82 96 120;
-  --primary: 24 44 79; --onprimary: 255 255 255; --brand: 221 230 243; --brandfg: 34 61 104;
-  --header: 255 255 255; --onheader: 15 30 56;
-  --hero: 226 234 247; --onhero: 15 30 56; --herotile: 255 255 255; --heroline: 190 205 230;
-  --accent: 251 191 36; --onaccent: 15 30 56;
+  --control-line: 122 128 142;
+  --ink: 17 19 26; --muted: 84 90 104;
+  --primary: 67 56 202; --onprimary: 255 255 255; --brand: 237 236 255; --brandfg: 55 48 163;
+  --header: 255 255 255; --onheader: 17 19 26;
+  --hero: 238 239 250; --onhero: 17 19 26; --herotile: 255 255 255; --heroline: 210 212 235;
+  --accent: 245 158 11; --onaccent: 17 19 26;
+  --elev-hi: inset 0 1px 0 rgb(255 255 255 / .9);
+  --elev-1: 0 1px 2px rgb(17 19 26 / .06), 0 1px 1px rgb(17 19 26 / .03);
+  --elev-2: 0 1px 2px rgb(17 19 26 / .05), 0 10px 28px -12px rgb(17 19 26 / .18);
+  --elev-3: 0 2px 6px rgb(17 19 26 / .06), 0 24px 48px -20px rgb(40 36 120 / .28);
   --ok-bg: 220 252 231; --ok-fg: 22 101 52; --ok-line: 134 239 172;
   --warn-bg: 254 243 199; --warn-fg: 146 64 14; --warn-line: 252 211 77;
   --danger-bg: 254 226 226; --danger-fg: 153 27 27; --danger-line: 252 165 165;
   --review-bg: 255 237 213; --review-fg: 154 52 18; --review-line: 253 186 116;
   --info-bg: 224 242 254; --info-fg: 7 89 133; --info-line: 125 211 252;
-  --globe-bg: 236 241 248; --globe-ocean: 218 226 238; --globe-land: 196 205 219; --globe-soon: 90 112 145; --globe-active: 24 44 79; --globe-line: 255 255 255; --globe-capital: 220 38 38; --globe-route: 24 44 79; --globe-side: 12 24 46; --globe-soon-side: 58 74 100; --globe-prov: 37 99 235; --globe-pside: 23 62 150;
-  --grid-line: 15 30 56; --grid-a: .1; --glow-a: 59 130 246; --glow-b: 124 58 237; --glow-k: .16;
-  --grad-a: 29 78 216; --grad-b: 79 70 229; --cta-a: 29 64 175; --cta-b: 67 56 202; --hero-base: 248 250 253;
+  --globe-bg: 236 238 244; --globe-ocean: 226 229 237; --globe-land: 196 201 213; --globe-soon: 112 119 136; --globe-active: 67 56 202; --globe-line: 255 255 255; --globe-capital: 220 38 38; --globe-route: 67 56 202; --globe-side: 36 30 112; --globe-soon-side: 84 90 110; --globe-prov: 99 102 241; --globe-pside: 49 46 129;
+  --grid-line: 17 19 26; --grid-a: .08; --glow-a: 99 102 241; --glow-b: 14 165 233; --glow-k: .16;
+  --grad-a: 67 56 202; --grad-b: 3 105 161; --cta-a: 67 56 202; --cta-b: 29 78 216; --hero-base: 250 250 253;
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --page: 10 16 29; --surface: 18 27 46; --surface2: 24 35 58; --surface3: 34 48 78; --line: 50 66 100;
-  --control-line: 106 124 158;
-  --ink: 232 238 248; --muted: 160 174 198;
-  --primary: 96 140 212; --onprimary: 8 14 26; --brand: 30 46 80; --brandfg: 184 206 242;
-  --header: 13 21 38; --onheader: 240 244 251;
-  --hero: 17 28 52; --onhero: 240 244 251; --herotile: 33 46 76; --heroline: 58 75 108;
-  --accent: 251 191 36; --onaccent: 15 30 56;
+  --page: 9 10 13; --surface: 21 22 28; --surface2: 27 28 35; --surface3: 38 40 49; --line: 46 48 59;
+  --control-line: 112 116 132;
+  --ink: 237 238 243; --muted: 160 164 178;
+  --primary: 140 150 250; --onprimary: 10 10 20; --brand: 34 33 70; --brandfg: 199 206 254;
+  --header: 13 14 18; --onheader: 240 241 246;
+  --hero: 20 20 34; --onhero: 240 241 246; --herotile: 34 34 52; --heroline: 58 58 86;
+  --accent: 251 191 36; --onaccent: 17 19 26;
+  --elev-hi: inset 0 1px 0 rgb(255 255 255 / .05);
+  --elev-1: 0 1px 2px rgb(0 0 0 / .5);
+  --elev-2: 0 1px 2px rgb(0 0 0 / .45), 0 14px 32px -14px rgb(0 0 0 / .85);
+  --elev-3: 0 2px 6px rgb(0 0 0 / .5), 0 28px 56px -22px rgb(0 0 0 / .95), 0 0 0 1px rgb(140 150 250 / .06);
   --ok-bg: 20 58 38; --ok-fg: 134 239 172; --ok-line: 34 110 66;
   --warn-bg: 66 50 14; --warn-fg: 252 211 77; --warn-line: 130 96 20;
   --danger-bg: 72 26 30; --danger-fg: 252 165 165; --danger-line: 140 50 56;
   --review-bg: 70 40 18; --review-fg: 253 186 116; --review-line: 138 78 30;
   --info-bg: 16 52 78; --info-fg: 125 211 252; --info-line: 30 100 150;
-  --globe-bg: 8 13 24; --globe-ocean: 16 25 43; --globe-land: 46 59 82; --globe-soon: 120 140 175; --globe-active: 110 154 226; --globe-line: 255 255 255; --globe-capital: 239 68 68; --globe-route: 147 197 253; --globe-side: 52 82 130; --globe-soon-side: 62 76 104; --globe-prov: 147 197 253; --globe-pside: 74 116 180;
-  --grid-line: 148 163 184; --grid-a: .16; --glow-a: 59 130 246; --glow-b: 139 92 246; --glow-k: .3;
-  --grad-a: 147 197 253; --grad-b: 196 181 253; --cta-a: 37 99 235; --cta-b: 79 70 229; --hero-base: 7 11 22;
+  --globe-bg: 9 10 13; --globe-ocean: 14 15 20; --globe-land: 48 51 63; --globe-soon: 92 97 116; --globe-active: 129 140 248; --globe-line: 255 255 255; --globe-capital: 239 68 68; --globe-route: 165 180 252; --globe-side: 55 48 163; --globe-soon-side: 58 61 76; --globe-prov: 165 180 252; --globe-pside: 79 70 229;
+  --grid-line: 160 164 178; --grid-a: .1; --glow-a: 99 102 241; --glow-b: 14 165 233; --glow-k: .26;
+  --grad-a: 165 180 252; --grad-b: 125 211 252; --cta-a: 79 70 229; --cta-b: 37 99 235; --hero-base: 11 11 18;
 }
 
 html { scroll-behavior: smooth }
 /* grid children may shrink below their content width (prevents horizontal overflow with long Thai/CJK lines) */
 .grid > * { min-width: 0 }
 body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif; line-height: 1.65; overflow-wrap: break-word;
-  background: rgb(var(--page)); color: rgb(var(--ink)); transition: background-color .25s ease, color .25s ease;
-  background-image: radial-gradient(1100px 420px at 50% -120px, rgb(var(--glow-a) / calc(var(--glow-k) * .45)), transparent 70%) ; background-repeat: no-repeat }
+  background-color: rgb(var(--page)); color: rgb(var(--ink)); transition: background-color .25s ease, color .25s ease;
+  /* depth behind everything: two soft light sources and a faint dot texture, fixed while the page scrolls */
+  background-image:
+    radial-gradient(900px 520px at 12% -10%, rgb(var(--glow-a) / calc(var(--glow-k) * .55)), transparent 70%),
+    radial-gradient(800px 480px at 95% 0%, rgb(var(--glow-b) / calc(var(--glow-k) * .4)), transparent 70%),
+    radial-gradient(circle at 1px 1px, rgb(var(--grid-line) / calc(var(--grid-a) * .9)) 1px, transparent 0);
+  background-size: auto, auto, 22px 22px; background-attachment: fixed }
 :focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: 2px }
 /* WCAG 2.4.11: keep a focused control clear of the 64px sticky header when the page scrolls to it */
 html { scroll-padding-top: 5rem }
@@ -53,17 +69,25 @@ h1[tabindex="-1"]:focus { outline: none }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important } }
 
 @layer components {
-  .card { @apply bg-surface border border-line rounded-2xl p-5 transition-[border-color,box-shadow] duration-200; box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 10px 30px -18px rgb(15 30 56 / .18) }
-  .card-hover { @apply hover:border-primary/40; }
-  .card-i { @apply bg-surface2 border border-line rounded-xl p-3 }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium min-h-[44px] md:min-h-[40px] transition duration-150 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 }
-  .btn-primary { @apply btn bg-primary text-onprimary hover:opacity-95 hover:-translate-y-px hover:shadow-md; background-image: linear-gradient(180deg, rgb(255 255 255 / .1), transparent) }
+  /* raised panel: a lighter top edge, a slight vertical gradient and a two-step shadow */
+  .card { @apply border border-line rounded-2xl p-5 transition-[border-color,box-shadow,transform] duration-200;
+    background: linear-gradient(180deg, rgb(var(--surface)), rgb(var(--surface2))); box-shadow: var(--elev-hi), var(--elev-2) }
+  .card-hover { @apply hover:border-primary/50 hover:-translate-y-0.5; }
+  .card-hover:hover { box-shadow: var(--elev-hi), var(--elev-3) }
+  /* inset well for secondary content inside a card */
+  .card-i { @apply border border-line rounded-xl p-3; background: rgb(var(--surface3) / .5); box-shadow: inset 0 1px 2px rgb(0 0 0 / .05) }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-medium min-h-[44px] md:min-h-[40px] transition duration-150 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 }
+  .btn-primary { @apply btn text-onprimary hover:-translate-y-px; background: linear-gradient(180deg, rgb(255 255 255 / .14), transparent 60%), rgb(var(--primary));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 1px 2px rgb(0 0 0 / .2), 0 8px 20px -10px rgb(var(--primary) / .8) }
   .btn-accent { @apply btn bg-accent text-onaccent hover:opacity-90 font-semibold }
-  .btn-ghost { @apply btn border border-control bg-surface text-ink hover:bg-surface3 }
-  .input { @apply w-full rounded-lg border border-control px-3 py-2 min-h-[44px] md:min-h-[40px] bg-surface text-ink placeholder:text-muted focus:border-primary transition-colors }
+  .btn-ghost { @apply btn border border-control text-ink hover:bg-surface3; background: rgb(var(--surface)); box-shadow: var(--elev-hi), var(--elev-1) }
+  .input { @apply w-full rounded-xl border border-control px-3 py-2 min-h-[44px] md:min-h-[40px] text-ink placeholder:text-muted focus:border-primary transition-colors;
+    background: rgb(var(--surface)); box-shadow: inset 0 1px 2px rgb(0 0 0 / .06) }
   .label { @apply block text-sm font-medium text-muted mb-1 }
-  .h1 { @apply text-2xl md:text-3xl font-bold text-ink }
+  .h1 { @apply text-2xl md:text-3xl font-bold text-ink tracking-tight }
   .h2 { @apply text-lg font-semibold text-ink }
+  /* small all-caps-like section label above a heading */
+  .eyebrow { @apply text-xs font-semibold uppercase tracking-wider text-primary }
   .chip { @apply inline-flex items-center gap-1 border rounded-full px-2.5 py-0.5 text-xs font-semibold max-w-full }
   .tab { @apply px-4 py-2 rounded-lg border border-control bg-surface text-ink whitespace-nowrap min-h-[44px] transition hover:bg-surface3 }
   .tab-on { @apply bg-primary text-onprimary border-primary hover:bg-primary }
@@ -99,14 +123,14 @@ h1[tabindex="-1"]:focus { outline: none }
 .g-capital { fill: rgb(var(--globe-capital)); stroke: #fff; stroke-width: 1.8 }
 .g-plane { fill: rgb(var(--globe-route)); stroke: rgb(var(--page)); stroke-width: 1 }
 .g-label, .g-name { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font-weight: 600 }
-.g-label { font-size: 13px } .g-name { font-size: 17px; font-weight: 700; letter-spacing: .04em }
+.g-label { font-size: 15px } .g-name { font-size: 17px; font-weight: 700; letter-spacing: .04em }
 svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: -3px }
-.globe-ctl { width: 40px; height: 40px; display: grid; place-items: center; border-radius: .6rem; background: rgb(var(--surface) / .92); border: 1px solid rgb(var(--control-line)); color: rgb(var(--ink)) }
+.globe-ctl { width: 40px; height: 40px; display: grid; place-items: center; border-radius: .75rem; background: rgb(var(--surface) / .9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgb(var(--control-line)); color: rgb(var(--ink)); box-shadow: var(--elev-hi), var(--elev-2) }
 .globe-ctl:hover { background: rgb(var(--surface3)) }
 @media (prefers-reduced-motion: reduce) { .g-c { transition: none } }
 
 /* ---------- C.A.L.L. hero language: atmosphere, perspective grid, gradient headline, premium CTA ---------- */
-.hero-shell { background: rgb(var(--hero-base)); }
+.hero-shell { background: linear-gradient(180deg, rgb(var(--hero-base)), rgb(var(--surface2))); box-shadow: var(--elev-hi), var(--elev-3) }
 .hero-glow { background:
   radial-gradient(600px 320px at 50% 0%, rgb(var(--glow-a) / var(--glow-k)), transparent 70%),
   radial-gradient(420px 260px at 85% 20%, rgb(var(--glow-b) / calc(var(--glow-k) * .6)), transparent 70%),
@@ -140,9 +164,13 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
 @keyframes ai-scan { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
 /* the map uses the same surface language: a faint static grid under the ocean */
 /* the map plane is seen at a slight angle (the controls and the frame stay flat) */
-.map-ocean { background-color: rgb(var(--globe-ocean)) }
-.map-tilt { position: absolute; inset: 0; transform: perspective(1600px) rotateX(14deg) scale(1.06); transform-origin: 50% 55% }
-.map-stage { background-color: rgb(var(--globe-ocean)); background-image: linear-gradient(to right, rgb(var(--grid-line) / calc(var(--grid-a) * .4)) 1px, transparent 0), linear-gradient(to bottom, rgb(var(--grid-line) / calc(var(--grid-a) * .4)) 1px, transparent 0); background-size: 56px 56px }
+.map-ocean { background-color: rgb(var(--globe-ocean)); box-shadow: var(--elev-hi), var(--elev-2) }
+/* oblique camera: the map plane leans back so the region reads as a 3-D table, with haze towards the horizon */
+.map-tilt { position: absolute; inset: 0; transform: perspective(1100px) rotateX(34deg) scale(1.18); transform-origin: 50% 62% }
+.map-stage { background-color: rgb(var(--globe-ocean)); background-image: linear-gradient(to right, rgb(var(--grid-line) / calc(var(--grid-a) * .55)) 1px, transparent 0), linear-gradient(to bottom, rgb(var(--grid-line) / calc(var(--grid-a) * .55)) 1px, transparent 0); background-size: 56px 56px }
+.map-haze { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to bottom, rgb(var(--globe-ocean)) 0%, rgb(var(--globe-ocean) / .6) 14%, transparent 38%), radial-gradient(120% 90% at 50% 100%, transparent 55%, rgb(var(--globe-ocean) / .55) 100%) }
+@media (max-width: 640px) { .map-tilt { transform: perspective(900px) rotateX(28deg) scale(1.14) } }
 
 /* matching prototype: pins on the map (mine = a seeker's pin, post = an employer post) */
 .g-pin { fill: rgb(var(--danger-fg)); stroke: rgb(var(--page)); stroke-width: 2.5 }

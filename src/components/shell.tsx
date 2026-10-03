@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { LANGS, dv, tk, useI18n } from '../i18n'
 import { useTheme } from '../theme'
-import { go, NavLink, useStore } from '../store'
+import { go, goBack, NavLink, useStore } from '../store'
 import { dirInfo } from '../utils/labels'
 import { tourRoutes } from '../data/culture'
 import { SampleTag } from './ui'
@@ -57,7 +57,7 @@ function useOutside(open: boolean, close: () => void) {
   }, [open, close])
   return ref
 }
-const ctrl = 'h-10 whitespace-nowrap rounded-lg border border-control text-onheader hover:bg-surface3 transition active:scale-95 flex items-center justify-center gap-1.5 text-sm'
+const ctrl = 'h-10 whitespace-nowrap rounded-xl border border-control bg-surface text-onheader hover:bg-surface3 shadow-[var(--elev-hi),var(--elev-1)] transition active:scale-95 flex items-center justify-center gap-1.5 text-sm'
 
 export function ThemeSwitcher() {
   const { theme, toggle } = useTheme()
@@ -164,7 +164,7 @@ export function PersonaSwitcher({ bar = false }: { bar?: boolean }) {
 export function Header({ menuOpen, onMenu }: { route?: string; menuOpen?: boolean; onMenu?: () => void }) {
   const { t } = useI18n()
   return (
-    <header className="bg-header/90 backdrop-blur-md text-onheader sticky top-0 z-40 border-b border-line">
+    <header className="bg-header/75 backdrop-blur-xl backdrop-saturate-150 text-onheader sticky top-0 z-40 border-b border-line shadow-[0_1px_0_rgb(255_255_255/.04),0_8px_24px_-16px_rgb(0_0_0/.25)]">
       <div className="px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
         <button type="button" className={`${ctrl} w-10 shrink-0`} data-menu-button aria-expanded={!!menuOpen} aria-label={t('m.menu')} title={t('m.menu')} onClick={onMenu}><Icon name={menuOpen ? 'close' : 'menu'} /></button>
         <div className="flex items-center gap-2 shrink-0" lang="en">
@@ -193,6 +193,20 @@ function BusinessSubNav({ route }: { route: string }) {
 }
 
 /** Compact "which business is the AI analysing" bar + guided-demo strip. */
+/** where "Back" leads when the page was opened directly (no earlier in-app page to return to) */
+const PARENT: Record<string, string> = { seek: 'choose-role', hire: 'choose-role', language: 'prepare', sources: 'prepare', monitoring: 'sources' }
+/** "Back" on every page except the Lobby, so nobody has to return to the Lobby to go one step back */
+export function BackButton({ route }: { route: string }) {
+  const { t } = useI18n()
+  if (!route) return null
+  return (
+    <button type="button" onClick={() => goBack(PARENT[route] ?? '')}
+      className="mb-3 -ml-1 inline-flex items-center gap-1.5 rounded-lg px-2 min-h-[40px] text-sm font-medium text-muted hover:text-ink hover:bg-surface3 transition-colors">
+      <Icon name="back" size={16} />{t('m.back')}
+    </button>
+  )
+}
+
 export function ContextStack({ route }: { route: string }) {
   const { t } = useI18n()
   const { profile, tour, set, mode, exitDemo } = useStore()

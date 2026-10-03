@@ -55,6 +55,16 @@ function Req() {
   const { t } = useI18n()
   return <span className="font-normal text-muted"> ({t('m.req')})</span>
 }
+/** nothing to show yet: say why and offer the next step, so no page is a dead end */
+function Empty({ icon, text, to, action }: { icon: 'bell' | 'pin' | 'posts'; text: string; to?: string; action?: string }) {
+  return (
+    <div className="card flex flex-col items-center text-center gap-3 !py-8">
+      <span className="w-12 h-12 rounded-2xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={22} /></span>
+      <p className="text-muted max-w-sm">{text}</p>
+      {to && action && <NavLink to={to} className="btn-primary">{action}<Icon name="next" size={16} /></NavLink>}
+    </div>
+  )
+}
 function NeedRole({ role }: { role: 'seeker' | 'employer' }) {
   const { t } = useI18n()
   return <div className="card space-y-3"><p>{t('m.profile.none')}</p><NavLink to="choose-role" className="btn-primary inline-flex">{t(role === 'seeker' ? 'm.role.seeker' : 'm.role.employer')}<Icon name="next" size={16} /></NavLink></div>
@@ -85,7 +95,7 @@ function SkillPicker({ skills, onChange, idp, fe }: { skills: Skill[]; onChange:
   const N = useNames()
   return (
     <fieldset aria-describedby={fe.describe(idp)}><legend className="label">{t('m.skills')}</legend>
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">{SKILLS.map((s, i) => (
+      <div className="grid grid-cols-2 gap-2">{SKILLS.map((s, i) => (
         <label key={s} className="chip-check">
           <input id={i === 0 ? `${idp}-0` : undefined} type="checkbox" className="sr-only" aria-invalid={fe.invalid(idp)} checked={skills.includes(s)} onChange={() => onChange(skills.includes(s) ? skills.filter((x) => x !== s) : [...skills, s])} />
           <span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.skill(s)}
@@ -98,9 +108,23 @@ const IndustrySelect = ({ value, onChange, label }: { value: Industry; onChange:
   const N = useNames()
   return <label className="block"><span className="label">{label}</span><select className="input" value={value} onChange={(e) => onChange(e.target.value as Industry)}>{INDUSTRIES.map((i) => <option key={i} value={i}>{N.industry(i)}</option>)}</select></label>
 }
+/** step pills: done = tick, current = bold + aria-current (not colour alone) */
 const Steps = ({ items, at }: { items: string[]; at: number }) => (
-  <ol className="flex flex-wrap gap-x-3 gap-y-1 text-sm">{items.map((s, i) => <li key={s} aria-current={i === at ? 'step' : undefined} className={`flex items-center gap-1.5 ${i === at ? 'font-semibold text-ink' : i < at ? 'text-ok-fg' : 'text-muted'}`}>{i > 0 && <Icon name="next" size={12} className="text-muted" />}{i < at && <Icon name="ok" size={14} />}{i + 1}. {s}</li>)}</ol>
+  <ol className="flex flex-wrap gap-2">{items.map((s, i) => (
+    <li key={s} aria-current={i === at ? 'step' : undefined} className={`inline-flex items-center gap-2 rounded-full border pl-1 pr-3 py-1 text-xs sm:text-sm ${i === at ? 'border-primary bg-brand text-brandfg font-semibold' : i < at ? 'border-ok-line bg-ok-bg text-ok-fg' : 'border-line bg-surface text-muted'}`}>
+      <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold ${i === at ? 'bg-primary text-onprimary' : i < at ? 'bg-ok-fg text-ok-bg' : 'bg-surface3 text-muted'}`}>{i < at ? <Icon name="check" size={13} /> : i + 1}</span>{s}
+    </li>))}</ol>
 )
+/** two columns on large screens: the map stays in view on the left while the steps scroll on the right */
+const MAP_SIZE = 'h-[300px] sm:h-[380px] lg:h-[calc(100vh-11rem)] lg:min-h-[420px] lg:max-h-[640px]'
+function MapLayout({ map, children }: { map: ReactNode; children: ReactNode }) {
+  return (
+    <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-5 items-start">
+      <div className="lg:sticky lg:top-20 space-y-2">{map}</div>
+      <div className="space-y-4 min-w-0">{children}</div>
+    </div>
+  )
+}
 
 /* ================= job seeker: origin → destination → pin (up to 5) ================= */
 export function SeekPage() {
@@ -133,10 +157,11 @@ export function SeekPage() {
   }
   return (
     <Page title={t('m.seek.title')}>
+      <MapLayout map={<>
+        <GeoMap className={MAP_SIZE} label={t('m.mapLabel')} country={originStep ? oc : dc} province={originStep ? op : dp} pins={pins}
+          onPickCountry={(c) => { if (originStep) { setOc(c); setOp(null) } else { setDc(c); setDp(null) } fe.clear() }} onPickProvince={(p) => { if (originStep) setOp(p); else setDp(p); fe.clear() }} />
+        <p className="text-xs text-muted">{t('m.mapHint')}</p></>}>
       <Steps items={[t('m.seek.s1'), t('m.seek.s2'), t('m.seek.s3')]} at={originStep ? 0 : dp ? 2 : 1} />
-      <GeoMap label={t('m.mapLabel')} country={originStep ? oc : dc} province={originStep ? op : dp} pins={pins}
-        onPickCountry={(c) => { if (originStep) { setOc(c); setOp(null) } else { setDc(c); setDp(null) } }} onPickProvince={(p) => (originStep ? setOp(p) : setDp(p))} />
-      <p className="text-xs text-muted">{t('m.mapHint')}</p>
       <Toast msg={msg} />
       {originStep ? (
         <section className="card space-y-3" aria-labelledby="s1h">
@@ -162,6 +187,8 @@ export function SeekPage() {
       )}
       <section className="space-y-2" aria-labelledby="pins-h">
         <h2 id="pins-h" className="h2">{t('m.pin.count', { n: st.me.pins.length })}</h2>
+        {/* how many of the 5 queue places are used (the number is in the heading; the bar is a visual aid) */}
+        <div className="h-1.5 rounded-full bg-surface3 overflow-hidden" aria-hidden><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(st.me.pins.length / MAX_PINS) * 100}%` }} /></div>
         <p className="text-xs text-muted">{t('m.pin.why')}</p>
         {!st.me.pins.length ? <div className="card text-muted">{t('m.pin.none')}</div> : (
           <ul className="grid sm:grid-cols-2 gap-2">{st.me.pins.map((p) => (
@@ -171,6 +198,7 @@ export function SeekPage() {
               <button type="button" className="w-9 h-9 rounded-lg border border-control grid place-items-center hover:bg-surface3" aria-label={`${t('m.pin.remove')}: ${N.place(p.country, p.province)}`} title={t('m.pin.remove')} onClick={() => { unpin(p.id); setMsg({ tone: 'info', text: t('m.pin.removed') }) }}><Icon name="close" size={16} /></button>
             </li>))}</ul>)}
       </section>
+      </MapLayout>
     </Page>
   )
 }
@@ -217,10 +245,11 @@ export function HirePage() {
   }
   return (
     <Page title={t('m.emp.title')}>
+      <MapLayout map={<>
+        <GeoMap className={MAP_SIZE} label={t('m.mapLabel')} country={c} province={p} pins={mine.map((x) => ({ country: x.country, province: x.province, label: `${x.position} · ${N.place(x.country, x.province)}`, tone: 'post' }))}
+          onPickCountry={(x) => { setC(x); setP(null); setForm(false) }} onPickProvince={(x) => { setP(x); setForm(false) }} />
+        <p className="text-xs text-muted">{t('m.mapHint')}</p></>}>
       <Steps items={[t('m.emp.s1'), t('m.emp.s2')]} at={form ? 1 : 0} />
-      <GeoMap label={t('m.mapLabel')} country={c} province={p} pins={mine.map((x) => ({ country: x.country, province: x.province, label: `${x.position} · ${N.place(x.country, x.province)}`, tone: 'post' }))}
-        onPickCountry={(x) => { setC(x); setP(null); setForm(false) }} onPickProvince={(x) => { setP(x); setForm(false) }} />
-      <p className="text-xs text-muted">{t('m.mapHint')}</p>
       <Toast msg={msg} />
       {!form ? (
         <section className="card space-y-3" aria-labelledby="e1h">
@@ -251,6 +280,7 @@ export function HirePage() {
           <ul className="space-y-2">{mine.map((x) => (
             <li key={x.id} className="card !p-4 space-y-2"><div><h3 className="font-semibold">{x.position}</h3><p className="text-sm text-muted">{x.company} · {N.place(x.country, x.province)} · {N.industry(x.industry)}</p></div><PostStatus post={x} /></li>))}</ul>)}
       </section>
+      </MapLayout>
     </Page>
   )
 }
@@ -266,18 +296,18 @@ export function NotificationsPage() {
     const acc = st.acceptances.filter((a) => mine.has(a.postId))
     return (
       <Page title={t('m.notif.title')}>
-        {!acc.length ? <div className="card text-muted">{t('m.notif.none')}</div> : (
+        {!acc.length ? <Empty icon="bell" text={t('m.notif.none')} to="hire" action={t('m.posts')} /> : (
           <ul className="space-y-2">{acc.map((a) => { const p = st.posts.find((x) => x.id === a.postId)!; return (
             <li key={a.id} className="card !p-4 flex items-start gap-3"><Icon name="bell" size={20} className="text-primary mt-0.5" /><div><p className="font-semibold">{t('m.empNotif', { p: p.position })}</p><p className="text-sm text-muted">{t(a.status === 'forwarded' ? 'm.st.forwarded' : 'm.st.accepted')}</p></div></li>) })}</ul>)}
       </Page>)
   }
-  if (st.role !== 'seeker') return <Page title={t('m.notif.title')}><div className="card text-muted">{t('m.notif.none')}</div></Page>
+  if (st.role !== 'seeker') return <Page title={t('m.notif.title')}><Empty icon="bell" text={t('m.notif.none')} to="choose-role" action={t('hero.cta')} /></Page>
   const offers = offersFor(st, st.me, now)
   const why = (tier: Tier | null) => t(tier === 1 ? 'm.offer.why1' : tier === 2 ? 'm.offer.why2' : 'm.offer.why3')
   return (
     <Page title={t('m.notif.title')}>
       <Toast msg={msg} />
-      {!st.me.pins.length ? <div className="card text-muted">{t('m.notif.noPins')}</div> : !offers.length ? <div className="card text-muted">{t('m.notif.none')}</div> : (
+      {!st.me.pins.length ? <Empty icon="pin" text={t('m.notif.noPins')} to="seek" action={t('m.pins')} /> : !offers.length ? <Empty icon="bell" text={t('m.notif.none')} /> : (
         <ul className="space-y-3">{offers.map((p) => {
           const mineAcc = st.acceptances.find((a) => a.postId === p.id && a.seekerId === ME)
           return (

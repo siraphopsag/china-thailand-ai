@@ -19,7 +19,7 @@ import { match } from './locales/match'
 import { Landing } from './pages/intake'
 import { ChooseRolePage } from './pages/choose'
 import { BackofficePage, NotificationsPage, SeekPage } from './pages/match'
-import { Header } from './components/shell'
+import { BackButton, Header } from './components/shell'
 import { SideNav, sideItems } from './components/sidenav'
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
@@ -217,12 +217,13 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
     expect(page).not.toMatch(/<a [^>]*title=/) // no hover-only names
     expect(src('./App.tsx')).toContain('lg:pl-20')
   })
-  it('#4 the map can be moved with single taps or the keyboard (four move buttons + back to the framed view)', () => {
+  it('#4 (revised with the owner) the view moves with single taps: tapping a country or province frames it; zoom and back-to-view buttons; no arrow pad', () => {
     const geo = src('./components/geomap.tsx')
-    for (const d of ['up', 'down', 'left', 'right']) expect(geo).toContain(`['${d}',`)
-    expect(geo).toContain("aria-label={t(`m.pan.${dir}`)}")
+    expect(geo).not.toContain('m.pan')
     expect(geo).toContain("onClick={() => flyTo(target)} aria-label={t('geo.resetView')}")
-    expect(geo).toContain("role=\"group\" aria-label={t('m.pan')}")
+    expect(geo).toMatch(/aria-label=\{t\('geo\.zoomIn'\)\}[\s\S]*aria-label=\{t\('geo\.zoomOut'\)\}/)
+    expect(geo).toMatch(/onPickProvince\(d\.prov === province \? null : d\.prov\)/) // a tap picks (and frames) a province
+    expect(geo).toMatch(/onPickCountry\(d\.code\)/)
   })
   it('#5 job titles on notifications and in the back office are headings', () => {
     const st = seedState(NOW); st.role = 'seeker'
@@ -246,6 +247,37 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
   })
   it('#10 pins have a thicker outline', () => {
     expect(css).toMatch(/\.g-pin \{[^}]*stroke-width: 2\.5/)
+  })
+})
+
+describe('design pass (owner review, Oct 2026)', () => {
+  const css = src('./index.css')
+  it('the map opens framed on Thailand + China, seen through an oblique camera with haze', () => {
+    const geo = src('./components/geomap.tsx')
+    expect(geo).toMatch(/x\.code === 'TH' \|\| x\.code === 'CN'/)
+    expect(geo).toContain('<div className="map-haze" aria-hidden />')
+    expect(css).toMatch(/\.map-tilt \{[^}]*rotateX\(3\d+deg\)/)
+  })
+  it('every page except the Lobby has a Back button that stays inside the site', () => {
+    const shell = src('./components/shell.tsx'), store = src('./store.tsx')
+    expect(src('./App.tsx')).toContain('<BackButton route={route} />')
+    expect(shell).toMatch(/if \(!route\) return null/)
+    expect(shell).toContain("onClick={() => goBack(PARENT[route] ?? '')}")
+    expect(store).toContain("pushState({ d: appDepth() + 1 }, '', '/' + r)")
+    expect(store).toMatch(/goBack = \(parent: string\) => \{ if \(appDepth\(\) > 0\) window\.history\.back\(\); else go\(parent\) \}/)
+    expect(html(<BackButton route="seek" />)).toContain(T('m.back'))
+    expect(html(<BackButton route="" />)).toBe('')
+  })
+  it('empty pages offer the next step', () => {
+    const st = seedState(NOW); st.role = 'seeker'; st.me = seeker([])
+    expect(html(<NotificationsPage />, st)).toMatch(/<a href="\/seek" class="btn-primary">/)
+  })
+  it('surfaces have depth: elevation tokens in both themes, raised cards and buttons', () => {
+    for (const k of ['--elev-hi', '--elev-1', '--elev-2', '--elev-3']) expect(css.split(k + ':').length - 1, k).toBe(2)
+    expect(css).toMatch(/\.card \{[^}]*box-shadow: var\(--elev-hi\), var\(--elev-2\)/)
+    expect(css).toMatch(/body \{[\s\S]*?background-attachment: fixed/)
+  })
+  it('pins keep their thicker outline in the new palette', () => {
     expect(css).toMatch(/\.g-pin-post \{[^}]*stroke-width: 2\.5/)
   })
 })

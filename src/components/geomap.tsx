@@ -45,8 +45,8 @@ function useTween(target: number, ms: number) {
 }
 
 export interface MapPin { country: 'TH' | 'CN'; province: string; label: string; tone?: 'mine' | 'post' }
-export function GeoMap({ country, province, pins = [], onPickCountry, onPickProvince, label }: {
-  country: 'TH' | 'CN' | null; province: string | null; pins?: MapPin[]; onPickCountry: (c: 'TH' | 'CN') => void; onPickProvince: (code: string | null) => void; label: string
+export function GeoMap({ country, province, pins = [], onPickCountry, onPickProvince, label, className = 'h-[46vh] min-h-[280px] max-h-[520px]' }: {
+  country: 'TH' | 'CN' | null; province: string | null; pins?: MapPin[]; onPickCountry: (c: 'TH' | 'CN') => void; onPickProvince: (code: string | null) => void; label: string; className?: string
 }) {
   const { t } = useI18n()
   const [data, setData] = useState<{ countries: CountryF[]; provinces: ProvinceF[] } | null>(null)
@@ -72,6 +72,13 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
   const target = useMemo<View>(() => {
     if (province) { const p = provs.find((x) => x.code === province); if (p) { const b = path.bounds(p.f) as [[number, number], [number, number]]; const pad = Math.max(b[1][0] - b[0][0], b[1][1] - b[0][1]) * 1.6; return viewForBox([[b[0][0] - pad, b[0][1] - pad], [b[1][0] + pad, b[1][1] + pad]], w, h, 0.9, 10) } }
     if (country) { const s = shapes.find((x) => x.code === country); if (s) return viewForBox(s.b, w, h, country === 'CN' ? 0.8 : 0.72, 7) }
+    // nothing chosen yet: frame the two countries in service (Thailand + China), not all of ASEAN
+    const two = shapes.filter((x) => x.code === 'TH' || x.code === 'CN')
+    if (two.length) {
+      const x0 = Math.min(...two.map((x) => x.b[0][0])), y0 = Math.min(...two.map((x) => x.b[0][1])), x1 = Math.max(...two.map((x) => x.b[1][0])), y1 = Math.max(...two.map((x) => x.b[1][1]))
+      // extra room at the bottom: the tilted camera pushes the near (southern) edge outwards
+      return viewForBox([[x0, y0], [x1, y1 + (y1 - y0) * 0.16]], w, h, 0.86, 4)
+    }
     return HOME
   }, [country, province, provs, shapes, path, w, h])
   const flyTo = (to: View) => {
@@ -88,8 +95,6 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
   const svg = useRef<SVGSVGElement>(null)
   const down = useRef<{ x: number; y: number; moved: number; code?: string; prov?: string } | null>(null)
   const zoomAt = (f: number, cx = w / 2, cy = h / 2) => setView((v) => { const k = Math.max(1, Math.min(MAX_K, v.k * f)); const r = k / v.k; return clampView({ k, x: cx - (cx - v.x) * r, y: cy - (cy - v.y) * r }, w, h) })
-  // WCAG 2.5.7: everything a drag does can also be done with single taps (and the keyboard) via these buttons
-  const pan = (dx: number, dy: number) => { cancelAnimationFrame(anim.current); setView((v) => clampView({ ...v, x: v.x + dx * w * 0.2, y: v.y + dy * h * 0.2 }, w, h)) }
   const onDown = (e: ReactPointerEvent) => {
     cancelAnimationFrame(anim.current)
     const el = e.target as Element
@@ -99,7 +104,7 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
   const onMove = (e: ReactPointerEvent) => {
     const d = down.current; if (!d) return
     const dx = e.clientX - d.x, dy = e.clientY - d.y; d.x = e.clientX; d.y = e.clientY; d.moved += Math.abs(dx) + Math.abs(dy)
-    setView((v) => clampView({ ...v, x: v.x + dx, y: v.y + dy }, w, h))
+    setView((v) => clampView({ ...v, x: v.x + dx, y: v.y + dy * 1.25 }, w, h)) // the plane leans back, so vertical moves are foreshortened
   }
   const onUp = () => {
     const d = down.current; down.current = null
@@ -120,7 +125,7 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
   const screen = (lon: number, lat: number, lift = 0): [number, number] | null => { const p = proj([lon, lat]); return p ? [view.x + view.k * p[0], view.y + view.k * p[1] - lift] : null }
   const name = (c: string) => t(`geo.c.${c}` as never)
   return (
-    <div ref={box} className="relative rounded-2xl overflow-hidden border border-line map-ocean h-[46vh] min-h-[280px] max-h-[520px]">
+    <div ref={box} className={`relative rounded-2xl overflow-hidden border border-line map-ocean ${className}`}>
       {failed && <p className="absolute inset-0 grid place-items-center p-6 text-center" role="alert">{t('geo.error')}</p>}
       {!data && !failed && <p className="absolute inset-0 grid place-items-center" role="status"><span className="flex items-center gap-2"><Icon name="globe" size={18} className="animate-pulse text-primary" />{t('geo.loading')}</span></p>}
       {data && (
@@ -143,16 +148,12 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
             })}
           </svg>
         </div>)}
+      {data && <div className="map-haze" aria-hidden />}
       {data && (
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
           <button type="button" className="globe-ctl" onClick={() => zoomAt(1.3)} aria-label={t('geo.zoomIn')} title={t('geo.zoomIn')}><Icon name="plus" size={18} /></button>
           <button type="button" className="globe-ctl" onClick={() => zoomAt(1 / 1.3)} aria-label={t('geo.zoomOut')} title={t('geo.zoomOut')}><Icon name="minus" size={18} /></button>
           <button type="button" className="globe-ctl" onClick={() => flyTo(target)} aria-label={t('geo.resetView')} title={t('geo.resetView')}><Icon name="target" size={18} /></button>
-        </div>)}
-      {data && (
-        <div className="absolute bottom-3 right-3 grid grid-cols-3 gap-1" role="group" aria-label={t('m.pan')}>
-          {([['up', 0, 1, 2, 1], ['left', 1, 0, 1, 2], ['right', -1, 0, 3, 2], ['down', 0, -1, 2, 3]] as const).map(([dir, dx, dy, col, row]) => (
-            <button key={dir} type="button" className="globe-ctl" style={{ gridColumn: col, gridRow: row }} onClick={() => pan(dx, dy)} aria-label={t(`m.pan.${dir}`)} title={t(`m.pan.${dir}`)}><Icon name={dir} size={18} /></button>))}
         </div>)}
     </div>
   )
