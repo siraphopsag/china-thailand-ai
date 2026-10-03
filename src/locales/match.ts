@@ -157,4 +157,13 @@ export const match = {
   'm.err.notOpen': ['งานนี้ยังไม่เปิดให้คุณรับ', '这份工作尚未向您开放', 'This job is not open to you'],
   'm.err.already': ['คุณรับงานนี้ไปแล้ว', '您已接受这份工作', 'You already accepted this job'],
   'm.err.unknown': ['ไม่พบข้อมูล', '找不到数据', 'Not found'],
+  // accessibility fixes (audit rounds 2–3)
+  'm.req': ['จำเป็น', '必填', 'required'],
+  'm.hint.company': ['2–80 ตัวอักษร', '2–80 个字符', '2–80 characters'],
+  'm.hint.position': ['3–80 ตัวอักษร', '3–80 个字符', '3–80 characters'],
+  'm.pan': ['เลื่อนแผนที่', '移动地图', 'Move the map'],
+  'm.pan.up': ['เลื่อนขึ้น', '向上移动', 'Move up'],
+  'm.pan.down': ['เลื่อนลง', '向下移动', 'Move down'],
+  'm.pan.left': ['เลื่อนไปทางซ้าย', '向左移动', 'Move left'],
+  'm.pan.right': ['เลื่อนไปทางขวา', '向右移动', 'Move right'],
 } as const satisfies Record<string, Msg>

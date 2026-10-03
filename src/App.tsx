@@ -74,7 +74,7 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:bg-surface focus:text-ink focus:p-2 z-50">{t('nav.skip')}</a>
       <Header route={route} menuOpen={menu} onMenu={() => setMenu((m) => !m)} />
       <SideNav route={route} open={menu} onClose={closeMenu} />
-      <div id="page-body" className="flex-1 flex flex-col lg:pl-16">
+      <div id="page-body" className="flex-1 flex flex-col lg:pl-20">
       <ContextStack route={route} />
       <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 xl:pb-10"><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
       <footer className="bg-surface border-t border-line text-xs text-muted px-4 py-6 mb-16 xl:mb-0">

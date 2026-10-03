@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { LANGS, useI18n } from '../i18n'
 import { useTheme } from '../theme'
 import { NavLink } from '../store'
@@ -34,34 +34,63 @@ function Page({ title, sub, children }: { title: string; sub?: string; children:
 function Toast({ msg }: { msg: { tone: 'info' | 'danger'; text: string } | null }) {
   return <div role="status" aria-live="polite">{msg && <Warn tone={msg.tone}>{msg.text}</Warn>}</div>
 }
+/**
+ * WCAG 3.3.1 / 1.3.1: a form error is shown under the field it belongs to, the field is marked invalid and described by it,
+ * and focus moves to that field. `key` names the field group, `focus` the control to focus.
+ */
+function useFieldError() {
+  const [err, setErr] = useState<{ key: string; focus: string; text: string } | null>(null)
+  useEffect(() => { if (err) document.getElementById(err.focus)?.focus() }, [err])
+  return {
+    set: (key: string, focus: string, text: string) => setErr({ key, focus, text }),
+    clear: () => setErr(null),
+    invalid: (key: string) => err?.key === key || undefined,
+    describe: (key: string, ...more: string[]) => [err?.key === key ? `${key}-err` : '', ...more].filter(Boolean).join(' ') || undefined,
+    msg: (key: string) => err?.key === key ? <p id={`${key}-err`} className="text-sm text-danger-fg flex items-center gap-1.5 mt-1"><Icon name="alert" size={15} />{err.text}</p> : null,
+  }
+}
+type FieldError = ReturnType<typeof useFieldError>
+/** WCAG 3.3.2: required fields say so in their label */
+function Req() {
+  const { t } = useI18n()
+  return <span className="font-normal text-muted"> ({t('m.req')})</span>
+}
 function NeedRole({ role }: { role: 'seeker' | 'employer' }) {
   const { t } = useI18n()
   return <div className="card space-y-3"><p>{t('m.profile.none')}</p><NavLink to="choose-role" className="btn-primary inline-flex">{t(role === 'seeker' ? 'm.role.seeker' : 'm.role.employer')}<Icon name="next" size={16} /></NavLink></div>
 }
 
 /** country buttons + province list, shown next to the map */
-function PlaceFields({ country, province, onCountry, onProvince, idp }: { country: Country | null; province: string | null; onCountry: (c: Country) => void; onProvince: (p: string | null) => void; idp: string }) {
+function PlaceFields({ country, province, onCountry, onProvince, idp, fe }: { country: Country | null; province: string | null; onCountry: (c: Country) => void; onProvince: (p: string | null) => void; idp: string; fe: FieldError }) {
   const { t } = useI18n()
   const N = useNames()
   return (
-    <div className="grid sm:grid-cols-2 gap-3">
-      <fieldset><legend className="label">{t('m.country')}</legend>
-        <div className="flex gap-2">{COUNTRIES.map((c) => <button key={c} type="button" aria-pressed={country === c} onClick={() => onCountry(c)} className={`flex-1 min-h-[44px] rounded-lg border px-3 ${country === c ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{N.country(c)}</button>)}</div>
-      </fieldset>
-      <label className="block"><span className="label">{t('m.province')}</span>
-        <select id={idp} className="input" disabled={!country} value={province ?? ''} onChange={(e) => onProvince(e.target.value || null)}>
-          <option value="">{t('m.chooseProv')}</option>
-          {country && N.provList(country).map((p) => <option key={p} value={p}>{N.prov(p)}</option>)}
-        </select></label>
+    <div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <fieldset aria-describedby={fe.describe(idp)}><legend className="label">{t('m.country')}<Req /></legend>
+          <div className="flex gap-2">{COUNTRIES.map((c, i) => <button key={c} id={i === 0 ? `${idp}-c` : undefined} type="button" aria-pressed={country === c} onClick={() => onCountry(c)} className={`flex-1 min-h-[44px] rounded-lg border px-3 ${country === c ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{N.country(c)}</button>)}</div>
+        </fieldset>
+        <label className="block"><span className="label">{t('m.province')}<Req /></span>
+          <select id={idp} className="input" disabled={!country} aria-required="true" aria-invalid={fe.invalid(idp)} aria-describedby={fe.describe(idp)} value={province ?? ''} onChange={(e) => onProvince(e.target.value || null)}>
+            <option value="">{t('m.chooseProv')}</option>
+            {country && N.provList(country).map((p) => <option key={p} value={p}>{N.prov(p)}</option>)}
+          </select></label>
+      </div>
+      {fe.msg(idp)}
     </div>
   )
 }
-function SkillPicker({ skills, onChange }: { skills: Skill[]; onChange: (s: Skill[]) => void }) {
+function SkillPicker({ skills, onChange, idp, fe }: { skills: Skill[]; onChange: (s: Skill[]) => void; idp: string; fe: FieldError }) {
   const { t } = useI18n()
   const N = useNames()
   return (
-    <fieldset><legend className="label">{t('m.skills')}</legend>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-1">{SKILLS.map((s) => <label key={s} className="flex items-center gap-2 text-sm min-h-[32px]"><input type="checkbox" checked={skills.includes(s)} onChange={() => onChange(skills.includes(s) ? skills.filter((x) => x !== s) : [...skills, s])} />{N.skill(s)}</label>)}</div>
+    <fieldset aria-describedby={fe.describe(idp)}><legend className="label">{t('m.skills')}</legend>
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">{SKILLS.map((s, i) => (
+        <label key={s} className="chip-check">
+          <input id={i === 0 ? `${idp}-0` : undefined} type="checkbox" className="sr-only" aria-invalid={fe.invalid(idp)} checked={skills.includes(s)} onChange={() => onChange(skills.includes(s) ? skills.filter((x) => x !== s) : [...skills, s])} />
+          <span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.skill(s)}
+        </label>))}</div>
+      {fe.msg(idp)}
     </fieldset>
   )
 }
@@ -84,15 +113,23 @@ export function SeekPage() {
   const [industry, setIndustry] = useState<Industry>('manufacturing')
   const [skills, setSkills] = useState<Skill[]>([])
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
+  const fe = useFieldError()
   if (st.role !== 'seeker') return <Page title={t('m.seek.title')}><NeedRole role="seeker" /></Page>
   const originStep = !st.me.origin || editOrigin
   const pins: MapPin[] = st.me.pins.map((p) => ({ country: p.country, province: p.province, label: N.place(p.country, p.province), tone: 'mine' }))
-  const confirmOrigin = () => { if (oc && op) { setOrigin({ country: oc, province: op }); setEditOrigin(false); setMsg(null) } else setMsg({ tone: 'danger', text: N.problem('place') }) }
+  const confirmOrigin = () => {
+    if (oc && op) { setOrigin({ country: oc, province: op }); setEditOrigin(false); setMsg(null); fe.clear() }
+    else { setMsg(null); fe.set('origin-prov', oc ? 'origin-prov' : 'origin-prov-c', N.problem('place')) }
+  }
   const submitPin = (e: FormEvent) => {
     e.preventDefault()
-    if (!dc || !dp) { setMsg({ tone: 'danger', text: N.problem('place') }); return }
+    setMsg(null)
+    if (!dc || !dp) { fe.set('dest-prov', dc ? 'dest-prov' : 'dest-prov-c', N.problem('place')); return }
     const r = pin({ place: { country: dc, province: dp }, industry, skills })
-    if (r.ok) { setMsg({ tone: 'info', text: t('m.pin.done', { p: N.place(dc, dp) }) }); setDp(null); setSkills([]) } else setMsg({ tone: 'danger', text: N.problem(r.problem) })
+    if (r.ok) { fe.clear(); setMsg({ tone: 'info', text: t('m.pin.done', { p: N.place(dc, dp) }) }); setDp(null); setSkills([]); return }
+    if (r.problem === 'place' || r.problem === 'duplicate') fe.set('dest-prov', 'dest-prov', N.problem(r.problem))
+    else if (r.problem === 'skills') fe.set('seek-skills', 'seek-skills-0', N.problem(r.problem))
+    else { fe.clear(); setMsg({ tone: 'danger', text: N.problem(r.problem) }) }
   }
   return (
     <Page title={t('m.seek.title')}>
@@ -104,7 +141,7 @@ export function SeekPage() {
       {originStep ? (
         <section className="card space-y-3" aria-labelledby="s1h">
           <h2 id="s1h" className="h2">{t('m.seek.s1')}</h2>
-          <PlaceFields idp="origin-prov" country={oc} province={op} onCountry={(c) => { setOc(c); setOp(null) }} onProvince={setOp} />
+          <PlaceFields idp="origin-prov" fe={fe} country={oc} province={op} onCountry={(c) => { setOc(c); setOp(null); fe.clear() }} onProvince={(p) => { setOp(p); fe.clear() }} />
           <button type="button" className="btn-primary" onClick={confirmOrigin}>{t('m.next')}<Icon name="next" size={16} /></button>
         </section>
       ) : (
@@ -113,12 +150,12 @@ export function SeekPage() {
             <h2 id="s2h" className="h2">{t('m.seek.s2')}</h2>
             <p className="text-sm text-muted">{t('m.seek.from', { p: N.place(st.me.origin!.country, st.me.origin!.province) })} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => setEditOrigin(true)}>{t('m.edit')}</button></p>
           </div>
-          <PlaceFields idp="dest-prov" country={dc} province={dp} onCountry={(c) => { setDc(c); setDp(null) }} onProvince={setDp} />
+          <PlaceFields idp="dest-prov" fe={fe} country={dc} province={dp} onCountry={(c) => { setDc(c); setDp(null); fe.clear() }} onProvince={(p) => { setDp(p); fe.clear() }} />
           <p className="text-xs text-muted">{t('m.seek.same')}</p>
           <div className="border-t border-line pt-3 space-y-3">
             <h3 className="font-semibold">{t('m.seek.s3')}</h3>
             <IndustrySelect value={industry} onChange={setIndustry} label={t('m.industry')} />
-            <SkillPicker skills={skills} onChange={setSkills} />
+            <SkillPicker idp="seek-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); fe.clear() }} />
           </div>
           <button type="submit" className="btn-primary" disabled={st.me.pins.length >= MAX_PINS}><Icon name="pin" size={16} />{t('m.pin.go')}</button>
         </form>
@@ -130,7 +167,7 @@ export function SeekPage() {
           <ul className="grid sm:grid-cols-2 gap-2">{st.me.pins.map((p) => (
             <li key={p.id} className="card !p-3 flex items-start gap-3">
               <Icon name="pin" size={20} className="text-danger-fg mt-0.5" />
-              <div className="min-w-0 flex-1"><p className="font-semibold">{N.place(p.country, p.province)}</p><p className="text-sm text-muted">{N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p></div>
+              <div className="min-w-0 flex-1"><h3 className="font-semibold">{N.place(p.country, p.province)}</h3><p className="text-sm text-muted">{N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p></div>
               <button type="button" className="w-9 h-9 rounded-lg border border-control grid place-items-center hover:bg-surface3" aria-label={`${t('m.pin.remove')}: ${N.place(p.country, p.province)}`} title={t('m.pin.remove')} onClick={() => { unpin(p.id); setMsg({ tone: 'info', text: t('m.pin.removed') }) }}><Icon name="close" size={16} /></button>
             </li>))}</ul>)}
       </section>
@@ -162,13 +199,21 @@ export function HirePage() {
   const [industry, setIndustry] = useState<Industry>('manufacturing'), [skills, setSkills] = useState<Skill[]>([])
   const [years, setYears] = useState('0'), [details, setDetails] = useState('')
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
+  const fe = useFieldError()
   if (st.role !== 'employer') return <Page title={t('m.emp.title')}><NeedRole role="employer" /></Page>
   const mine = st.posts.filter((x) => x.employerId === MY_EMPLOYER)
+  const FIELD: Partial<Record<Problem, [string, string]>> = {
+    company: ['emp-company', 'emp-company'], position: ['emp-position', 'emp-position'], years: ['emp-years', 'emp-years'],
+    details: ['emp-details', 'emp-details'], contact: ['emp-details', 'emp-details'], skills: ['emp-skills', 'emp-skills-0'],
+  }
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    setMsg(null)
     if (!c || !p) { setMsg({ tone: 'danger', text: N.problem('place') }); return }
     const r = post({ place: { country: c, province: p }, company: company.trim(), position: position.trim(), industry, skills, minYears: Number(years), details: details.trim() })
-    if (r.ok) { setMsg({ tone: 'info', text: t('m.emp.done') }); setForm(false); setPosition(''); setSkills([]); setDetails(''); setP(null) } else setMsg({ tone: 'danger', text: N.problem(r.problem) })
+    if (r.ok) { fe.clear(); setMsg({ tone: 'info', text: t('m.emp.done') }); setForm(false); setPosition(''); setSkills([]); setDetails(''); setP(null); return }
+    const f = FIELD[r.problem]
+    if (f) fe.set(f[0], f[1], N.problem(r.problem)); else { fe.clear(); setMsg({ tone: 'danger', text: N.problem(r.problem) }) }
   }
   return (
     <Page title={t('m.emp.title')}>
@@ -180,20 +225,23 @@ export function HirePage() {
       {!form ? (
         <section className="card space-y-3" aria-labelledby="e1h">
           <h2 id="e1h" className="h2">{t('m.emp.s1')}</h2>
-          <PlaceFields idp="emp-prov" country={c} province={p} onCountry={(x) => { setC(x); setP(null) }} onProvince={setP} />
+          <PlaceFields idp="emp-prov" fe={fe} country={c} province={p} onCountry={(x) => { setC(x); setP(null) }} onProvince={setP} />
           <button type="button" className="btn-primary" disabled={!c || !p} onClick={() => { setForm(true); setMsg(null) }}><Icon name="posts" size={16} />{t('m.emp.fill')}</button>
         </section>
       ) : (
         <form className="card space-y-3" onSubmit={submit} aria-labelledby="e2h">
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="e2h" className="h2">{t('m.emp.s2')}</h2><p className="text-sm text-muted">{c && p && N.place(c, p)} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => setForm(false)}>{t('m.edit')}</button></p></div>
           <div className="grid sm:grid-cols-2 gap-3">
-            <label className="block"><span className="label">{t('m.emp.company')}</span><input className="input" required maxLength={80} value={company} onChange={(e) => setCompany(e.target.value)} /></label>
-            <label className="block"><span className="label">{t('m.emp.position')}</span><input className="input" required maxLength={80} value={position} onChange={(e) => setPosition(e.target.value)} /></label>
+            <div><label className="block"><span className="label">{t('m.emp.company')}<Req /></span><input id="emp-company" className="input" required maxLength={80} aria-invalid={fe.invalid('emp-company')} aria-describedby={fe.describe('emp-company', 'emp-company-hint')} value={company} onChange={(e) => { setCompany(e.target.value); fe.clear() }} /></label>
+              <span id="emp-company-hint" className="block text-xs text-muted mt-1">{t('m.hint.company')}</span>{fe.msg('emp-company')}</div>
+            <div><label className="block"><span className="label">{t('m.emp.position')}<Req /></span><input id="emp-position" className="input" required maxLength={80} aria-invalid={fe.invalid('emp-position')} aria-describedby={fe.describe('emp-position', 'emp-position-hint')} value={position} onChange={(e) => { setPosition(e.target.value); fe.clear() }} /></label>
+              <span id="emp-position-hint" className="block text-xs text-muted mt-1">{t('m.hint.position')}</span>{fe.msg('emp-position')}</div>
             <IndustrySelect value={industry} onChange={setIndustry} label={t('jb.field.industry')} />
-            <label className="block"><span className="label">{t('m.emp.years')}</span><input className="input" type="number" min={0} max={40} step={1} value={years} onChange={(e) => setYears(e.target.value)} /></label>
+            <div><label className="block"><span className="label">{t('m.emp.years')}</span><input id="emp-years" className="input" type="number" min={0} max={40} step={1} aria-invalid={fe.invalid('emp-years')} aria-describedby={fe.describe('emp-years')} value={years} onChange={(e) => { setYears(e.target.value); fe.clear() }} /></label>{fe.msg('emp-years')}</div>
           </div>
-          <SkillPicker skills={skills} onChange={setSkills} />
-          <label className="block"><span className="label">{t('m.emp.details')}</span><textarea className="input min-h-[96px]" maxLength={600} value={details} aria-describedby="det-hint" onChange={(e) => setDetails(e.target.value)} /><span id="det-hint" className="block text-xs text-muted mt-1">{t('m.emp.detailsHint')}</span></label>
+          <SkillPicker idp="emp-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); fe.clear() }} />
+          <div><label className="block"><span className="label">{t('m.emp.details')}</span><textarea id="emp-details" className="input min-h-[96px]" maxLength={600} aria-invalid={fe.invalid('emp-details')} aria-describedby={fe.describe('emp-details', 'det-hint')} value={details} onChange={(e) => { setDetails(e.target.value); fe.clear() }} /></label>
+            <span id="det-hint" className="block text-xs text-muted mt-1">{t('m.emp.detailsHint')}</span>{fe.msg('emp-details')}</div>
           <div className="flex flex-wrap items-center gap-3"><button type="submit" className="btn-primary"><Icon name="send" size={16} />{t('m.emp.post')}</button><span className="text-xs text-muted">{t('m.emp.noPay')}</span></div>
         </form>
       )}
@@ -201,7 +249,7 @@ export function HirePage() {
         <h2 id="myposts-h" className="h2">{t('m.posts')}</h2>
         {!mine.length ? <div className="card text-muted">{t('m.posts.none')}</div> : (
           <ul className="space-y-2">{mine.map((x) => (
-            <li key={x.id} className="card !p-4 space-y-2"><div><p className="font-semibold">{x.position}</p><p className="text-sm text-muted">{x.company} · {N.place(x.country, x.province)} · {N.industry(x.industry)}</p></div><PostStatus post={x} /></li>))}</ul>)}
+            <li key={x.id} className="card !p-4 space-y-2"><div><h3 className="font-semibold">{x.position}</h3><p className="text-sm text-muted">{x.company} · {N.place(x.country, x.province)} · {N.industry(x.industry)}</p></div><PostStatus post={x} /></li>))}</ul>)}
       </section>
     </Page>
   )
@@ -235,7 +283,7 @@ export function NotificationsPage() {
           return (
             <li key={p.id} className="card !p-4 space-y-2">
               <p className="text-xs font-semibold text-primary flex items-center gap-1.5"><Icon name="bell" size={14} />{t('m.offer.new')} · {why(reachTier(p, st.me))}</p>
-              <div><p className="font-semibold text-lg">{p.position}</p><p className="text-sm text-muted">{p.company} · {N.place(p.country, p.province)} · {N.industry(p.industry)}</p></div>
+              <div><h2 className="font-semibold text-lg">{p.position}</h2><p className="text-sm text-muted">{p.company} · {N.place(p.country, p.province)} · {N.industry(p.industry)}</p></div>
               <p className="text-sm">{t('jb.minYearsShort', { n: p.minYears })} · {p.skills.map(N.skill).join(', ')}</p>
               {p.details && <p className="text-sm text-muted">{p.details}</p>}
               {mineAcc ? (
@@ -322,7 +370,7 @@ export function BackofficePage() {
           return (
             <li key={p.id} className="card !p-4 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <div><p className="font-semibold">{p.position} · {p.company} {p.employerId !== MY_EMPLOYER && <span className="chip bg-surface3 text-muted border-line ml-1">{t('m.adm.sample')}</span>}</p><p className="text-sm text-muted">{N.place(p.country, p.province)} · {N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p></div>
+                <div><h3 className="font-semibold">{p.position} · {p.company} {p.employerId !== MY_EMPLOYER && <span className="chip bg-surface3 text-muted border-line ml-1">{t('m.adm.sample')}</span>}</h3><p className="text-sm text-muted">{N.place(p.country, p.province)} · {N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p></div>
                 <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(`m.tier.${tier}` as never)}</span>
               </div>
               <div className="grid sm:grid-cols-2 gap-3 text-sm">

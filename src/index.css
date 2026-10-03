@@ -145,6 +145,16 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
 .map-stage { background-color: rgb(var(--globe-ocean)); background-image: linear-gradient(to right, rgb(var(--grid-line) / calc(var(--grid-a) * .4)) 1px, transparent 0), linear-gradient(to bottom, rgb(var(--grid-line) / calc(var(--grid-a) * .4)) 1px, transparent 0); background-size: 56px 56px }
 
 /* matching prototype: pins on the map (mine = a seeker's pin, post = an employer post) */
-.g-pin { fill: rgb(var(--danger-fg)); stroke: rgb(var(--page)); stroke-width: 1.5 }
-.g-pin-post { fill: rgb(var(--primary)); stroke: rgb(var(--page)); stroke-width: 1.5 }
+.g-pin { fill: rgb(var(--danger-fg)); stroke: rgb(var(--page)); stroke-width: 2.5 }
+.g-pin-post { fill: rgb(var(--primary)); stroke: rgb(var(--page)); stroke-width: 2.5 }
 .g-pin-dot { fill: rgb(var(--page)) }
+
+/* skill choices: large tappable chips with a visible tick (the checkbox itself stays for keyboards and screen readers) */
+.chip-check { position: relative; display: flex; align-items: center; gap: .6rem; min-height: 44px; padding: .5rem .75rem; border: 1px solid rgb(var(--control-line)); border-radius: .75rem; font-size: .875rem; cursor: pointer; transition: background-color .15s ease }
+.chip-check:hover { background: rgb(var(--surface3)) }
+.chip-check:has(input:checked) { border-color: rgb(var(--primary)); background: rgb(var(--brand)); color: rgb(var(--brandfg)); font-weight: 600 }
+.chip-check:has(input:focus-visible) { outline: 3px solid rgb(var(--primary)); outline-offset: 2px }
+.chip-box { width: 1.25rem; height: 1.25rem; flex-shrink: 0; display: grid; place-items: center; border: 2px solid rgb(var(--control-line)); border-radius: .35rem }
+.chip-box svg { opacity: 0 }
+.chip-check:has(input:checked) .chip-box { background: rgb(var(--primary)); border-color: rgb(var(--primary)); color: rgb(var(--onprimary)) }
+.chip-check:has(input:checked) .chip-box svg { opacity: 1 }

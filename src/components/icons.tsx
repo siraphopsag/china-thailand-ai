@@ -1,5 +1,5 @@
 import {
-  ArrowLeft, ArrowRight, BookOpen, Building2, BriefcaseBusiness, Check, ChevronDown, ChevronUp, Circle, CircleAlert, CircleCheck, CircleDot, CircleHelp, ExternalLink, FileText,
+  ArrowLeft, ArrowRight, BookOpen, Building2, BriefcaseBusiness, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, CircleAlert, CircleCheck, CircleDot, CircleHelp, ExternalLink, FileText,
   House, Info, Landmark, Languages, ListChecks, Menu, Minus, Moon, Network, PieChart, Radar, Scale, Search, Settings, ShieldAlert, SlidersHorizontal, Sparkles, Square, SquareCheck,
   Sun, TrendingUp, TriangleAlert, UserCog, Wallet, X, Link2, LayoutDashboard, Globe2, Plus, LocateFixed, Plane, User, Bell, MapPin, ClipboardList, LogIn, LogOut, ShieldCheck, FastForward, Send,
 } from 'lucide-react'
@@ -8,7 +8,7 @@ import {
 const ICONS = {
   business: Building2, ownership: Network, pie: PieChart, legal: Scale, employment: BriefcaseBusiness, risk: ShieldAlert, documents: FileText, plan: ListChecks,
   search: Search, ai: Sparkles, language: Languages, settings: Settings, light: Sun, dark: Moon, back: ArrowLeft, next: ArrowRight,
-  ok: CircleCheck, warn: TriangleAlert, info: Info, help: CircleHelp, alert: CircleAlert, down: ChevronDown, up: ChevronUp, external: ExternalLink, home: House, menu: Menu, close: X,
+  ok: CircleCheck, warn: TriangleAlert, info: Info, help: CircleHelp, alert: CircleAlert, down: ChevronDown, up: ChevronUp, left: ChevronLeft, right: ChevronRight, external: ExternalLink, home: House, menu: Menu, close: X,
   check: Check, square: Square, squareCheck: SquareCheck, circle: Circle, circleDot: CircleDot, funding: Wallet, control: SlidersHorizontal, economic: TrendingUp,
   management: UserCog, ownershipCat: Landmark, monitor: Radar, sources: Link2, culture: BookOpen, overview: LayoutDashboard, dash: Minus, globe: Globe2, plus: Plus, minus: Minus, target: LocateFixed, plane: Plane,
   user: User, bell: Bell, pin: MapPin, posts: ClipboardList, login: LogIn, logout: LogOut, shield: ShieldCheck, fastForward: FastForward, send: Send,

@@ -74,12 +74,13 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
     if (country) { const s = shapes.find((x) => x.code === country); if (s) return viewForBox(s.b, w, h, country === 'CN' ? 0.8 : 0.72, 7) }
     return HOME
   }, [country, province, provs, shapes, path, w, h])
-  useEffect(() => {
+  const flyTo = (to: View) => {
     cancelAnimationFrame(anim.current)
     const from = viewRef.current, t0 = performance.now()
-    const step = (n: number) => { const p = Math.min(1, (n - t0) / 700); setView(lerpView(from, target, p)); if (p < 1) anim.current = requestAnimationFrame(step) }
-    anim.current = requestAnimationFrame(step); return () => cancelAnimationFrame(anim.current)
-  }, [target])
+    const step = (n: number) => { const p = Math.min(1, (n - t0) / 700); setView(lerpView(from, to, p)); if (p < 1) anim.current = requestAnimationFrame(step) }
+    anim.current = requestAnimationFrame(step)
+  }
+  useEffect(() => { flyTo(target); return () => cancelAnimationFrame(anim.current) }, [target]) // eslint-disable-line react-hooks/exhaustive-deps -- flyTo reads refs only
   const countryLift = useTween(country && !province ? 12 : 0, 420)
   const provLift = useTween(province ? 9 : 0, 380)
 
@@ -87,6 +88,8 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
   const svg = useRef<SVGSVGElement>(null)
   const down = useRef<{ x: number; y: number; moved: number; code?: string; prov?: string } | null>(null)
   const zoomAt = (f: number, cx = w / 2, cy = h / 2) => setView((v) => { const k = Math.max(1, Math.min(MAX_K, v.k * f)); const r = k / v.k; return clampView({ k, x: cx - (cx - v.x) * r, y: cy - (cy - v.y) * r }, w, h) })
+  // WCAG 2.5.7: everything a drag does can also be done with single taps (and the keyboard) via these buttons
+  const pan = (dx: number, dy: number) => { cancelAnimationFrame(anim.current); setView((v) => clampView({ ...v, x: v.x + dx * w * 0.2, y: v.y + dy * h * 0.2 }, w, h)) }
   const onDown = (e: ReactPointerEvent) => {
     cancelAnimationFrame(anim.current)
     const el = e.target as Element
@@ -144,6 +147,12 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
           <button type="button" className="globe-ctl" onClick={() => zoomAt(1.3)} aria-label={t('geo.zoomIn')} title={t('geo.zoomIn')}><Icon name="plus" size={18} /></button>
           <button type="button" className="globe-ctl" onClick={() => zoomAt(1 / 1.3)} aria-label={t('geo.zoomOut')} title={t('geo.zoomOut')}><Icon name="minus" size={18} /></button>
+          <button type="button" className="globe-ctl" onClick={() => flyTo(target)} aria-label={t('geo.resetView')} title={t('geo.resetView')}><Icon name="target" size={18} /></button>
+        </div>)}
+      {data && (
+        <div className="absolute bottom-3 right-3 grid grid-cols-3 gap-1" role="group" aria-label={t('m.pan')}>
+          {([['up', 0, 1, 2, 1], ['left', 1, 0, 1, 2], ['right', -1, 0, 3, 2], ['down', 0, -1, 2, 3]] as const).map(([dir, dx, dy, col, row]) => (
+            <button key={dir} type="button" className="globe-ctl" style={{ gridColumn: col, gridRow: row }} onClick={() => pan(dx, dy)} aria-label={t(`m.pan.${dir}`)} title={t(`m.pan.${dir}`)}><Icon name={dir} size={18} /></button>))}
         </div>)}
     </div>
   )

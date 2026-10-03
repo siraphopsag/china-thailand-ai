@@ -18,9 +18,9 @@ import { messages, type MsgKey } from './locales/index'
 import { match } from './locales/match'
 import { Landing } from './pages/intake'
 import { ChooseRolePage } from './pages/choose'
-import { BackofficePage, NotificationsPage } from './pages/match'
+import { BackofficePage, NotificationsPage, SeekPage } from './pages/match'
 import { Header } from './components/shell'
-import { sideItems } from './components/sidenav'
+import { SideNav, sideItems } from './components/sidenav'
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
@@ -202,5 +202,50 @@ describe('accessibility audit, round 1 (#1, #2, #7)', () => {
   })
   it('#7 focused controls scroll clear of the 64px sticky header', () => {
     expect(css).toMatch(/html\s*\{\s*scroll-padding-top:\s*5rem\s*\}/)
+  })
+})
+
+describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
+  const css = src('./index.css')
+  const seekerState = () => { const st = seedState(NOW); st.role = 'seeker'; st.me = seeker([]); return st }
+  it('#3 #9 the side rail marks the current page with a solid bar and always shows its labels', () => {
+    const page = html(<SideNav route="seek" open={false} onClose={() => {}} />, seekerState())
+    const current = page.match(/<a [^>]*aria-current="page"[^>]*>([\s\S]*?)<\/a>/)
+    expect(current?.[0]).toContain('href="/seek"')
+    expect(current?.[1]).toContain('w-1 rounded-r-full bg-primary')
+    for (const k of ['m.home', 'm.profile', 'm.notif', 'm.pins', 'm.prepare', 'm.settings', 'm.help'] as const) expect(page, k).toContain(`>${T(k)}</span>`)
+    expect(page).not.toMatch(/<a [^>]*title=/) // no hover-only names
+    expect(src('./App.tsx')).toContain('lg:pl-20')
+  })
+  it('#4 the map can be moved with single taps or the keyboard (four move buttons + back to the framed view)', () => {
+    const geo = src('./components/geomap.tsx')
+    for (const d of ['up', 'down', 'left', 'right']) expect(geo).toContain(`['${d}',`)
+    expect(geo).toContain("aria-label={t(`m.pan.${dir}`)}")
+    expect(geo).toContain("onClick={() => flyTo(target)} aria-label={t('geo.resetView')}")
+    expect(geo).toContain("role=\"group\" aria-label={t('m.pan')}")
+  })
+  it('#5 job titles on notifications and in the back office are headings', () => {
+    const st = seedState(NOW); st.role = 'seeker'
+    st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(0) }])
+    expect(html(<NotificationsPage />, st)).toMatch(/<h2 class="[^"]*">Quality Control Engineer<\/h2>/)
+    expect(src('./pages/match.tsx')).toMatch(/<h3 className="font-semibold">\{p\.position\} · \{p\.company\}/)
+  })
+  it('#6 #8 the pin form marks required fields, offers tick chips and ties errors to their field', () => {
+    const page = html(<SeekPage />, { ...seekerState(), me: seeker([]) })
+    expect(page).toContain(`(${T('m.req')})`)
+    expect(page).toMatch(/<select id="dest-prov"[^>]*aria-required="true"/)
+    expect(page).toContain('id="dest-prov-c"') // focus target when no country is chosen yet
+    expect(page.match(/class="chip-check"/g)?.length).toBe(12)
+    expect(page).toMatch(/<input id="seek-skills-0" type="checkbox" class="sr-only"/)
+    const m = src('./pages/match.tsx')
+    expect(m).toMatch(/useEffect\(\(\) => \{ if \(err\) document\.getElementById\(err\.focus\)\?\.focus\(\) \}, \[err\]\)/)
+    expect(m).toContain("aria-describedby={fe.describe('emp-company', 'emp-company-hint')}")
+    expect(m).toContain("contact: ['emp-details', 'emp-details']")
+    expect(css).toMatch(/\.chip-check:has\(input:focus-visible\)\s*\{\s*outline:\s*3px solid/)
+    expect(css).toMatch(/\.chip-check:has\(input:checked\) \.chip-box svg\s*\{\s*opacity:\s*1/)
+  })
+  it('#10 pins have a thicker outline', () => {
+    expect(css).toMatch(/\.g-pin \{[^}]*stroke-width: 2\.5/)
+    expect(css).toMatch(/\.g-pin-post \{[^}]*stroke-width: 2\.5/)
   })
 })

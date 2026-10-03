@@ -69,11 +69,14 @@ export function SideNav({ route, open, onClose }: { route: string; open: boolean
       const badge = n.key === 'm.notif' && unread > 0
       return (
         <li key={n.key}>
-          <NavLink to={n.to} onNavigate={follow} aria-current={on ? 'page' : undefined} title={wide ? undefined : t(n.key as never)} aria-label={badge ? `${t(n.key as never)} · ${t('m.unread', { n: unread })}` : t(n.key as never)}
-            className={`relative flex items-center gap-3 rounded-xl min-h-[44px] transition-colors ${wide ? 'px-3' : 'justify-center w-11 mx-auto'} ${on ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3 text-ink'}`}>
+          <NavLink to={n.to} onNavigate={follow} aria-current={on ? 'page' : undefined} aria-label={badge ? `${t(n.key as never)} · ${t('m.unread', { n: unread })}` : t(n.key as never)}
+            className={`relative flex items-center rounded-xl transition-colors ${wide ? 'gap-3 px-3 min-h-[44px]' : 'flex-col justify-center gap-0.5 w-[72px] mx-auto min-h-[56px] px-1 py-1.5 text-center'} ${on ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3 text-ink'}`}>
+            {/* WCAG 1.4.1 / 1.4.11: the current page also gets a solid bar, not only a pale fill */}
+            {on && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary" aria-hidden />}
             <Icon name={n.icon} size={20} />
-            {wide && <span className="text-sm">{t(n.key as never)}</span>}
-            {badge && <span className={`absolute ${wide ? 'right-3' : 'top-1 right-1'} min-w-[18px] h-[18px] px-1 rounded-full bg-danger-fg text-page text-[11px] font-bold grid place-items-center`} aria-hidden>{unread}</span>}
+            {/* the label is always visible, also in the narrow rail */}
+            <span className={wide ? 'text-sm' : 'text-[11px] leading-tight'}>{t(n.key as never)}</span>
+            {badge && <span className={`absolute ${wide ? 'right-3' : 'top-1 right-3'} min-w-[18px] h-[18px] px-1 rounded-full bg-danger-fg text-page text-[11px] font-bold grid place-items-center`} aria-hidden>{unread}</span>}
           </NavLink>
         </li>)
     })}</ul>
@@ -81,7 +84,7 @@ export function SideNav({ route, open, onClose }: { route: string; open: boolean
   return (
     <>
       {/* large screens: always-visible rail, widened when opened */}
-      <nav aria-label={t('m.side')} className={`hidden lg:block fixed left-0 top-16 bottom-0 z-30 border-r border-line bg-surface py-3 transition-[width] ${open ? 'w-56 px-2' : 'w-16'}`}>{list(open)}</nav>
+      <nav aria-label={t('m.side')} className={`hidden lg:block fixed left-0 top-16 bottom-0 z-30 border-r border-line bg-surface py-3 overflow-y-auto transition-[width] ${open ? 'w-56 px-2' : 'w-20'}`}>{list(open)}</nav>
       {/* small screens: drawer */}
       {open && (
         <div className="lg:hidden fixed inset-0 top-16 z-40">
