@@ -159,6 +159,8 @@ export const match = {
   'm.err.unknown': ['ไม่พบข้อมูล', '找不到数据', 'Not found'],
   // accessibility fixes (audit rounds 2–3)
   'm.req': ['จำเป็น', '必填', 'required'],
+  'm.chooseCountry': ['เลือกประเทศ', '选择国家', 'Choose a country'],
+  'm.countryOpen': ['เปิดให้บริการแล้ว', '已开放', 'Open now'],
   'm.hint.company': ['2–80 ตัวอักษร', '2–80 个字符', '2–80 characters'],
   'm.hint.position': ['3–80 ตัวอักษร', '3–80 个字符', '3–80 characters'],
 } as const satisfies Record<string, Msg>

@@ -6,15 +6,23 @@ import type { GeometryCollection, Topology } from 'topojson-specification'
 import { useI18n } from '../i18n'
 import { Icon } from './icons'
 import { GEO, HOME, MAX_K, clampView, codeOfIso, lerpView, viewForBox, type GeoCode, type View } from '../geo'
+import capitals from '../data/geo/capitals.json'
 
 /**
  * Reusable map of China + ASEAN with Thai and Chinese provinces (same Natural Earth data and raised-relief style as the original
  * map). Controlled: the parent decides the focused country and province; the map frames them, raises them, and draws pins.
- * Only Thailand and China can be chosen today; other ASEAN countries are shown as "coming later".
+ * Every ASEAN country can be focused (its capital is shown); only Thailand and China have provinces today — the parent shows
+ * "coming soon" for the others.
+ *
+ * Camera: the map plane leans back (oblique view). The lean is stronger on the overview and smaller once a country is chosen,
+ * so provinces are easy to read. Labels, capitals and pins are drawn on a flat layer above the plane, positioned through the same
+ * projection, so text always stands upright.
  */
 const CHINA_PARTS = new Set(['156', '344', '446'])
 type CountryF = Feature<Geometry, { name?: string }>
 type ProvinceF = Feature<Geometry, { iso_3166_2?: string; adm0_a3?: string }>
+type Capital = { country: GeoCode; name: string; lon: number; lat: number }
+const CAPITALS = capitals as Capital[]
 let cache: Promise<{ countries: CountryF[]; provinces: ProvinceF[] }> | null = null
 function loadGeo() {
   cache ??= Promise.all([import('../data/geo/region-asean-china.json'), import('../data/geo/admin1-th-cn.json')]).then(([r, a]) => {
@@ -44,9 +52,22 @@ function useTween(target: number, ms: number) {
   return v
 }
 
+/** camera lean in degrees: overview vs. a chosen country/province (owner review, Oct 2026); phones lean a little less */
+export const TILT = { overview: 28, focused: 14, phone: 0.85 }
+/** CSS perspective distance and the scale that keeps the leaning plane filling the frame */
+const perspectiveFor = (w: number) => (w < 640 ? 900 : 1100)
+const scaleFor = (deg: number) => 1 + deg * 0.0053
+/** where a point of the flat map plane appears on screen once the plane leans back (same maths as the CSS transform) */
+export function leanPoint(x: number, y: number, w: number, h: number, deg: number): [number, number] {
+  const ox = w / 2, oy = h * 0.62, P = perspectiveFor(w), s = scaleFor(deg), a = (deg * Math.PI) / 180
+  const X = (x - ox) * s, Y = (y - oy) * s
+  const z = Y * Math.sin(a), f = P / (P - z)
+  return [ox + X * f, oy + Y * Math.cos(a) * f]
+}
+
 export interface MapPin { country: 'TH' | 'CN'; province: string; label: string; tone?: 'mine' | 'post' }
 export function GeoMap({ country, province, pins = [], onPickCountry, onPickProvince, label, className = 'h-[46vh] min-h-[280px] max-h-[520px]' }: {
-  country: 'TH' | 'CN' | null; province: string | null; pins?: MapPin[]; onPickCountry: (c: 'TH' | 'CN') => void; onPickProvince: (code: string | null) => void; label: string; className?: string
+  country: GeoCode | null; province: string | null; pins?: MapPin[]; onPickCountry: (c: GeoCode) => void; onPickProvince: (code: string | null) => void; label: string; className?: string
 }) {
   const { t } = useI18n()
   const [data, setData] = useState<{ countries: CountryF[]; provinces: ProvinceF[] } | null>(null)
@@ -65,22 +86,24 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
   const path = useMemo(() => geoPath(proj), [proj])
   const shapes = useMemo(() => (data?.countries ?? []).map((f) => ({ code: codeOfIso(f.id), d: path(f) ?? '', b: path.bounds(f) as [[number, number], [number, number]] })), [data, path])
   const provs = useMemo(() => (data?.provinces ?? []).map((f) => ({ f, code: f.properties.iso_3166_2!, country: (f.properties.adm0_a3 === 'THA' ? 'TH' : 'CN') as 'TH' | 'CN', d: path(f) ?? '', c: geoCentroid(f) as [number, number] })), [data, path])
+  const capitalOf = (c: GeoCode) => CAPITALS.find((x) => x.country === c)
 
   const [view, setView] = useState<View>(HOME)
   const viewRef = useRef(view); viewRef.current = view
   const anim = useRef(0)
   const target = useMemo<View>(() => {
     if (province) { const p = provs.find((x) => x.code === province); if (p) { const b = path.bounds(p.f) as [[number, number], [number, number]]; const pad = Math.max(b[1][0] - b[0][0], b[1][1] - b[0][1]) * 1.6; return viewForBox([[b[0][0] - pad, b[0][1] - pad], [b[1][0] + pad, b[1][1] + pad]], w, h, 0.9, 10) } }
+    if (country === 'SG') { const c = capitalOf('SG'), p = c && proj([c.lon, c.lat]); if (p) return viewForBox([[p[0] - 12, p[1] - 12], [p[0] + 12, p[1] + 12]], w, h, 0.7, MAX_K) } // too small to frame by its outline
     if (country) { const s = shapes.find((x) => x.code === country); if (s) return viewForBox(s.b, w, h, country === 'CN' ? 0.8 : 0.72, 7) }
     // nothing chosen yet: frame the two countries in service (Thailand + China), not all of ASEAN
     const two = shapes.filter((x) => x.code === 'TH' || x.code === 'CN')
     if (two.length) {
       const x0 = Math.min(...two.map((x) => x.b[0][0])), y0 = Math.min(...two.map((x) => x.b[0][1])), x1 = Math.max(...two.map((x) => x.b[1][0])), y1 = Math.max(...two.map((x) => x.b[1][1]))
-      // extra room at the bottom: the tilted camera pushes the near (southern) edge outwards
-      return viewForBox([[x0, y0], [x1, y1 + (y1 - y0) * 0.16]], w, h, 0.86, 4)
+      // a little room at the bottom: the leaning camera pushes the near (southern) edge outwards
+      return viewForBox([[x0, y0], [x1, y1 + (y1 - y0) * 0.22]], w, h, 0.94, 4)
     }
     return HOME
-  }, [country, province, provs, shapes, path, w, h])
+  }, [country, province, provs, shapes, path, proj, w, h]) // eslint-disable-line react-hooks/exhaustive-deps -- capitalOf reads a constant
   const flyTo = (to: View) => {
     cancelAnimationFrame(anim.current)
     const from = viewRef.current, t0 = performance.now()
@@ -90,6 +113,7 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
   useEffect(() => { flyTo(target); return () => cancelAnimationFrame(anim.current) }, [target]) // eslint-disable-line react-hooks/exhaustive-deps -- flyTo reads refs only
   const countryLift = useTween(country && !province ? 12 : 0, 420)
   const provLift = useTween(province ? 9 : 0, 380)
+  const tilt = useTween((country || province ? TILT.focused : TILT.overview) * (w < 640 ? TILT.phone : 1), 520)
 
   // gestures: drag pans, wheel/buttons zoom, a tap picks a province (inside the focused country) or a country
   const svg = useRef<SVGSVGElement>(null)
@@ -104,13 +128,13 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
   const onMove = (e: ReactPointerEvent) => {
     const d = down.current; if (!d) return
     const dx = e.clientX - d.x, dy = e.clientY - d.y; d.x = e.clientX; d.y = e.clientY; d.moved += Math.abs(dx) + Math.abs(dy)
-    setView((v) => clampView({ ...v, x: v.x + dx, y: v.y + dy * 1.25 }, w, h)) // the plane leans back, so vertical moves are foreshortened
+    setView((v) => clampView({ ...v, x: v.x + dx, y: v.y + dy / Math.cos((tilt * Math.PI) / 180) }, w, h)) // the plane leans back, so vertical moves are foreshortened
   }
   const onUp = () => {
     const d = down.current; down.current = null
     if (!d || d.moved > 6) return
     if (d.prov && country && d.prov.startsWith(country + '-')) onPickProvince(d.prov === province ? null : d.prov)
-    else if (d.code === 'TH' || d.code === 'CN') onPickCountry(d.code)
+    else if (d.code && d.code in GEO) onPickCountry(d.code as GeoCode)
   }
   useEffect(() => {
     const el = svg.current; if (!el) return
@@ -122,33 +146,52 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
   const focusShape = country ? shapes.find((s) => s.code === country) : undefined
   const provShape = province ? provs.find((p) => p.code === province) : undefined
   const Lc = countryLift / view.k
-  const screen = (lon: number, lat: number, lift = 0): [number, number] | null => { const p = proj([lon, lat]); return p ? [view.x + view.k * p[0], view.y + view.k * p[1] - lift] : null }
+  /** flat-plane point (after zoom/pan and the raise of the selection) → upright screen position on the leaning plane */
+  const flat = (x: number, y: number, lift = 0) => leanPoint(view.x + view.k * x, view.y + view.k * y - lift, w, h, tilt)
+  const geoPt = (lon: number, lat: number, lift = 0): [number, number] | null => { const p = proj([lon, lat]); return p ? flat(p[0], p[1], lift) : null }
   const name = (c: string) => t(`geo.c.${c}` as never)
+  const cityName = (c: Capital) => t(`geo.city.${c.name.replace(/\s/g, '')}` as never)
+  // capitals: Bangkok and Beijing on the overview, otherwise the chosen country's capital
+  const shownCapitals = (country ? [capitalOf(country)] : [capitalOf('TH'), capitalOf('CN')]).filter((c): c is Capital => !!c)
+  const inView = (p: [number, number] | null): p is [number, number] => !!p && p[0] > -40 && p[0] < w + 40 && p[1] > -40 && p[1] < h + 40
   return (
     <div ref={box} className={`relative rounded-2xl overflow-hidden border border-line map-ocean ${className}`}>
       {failed && <p className="absolute inset-0 grid place-items-center p-6 text-center" role="alert">{t('geo.error')}</p>}
       {!data && !failed && <p className="absolute inset-0 grid place-items-center" role="status"><span className="flex items-center gap-2"><Icon name="globe" size={18} className="animate-pulse text-primary" />{t('geo.loading')}</span></p>}
       {data && (
-        <div className="map-tilt map-stage">
+        <div className="map-tilt map-stage" style={{ transform: `perspective(${perspectiveFor(w)}px) rotateX(${tilt}deg) scale(${scaleFor(tilt)})` }}>
           <svg ref={svg} width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => { down.current = null }}
             className="block select-none cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
             <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
               {shapes.map((s, i) => <path key={i} d={s.d} data-code={s.code} className={'g-c ' + paint(s.code)}>{s.code && <title>{name(s.code)}</title>}</path>)}
-              {focusShape && <Raised d={focusShape.d} lift={countryLift} k={view.k} side="g-side" top="g-top" />}
+              {focusShape && <Raised d={focusShape.d} lift={countryLift} k={view.k} side={GEO[focusShape.code!].status === 'active' ? 'g-side' : 'g-side-soon'} top="g-top" />}
               {country && <g transform={`translate(0,${-Lc})`}>{provs.filter((p) => p.country === country).map((p) => <path key={p.code} d={p.d} data-prov={p.code} className={'g-prov' + (p.code === province ? ' is-sel' : '')}><title>{t(`prov.${p.code}` as never)}</title></path>)}</g>}
               {provShape && <Raised d={provShape.d} lift={provLift} k={view.k} side="g-pside" top="g-ptop" />}
             </g>
-            {!country && (['TH', 'CN'] as const).map((c) => { const s = shapes.find((x) => x.code === c); if (!s) return null; const x = view.x + view.k * ((s.b[0][0] + s.b[1][0]) / 2), y = view.y + view.k * ((s.b[0][1] + s.b[1][1]) / 2); return <text key={c} x={x} y={y} textAnchor="middle" className="g-label pointer-events-none">{name(c)}</text> })}
-            {provShape && (() => { const xy = screen(provShape.c[0], provShape.c[1], provLift + countryLift); return xy ? <text x={xy[0]} y={xy[1] - 14} textAnchor="middle" className="g-name pointer-events-none">{t(`prov.${provShape.code}` as never)}</text> : null })()}
-            {pins.map((pn, i) => {
-              const p = provs.find((x) => x.code === pn.province); if (!p) return null
-              const xy = screen(p.c[0], p.c[1], (pn.province === province ? provLift : 0) + (pn.country === country ? countryLift : 0)); if (!xy) return null
-              return <g key={i} transform={`translate(${xy[0]},${xy[1]})`} className="pointer-events-none"><title>{pn.label}</title>
-                <path d="M0 0 C-7 -9 -9 -13 -9 -17 A9 9 0 1 1 9 -17 C9 -13 7 -9 0 0 Z" className={pn.tone === 'post' ? 'g-pin-post' : 'g-pin'} /><circle cx={0} cy={-17} r={3.2} className="g-pin-dot" /></g>
-            })}
           </svg>
         </div>)}
       {data && <div className="map-haze" aria-hidden />}
+      {/* upright layer: names, capitals and pins stand straight while the map below leans back */}
+      {data && (
+        <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="absolute inset-0 pointer-events-none" aria-hidden>
+          {!country && (['TH', 'CN'] as const).map((c) => {
+            const s = shapes.find((x) => x.code === c); if (!s) return null
+            const p = flat((s.b[0][0] + s.b[1][0]) / 2, (s.b[0][1] + s.b[1][1]) / 2)
+            // keep the country name clear of its capital's name (Bangkok sits near the middle of Thailand)
+            const cap = capitalOf(c), cp = cap && geoPt(cap.lon, cap.lat), near = cp && Math.abs(cp[1] - p[1]) < 22 && p[0] > cp[0] - 30 && p[0] < cp[0] + 130
+            return <text key={c} x={near ? cp[0] - 12 : p[0]} y={near ? cp[1] - 16 : p[1]} textAnchor={near ? 'end' : 'middle'} className="g-label">{name(c)}</text>
+          })}
+          {shownCapitals.map((c) => { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); return inView(p) ? (
+            <g key={c.country}><circle cx={p[0]} cy={p[1]} r={5.5} className="g-capital" /><text x={p[0] + 9} y={p[1] + 4} className="g-city">{cityName(c)}</text></g>) : null })}
+          {provShape && (() => { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); return p ? <text x={p[0]} y={p[1] - 16} textAnchor="middle" className="g-name">{t(`prov.${provShape.code}` as never)}</text> : null })()}
+          {pins.map((pn, i) => {
+            const pv = provs.find((x) => x.code === pn.province); if (!pv) return null
+            const p = geoPt(pv.c[0], pv.c[1], (pn.province === province ? provLift : 0) + (pn.country === country ? countryLift : 0)); if (!inView(p)) return null
+            return <g key={i} transform={`translate(${p[0]},${p[1]})`}><title>{pn.label}</title>
+              <ellipse cx={0} cy={0} rx={6} ry={2.2} className="g-shadow" />
+              <path d="M0 0 C-7 -9 -9 -13 -9 -17 A9 9 0 1 1 9 -17 C9 -13 7 -9 0 0 Z" className={pn.tone === 'post' ? 'g-pin-post' : 'g-pin'} /><circle cx={0} cy={-17} r={3.2} className="g-pin-dot" /></g>
+          })}
+        </svg>)}
       {data && (
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
           <button type="button" className="globe-ctl" onClick={() => zoomAt(1.3)} aria-label={t('geo.zoomIn')} title={t('geo.zoomIn')}><Icon name="plus" size={18} /></button>

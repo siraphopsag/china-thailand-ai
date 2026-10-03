@@ -4,8 +4,10 @@ import { useTheme } from '../theme'
 import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { provinces } from '../locales/provinces'
-import { isTaken, offersFor, reachTier, tierOf, isVisibleTo, type Problem } from '../domain/match/logic'
-import { COUNTRIES, INDUSTRIES, MAX_PINS, ME, MY_EMPLOYER, SKILLS, type Country, type Industry, type Post, type Skill, type Tier } from '../domain/match/types'
+import { isCountry, isTaken, offersFor, reachTier, tierOf, isVisibleTo, type Problem } from '../domain/match/logic'
+import { INDUSTRIES, MAX_PINS, ME, MY_EMPLOYER, SKILLS, type Country, type Industry, type Post, type Skill, type Tier } from '../domain/match/types'
+import { ACTIVE, GEO, SOON, type GeoCode } from '../geo'
+import capitalsData from '../data/geo/capitals.json'
 import { GeoMap, type MapPin } from '../components/geomap'
 import { Warn } from '../components/ui'
 import { Icon } from '../components/icons'
@@ -14,14 +16,15 @@ import { Icon } from '../components/icons'
  * Pages of the matching prototype. Data stay in this browser (see matchData.tsx); forwarding to agencies is simulated and
  * nothing is sent anywhere. Links to agencies open their official websites.
  */
+const CAPITALS = capitalsData as { country: GeoCode; name: string }[]
 const AGENCIES = [{ key: 'm.agency.doe', url: 'https://www.doe.go.th/' }, { key: 'm.agency.dsd', url: 'https://www.dsd.go.th/' }] as const
 
 function useNames() {
   const { t, lang } = useI18n()
   const collator = useMemo(() => new Intl.Collator(lang === 'zh' ? 'zh-CN' : lang), [lang])
   return {
-    country: (c: Country) => t(`geo.c.${c}` as never), prov: (p: string) => t(`prov.${p}` as never),
-    place: (c: Country, p: string) => `${t(`prov.${p}` as never)}, ${t(`geo.c.${c}` as never)}`,
+    country: (c: GeoCode) => t(`geo.c.${c}` as never), prov: (p: string) => t(`prov.${p}` as never),
+    place: (c: GeoCode, p: string) => `${t(`prov.${p}` as never)}, ${t(`geo.c.${c}` as never)}`,
     skill: (s: Skill) => t(`jb.skill.${s}` as never), industry: (i: Industry) => t(`jb.industry.${i}` as never),
     provList: (c: Country) => Object.keys(provinces).filter((k) => k.startsWith(`prov.${c}-`)).map((k) => k.slice(5)).sort((a, b) => collator.compare(t(`prov.${a}` as never), t(`prov.${b}` as never))),
     problem: (p: Problem) => t(`m.err.${p}` as never),
@@ -71,22 +74,44 @@ function NeedRole({ role }: { role: 'seeker' | 'employer' }) {
 }
 
 /** country buttons + province list, shown next to the map */
-function PlaceFields({ country, province, onCountry, onProvince, idp, fe }: { country: Country | null; province: string | null; onCountry: (c: Country) => void; onProvince: (p: string | null) => void; idp: string; fe: FieldError }) {
+/**
+ * Country list with every ASEAN country (+ China). Only Thailand and China are open today; choosing another one frames it on the
+ * map, shows its capital and a "coming soon" note, and keeps the province list and the next step closed. Nothing is saved for it.
+ */
+function PlaceFields({ country, province, onCountry, onProvince, idp, fe }: { country: GeoCode | null; province: string | null; onCountry: (c: GeoCode) => void; onProvince: (p: string | null) => void; idp: string; fe: FieldError }) {
   const { t } = useI18n()
   const N = useNames()
+  const open = isCountry(country)
   return (
-    <div>
+    <div className="space-y-3">
       <div className="grid sm:grid-cols-2 gap-3">
-        <fieldset aria-describedby={fe.describe(idp)}><legend className="label">{t('m.country')}<Req /></legend>
-          <div className="flex gap-2">{COUNTRIES.map((c, i) => <button key={c} id={i === 0 ? `${idp}-c` : undefined} type="button" aria-pressed={country === c} onClick={() => onCountry(c)} className={`flex-1 min-h-[44px] rounded-lg border px-3 ${country === c ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{N.country(c)}</button>)}</div>
-        </fieldset>
+        <label className="block"><span className="label">{t('m.country')}<Req /></span>
+          <select id={`${idp}-c`} className="input" aria-required="true" aria-invalid={fe.invalid(idp)} aria-describedby={fe.describe(idp)} value={country ?? ''} onChange={(e) => { const v = e.target.value; if (v in GEO) onCountry(v as GeoCode) }}>
+            <option value="" disabled>{t('m.chooseCountry')}</option>
+            <optgroup label={t('m.countryOpen')}>{ACTIVE.map((c) => <option key={c} value={c}>{N.country(c)}</option>)}</optgroup>
+            <optgroup label={t('geo.soon')}>{SOON.map((c) => <option key={c} value={c}>{N.country(c)} · {t('geo.soon')}</option>)}</optgroup>
+          </select></label>
         <label className="block"><span className="label">{t('m.province')}<Req /></span>
-          <select id={idp} className="input" disabled={!country} aria-required="true" aria-invalid={fe.invalid(idp)} aria-describedby={fe.describe(idp)} value={province ?? ''} onChange={(e) => onProvince(e.target.value || null)}>
+          <select id={idp} className="input" disabled={!open} aria-required="true" aria-invalid={fe.invalid(idp)} aria-describedby={fe.describe(idp)} value={province ?? ''} onChange={(e) => onProvince(e.target.value || null)}>
             <option value="">{t('m.chooseProv')}</option>
-            {country && N.provList(country).map((p) => <option key={p} value={p}>{N.prov(p)}</option>)}
+            {isCountry(country) && N.provList(country).map((p) => <option key={p} value={p}>{N.prov(p)}</option>)}
           </select></label>
       </div>
+      {country && !open && <SoonNote country={country} />}
       {fe.msg(idp)}
+    </div>
+  )
+}
+/** a planned ASEAN country: its capital and a plain "coming soon" note (announced politely) */
+export function SoonNote({ country }: { country: GeoCode }) {
+  const { t } = useI18n()
+  const N = useNames()
+  const cap = CAPITALS.find((c) => c.country === country)
+  return (
+    <div role="status" className="card-i space-y-1.5">
+      <p className="flex flex-wrap items-center gap-2"><b className="text-base">{N.country(country)}</b><span className="chip bg-info-bg text-info-fg border-info-line">{t('geo.soon')}</span></p>
+      {cap && <p className="text-sm flex items-center gap-2"><span className="inline-block w-2.5 h-2.5 rounded-full bg-[rgb(var(--globe-capital))]" aria-hidden />{t('geo.capital')}: <b>{t(`geo.city.${cap.name.replace(/\s/g, '')}` as never)}</b></p>}
+      <p className="text-sm text-muted">{t('geo.soon.t')} {t('geo.soon.now')}</p>
     </div>
   )
 }
@@ -132,8 +157,8 @@ export function SeekPage() {
   const N = useNames()
   const { st, setOrigin, pin, unpin } = useMatch()
   const [editOrigin, setEditOrigin] = useState(false)
-  const [oc, setOc] = useState<Country | null>(st.me.origin?.country ?? null), [op, setOp] = useState<string | null>(st.me.origin?.province ?? null)
-  const [dc, setDc] = useState<Country | null>(null), [dp, setDp] = useState<string | null>(null)
+  const [oc, setOc] = useState<GeoCode | null>(st.me.origin?.country ?? null), [op, setOp] = useState<string | null>(st.me.origin?.province ?? null)
+  const [dc, setDc] = useState<GeoCode | null>(null), [dp, setDp] = useState<string | null>(null)
   const [industry, setIndustry] = useState<Industry>('manufacturing')
   const [skills, setSkills] = useState<Skill[]>([])
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
@@ -142,13 +167,13 @@ export function SeekPage() {
   const originStep = !st.me.origin || editOrigin
   const pins: MapPin[] = st.me.pins.map((p) => ({ country: p.country, province: p.province, label: N.place(p.country, p.province), tone: 'mine' }))
   const confirmOrigin = () => {
-    if (oc && op) { setOrigin({ country: oc, province: op }); setEditOrigin(false); setMsg(null); fe.clear() }
+    if (isCountry(oc) && op) { setOrigin({ country: oc, province: op }); setEditOrigin(false); setMsg(null); fe.clear() }
     else { setMsg(null); fe.set('origin-prov', oc ? 'origin-prov' : 'origin-prov-c', N.problem('place')) }
   }
   const submitPin = (e: FormEvent) => {
     e.preventDefault()
     setMsg(null)
-    if (!dc || !dp) { fe.set('dest-prov', dc ? 'dest-prov' : 'dest-prov-c', N.problem('place')); return }
+    if (!isCountry(dc) || !dp) { fe.set('dest-prov', isCountry(dc) ? 'dest-prov' : 'dest-prov-c', N.problem('place')); return }
     const r = pin({ place: { country: dc, province: dp }, industry, skills })
     if (r.ok) { fe.clear(); setMsg({ tone: 'info', text: t('m.pin.done', { p: N.place(dc, dp) }) }); setDp(null); setSkills([]); return }
     if (r.problem === 'place' || r.problem === 'duplicate') fe.set('dest-prov', 'dest-prov', N.problem(r.problem))
@@ -167,7 +192,7 @@ export function SeekPage() {
         <section className="card space-y-3" aria-labelledby="s1h">
           <h2 id="s1h" className="h2">{t('m.seek.s1')}</h2>
           <PlaceFields idp="origin-prov" fe={fe} country={oc} province={op} onCountry={(c) => { setOc(c); setOp(null); fe.clear() }} onProvince={(p) => { setOp(p); fe.clear() }} />
-          <button type="button" className="btn-primary" onClick={confirmOrigin}>{t('m.next')}<Icon name="next" size={16} /></button>
+          <button type="button" className="btn-primary" disabled={!!oc && !isCountry(oc)} onClick={confirmOrigin}>{t('m.next')}<Icon name="next" size={16} /></button>
         </section>
       ) : (
         <form className="card space-y-4" onSubmit={submitPin} aria-labelledby="s2h">
@@ -182,7 +207,7 @@ export function SeekPage() {
             <IndustrySelect value={industry} onChange={setIndustry} label={t('m.industry')} />
             <SkillPicker idp="seek-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); fe.clear() }} />
           </div>
-          <button type="submit" className="btn-primary" disabled={st.me.pins.length >= MAX_PINS}><Icon name="pin" size={16} />{t('m.pin.go')}</button>
+          <button type="submit" className="btn-primary" disabled={st.me.pins.length >= MAX_PINS || (!!dc && !isCountry(dc))}><Icon name="pin" size={16} />{t('m.pin.go')}</button>
         </form>
       )}
       <section className="space-y-2" aria-labelledby="pins-h">
@@ -221,7 +246,7 @@ export function HirePage() {
   const { t } = useI18n()
   const N = useNames()
   const { st, post } = useMatch()
-  const [c, setC] = useState<Country | null>(null), [p, setP] = useState<string | null>(null)
+  const [c, setC] = useState<GeoCode | null>(null), [p, setP] = useState<string | null>(null)
   const [form, setForm] = useState(false)
   const [company, setCompany] = useState(st.myCompany), [position, setPosition] = useState('')
   const [industry, setIndustry] = useState<Industry>('manufacturing'), [skills, setSkills] = useState<Skill[]>([])
@@ -237,7 +262,7 @@ export function HirePage() {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setMsg(null)
-    if (!c || !p) { setMsg({ tone: 'danger', text: N.problem('place') }); return }
+    if (!isCountry(c) || !p) { setMsg({ tone: 'danger', text: N.problem('place') }); return }
     const r = post({ place: { country: c, province: p }, company: company.trim(), position: position.trim(), industry, skills, minYears: Number(years), details: details.trim() })
     if (r.ok) { fe.clear(); setMsg({ tone: 'info', text: t('m.emp.done') }); setForm(false); setPosition(''); setSkills([]); setDetails(''); setP(null); return }
     const f = FIELD[r.problem]
@@ -255,7 +280,7 @@ export function HirePage() {
         <section className="card space-y-3" aria-labelledby="e1h">
           <h2 id="e1h" className="h2">{t('m.emp.s1')}</h2>
           <PlaceFields idp="emp-prov" fe={fe} country={c} province={p} onCountry={(x) => { setC(x); setP(null) }} onProvince={setP} />
-          <button type="button" className="btn-primary" disabled={!c || !p} onClick={() => { setForm(true); setMsg(null) }}><Icon name="posts" size={16} />{t('m.emp.fill')}</button>
+          <button type="button" className="btn-primary" disabled={!isCountry(c) || !p} onClick={() => { setForm(true); setMsg(null) }}><Icon name="posts" size={16} />{t('m.emp.fill')}</button>
         </section>
       ) : (
         <form className="card space-y-3" onSubmit={submit} aria-labelledby="e2h">

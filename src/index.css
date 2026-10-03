@@ -123,7 +123,8 @@ h1[tabindex="-1"]:focus { outline: none }
 .g-capital { fill: rgb(var(--globe-capital)); stroke: #fff; stroke-width: 1.8 }
 .g-plane { fill: rgb(var(--globe-route)); stroke: rgb(var(--page)); stroke-width: 1 }
 .g-label, .g-name { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font-weight: 600 }
-.g-label { font-size: 15px } .g-name { font-size: 17px; font-weight: 700; letter-spacing: .04em }
+.g-label { font-size: 15px }
+.g-city { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font-size: 12.5px; font-weight: 600 } .g-name { font-size: 17px; font-weight: 700; letter-spacing: .04em }
 svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: -3px }
 .globe-ctl { width: 40px; height: 40px; display: grid; place-items: center; border-radius: .75rem; background: rgb(var(--surface) / .9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgb(var(--control-line)); color: rgb(var(--ink)); box-shadow: var(--elev-hi), var(--elev-2) }
 .globe-ctl:hover { background: rgb(var(--surface3)) }
@@ -166,11 +167,10 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
 /* the map plane is seen at a slight angle (the controls and the frame stay flat) */
 .map-ocean { background-color: rgb(var(--globe-ocean)); box-shadow: var(--elev-hi), var(--elev-2) }
 /* oblique camera: the map plane leans back so the region reads as a 3-D table, with haze towards the horizon */
-.map-tilt { position: absolute; inset: 0; transform: perspective(1100px) rotateX(34deg) scale(1.18); transform-origin: 50% 62% }
+.map-tilt { position: absolute; inset: 0; transform-origin: 50% 62% } /* the lean itself is set by geomap.tsx (TILT), which also places the upright labels */
 .map-stage { background-color: rgb(var(--globe-ocean)); background-image: linear-gradient(to right, rgb(var(--grid-line) / calc(var(--grid-a) * .55)) 1px, transparent 0), linear-gradient(to bottom, rgb(var(--grid-line) / calc(var(--grid-a) * .55)) 1px, transparent 0); background-size: 56px 56px }
 .map-haze { position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(to bottom, rgb(var(--globe-ocean)) 0%, rgb(var(--globe-ocean) / .6) 14%, transparent 38%), radial-gradient(120% 90% at 50% 100%, transparent 55%, rgb(var(--globe-ocean) / .55) 100%) }
-@media (max-width: 640px) { .map-tilt { transform: perspective(900px) rotateX(28deg) scale(1.14) } }
 
 /* matching prototype: pins on the map (mine = a seeker's pin, post = an employer post) */
 .g-pin { fill: rgb(var(--danger-fg)); stroke: rgb(var(--page)); stroke-width: 2.5 }

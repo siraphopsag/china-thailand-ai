@@ -18,7 +18,8 @@ import { messages, type MsgKey } from './locales/index'
 import { match } from './locales/match'
 import { Landing } from './pages/intake'
 import { ChooseRolePage } from './pages/choose'
-import { BackofficePage, NotificationsPage, SeekPage } from './pages/match'
+import { BackofficePage, NotificationsPage, SeekPage, SoonNote } from './pages/match'
+import { TILT, leanPoint } from './components/geomap'
 import { BackButton, Header } from './components/shell'
 import { SideNav, sideItems } from './components/sidenav'
 
@@ -223,7 +224,7 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
     expect(geo).toContain("onClick={() => flyTo(target)} aria-label={t('geo.resetView')}")
     expect(geo).toMatch(/aria-label=\{t\('geo\.zoomIn'\)\}[\s\S]*aria-label=\{t\('geo\.zoomOut'\)\}/)
     expect(geo).toMatch(/onPickProvince\(d\.prov === province \? null : d\.prov\)/) // a tap picks (and frames) a province
-    expect(geo).toMatch(/onPickCountry\(d\.code\)/)
+    expect(geo).toMatch(/onPickCountry\(d\.code as GeoCode\)/)
   })
   it('#5 job titles on notifications and in the back office are headings', () => {
     const st = seedState(NOW); st.role = 'seeker'
@@ -251,12 +252,67 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
 })
 
 describe('design pass (owner review, Oct 2026)', () => {
-  const css = src('./index.css')
   it('the map opens framed on Thailand + China, seen through an oblique camera with haze', () => {
     const geo = src('./components/geomap.tsx')
     expect(geo).toMatch(/x\.code === 'TH' \|\| x\.code === 'CN'/)
     expect(geo).toContain('<div className="map-haze" aria-hidden />')
-    expect(css).toMatch(/\.map-tilt \{[^}]*rotateX\(3\d+deg\)/)
+    expect(geo).toContain('rotateX(${tilt}deg)')
+  })
+})
+
+describe('map review 2 (owner, Oct 2026): lean, upright labels, all ASEAN countries, capitals', () => {
+  const geo = src('./components/geomap.tsx')
+  const css = src('./index.css')
+  it('1–2 the lean is smaller once a country is chosen, and the overview is zoomed a little closer', () => {
+    expect(TILT.overview).toBe(28)
+    expect(TILT.focused).toBe(14)
+    expect(TILT.focused).toBeLessThan(TILT.overview)
+    expect(geo).toContain('(country || province ? TILT.focused : TILT.overview)')
+    expect(geo).toMatch(/viewForBox\(\[\[x0, y0\], \[x1, y1 \+ \(y1 - y0\) \* 0\.22\]\], w, h, 0\.94, 4\)/)
+  })
+  it('3 upright layer: no text is drawn on the leaning plane; labels use the same projection as the CSS lean', () => {
+    const plane = geo.slice(geo.indexOf('className="map-tilt map-stage"'), geo.indexOf('</svg>'))
+    expect(plane).not.toContain('<text')
+    expect(geo).toMatch(/<svg width=\{w\} height=\{h\} viewBox=\{`0 0 \$\{w\} \$\{h\}`\} className="absolute inset-0 pointer-events-none" aria-hidden>/)
+    // the projection: identity without lean, the pivot stays put, the far (upper) side shrinks and is foreshortened
+    expect(leanPoint(123, 45, 800, 500, 0)).toEqual([123, 45])
+    const [ox, oy] = leanPoint(400, 310, 800, 500, 28)
+    expect(ox).toBeCloseTo(400); expect(oy).toBeCloseTo(310)
+    const far = leanPoint(200, 60, 800, 500, 28)
+    expect(far[0]).toBeGreaterThan(200 - (400 - 200) * 0.2) // pulled towards the centre line
+    expect(far[1]).toBeGreaterThan(60) // the far edge appears lower than on the flat map
+  })
+  it('5 every ASEAN country can be tapped; only Thailand and China ever reach saved data', () => {
+    expect(geo).toContain('else if (d.code && d.code in GEO) onPickCountry(d.code as GeoCode)')
+    for (const c of ['VN', 'SG', 'TL']) {
+      const r = addPin(seeker([]), { place: { country: c, province: 'X' } as never, industry: 'technology', skills: ['data_analysis'] }, 'p', at(0))
+      expect(r.ok ? 'ok' : r.problem, c).toBe('place')
+    }
+  })
+  it('4 the country list has all 12 countries: open now (2) and coming soon (10)', () => {
+    const page = html(<SeekPage />, { ...seedState(NOW), role: 'seeker', me: seeker([]) })
+    const sel = page.slice(page.indexOf('<select id="dest-prov-c"'), page.indexOf('</select>', page.indexOf('<select id="dest-prov-c"')))
+    expect(sel).toContain(`<optgroup label="${T('m.countryOpen')}">`)
+    expect(sel).toContain(`<optgroup label="${T('geo.soon')}">`)
+    expect(sel.match(/<option value="[A-Z]{2}"/g)?.length).toBe(12)
+    for (const c of ['TH', 'CN', 'VN', 'MM', 'LA', 'SG', 'KH', 'MY', 'ID', 'PH', 'BN', 'TL']) expect(sel, c).toContain(`value="${c}"`)
+  })
+  it('5 choosing a planned country shows a coming-soon note with its capital', () => {
+    const note = html(<SoonNote country="VN" />)
+    expect(note).toContain('role="status"')
+    expect(note).toContain(T('geo.c.VN' as MsgKey)); expect(note).toContain(T('geo.soon')); expect(note).toContain(T('geo.city.Hanoi' as MsgKey))
+    expect(note).toContain(T('geo.soon.now'))
+    const m = src('./pages/match.tsx')
+    expect(m).toContain('disabled={!open}') // no provinces for a planned country
+    expect(m).toContain('disabled={!!oc && !isCountry(oc)} onClick={confirmOrigin}')
+    expect(m).toContain("disabled={st.me.pins.length >= MAX_PINS || (!!dc && !isCountry(dc))}")
+    expect(m).toContain('disabled={!isCountry(c) || !p}')
+  })
+  it('7–9 capitals: Bangkok and Beijing on the overview, otherwise the chosen country; names in 3 languages', () => {
+    expect(geo).toContain("(country ? [capitalOf(country)] : [capitalOf('TH'), capitalOf('CN')])")
+    expect(geo).toContain('className="g-capital"')
+    for (const c of ['Bangkok', 'Beijing', 'Hanoi', 'Naypyidaw', 'Vientiane', 'Singapore', 'PhnomPenh', 'KualaLumpur', 'Jakarta', 'Manila', 'BandarSeriBegawan', 'Dili'])
+      expect(`geo.city.${c}` in messages, c).toBe(true)
   })
   it('every page except the Lobby has a Back button that stays inside the site', () => {
     const shell = src('./components/shell.tsx'), store = src('./store.tsx')
