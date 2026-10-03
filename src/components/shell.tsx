@@ -7,8 +7,6 @@ import { tourRoutes } from '../data/culture'
 import { SampleTag } from './ui'
 import { BRAND } from '../brand'
 import { CountryBadge, Icon, type IconName } from './icons'
-import { usePersona } from '../persona'
-import { usePersonaLabel } from './jobboard'
 import { LoginButton } from './sidenav'
 
 type NavItem = { route: string; key: string; icon: IconName; sub: string[] }
@@ -23,16 +21,6 @@ export const PRIMARY: NavItem[] = [
 /** Every route that belongs to the business-planning tool (map, interview, analysis, plans, documents). */
 export const BUSINESS_ROUTES = PRIMARY.flatMap((n) => [n.route, ...n.sub])
 export const isBusinessRoute = (route: string) => BUSINESS_ROUTES.includes(route)
-type MainItem = { key: string; icon: IconName; to: (hasProfile: boolean) => string; match: string[] }
-/** Main navigation, employment first: jobs, employers, preparation (language & culture), legal information, then business planning. */
-export const MAIN_NAV: MainItem[] = [
-  { key: 'nav.jobs', icon: 'employment', to: () => 'jobs', match: ['jobs'] },
-  { key: 'nav.employerArea', icon: 'business', to: () => 'employer', match: ['employer'] },
-  { key: 'tabs.language', icon: 'culture', to: () => 'language', match: ['language'] },
-  { key: 'nav.legalInfo', icon: 'legal', to: () => 'sources', match: ['sources', 'monitoring'] },
-  // business planning opens its overview when a business case exists, otherwise its first step (the map)
-  { key: 'nav.bizPlanning', icon: 'globe', to: (p) => (p ? 'dashboard' : 'start'), match: BUSINESS_ROUTES },
-]
 const isActive = (route: string, n: NavItem) => route === n.route || n.sub.includes(route)
 
 /** C.A.L.L. mark: two linked rings (two sides of a border, two languages) joined by one line. Follows the theme. */
@@ -112,46 +100,6 @@ export function LanguageSwitcher() {
                 <button role="menuitemradio" aria-checked={l.id === lang} lang={l.html} onClick={() => { setLang(l.id); close() }} className={`${item} ${l.id === lang ? 'bg-brand text-brandfg font-semibold' : ''}`}>{l.label}{l.id === lang && <Icon name="check" size={16} className="ml-auto" />}</button>
               </li>))}
           </ul>)}
-      </Menu>
-    </div>
-  )
-}
-
-/**
- * Job-board PoC persona switcher. A simulation control, not a login: it only changes which synthetic persona the
- * demo pages act as. The selection lives in session state (see persona.tsx).
- */
-export function PersonaSwitcher({ bar = false }: { bar?: boolean }) {
-  const { t } = useI18n()
-  const { persona, personas, select, reset, invalid } = usePersona()
-  const label = usePersonaLabel()
-  const who = label(persona)
-  // `bar`: full-width row under the header on narrow screens, where the header row has no room for another control
-  const text = bar
-    ? <span className="flex-1 min-w-0 truncate text-left">{t('persona.current', { who })}</span>
-    : <><span className="hidden md:inline max-w-[11rem] truncate">{who}</span><span className="md:hidden max-w-[6rem] truncate">{t(`persona.role.${persona.kind}` as never)}</span></>
-  return (
-    <div role="group" aria-label={t('persona.label')} className={bar ? 'w-full' : ''}>
-      <Menu icon="management" refocus ariaLabel={t('persona.aria', { who })} panelClass="w-72 max-w-[calc(100vw-1.5rem)]" align={bar ? 'left' : 'right'}
-        rootClass={bar ? 'w-full' : ''} buttonClass={bar ? 'w-full !justify-start' : ''}
-        label={<><span className="text-[10px] font-bold rounded px-1 bg-warn-bg text-warn-fg" lang="en">PoC</span>{text}</>}>
-        {(close) => (<>
-          <p className="px-3 pt-2 pb-1 text-xs text-muted">{t('persona.note')}</p>
-          <p className="px-3 pb-2 text-xs text-muted">{t('jb.notice.short')}</p>
-          {invalid && <p role="status" className="px-3 pb-2 text-xs text-danger-fg">{t('persona.invalid')}</p>}
-          <ul role="menu" aria-label={t('persona.label')}>
-            {personas.map((p) => (
-              <li key={p.key} role="none">
-                <button role="menuitemradio" aria-checked={p.key === persona.key} onClick={() => { select(p.key); close() }} className={`${item} ${p.key === persona.key ? 'bg-brand text-brandfg font-semibold' : ''}`}>
-                  <span className="min-w-0"><span className="block">{t(`persona.role.${p.kind}` as never)}</span>{p.name && <span className="block text-xs opacity-80 truncate">{p.name} · {t('persona.fictional')}</span>}</span>
-                  {p.key === persona.key && <Icon name="check" size={16} className="ml-auto" />}
-                </button>
-              </li>))}
-            {/* the simulated review workspace is offered only once the simulated reviewer persona is chosen (it is not a real admin link) */}
-            {persona.kind === 'admin' && <li role="none" className="border-t border-line mt-1 pt-1"><button role="menuitem" className={item} onClick={() => { close(); go('review') }}><Icon name="risk" size={16} />{t('persona.toReview')}</button></li>}
-            <li role="none" className="border-t border-line mt-1 pt-1"><button role="menuitem" className={item} onClick={() => { reset(); close() }}><Icon name="back" size={16} />{t('persona.reset')}</button></li>
-          </ul>
-        </>)}
       </Menu>
     </div>
   )

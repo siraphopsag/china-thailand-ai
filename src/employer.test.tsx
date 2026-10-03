@@ -9,8 +9,6 @@ import { LanguageProvider } from './i18n'
 import { tr } from './i18n/core'
 import { StoreProvider } from './store'
 import { ThemeProvider } from './theme'
-import { PersonaProvider } from './persona'
-import { JobBoardProvider } from './jobboardData'
 import { MatchProvider } from './matchData'
 import { DAY_MS, canPost, makePost, parseState, postLimit, postsThisWeek, type PostInput } from './domain/match/logic'
 import { precheck } from './domain/match/precheck'
@@ -30,7 +28,7 @@ function html(node: ReactNode, st?: MatchState): string {
   const g = globalThis as { document?: unknown }
   const had = 'document' in g, prev = g.document
   g.document = { documentElement: { getAttribute: () => null, setAttribute: () => {}, lang: 'th' } }
-  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><StoreProvider><PersonaProvider><JobBoardProvider storage={null}><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></JobBoardProvider></PersonaProvider></StoreProvider></LanguageProvider></ThemeProvider>) }
+  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><StoreProvider><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></StoreProvider></LanguageProvider></ThemeProvider>) }
   finally { if (had) g.document = prev; else delete g.document }
 }
 const good: PostInput = {
@@ -74,7 +72,7 @@ describe('A. post details', () => {
   it('details show everywhere a post appears; missing ones say "not stated"', () => {
     const st = seedState(NOW)
     const facts = html(<PostFacts post={st.posts[0]} />)
-    for (const s of [T('m.people', { n: 2 }), T('m.emp.type.permanent'), '9,000–12,000', T('m.cur.CNY'), T('jb.lang.zh' as MsgKey), T('jb.level.professional' as MsgKey), T('jb.edu.bachelor' as MsgKey), T('m.ben.housing')]) expect(facts, s).toContain(s)
+    for (const s of [T('m.people', { n: 2 }), T('m.emp.type.permanent'), '9,000–12,000', T('m.cur.CNY'), T('jb.lang.zh' as MsgKey), T('jb.level.professional' as MsgKey), T('m.edu.bachelor' as MsgKey), T('m.ben.housing')]) expect(facts, s).toContain(s)
     const legacy: Post = { ...st.posts[0], headcount: null, employment: null, salary: null, startDate: null, languages: [], education: 'none', benefits: [] }
     expect(html(<PostFacts post={legacy} />).split(T('m.notStated')).length - 1).toBe(6)
     const m = src('./pages/match.tsx')

@@ -86,7 +86,7 @@ describe('Background Paths in the home hero (still lines + moving light: A runs 
     h.reset(); for (t = 5000; t < 8300; t += 33) h.frame(t) // after reset the warm-up starts again
     expect(slow).toBe(0)
   })
-  it('B for devices that report low memory or data saver, and for the rest of the session once A was too slow; ?fx= forces a mode', () => {
+  it('B for devices that report low memory or data saver, and for the rest of the session once A was too slow; no URL switch any more', () => {
     const render = () => renderToStaticMarkup(<LanguageProvider><BackgroundPaths /></LanguageProvider>)
     vi.stubGlobal('navigator', { deviceMemory: 2, hardwareConcurrency: 8 })
     expect(render()).toContain('data-fx="b"')
@@ -96,10 +96,10 @@ describe('Background Paths in the home hero (still lines + moving light: A runs 
     vi.stubGlobal('sessionStorage', { getItem: (k: string) => (k === 'call.fx.slow' ? '1' : null), setItem: () => {} })
     const b = render()
     expect(b).toContain('data-fx="b"'); expect(b).toContain('<div class="bg-sheen-wrap"><div class="bg-sheen"><div class="bg-sheen-lines">')
-    vi.stubGlobal('location', { search: '?fx=a' })
-    expect(render()).toContain('data-fx="a"') // forced, even though this session was marked slow
+    vi.stubGlobal('location', { search: '?fx=a' }) // the prototype comparison link was removed (owner chose A)
+    expect(render()).toContain('data-fx="b"')
     const c = src('./components/ui/background-paths.tsx')
-    expect(c).toContain("if (paused || away || fx !== 'a' || forced || typeof requestAnimationFrame !== 'function') return")
+    expect(c).toContain("if (paused || away || fx !== 'a' || typeof requestAnimationFrame !== 'function') return"); expect(c).not.toContain('URLSearchParams')
     expect(c).toContain("sessionStorage.setItem(SLOW, '1')")
   })
   it('B: only transforms move (smooth on low-end phones), the light stays on the lines, and it stops off-screen', () => {

@@ -2,13 +2,12 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
 /* Background Paths (owner, Oct 2026): two sets of 36 curved lines after the shadcn "background-paths" component, kept in
  * components/ui (the shadcn convention) but without framer-motion. The lines are drawn whole and stay still; light moves on them.
- *  A (default): short soft lights run along every other line, one way, in a seamless loop (stroke-dashoffset). This repaints
+ *  A (default; owner chose it, Oct 2026): short soft lights run along every other line, one way, in a seamless loop (stroke-dashoffset). This repaints
  *    every frame, so a frame-rate guard watches it: below ~45 fps for 1.5 s (after a 2 s warm-up, as
  *    page load itself can drop frames) → switch to B for this browsing session.
  *    Devices that report low memory/cores or data saver start on B.
  *  B: a band of light sweeps across — a brighter copy of the lines seen through a moving window that slides back by the same
  *    amount; only transforms move (GPU, no repaint), so it is smooth almost everywhere.
- *  Prototype only: ?fx=a or ?fx=b forces a mode (no guard) so the owner can compare.
  * Accessibility: decorative (aria-hidden); faded over the text column so contrast holds; WCAG 2.2.2 — the on/off switch lives in
  * Settings (owner: no button on the hero), remembered in this browser; "reduce motion" devices start off and can switch it on
  * there; nothing moves off-screen. */
@@ -20,7 +19,6 @@ export const motionOff = () => {
   try { const v = localStorage.getItem(KEY); if (v === '1' || v === '0') return v === '1' } catch { /* storage blocked: use the device setting */ }
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
-const forcedFx = (): Fx | null => { try { const f = new URLSearchParams(location.search).get('fx'); return f === 'a' || f === 'b' ? f : null } catch { return null } }
 const lowSpec = () => {
   if (typeof navigator === 'undefined') return false
   const n = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } }
@@ -72,8 +70,7 @@ const Svg = ({ every, className = '' }: { every?: number; className?: string }) 
 
 export function BackgroundPaths() {
   const [paused] = useState(motionOff)
-  const [forced] = useState(forcedFx)
-  const [fx, setFx] = useState<Fx>(() => forced ?? startFx())
+  const [fx, setFx] = useState<Fx>(startFx)
   const [away, setAway] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -81,15 +78,15 @@ export function BackgroundPaths() {
     const io = new IntersectionObserver(([e]) => setAway(!e.isIntersecting)); io.observe(el)
     return () => io.disconnect()
   }, [])
-  // frame-rate guard for A (not when the owner forced a mode)
+  // frame-rate guard for A
   useEffect(() => {
-    if (paused || away || fx !== 'a' || forced || typeof requestAnimationFrame !== 'function') return
+    if (paused || away || fx !== 'a' || typeof requestAnimationFrame !== 'function') return
     const g = fpsGuard(() => { try { sessionStorage.setItem(SLOW, '1') } catch { /* no storage */ } setFx('b') })
     let id = requestAnimationFrame(function loop(ts) { g.frame(ts); id = requestAnimationFrame(loop) })
     const vis = () => g.reset()
     document.addEventListener('visibilitychange', vis)
     return () => { cancelAnimationFrame(id); document.removeEventListener('visibilitychange', vis) }
-  }, [paused, away, fx, forced])
+  }, [paused, away, fx])
   return (
     <div ref={box} data-fx={fx} className={'bg-paths pointer-events-none absolute inset-0' + (paused ? '' : ' is-on') + (away ? ' is-away' : '')} aria-hidden>
       <Svg />

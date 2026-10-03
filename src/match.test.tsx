@@ -8,8 +8,6 @@ import { LanguageProvider } from './i18n'
 import { tr } from './i18n/core'
 import { StoreProvider } from './store'
 import { ThemeProvider } from './theme'
-import { PersonaProvider } from './persona'
-import { JobBoardProvider } from './jobboardData'
 import { MatchProvider, checkAdmin } from './matchData'
 import { DAY_MS, accept, addPin, forward, isVisibleTo, makePost, offersFor, parseState, reachTier, tierOf } from './domain/match/logic'
 import { seedState } from './domain/match/seed'
@@ -30,7 +28,7 @@ function html(node: ReactNode, st?: MatchState): string {
   const g = globalThis as { document?: unknown }
   const had = 'document' in g, prev = g.document
   g.document = { documentElement: { getAttribute: () => null, setAttribute: () => {}, lang: 'th' } }
-  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><StoreProvider><PersonaProvider><JobBoardProvider storage={null}><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></JobBoardProvider></PersonaProvider></StoreProvider></LanguageProvider></ThemeProvider>) }
+  try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><StoreProvider><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></StoreProvider></LanguageProvider></ThemeProvider>) }
   finally { if (had) g.document = prev; else delete g.document }
 }
 const NOW = Date.parse('2026-10-03T08:00:00.000Z')

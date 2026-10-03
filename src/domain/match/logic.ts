@@ -1,9 +1,21 @@
 // Pure rules of the matching prototype (no React, no storage): pins, posts, the step-by-step release and acceptances.
 import { isObj } from '../../profileSchema'
 import { provinces } from '../../locales/provinces'
-import { textProblem } from '../jobboard/validate'
 import { BENEFITS, COUNTRIES, CURRENCIES, EDU, EMPLOYMENT, FREE_POSTS_PER_WEEK, INDUSTRIES, LANGS, LANG_LEVELS, MAX_PINS, ME, MEMBER_POSTS_PER_WEEK, MY_EMPLOYER, SKILLS,
   type Acceptance, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type MatchState, type Pin, type Place, type Post, type Salary, type Seeker, type Skill, type Tier } from './types'
+
+/**
+ * Short free text (company, position, details). Text that looks like contact details — an e-mail address, a link or a long run
+ * of digits such as a phone or ID number — is refused, so real personal or employer contact data cannot be typed in.
+ * (Came from the first job-board prototype, removed in Oct 2026.)
+ */
+export function textProblem(v: unknown, min: number, max: number): 'type' | 'length' | 'contact' | null {
+  if (typeof v !== 'string') return 'type'
+  const s = v.trim()
+  if (s.length < min || s.length > max || s !== v) return 'length'
+  if (/[^\s@]+@[^\s@]+/.test(s) || /(https?:\/\/|www\.)/i.test(s) || /\d[\d\s-]{6,}\d/.test(s)) return 'contact'
+  return null
+}
 
 export const DAY_MS = 86_400_000
 export const isCountry = (v: unknown): v is Country => v === 'TH' || v === 'CN'

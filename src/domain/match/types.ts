@@ -4,9 +4,17 @@
  * the admin forwards the case to the employment authority (simulated — nothing is sent anywhere).
  * Everything here is synthetic prototype data kept in this browser. No identity documents or contact details are collected.
  */
-import { INDUSTRIES, LANGS, LANG_LEVELS, SKILLS, type Industry, type LanguageSkill, type Skill } from '../jobboard/types'
-
-export { INDUSTRIES, LANGS, LANG_LEVELS, SKILLS, type Industry, type LanguageSkill, type Skill }
+/* fields, skills and languages (came with the first job-board prototype, which was removed in Oct 2026) */
+export const SKILLS = [
+  'software_engineering', 'data_analysis', 'mechanical_engineering', 'electrical_engineering', 'civil_engineering', 'quality_control',
+  'project_management', 'accounting_finance', 'marketing', 'hospitality_management', 'culinary_arts', 'thai_chinese_translation',
+] as const
+export type Skill = (typeof SKILLS)[number]
+export const INDUSTRIES = ['manufacturing', 'technology', 'hospitality', 'food_service', 'education', 'logistics', 'finance'] as const
+export type Industry = (typeof INDUSTRIES)[number]
+export const LANGS = ['th', 'zh', 'en'] as const
+export const LANG_LEVELS = ['basic', 'conversational', 'professional', 'native'] as const
+export interface LanguageSkill { lang: (typeof LANGS)[number]; level: (typeof LANG_LEVELS)[number] }
 /* employer post details added Oct 2026 (owner: "the form feels too short") */
 export const EMPLOYMENT = ['permanent', 'contract', 'temporary', 'internship'] as const
 export type Employment = (typeof EMPLOYMENT)[number]
