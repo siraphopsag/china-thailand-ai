@@ -11,7 +11,9 @@ export { INDUSTRIES, LANGS, LANG_LEVELS, SKILLS, type Industry, type LanguageSki
 export const EMPLOYMENT = ['permanent', 'contract', 'temporary', 'internship'] as const
 export type Employment = (typeof EMPLOYMENT)[number]
 /** minimum education; 'none' = not required */
-export const EDU = ['none', 'secondary', 'vocational', 'bachelor', 'master'] as const
+/** minimum education, low → high. Thai ปวช./ปวส. line up with Chinese 中专/大专. 'secondary' = upper secondary and 'vocational' = vocational certificate
+ *  (both keys kept from the first version so saved posts still load). */
+export const EDU = ['none', 'lower_secondary', 'secondary', 'vocational', 'high_vocational', 'bachelor', 'master', 'doctorate'] as const
 export type Edu = (typeof EDU)[number]
 export const BENEFITS = ['housing', 'meals', 'insurance', 'workDocs'] as const
 export type Benefit = (typeof BENEFITS)[number]

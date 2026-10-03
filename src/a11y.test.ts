@@ -26,8 +26,13 @@ describe('accessibility audit fixes (WCAG 2.2 A/AA)', () => {
     expect(css).toMatch(/\.g-soon \{ fill: rgb\(var\(--globe-soon\)\)/)
     expect(css).not.toMatch(/g-hatch/)
   })
-  it('#11 no decorative animation runs forever', () => {
+  it('#11 no decorative animation runs forever without a way to pause it (WCAG 2.2.2)', () => {
     expect(css).not.toMatch(/animation:[^;]*(retro-drift|cta-spin)[^;]*infinite/)
+    // the only endless one is the hero's Background Paths (owner, Oct 2026): it has a pause button and stops for reduced motion
+    const endless = [...css.matchAll(/animation:\s*([a-z-]+)[^;}]*infinite/g)].map((m) => m[1])
+    // (ai-scan is a busy indicator, shown only while the AI is working)
+    expect(endless.sort()).toEqual(['ai-scan', 'bg-path'])
+    expect(css).toMatch(/\.bg-paths\.is-paused path \{ animation-play-state: paused \}/)
   })
   it('#6 a source title is never a raw message key', () => {
     for (const r of REQUIREMENTS) for (const l of ['th', 'zh', 'en'] as const) for (const s of viewRequirement(r, null, l).official_source) expect(s.title, r.id).not.toMatch(/^reg\./)

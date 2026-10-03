@@ -30,7 +30,7 @@ export function useNames() {
     provList: (c: Country) => Object.keys(provinces).filter((k) => k.startsWith(`prov.${c}-`)).map((k) => k.slice(5)).sort((a, b) => collator.compare(t(`prov.${a}` as never), t(`prov.${b}` as never))),
     problem: (p: Problem) => t(`m.err.${p}` as never),
     employment: (e: Employment) => t(`m.emp.type.${e}` as never),
-    edu: (e: Edu) => t((e === 'none' || e === 'secondary' ? `m.edu.${e}` : `jb.edu.${e}`) as never),
+    edu: (e: Edu) => t(`m.edu.${e}`),
     lang: (l: LanguageSkill['lang']) => t(`jb.lang.${l}` as never), level: (l: LanguageSkill['level']) => t(`jb.level.${l}` as never),
     benefit: (b: Benefit) => t(`m.ben.${b}` as never),
     money: (s: Salary) => { const f = new Intl.NumberFormat(locale(lang)); return `${f.format(s.min)}–${f.format(s.max)} ${t(`m.cur.${s.currency}` as never)}${t('m.perMonth')}` },

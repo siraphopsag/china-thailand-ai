@@ -25,7 +25,7 @@
   --info-bg: 224 242 254; --info-fg: 7 89 133; --info-line: 125 211 252;
   --globe-bg: 236 238 244; --globe-ocean: 226 229 237; --globe-land: 196 201 213; --globe-soon: 112 119 136; --globe-active: 67 56 202; --globe-line: 255 255 255; --globe-capital: 220 38 38; --pin-post: 217 119 6; --globe-route: 67 56 202; --globe-side: 36 30 112; --globe-soon-side: 84 90 110; --globe-prov: 99 102 241; --globe-pside: 49 46 129;
   --grid-line: 17 19 26; --grid-a: .08; --glow-a: 99 102 241; --glow-b: 14 165 233; --glow-k: .16;
-  --grad-a: 67 56 202; --grad-b: 3 105 161; --cta-a: 67 56 202; --cta-b: 29 78 216; --hero-base: 250 250 253;
+  --grad-a: 67 56 202; --grad-b: 3 105 161; --cta-a: 67 56 202; --cta-b: 29 78 216; --hero-base: 250 250 253; --paths-c: 55 48 163; --paths-a: 1;
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -47,7 +47,7 @@
   --info-bg: 16 52 78; --info-fg: 125 211 252; --info-line: 30 100 150;
   --globe-bg: 9 10 13; --globe-ocean: 14 15 20; --globe-land: 48 51 63; --globe-soon: 92 97 116; --globe-active: 129 140 248; --globe-line: 255 255 255; --globe-capital: 239 68 68; --pin-post: 251 191 36; --globe-route: 165 180 252; --globe-side: 55 48 163; --globe-soon-side: 58 61 76; --globe-prov: 165 180 252; --globe-pside: 79 70 229;
   --grid-line: 160 164 178; --grid-a: .1; --glow-a: 99 102 241; --glow-b: 14 165 233; --glow-k: .26;
-  --grad-a: 165 180 252; --grad-b: 125 211 252; --cta-a: 79 70 229; --cta-b: 37 99 235; --hero-base: 11 11 18;
+  --grad-a: 165 180 252; --grad-b: 125 211 252; --cta-a: 79 70 229; --cta-b: 37 99 235; --hero-base: 11 11 18; --paths-c: 255 255 255; --paths-a: 1;
 }
 
 html { scroll-behavior: smooth }
@@ -150,14 +150,17 @@ svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); ou
   radial-gradient(600px 320px at 50% 0%, rgb(var(--glow-a) / var(--glow-k)), transparent 70%),
   radial-gradient(420px 260px at 85% 20%, rgb(var(--glow-b) / calc(var(--glow-k) * .6)), transparent 70%),
   radial-gradient(420px 260px at 10% 30%, rgb(var(--glow-a) / calc(var(--glow-k) * .5)), transparent 70%) }
-.retro-grid { perspective: 200px; opacity: .9 }
-.retro-plane { position: absolute; inset: 0; transform: rotateX(35deg) }
-.retro-lines { position: absolute; left: -250%; width: 600%; height: 300%; top: 0;
-  background-image: linear-gradient(to right, rgb(var(--grid-line) / var(--grid-a)) 1px, transparent 0), linear-gradient(to bottom, rgb(var(--grid-line) / var(--grid-a)) 1px, transparent 0);
-  background-size: 56px 56px; animation: retro-drift 5s ease-out 1 both }
-.retro-fade { position: absolute; inset: 0; background: linear-gradient(to top, rgb(var(--hero-base)) 0%, rgb(var(--hero-base) / .5) 35%, transparent 90%), linear-gradient(to bottom, rgb(var(--hero-base) / .6), transparent 25%) }
-/* WCAG 2.2.2: moves once for 5 s, then rests */
-@keyframes retro-drift { from { transform: translateY(-50%) } to { transform: translateY(calc(-50% + 56px)) } }
+/* Background Paths (components/ui/background-paths.tsx): flowing lines, full strength at the sides and faded to 20 % over the
+ * centred text column (on phones and tablets the column is the whole width, so the lines stay faint behind the text) */
+.bg-paths { color: rgb(var(--paths-c)); opacity: var(--paths-a);
+  -webkit-mask-image: linear-gradient(to right, #000, rgb(0 0 0 / .2) calc(50% - min(440px, 46%)), rgb(0 0 0 / .2) calc(50% + min(440px, 46%)), #000);
+  mask-image: linear-gradient(to right, #000, rgb(0 0 0 / .2) calc(50% - min(440px, 46%)), rgb(0 0 0 / .2) calc(50% + min(440px, 46%)), #000) }
+.bg-paths-svg { position: absolute; inset: 0; width: 100%; height: 100% }
+.bg-paths path { stroke-dasharray: 1 1; opacity: .45; animation: bg-path 25s linear infinite }
+.bg-paths.is-paused path { animation-play-state: paused }
+@keyframes bg-path { 0%, 100% { stroke-dashoffset: 0; opacity: .3 } 50% { stroke-dashoffset: -1; opacity: .6 } }
+.bg-paths-toggle { position: absolute; right: .75rem; bottom: .75rem; z-index: 1 }
+@media (prefers-reduced-motion: reduce) { .bg-paths-toggle { display: none } }
 .hero-title { font-size: clamp(1.75rem, 1rem + 3vw, 3rem); line-height: 1.2; letter-spacing: -.01em }
 .hero-title > span { text-wrap: balance }
 html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /* Latin words are longer per idea than Thai/Chinese */
@@ -175,7 +178,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .cta-core:active { transform: scale(.98) }
 .glass { background: rgb(var(--surface) / .72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgb(var(--line)) }
 .hero-tilt { transform: perspective(1200px) rotateX(8deg); transform-origin: 50% 0 }
-@media (max-width: 640px) { .hero-tilt { transform: none } .retro-lines { background-size: 40px 40px } }
+@media (max-width: 640px) { .hero-tilt { transform: none } }
 /* AI activity: a thin scanning line on surfaces where the AI is working */
 .ai-scan { position: relative; overflow: hidden }
 .ai-scan::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, transparent, rgb(var(--glow-a)), rgb(var(--glow-b)), transparent); animation: ai-scan 1.6s ease-in-out infinite }
@@ -288,6 +291,8 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 
 /* skill choices: large tappable chips with a visible tick (the checkbox itself stays for keyboards and screen readers) */
 .chip-check { position: relative; display: flex; align-items: center; gap: .6rem; min-height: 44px; height: 100%; line-height: 1.3; padding: .5rem .75rem; border: 1px solid rgb(var(--control-line)); border-radius: .75rem; font-size: .875rem; cursor: pointer; transition: background-color .15s ease }
+/* a chip with something under it (the language level picker) keeps its own height, or the picker spills onto the text below */
+.chip-check.chip-auto { height: auto }
 .chip-check:hover { background: rgb(var(--surface3)) }
 .chip-check:has(input:checked) { border-color: rgb(var(--primary)); background: rgb(var(--brand)); color: rgb(var(--brandfg)); font-weight: 600 }
 .chip-check:has(input:focus-visible) { outline: 3px solid rgb(var(--primary)); outline-offset: 2px }

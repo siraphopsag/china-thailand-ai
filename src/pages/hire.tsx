@@ -134,10 +134,10 @@ export function HirePage() {
               <div><label className="block"><span className="label">{t('m.f.education')} <span className="font-normal text-muted">({t('m.opt')})</span></span><select id="emp-edu" className="input" value={edu} onChange={(e) => setEdu(e.target.value as Edu)}>{EDU.map((x) => <option key={x} value={x}>{N.edu(x)}</option>)}</select></label></div>
             </div>
             <fieldset aria-describedby={fe.describe('emp-langs', 'emp-langs-hint')}><legend className="label">{t('m.f.languages')}<Req /></legend>
-              <div className="grid sm:grid-cols-3 gap-2">{LANGS.map((l) => { const on = langs.find((x) => x.lang === l); return (
+              <div className="grid sm:grid-cols-3 gap-2 items-start">{LANGS.map((l) => { const on = langs.find((x) => x.lang === l); return (
                 <div key={l} className="space-y-1.5">
-                  <label className="chip-check"><input id={`emp-langs-${l}`} type="checkbox" className="sr-only" aria-invalid={fe.invalid('emp-langs')} checked={!!on} onChange={() => toggleLang(l)} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.lang(l)}</label>
-                  {on && <select className="input" aria-label={`${N.lang(l)} — ${t('m.f.level')}`} value={on.level} onChange={(e) => setLevel(l, e.target.value as LanguageSkill['level'])}>{LANG_LEVELS.map((x) => <option key={x} value={x}>{N.level(x)}</option>)}</select>}
+                  <label className="chip-check chip-auto"><input id={`emp-langs-${l}`} type="checkbox" className="sr-only" aria-invalid={fe.invalid('emp-langs')} checked={!!on} onChange={() => toggleLang(l)} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.lang(l)}</label>
+                  {on && <label className="block"><span className="block text-xs text-muted mb-1">{t('m.f.level')}</span><select className="input" aria-label={`${N.lang(l)} — ${t('m.f.level')}`} value={on.level} onChange={(e) => setLevel(l, e.target.value as LanguageSkill['level'])}>{LANG_LEVELS.map((x) => <option key={x} value={x}>{N.level(x)}</option>)}</select></label>}
                 </div>) })}</div>
               <span id="emp-langs-hint" className="block text-xs text-muted mt-1">{t('m.f.languagesHint')}</span>{fe.msg('emp-langs')}
             </fieldset>

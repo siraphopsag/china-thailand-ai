@@ -6,7 +6,8 @@ import { BusinessProfile, Disclaimer, EmptyState, Go, JourneyStrip, Ok, PageHead
 import { CountryBadge, Icon } from '../components/icons'
 import { dirInfo } from '../utils/labels'
 import { BRAND, BRAND_CONCEPTS } from '../brand'
-import { Glow, RetroGrid } from '../components/backdrop'
+import { Glow } from '../components/backdrop'
+import { BackgroundPaths } from '../components/ui/background-paths'
 import { dv, tk, useI18n } from '../i18n'
 import { OWNERSHIP_KEYS, buildProfile, coreDone, firstUnanswered, prune, remaining, visibleQs, type A, type Q } from '../interview'
 
@@ -66,9 +67,9 @@ export function Landing() {
   const { t } = useI18n()
   return (
     <div className="space-y-14 max-w-5xl mx-auto">
-      <section className="hero-shell relative overflow-hidden rounded-3xl border border-line px-5 pt-14 pb-10 sm:px-10 md:pt-20 md:pb-14 text-center" aria-labelledby="hero-h">
-        <Glow /><RetroGrid />
-        <div className="relative max-w-4xl mx-auto">
+      <section className="hero-shell relative isolate overflow-hidden rounded-3xl border border-line px-5 pt-14 pb-10 sm:px-10 md:pt-20 md:pb-14 text-center" aria-labelledby="hero-h">
+        <Glow />
+        <div className="relative z-[1] max-w-4xl mx-auto">
           <p className="inline-flex items-center gap-2 rounded-full glass px-3.5 py-1.5 text-xs sm:text-sm font-medium" lang="en"><Icon name="globe" size={15} className="text-primary" />{BRAND.title}</p>
           {/* size follows the screen width, so the longer English headline keeps about the same number of lines as Thai and Chinese */}
           <h1 id="hero-h" className="hero-title mt-6 font-bold text-ink">
@@ -80,6 +81,8 @@ export function Landing() {
           </div>
           <p className="mt-4 text-xs text-muted">{t('m.proto')}</p>
         </div>
+        {/* after the content so the pause button comes after the main button in keyboard order; the lines sit behind (z-index) */}
+        <BackgroundPaths />
       </section>
       {/* liquid-glass cards (owner, Oct 2026); the soft coloured light they show comes from the page background */}
       <div className="space-y-14">
