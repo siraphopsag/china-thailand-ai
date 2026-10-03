@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
-import { NavLink, go } from '../store'
+import { NavLink, go, useStore } from '../store'
+import { isBusinessRoute } from './shell'
 import { useMatch } from '../matchData'
 import { offersFor } from '../domain/match/logic'
 import { MY_EMPLOYER } from '../domain/match/types'
@@ -15,82 +16,77 @@ export function useUnread(): number {
 }
 
 type Item = { to: string; key: string; icon: IconName; match: string[] }
+/** menu order (owner, Oct 2026): home, my pins / my posts, notifications, prepare, settings, help, back office (admin), profile last */
 export function sideItems(role: 'seeker' | 'employer' | null, admin: boolean): Item[] {
-  const items: Item[] = [
-    { to: '', key: 'm.home', icon: 'home', match: [''] },
-    { to: 'me', key: 'm.profile', icon: 'user', match: ['me'] },
-    { to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] },
-  ]
+  const items: Item[] = [{ to: '', key: 'm.home', icon: 'home', match: [''] }]
   if (role === 'seeker') items.push({ to: 'seek', key: 'm.pins', icon: 'pin', match: ['seek'] })
   if (role === 'employer') items.push({ to: 'hire', key: 'm.posts', icon: 'posts', match: ['hire'] })
-  items.push({ to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
+  items.push({ to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
   if (admin) items.push({ to: 'backoffice', key: 'm.admin', icon: 'shield', match: ['backoffice'] })
+  items.push({ to: 'me', key: 'm.profile', icon: 'profile', match: ['me'] })
   return items
 }
+/** on phones the bottom bar keeps 5 main places; these go under "More" so the bar does not cover the screen */
+export const MORE_KEYS = ['m.settings', 'm.help', 'm.admin']
 
 /**
- * Side menu: an icon rail on large screens (labels appear when opened with the menu button), a drawer on small screens.
- * Icons are line symbols with accessible names.
+ * Menu (owner, Oct 2026, after a reference he liked): a floating capsule of icons — on the left for computers and tablets
+ * (768 px and wider), at the bottom for phones. Icons only; the page heading shows the name once you arrive. The current page
+ * sits on a solid indigo pill (≥ 3:1, plus aria-current). Phones show 5 places + "More" (settings, help, back office).
  */
-export function SideNav({ route, open, onClose }: { route: string; open: boolean; onClose: () => void }) {
+export function SideNav({ route }: { route: string }) {
   const { t } = useI18n()
   const { st, isAdmin } = useMatch()
+  const { profile } = useStore()
   const unread = useUnread()
   const items = sideItems(st.role, isAdmin)
-  useEffect(() => { onClose() }, [route]) // eslint-disable-line react-hooks/exhaustive-deps -- a new page closes the drawer
+  const main = items.filter((n) => !MORE_KEYS.includes(n.key)), more = items.filter((n) => MORE_KEYS.includes(n.key))
+  const [moreOpen, setMoreOpen] = useState(false)
+  const moreBtn = useRef<HTMLButtonElement>(null), moreList = useRef<HTMLUListElement>(null)
+  useEffect(() => { setMoreOpen(false) }, [route])
   useEffect(() => {
-    if (!open) return
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', esc); return () => document.removeEventListener('keydown', esc)
-  }, [open, onClose])
-  // small screens: the drawer is modal (WCAG 2.4.3, 2.4.11) — the page behind it is inert, focus moves into the drawer and,
-  // unless a link was followed (the new page focuses its heading), returns to the menu button when the drawer closes
-  const drawer = useRef<HTMLElement>(null)
-  const followed = useRef(false)
-  useEffect(() => {
-    const wide = window.matchMedia('(min-width: 1024px)')
-    if (!open || wide.matches) return
-    const body = document.getElementById('page-body')
-    body?.setAttribute('inert', '')
-    followed.current = false
-    drawer.current?.querySelector<HTMLElement>('a[href]')?.focus()
-    const resize = () => { if (wide.matches) onClose() }
-    wide.addEventListener('change', resize)
-    return () => {
-      wide.removeEventListener('change', resize)
-      body?.removeAttribute('inert')
-      if (!followed.current) document.querySelector<HTMLElement>('[data-menu-button]')?.focus()
-    }
-  }, [open, onClose])
-  const follow = () => { followed.current = true; onClose() }
-  const list = (wide: boolean) => (
-    <ul className="space-y-1">{items.map((n) => {
-      const on = n.match.includes(route)
-      const badge = n.key === 'm.notif' && unread > 0
-      return (
-        <li key={n.key}>
-          <NavLink to={n.to} onNavigate={follow} aria-current={on ? 'page' : undefined} aria-label={badge ? `${t(n.key as never)} · ${t('m.unread', { n: unread })}` : t(n.key as never)}
-            className={`relative flex items-center rounded-xl transition-colors ${wide ? 'gap-3 px-3 min-h-[44px]' : 'flex-col justify-center gap-0.5 w-[72px] mx-auto min-h-[56px] px-1 py-1.5 text-center'} ${on ? 'bg-brand text-brandfg font-semibold' : 'hover:bg-surface3 text-ink'}`}>
-            {/* WCAG 1.4.1 / 1.4.11: the current page also gets a solid bar, not only a pale fill */}
-            {on && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary" aria-hidden />}
-            <Icon name={n.icon} size={20} />
-            {/* the label is always visible, also in the narrow rail */}
-            <span className={wide ? 'text-sm' : 'block w-full text-[11px] leading-tight tracking-tight break-words [hyphens:auto]'}>{t(n.key as never)}</span>
-            {badge && <span className={`absolute ${wide ? 'right-3' : 'top-1 right-3'} min-w-[18px] h-[18px] px-1 rounded-full bg-danger-fg text-page text-[11px] font-bold grid place-items-center`} aria-hidden>{unread}</span>}
-          </NavLink>
-        </li>)
-    })}</ul>
-  )
+    if (!moreOpen) return
+    moreList.current?.querySelector<HTMLElement>('a[href]')?.focus()
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setMoreOpen(false); moreBtn.current?.focus() } }
+    const away = (e: PointerEvent) => { const tg = e.target as Node; if (!moreList.current?.contains(tg) && !moreBtn.current?.contains(tg)) setMoreOpen(false) }
+    document.addEventListener('keydown', esc); document.addEventListener('pointerdown', away)
+    return () => { document.removeEventListener('keydown', esc); document.removeEventListener('pointerdown', away) }
+  }, [moreOpen])
+  const name = (n: Item) => (n.key === 'm.notif' && unread > 0 ? `${t(n.key as never)} · ${t('m.unread', { n: unread })}` : t(n.key as never))
+  const iconLink = (n: Item, size: 'lg' | 'sm') => {
+    const on = n.match.includes(route)
+    return (
+      <NavLink to={n.to} aria-current={on ? 'page' : undefined} aria-label={name(n)}
+        className={`nav-item ${size === 'lg' ? 'w-12 h-12' : 'w-11 h-11'} ${on ? 'nav-on' : ''}`}>
+        <Icon name={n.icon} size={size === 'lg' ? 22 : 21} />
+        {n.key === 'm.notif' && unread > 0 && <span className="absolute top-1 right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-danger-fg text-page text-[10px] font-bold grid place-items-center" aria-hidden>{unread}</span>}
+      </NavLink>)
+  }
+  const moreOn = more.some((n) => n.match.includes(route))
+  // the hidden business-planning pages keep their own bottom bar; never stack two bars
+  const ownBar = !!profile && isBusinessRoute(route)
   return (
     <>
-      {/* large screens: always-visible rail, widened when opened */}
-      <nav aria-label={t('m.side')} className={`hidden lg:block fixed left-0 top-16 bottom-0 z-30 border-r border-line bg-surface/80 backdrop-blur-xl py-3 overflow-y-auto transition-[width] ${open ? 'w-56 px-2' : 'w-20'}`}>{list(open)}</nav>
-      {/* small screens: drawer */}
-      {open && (
-        <div className="lg:hidden fixed inset-0 top-16 z-40">
-          <button type="button" className="absolute inset-0 bg-black/40" aria-label={t('m.menu')} onClick={onClose} tabIndex={-1} />
-          <nav ref={drawer} aria-label={t('m.side')} className="relative h-full w-64 max-w-[80vw] bg-surface border-r border-line p-3 overflow-auto">{list(true)}</nav>
-        </div>)}
+      {/* computers and tablets: floating capsule on the left, vertically centred */}
+      <nav aria-label={t('m.side')} className="nav-pill hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 z-30 flex-col items-center gap-1.5 p-2 rounded-full">
+        <ul className="flex flex-col gap-1.5">{items.map((n) => <li key={n.key}>{iconLink(n, 'lg')}</li>)}</ul>
+      </nav>
+      {/* phones: floating capsule at the bottom — 5 places + More */}
+      {!ownBar && (
+        <nav aria-label={t('m.side')} className="nav-pill md:hidden fixed inset-x-3 z-40 rounded-full px-2 py-1.5" style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+          <ul className="flex items-center justify-around">
+            {main.map((n) => <li key={n.key}>{iconLink(n, 'sm')}</li>)}
+            <li className="relative">
+              <button ref={moreBtn} type="button" aria-label={t('m.more')} aria-expanded={moreOpen} aria-controls="nav-more" onClick={() => setMoreOpen((o) => !o)}
+                className={`nav-item w-11 h-11 ${moreOn ? 'nav-on' : ''}`}><Icon name="more" size={21} /></button>
+              <ul ref={moreList} id="nav-more" hidden={!moreOpen} className="list-pop absolute bottom-full right-0 mb-3 w-52 rounded-2xl border border-line p-1.5">
+                {more.map((n) => { const on = n.match.includes(route); return (
+                  <li key={n.key}><NavLink to={n.to} aria-current={on ? 'page' : undefined}
+                    className={`flex items-center gap-3 rounded-xl px-3 min-h-[44px] text-sm ${on ? 'bg-primary text-onprimary font-semibold' : 'text-ink hover:bg-surface3'}`}><Icon name={n.icon} size={18} />{t(n.key as never)}</NavLink></li>) })}
+              </ul>
+            </li>
+          </ul>
+        </nav>)}
     </>
   )
 }

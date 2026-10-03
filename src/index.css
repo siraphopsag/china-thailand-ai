@@ -186,6 +186,14 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .g-pin-post { fill: rgb(var(--primary)); stroke: rgb(var(--page)); stroke-width: 2.5 }
 .g-pin-dot { fill: rgb(var(--page)) }
 
+/* menu capsule (left on computers/tablets, bottom on phones): glass panel, round icon buttons, current page on a solid indigo pill */
+.nav-pill { background: rgb(var(--surface) / .82); backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4); border: 1px solid rgb(var(--line)); box-shadow: var(--elev-hi), var(--elev-3) }
+.nav-item { position: relative; display: grid; place-items: center; border-radius: 9999px; color: rgb(var(--ink)); transition: background-color .15s ease, color .15s ease }
+.nav-item:hover { background: rgb(var(--surface3)) }
+.nav-on, .nav-on:hover { background: rgb(var(--primary)); color: rgb(var(--onprimary)); box-shadow: 0 6px 16px -8px rgb(var(--primary) / .9) }
+/* WCAG 2.4.11: on phones keep focused controls clear of the bottom capsule */
+@media (max-width: 767px) { html { scroll-padding-bottom: 6rem } }
+
 /* drop-down list of ListSelect: a raised panel under the field */
 .list-pop { background: rgb(var(--surface)); box-shadow: var(--elev-hi), var(--elev-3); scrollbar-width: thin; scrollbar-color: rgb(var(--control-line)) transparent }
 

@@ -135,20 +135,20 @@ describe('admin gate (prototype)', () => {
 })
 
 describe('reviewed shell and pages', () => {
-  it('header: menu button, C.A.L.L. mark that is not a link, language, theme, log in — no top navigation, no role switcher', () => {
+  it('header: C.A.L.L. mark that is not a link, language, theme, log in — no menu button (owner, Oct 2026), no top navigation, no role switcher', () => {
     const h = html(<Header route="" />)
-    expect(h).toContain(`aria-label="${T('m.menu')}"`)
+    expect(h).not.toContain(`aria-label="${T('m.menu')}"`)
+    expect(h).not.toContain('data-menu-button')
     expect(h).toContain(T('m.login'))
     expect(h).not.toContain('>PoC<')
     for (const k of ['nav.jobs', 'nav.employerArea', 'nav.bizPlanning'] as const) expect(h, k).not.toContain(T(k))
     expect(h).not.toMatch(/<a [^>]*href="\/"/) // the logo is no longer a link
   })
-  it('side menu: home, profile, notifications, my pins / my posts by role, prepare, settings, help, and back office only for the admin', () => {
+  it('menu order: home, my pins / my posts by role, notifications, prepare, settings, help, back office (admin only), profile last', () => {
     const keys = (r: 'seeker' | 'employer' | null, a: boolean) => sideItems(r, a).map((i) => i.key)
-    expect(keys(null, false)).toEqual(['m.home', 'm.profile', 'm.notif', 'm.prepare', 'm.settings', 'm.help'])
-    expect(keys('seeker', false)).toContain('m.pins'); expect(keys('seeker', false)).not.toContain('m.posts')
-    expect(keys('employer', false)).toContain('m.posts')
-    expect(keys('employer', true).slice(-1)).toEqual(['m.admin'])
+    expect(keys(null, false)).toEqual(['m.home', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.profile'])
+    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.profile'])
+    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.admin', 'm.profile'])
     for (const r of [null, 'seeker', 'employer'] as const) for (const i of sideItems(r, true)) expect(ROUTES.has(i.to), i.to).toBe(true)
     expect(src('./components/sidenav.tsx')).not.toMatch(/to: '(start|interview|dashboard|plan|documents|jobs|employer|review)'/)
   })
@@ -191,15 +191,16 @@ describe('accessibility audit, round 1 (#1, #2, #7)', () => {
     expect(css).toMatch(/\.cta-ring:has\(\.cta-core:focus-visible\)\s*\{[^}]*outline:\s*3px solid/)
     expect(css).toMatch(/\.cta-ring\s*\{[^}]*overflow:\s*hidden/) // the reason the ring, not the button, carries the outline
   })
-  it('#2 the small-screen drawer is modal: the page behind is inert, focus moves in and returns to the menu button', () => {
+  it('#2 (superseded by the always-visible menu, Oct 2026) no drawer over the page; the phone "More" list moves focus in, closes on Esc (focus back) and on a press outside', () => {
     const nav = src('./components/sidenav.tsx')
-    expect(src('./App.tsx')).toContain('id="page-body"')
-    expect(nav).toMatch(/getElementById\('page-body'\)[\s\S]*setAttribute\('inert', ''\)/)
-    expect(nav).toContain("removeAttribute('inert')")
-    expect(nav).toMatch(/drawer\.current\?\.querySelector<HTMLElement>\('a\[href\]'\)\?\.focus\(\)/)
-    expect(nav).toContain("querySelector<HTMLElement>('[data-menu-button]')?.focus()")
-    expect(nav).toContain("matchMedia('(min-width: 1024px)')") // the large-screen rail never makes the page inert
-    expect(html(<Header route="" />)).toContain('data-menu-button')
+    expect(nav).not.toContain("setAttribute('inert'")
+    expect(nav).toMatch(/moreList\.current\?\.querySelector<HTMLElement>\('a\[href\]'\)\?\.focus\(\)/)
+    expect(nav).toContain("if (e.key === 'Escape') { setMoreOpen(false); moreBtn.current?.focus() }")
+    expect(nav).toContain("document.addEventListener('pointerdown', away)")
+    expect(nav).toContain('useEffect(() => { setMoreOpen(false) }, [route])')
+    // nothing hides under the bottom capsule on phones
+    expect(src('./App.tsx')).toContain('pb-28 md:pb-10')
+    expect(css).toMatch(/@media \(max-width: 767px\) \{ html \{ scroll-padding-bottom: 6rem \} \}/)
   })
   it('#7 focused controls scroll clear of the 64px sticky header', () => {
     expect(css).toMatch(/html\s*\{\s*scroll-padding-top:\s*5rem\s*\}/)
@@ -209,14 +210,21 @@ describe('accessibility audit, round 1 (#1, #2, #7)', () => {
 describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
   const css = src('./index.css')
   const seekerState = () => { const st = seedState(NOW); st.role = 'seeker'; st.me = seeker([]); return st }
-  it('#3 #9 the side rail marks the current page with a solid bar and always shows its labels', () => {
-    const page = html(<SideNav route="seek" open={false} onClose={() => {}} />, seekerState())
-    const current = page.match(/<a [^>]*aria-current="page"[^>]*>([\s\S]*?)<\/a>/)
-    expect(current?.[0]).toContain('href="/seek"')
-    expect(current?.[1]).toContain('w-1 rounded-r-full bg-primary')
-    for (const k of ['m.home', 'm.profile', 'm.notif', 'm.pins', 'm.prepare', 'm.settings', 'm.help'] as const) expect(page, k).toContain(`>${T(k)}</span>`)
-    expect(page).not.toMatch(/<a [^>]*title=/) // no hover-only names
-    expect(src('./App.tsx')).toContain('lg:pl-20')
+  it('#3 #9 (menu capsule, Oct 2026) the current page sits on a solid indigo pill; icons only (owner), each with a name for screen readers', () => {
+    const page = html(<SideNav route="seek" />, seekerState())
+    const current = [...page.matchAll(/<a [^>]*aria-current="page"[^>]*>/g)].map((m) => m[0])
+    expect(current.length).toBe(2) // the side capsule and the phone bar
+    for (const a of current) { expect(a).toContain('href="/seek"'); expect(a).toContain('nav-on') }
+    expect(css).toMatch(/\.nav-on, \.nav-on:hover \{ background: rgb\(var\(--primary\)\); color: rgb\(var\(--onprimary\)\)/) // primary vs surface ≥ 6.7:1
+    for (const k of ['m.home', 'm.notif', 'm.pins', 'm.prepare', 'm.settings', 'm.help', 'm.profile'] as const) expect(page, k).toContain(`aria-label="${T(k)}"`)
+    expect(page).not.toMatch(/<a [^>]*title=/)
+    // computers and tablets: left capsule; phones: bottom capsule with 5 places + More
+    expect(page).toMatch(/class="nav-pill hidden md:flex fixed left-4 top-1\/2/)
+    expect(page).toMatch(/class="nav-pill md:hidden fixed inset-x-3/)
+    const bar = page.slice(page.indexOf('nav-pill md:hidden'))
+    expect(bar.slice(0, bar.indexOf('aria-controls="nav-more"')).match(/<a /g)?.length).toBe(5)
+    expect(bar).toContain(`aria-label="${T('m.more')}" aria-expanded="false" aria-controls="nav-more"`)
+    expect(src('./App.tsx')).toContain('md:pl-24')
   })
   it('#4 (revised with the owner) the view moves with single taps: tapping a country or province frames it; zoom and back-to-view buttons; no arrow pad', () => {
     const geo = src('./components/geomap.tsx')
@@ -297,10 +305,11 @@ describe('languages look alike (owner, Oct 2026)', () => {
     }
     for (const n of [1, 2, 3, 4]) { const [th, , en] = messages[`m.how.${n}.t` as MsgKey] as readonly string[]; expect(th.length).toBeLessThanOrEqual(24); expect(en.split(' ').length).toBeLessThanOrEqual(4) }
   })
-  it('skill chips in a row share one height; narrow-rail labels may wrap tidily', () => {
+  it('skill chips in a row share one height; the menu capsule shows icons only, so no label can overflow in any language', () => {
     expect(src('./pages/match.tsx')).toContain('grid grid-cols-2 auto-rows-fr gap-2')
     expect(css).toMatch(/\.chip-check \{[^}]*height: 100%/)
-    expect(src('./components/sidenav.tsx')).toContain("'block w-full text-[11px] leading-tight tracking-tight break-words [hyphens:auto]'")
+    const nav = src('./components/sidenav.tsx'), cap = nav.slice(nav.indexOf('const iconLink'), nav.indexOf('const moreOn'))
+    expect(cap).not.toMatch(/\{t\(n\.key as never\)\}<\//) // no visible text label inside the capsule buttons
   })
 })
 

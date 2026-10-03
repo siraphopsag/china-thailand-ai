@@ -158,15 +158,14 @@ export function PersonaSwitcher({ bar = false }: { bar?: boolean }) {
 }
 
 /**
- * Header: the side-menu button and the C.A.L.L. mark on the left (the mark is not a link — "home" is in the side menu),
- * language, theme and log-in on the right. No top navigation and no simulated-role control.
+ * Header: the C.A.L.L. mark on the left (not a link — "home" is in the menu capsule), language, theme and log-in on the right.
+ * No top navigation, no menu button and no simulated-role control.
  */
-export function Header({ menuOpen, onMenu }: { route?: string; menuOpen?: boolean; onMenu?: () => void }) {
-  const { t } = useI18n()
+export function Header(_: { route?: string }) {
   return (
     <header className="bg-header/75 backdrop-blur-xl backdrop-saturate-150 text-onheader sticky top-0 z-40 border-b border-line shadow-[0_1px_0_rgb(255_255_255/.04),0_8px_24px_-16px_rgb(0_0_0/.25)]">
       <div className="px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
-        <button type="button" className={`${ctrl} w-10 shrink-0`} data-menu-button aria-expanded={!!menuOpen} aria-label={t('m.menu')} title={t('m.menu')} onClick={onMenu}><Icon name={menuOpen ? 'close' : 'menu'} /></button>
+        {/* no menu button: the menu capsule is always visible (left on computers and tablets, bottom on phones) */}
         <div className="flex items-center gap-2 shrink-0" lang="en">
           <Logo /><span className="leading-tight"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
         </div>

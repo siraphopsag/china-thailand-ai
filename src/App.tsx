@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, type ReactNode } from 'react'
 import { go, NavLink, StoreProvider, useRoute } from './store'
 import { LanguageProvider, useI18n } from './i18n'
 import { ThemeProvider } from './theme'
@@ -48,8 +48,6 @@ const ChooseRolePage = lazy(() => import('./pages/choose').then((m) => ({ defaul
 const FOOT = 'underline inline-flex items-center min-h-[24px]'
 function Shell({ route, children }: { route: string; children: ReactNode }) {
   const { t } = useI18n()
-  const [menu, setMenu] = useState(false)
-  const closeMenu = useCallback(() => setMenu(false), [])
   const first = useRef(true)
   // Every view gets its own title (its h1 + the product name), and after a route change focus moves to that h1 so
   // keyboard and screen-reader users start at the new content and hear which page opened. Pages load lazily, so wait for the h1.
@@ -72,12 +70,13 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:bg-surface focus:text-ink focus:p-2 z-50">{t('nav.skip')}</a>
-      <Header route={route} menuOpen={menu} onMenu={() => setMenu((m) => !m)} />
-      <SideNav route={route} open={menu} onClose={closeMenu} />
-      <div id="page-body" className="flex-1 flex flex-col lg:pl-20">
+      <Header route={route} />
+      <SideNav route={route} />
+      {/* room for the menu capsule: on the left from 768 px, below the content on phones */}
+      <div id="page-body" className="flex-1 flex flex-col md:pl-24">
       <ContextStack route={route} />
-      <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 xl:pb-10"><BackButton route={route} /><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
-      <footer className="bg-surface border-t border-line text-xs text-muted px-4 py-6 mb-16 xl:mb-0">
+      <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 md:pb-10"><BackButton route={route} /><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
+      <footer className="bg-surface border-t border-line text-xs text-muted px-4 py-6 mb-20 md:mb-0">
         <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-2 items-center">
           <span className="font-semibold text-ink" lang="en">{BRAND.title}</span><span>{t('foot.note')}</span>
           <NavLink to="privacy" className={FOOT}>{t('nav.privacy')}</NavLink>
