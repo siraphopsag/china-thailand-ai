@@ -215,7 +215,7 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
     const current = [...page.matchAll(/<a [^>]*aria-current="page"[^>]*>/g)].map((m) => m[0])
     expect(current.length).toBe(2) // the side capsule and the phone bar
     for (const a of current) { expect(a).toContain('href="/seek"'); expect(a).toContain('nav-on') }
-    expect(css).toMatch(/\.nav-on, \.nav-on:hover \{ background: rgb\(var\(--primary\)\); color: rgb\(var\(--onprimary\)\)/) // primary vs surface ≥ 6.7:1
+    expect(css).toMatch(/\.nav-on, \.nav-on:hover \{ color: rgb\(var\(--onprimary\)\);[\s\S]*?linear-gradient\(180deg, rgb\(var\(--primary-hi\)\), rgb\(var\(--primary\)\)\)/)
     for (const k of ['m.home', 'm.notif', 'm.pins', 'm.prepare', 'm.settings', 'm.help', 'm.profile'] as const) expect(page, k).toContain(`aria-label="${T(k)}"`)
     expect(page).not.toMatch(/<a [^>]*title=/)
     // computers and tablets: left capsule; phones: bottom capsule with 5 places + More
@@ -266,6 +266,34 @@ describe('design pass (owner review, Oct 2026)', () => {
     expect(geo).not.toContain('map-haze')
     expect(src('./index.css')).not.toContain('map-haze')
     expect(geo).toContain('rotateX(${tilt}deg)')
+  })
+})
+
+describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
+  const css = src('./index.css')
+  const tok = (theme: 'light' | 'dark', name: string) => {
+    const lightAt = css.search(/:root, :root\[data-theme='light'\] \{\s*--glass-tint/), darkAt = css.search(/:root\[data-theme='dark'\] \{\s*--glass-tint/)
+    const block = theme === 'light' ? css.slice(lightAt, darkAt) : css.slice(darkAt)
+    return block.match(new RegExp(`--${name}: ([\\d.]+) ([\\d.]+) ([\\d.]+)`))!.slice(1, 4).map(Number)
+  }
+  const pal = (theme: 'light' | 'dark', name: string) => {
+    const i = theme === 'light' ? css.indexOf(":root, :root[data-theme='light'] {") : css.indexOf(":root[data-theme='dark'] {")
+    return css.slice(i).match(new RegExp(`--${name}: ([\\d.]+) ([\\d.]+) ([\\d.]+)`))!.slice(1, 4).map(Number)
+  }
+  const L = (c: number[]) => { const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }); return 0.2126 * r + 0.7152 * g + 0.0722 * b }
+  const cr = (a: number[], b: number[]) => { const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) }
+  it('clear glass: strong blur, lit rim, specular highlight; the "More" list is glass too and lives outside the capsule', () => {
+    expect(css).toMatch(/\.nav-pill, \.glass-pop \{ isolation: isolate;[\s\S]*?backdrop-filter: blur\(var\(--glass-blur\)\) saturate\(1\.8\)/)
+    expect(css).toMatch(/\.nav-pill::before, \.glass-pop::before \{[^}]*radial-gradient/)
+    const nav = src('./components/sidenav.tsx')
+    expect(nav.indexOf('id="nav-more"')).toBeGreaterThan(nav.lastIndexOf('</nav>'))
+  })
+  it('the current-page drop stays ≥ 3:1 against the glass and the icon on it ≥ 3:1, in both themes; reduced transparency → solid', () => {
+    for (const th of ['light', 'dark'] as const) {
+      const glass = tok(th, 'glass-tint'), hi = tok(th, 'primary-hi'), base = pal(th, 'primary'), on = pal(th, 'onprimary')
+      for (const c of [hi, base]) { expect(cr(c, glass), `${th} drop`).toBeGreaterThanOrEqual(3); expect(cr(on, c), `${th} icon`).toBeGreaterThanOrEqual(3) }
+    }
+    expect(css).toMatch(/@media \(prefers-reduced-transparency: reduce\) \{\s*\.nav-pill, \.glass-pop \{ background: rgb\(var\(--surface\)\); backdrop-filter: none/)
   })
 })
 

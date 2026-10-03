@@ -76,17 +76,21 @@ export function SideNav({ route }: { route: string }) {
         <nav aria-label={t('m.side')} className="nav-pill md:hidden fixed inset-x-3 z-40 rounded-full px-2 py-1.5" style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           <ul className="flex items-center justify-around">
             {main.map((n) => <li key={n.key}>{iconLink(n, 'sm')}</li>)}
-            <li className="relative">
+            <li>
               <button ref={moreBtn} type="button" aria-label={t('m.more')} aria-expanded={moreOpen} aria-controls="nav-more" onClick={() => setMoreOpen((o) => !o)}
                 className={`nav-item w-11 h-11 ${moreOn ? 'nav-on' : ''}`}><Icon name="more" size={21} /></button>
-              <ul ref={moreList} id="nav-more" hidden={!moreOpen} className="list-pop absolute bottom-full right-0 mb-3 w-52 rounded-2xl border border-line p-1.5">
-                {more.map((n) => { const on = n.match.includes(route); return (
-                  <li key={n.key}><NavLink to={n.to} aria-current={on ? 'page' : undefined}
-                    className={`flex items-center gap-3 rounded-xl px-3 min-h-[44px] text-sm ${on ? 'bg-primary text-onprimary font-semibold' : 'text-ink hover:bg-surface3'}`}><Icon name={n.icon} size={18} />{t(n.key as never)}</NavLink></li>) })}
-              </ul>
             </li>
           </ul>
         </nav>)}
+      {/* the "More" list sits outside the capsule so its own glass can blur the page (a glass element cannot blur through
+          another glass element); it comes right after the More button in the reading and Tab order */}
+      {!ownBar && (
+        <ul ref={moreList} id="nav-more" hidden={!moreOpen} className="glass-pop md:hidden fixed right-3 z-40 w-52 rounded-3xl p-1.5"
+          style={{ bottom: 'calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.5rem)' }}>
+          {more.map((n) => { const on = n.match.includes(route); return (
+            <li key={n.key}><NavLink to={n.to} aria-current={on ? 'page' : undefined}
+              className={`nav-item !flex !justify-start gap-3 !rounded-2xl px-3 min-h-[44px] text-sm ${on ? 'nav-on font-semibold' : ''}`}><Icon name={n.icon} size={18} />{t(n.key as never)}</NavLink></li>) })}
+        </ul>)}
     </>
   )
 }
