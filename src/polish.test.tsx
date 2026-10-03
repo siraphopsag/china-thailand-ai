@@ -48,28 +48,61 @@ describe('language level picker', () => {
   })
 })
 
-describe('Background Paths in the home hero', () => {
+describe('Background Paths in the home hero (option B: still lines + a sweeping band of light)', () => {
   const html = renderToStaticMarkup(<LanguageProvider><BackgroundPaths /></LanguageProvider>)
-  it('2 sets × 36 curved lines, hidden from screen readers, with a pause button after the hero content', () => {
-    expect(html.match(/<path /g)).toHaveLength(72)
-    expect(html).toMatch(/<div class="bg-paths [^"]*" aria-hidden="true">/)
-    expect(html).toMatch(/<button type="button" class="bg-paths-toggle globe-ctl" aria-pressed="false" aria-label="[^"]+"/)
+  it('2 sets × 36 still curved lines + the same lines again inside the light band; hidden from screen readers; play/pause after the hero content', () => {
+    expect(html.match(/<path /g)).toHaveLength(144)
+    expect(html).toMatch(/<div class="bg-paths [^"]*is-on[^"]*" aria-hidden="true">/) // moves by default
+    expect(html).toContain('<div class="bg-sheen-wrap"><div class="bg-sheen"><div class="bg-sheen-lines">')
+    expect(html).toMatch(/<button type="button" class="bg-paths-toggle globe-ctl" aria-label="[^"]+" title="[^"]+">/)
     expect(html).not.toContain('framer') // no new library
     const intake = src('./pages/intake.tsx')
     expect(intake.indexOf('<BackgroundPaths />')).toBeGreaterThan(intake.indexOf("t('m.proto')")) // keyboard order: main button first
     expect(intake).not.toContain('RetroGrid')
-    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{ \.bg-paths-toggle \{ display: none \} \}/)
   })
-  it('text over the lines keeps ≥ 4.5:1 in both themes (lines at their strongest, 20 % over the text column)', () => {
+  it('only transforms move (smooth on low-end phones), the light stays on the lines, and it stops off-screen', () => {
+    const kf = (n: string) => { const i = css.indexOf(`@keyframes ${n} {`); return css.slice(i + `@keyframes ${n} {`.length, css.indexOf('\n', i)).replace(/\r$/, '') }
+    for (const n of ['bg-sheen', 'bg-sheen-lines']) { expect(kf(n)).toMatch(/transform: translateX/); expect(kf(n)).not.toMatch(/stroke|opacity|width|left/) }
+    // window -100% → 250% of its 40 % width; copy +40% → -100% of its full (250 %) width: the two always cancel
+    expect(kf('bg-sheen')).toBe(' 0% { transform: translateX(-100%) } 70%, 100% { transform: translateX(250%) } }')
+    expect(kf('bg-sheen-lines')).toBe(' 0% { transform: translateX(40%) } 70%, 100% { transform: translateX(-100%) } }')
+    expect(-100 * 0.4).toBe(-40); expect(250 * 0.4).toBe(100)
+    expect(css).toContain('.bg-sheen { position: absolute; top: 0; bottom: 0; left: 0; width: 40%;')
+    expect(css).toContain('.bg-sheen-lines { position: absolute; top: 0; bottom: 0; left: 0; width: 250%;')
+    expect(css).toContain('.bg-paths.is-on .bg-sheen { display: block; animation: bg-sheen 14s ease-in-out infinite !important }')
+    expect(css).toContain('.bg-paths.is-on .bg-sheen-lines { animation: bg-sheen-lines 14s ease-in-out infinite !important }')
+    expect(css).toContain('.bg-paths.is-away .bg-sheen, .bg-paths.is-away .bg-sheen-lines { animation-play-state: paused !important }')
+    expect(css).not.toContain('@keyframes bg-path ') // the old per-line dash animation (broken-looking lines) is gone
+  })
+  it('"reduce motion" devices start still but can press play; the choice is remembered', () => {
+    const c = src('./components/ui/background-paths.tsx')
+    expect(c).toContain("matchMedia('(prefers-reduced-motion: reduce)').matches")
+    expect(c).toContain("localStorage.setItem(KEY, p ? '0' : '1')")
+    expect(css).not.toContain('.bg-paths-toggle { display: none }') // the button is always there
+    expect(tr('m.motion.play', undefined, 'th')).toBe('เล่นภาพเคลื่อนไหว'); expect(tr('m.motion.pause', undefined, 'th')).toBe('หยุดภาพเคลื่อนไหว')
+  })
+  it('with "reduce motion" on, it renders still with a play button; a stored choice wins over the device setting', () => {
+    const g = globalThis as { matchMedia?: unknown; localStorage?: unknown }
+    const store: Record<string, string> = {}
+    g.matchMedia = () => ({ matches: true }); g.localStorage = { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v } }
+    try {
+      const still = renderToStaticMarkup(<LanguageProvider><BackgroundPaths /></LanguageProvider>)
+      expect(still).not.toContain('is-on'); expect(still).toContain(`aria-label="${tr('m.motion.play', undefined, 'th')}"`)
+      store['call.motion.paused'] = '0' // the visitor pressed play earlier
+      expect(renderToStaticMarkup(<LanguageProvider><BackgroundPaths /></LanguageProvider>)).toContain('is-on')
+    } finally { delete g.matchMedia; delete g.localStorage }
+  })
+  it('text over the lines keeps ≥ 4.5:1 in both themes (still lines + light band at full strength, 15 % over the text column)', () => {
     for (const t of [light, dark]) {
-      const peak = 0.6 * t['paths-a'][0] * 0.2 // keyframe opacity × theme strength × mask over the text column
-      expect(peak).toBeGreaterThan(0)
+      const m = 0.15 * t['paths-a'][0], still = 0.4 * m, band = 1 * m * 0.5 // band: full copy × the extra .5 over the text column
       for (const base of [t['hero-base'], t.surface2]) {
-        const glowed = mix(base, t['glow-a'], t['glow-k'][0]) // the hero glow at its strongest
-        for (const bg of [mix(base, t['paths-c'], peak), mix(glowed, t['paths-c'], peak)]) expect(cr(t.ink, bg)).toBeGreaterThanOrEqual(4.5)
-        expect(cr(t.muted, mix(base, t['paths-c'], peak))).toBeGreaterThanOrEqual(4.5) // the small prototype note sits at the bottom, away from the glow
+        const lined = mix(mix(base, t['paths-c'], still), t['paths-sheen'], band) // a pixel where a still line and the band overlap
+        const glowed = mix(mix(mix(base, t['glow-a'], t['glow-k'][0]), t['paths-c'], still), t['paths-sheen'], band)
+        expect(cr(t.ink, lined)).toBeGreaterThanOrEqual(4.5); expect(cr(t.ink, glowed)).toBeGreaterThanOrEqual(4.5)
+        expect(cr(t.muted, lined)).toBeGreaterThanOrEqual(4.5) // the small prototype note sits at the bottom, away from the glow
       }
     }
-    expect(css).toContain('rgb(0 0 0 / .2) calc(50% - min(440px, 46%))')
+    expect(css).toContain('rgb(0 0 0 / .15) calc(50% - min(440px, 46%))')
+    expect(css).toContain('.bg-paths > .bg-paths-svg { opacity: .4 }'); expect(css).toContain('width: 250%; opacity: 1;'); expect(css).toContain('rgb(0 0 0 / .5) calc(50% - min(440px, 46%))')
   })
 })

@@ -207,6 +207,7 @@ export const match = {
   'm.f.level': ['ระดับ', '水平', 'Level'],
   'm.f.education': ['ระดับการศึกษาขั้นต่ำ', '最低学历', 'Minimum education'],
   'm.motion.pause': ['หยุดภาพเคลื่อนไหว', '暂停动画', 'Pause animation'],
+  'm.motion.play': ['เล่นภาพเคลื่อนไหว', '播放动画', 'Play animation'],
   'm.edu.none': ['ไม่กำหนด', '不限', 'Not required'],
   'm.edu.lower_secondary': ['มัธยมต้น', '初中', 'Lower secondary'],
   'm.edu.secondary': ['มัธยมปลาย', '高中', 'Upper secondary'],
