@@ -14,6 +14,7 @@ import { ListSelect } from '../components/listselect'
 import { Warn } from '../components/ui'
 import { Icon, type IconName } from '../components/icons'
 import { motionOff, setMotionOff } from '../components/ui/background-paths'
+import { NeedLogin } from './auth'
 
 /**
  * Pages of the matching prototype. Data stay in this browser (see matchData.tsx); forwarding to agencies is simulated and
@@ -100,6 +101,14 @@ export function Empty({ icon, text, to, action }: { icon: 'bell' | 'pin' | 'post
       {to && action && <NavLink to={to} className="btn-primary">{action}<Icon name="next" size={16} /></NavLink>}
     </div>
   )
+}
+/** null when the page can show its content; otherwise what to show instead (a wait, or "sign in first") */
+export function useGate(here: string): ReactNode | null {
+  const { t } = useI18n()
+  const { mode } = useMatch()
+  if (mode === 'loading') return <p className="text-muted py-10 text-center" role="status">{t('c.loading')}</p>
+  if (mode === 'signedOut') return <NeedLogin here={here} />
+  return null
 }
 export function NeedRole({ role }: { role: 'seeker' | 'employer' }) {
   const { t } = useI18n()
@@ -196,18 +205,20 @@ export function SeekPage() {
   const [skills, setSkills] = useState<Skill[]>([])
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   const fe = useFieldError()
+  const gate = useGate('seek')
+  if (gate) return <Page title={t('m.seek.title')}>{gate}</Page>
   if (st.role !== 'seeker') return <Page title={t('m.seek.title')}><NeedRole role="seeker" /></Page>
   const originStep = !st.me.origin || editOrigin
   const pins: MapPin[] = st.me.pins.map((p) => ({ country: p.country, province: p.province, label: N.place(p.country, p.province), tone: 'mine' }))
-  const confirmOrigin = () => {
-    if (isCountry(oc) && op) { setOrigin({ country: oc, province: op }); setEditOrigin(false); setMsg(null); fe.clear() }
+  const confirmOrigin = async () => {
+    if (isCountry(oc) && op) { await setOrigin({ country: oc, province: op }); setEditOrigin(false); setMsg(null); fe.clear() }
     else { setMsg(null); fe.set('origin-prov', oc ? 'origin-prov' : 'origin-prov-c', N.problem('place')) }
   }
-  const submitPin = (e: FormEvent) => {
+  const submitPin = async (e: FormEvent) => {
     e.preventDefault()
     setMsg(null)
     if (!isCountry(dc) || !dp) { fe.set('dest-prov', isCountry(dc) ? 'dest-prov' : 'dest-prov-c', N.problem('place')); return }
-    const r = pin({ place: { country: dc, province: dp }, industry, skills })
+    const r = await pin({ place: { country: dc, province: dp }, industry, skills })
     if (r.ok) { fe.clear(); setMsg({ tone: 'info', text: t('m.pin.done', { p: N.place(dc, dp) }) }); setDp(null); setSkills([]); return }
     if (r.problem === 'place' || r.problem === 'duplicate') fe.set('dest-prov', 'dest-prov', N.problem(r.problem))
     else if (r.problem === 'skills') fe.set('seek-skills', 'seek-skills-0', N.problem(r.problem))
@@ -253,7 +264,7 @@ export function SeekPage() {
             <li key={p.id} className="glass-card p-3 flex items-start gap-3">
               <Icon name="pin" size={20} className="text-danger-fg mt-0.5" />
               <div className="min-w-0 flex-1"><h3 className="font-semibold">{N.place(p.country, p.province)}</h3><p className="text-sm text-muted">{N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p></div>
-              <button type="button" className="w-9 h-9 rounded-lg border border-control grid place-items-center hover:bg-surface3" aria-label={`${t('m.pin.remove')}: ${N.place(p.country, p.province)}`} title={t('m.pin.remove')} onClick={() => { unpin(p.id); setMsg({ tone: 'info', text: t('m.pin.removed') }) }}><Icon name="close" size={16} /></button>
+              <button type="button" className="w-9 h-9 rounded-lg border border-control grid place-items-center hover:bg-surface3" aria-label={`${t('m.pin.remove')}: ${N.place(p.country, p.province)}`} title={t('m.pin.remove')} onClick={async () => { await unpin(p.id); setMsg({ tone: 'info', text: t('m.pin.removed') }) }}><Icon name="close" size={16} /></button>
             </li>))}</ul>)}
       </section>
       </MapLayout>
@@ -281,6 +292,8 @@ export function NotificationsPage() {
   const N = useNames()
   const { st, now, acceptOffer } = useMatch()
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
+  const gate = useGate('notifications')
+  if (gate) return <Page title={t('m.notif.title')}>{gate}</Page>
   if (st.role === 'employer') {
     const mine = new Set(st.posts.filter((p) => p.employerId === MY_EMPLOYER).map((p) => p.id))
     const acc = st.acceptances.filter((a) => mine.has(a.postId))
@@ -314,7 +327,7 @@ export function NotificationsPage() {
                     <ul className="flex flex-wrap gap-x-4 gap-y-1">{AGENCIES.map((a) => <li key={a.key}><a className="text-primary underline inline-flex items-center gap-1 min-h-[24px]" href={a.url} target="_blank" rel="noopener noreferrer">{t(a.key)}<Icon name="external" size={13} /></a></li>)}</ul>
                     <p className="text-xs text-muted mt-1">{t('m.agency.note')}</p></div>
                 </div>
-              ) : <button type="button" className="btn-primary" onClick={() => { const r = acceptOffer(p.id); setMsg(r.ok ? { tone: 'info', text: t('m.accept.done') } : { tone: 'danger', text: N.problem(r.problem) }) }}>{t('m.accept')}</button>}
+              ) : <button type="button" className="btn-primary" onClick={async () => { const r = await acceptOffer(p.id); setMsg(r.ok ? { tone: 'info', text: t('m.accept.done') } : { tone: 'danger', text: N.problem(r.problem) }) }}>{t('m.accept')}</button>}
             </li>)
         })}</ul>)}
     </Page>
@@ -371,7 +384,7 @@ export function PreparePage() {
 export function SettingsPage() {
   const { t, lang, setLang } = useI18n()
   const { theme, toggle } = useTheme()
-  const { reset } = useMatch()
+  const { reset, mode } = useMatch()
   const [done, setDone] = useState(false)
   const [motion, setMotion] = useState(() => !motionOff())
   return (
@@ -382,9 +395,9 @@ export function SettingsPage() {
         {/* the home hero's moving lines (WCAG 2.2.2: a way to stop them; owner asked for no button on the hero itself) */}
         <fieldset aria-describedby="motion-hint"><legend className="label">{t('m.settings.motion')}</legend><div className="flex gap-2">{([true, false] as const).map((on) => <button key={String(on)} type="button" aria-pressed={motion === on} onClick={() => { setMotion(on); setMotionOff(!on) }} className={`min-h-[44px] px-4 rounded-lg border ${motion === on ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(on ? 'm.settings.on' : 'm.settings.off')}</button>)}</div>
           <p id="motion-hint" className="text-xs text-muted mt-1">{t('m.settings.motion.d')}</p></fieldset>
-        <div className="border-t border-line pt-3 space-y-2"><p className="text-sm text-muted">{t('m.settings.reset.d')}</p>
+        {mode === 'local' && <div className="border-t border-line pt-3 space-y-2"><p className="text-sm text-muted">{t('m.settings.reset.d')}</p>
           <button type="button" className="btn-ghost" onClick={() => { if (window.confirm(t('m.settings.reset.d'))) { reset(); setDone(true) } }}>{t('m.settings.reset')}</button>
-          <p role="status" className="text-sm">{done && t('m.settings.resetDone')}</p></div>
+          <p role="status" className="text-sm">{done && t('m.settings.resetDone')}</p></div>}
       </section>
     </Page>
   )
@@ -398,14 +411,22 @@ export function HelpPage() {
 export function BackofficePage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, advanceDay, forwardCase } = useMatch()
+  const { st, now, advanceDay, forwardCase, deletePost, stats, mode } = useMatch()
   const { isAdmin } = useAuth()
+  const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   if (!isAdmin) return <Page title={t('m.adm.title')}><Warn>{t('m.adm.gate')}</Warn></Page>
   const people = [{ ...st.me, name: t('m.adm.you') }, ...st.seekers]
   return (
     <Page title={t('m.adm.title')} sub={t('m.adm.sub')}>
       <div className="flex flex-wrap items-center gap-3"><span className="chip bg-info-bg text-info-fg border-info-line">{t('m.adm.clock', { n: st.dayOffset })}</span><button type="button" className="btn-ghost text-sm" onClick={advanceDay}><Icon name="fastForward" size={16} />{t('m.adm.advance')}</button></div>
       <p className="text-xs text-muted">{t('m.adm.ai')}</p>
+      <Toast msg={msg} />
+      {mode === 'remote' && stats && (
+        <section aria-labelledby="adm-stats" className="space-y-2">
+          <h2 id="adm-stats" className="h2">{t('m.adm.stats')}</h2>
+          <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">{([['m.adm.st.users', stats.users], ['m.adm.st.employers', stats.employers], ['m.adm.st.seekers', stats.seekers], ['m.adm.st.posts', stats.posts], ['m.adm.st.posts7', stats.posts_7d], ['m.adm.st.acc', stats.acceptances]] as const).map(([k, v]) => (
+            <div key={k} className="glass-card glass-lite p-3"><dt className="text-xs text-muted">{t(k)}</dt><dd className="text-2xl font-bold">{v}</dd></div>))}</dl>
+        </section>)}
       <section className="space-y-3" aria-labelledby="adm-posts">
         <h2 id="adm-posts" className="h2">{t('m.adm.posts')}</h2>
         <ul className="space-y-3">{st.posts.map((p) => {
@@ -423,10 +444,11 @@ export function BackofficePage() {
                 <div><p className="font-medium">{t('m.adm.reached')} ({reached.length})</p><p className="text-muted">{reached.map((s) => s.name).join(', ') || t('m.adm.none')}</p></div>
                 <div><p className="font-medium">{t('m.adm.waiting')}</p><p className="text-muted">{waiting.map((s) => `${s.name} (${reachTier(p, s)})`).join(', ') || t('m.adm.none')}</p></div>
               </div>
+              <div className="flex justify-end"><button type="button" className="btn-ghost text-sm text-danger-fg" onClick={async () => { if (window.confirm(t('m.post.delete.confirm'))) setMsg((await deletePost(p.id)) ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') }) }}><Icon name="trash" size={15} />{t('m.post.delete')}</button></div>
               {acc.map((a) => { const s = people.find((x) => x.id === a.seekerId); return (
                 <div key={a.id} className="border-t border-line pt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span><Icon name="ok" size={15} className="inline text-ok-fg" /> {s?.name} · {t(a.status === 'forwarded' ? 'm.st.forwarded' : 'm.st.accepted')}</span>
-                  {a.status === 'accepted' ? <button type="button" className="btn-primary text-sm" onClick={() => forwardCase(a.id)}><Icon name="send" size={15} />{t('m.adm.forward')}</button> : <span className="text-xs text-muted">{t('m.adm.forwarded')}</span>}
+                  <span><Icon name="ok" size={15} className="inline text-ok-fg" /> {s?.name ?? a.seekerName} · {t(a.status === 'forwarded' ? 'm.st.forwarded' : 'm.st.accepted')}</span>
+                  {a.status === 'accepted' ? <button type="button" className="btn-primary text-sm" onClick={() => { void forwardCase(a.id) }}><Icon name="send" size={15} />{t('m.adm.forward')}</button> : <span className="text-xs text-muted">{t('m.adm.forwarded')}</span>}
                 </div>) })}
             </li>)
         })}</ul>

@@ -71,7 +71,7 @@ export interface Post extends Place {
   synthetic: true
 }
 /** a seeker took a post; the admin then forwards it to the employment authority (simulated) */
-export interface Acceptance { id: string; postId: string; seekerId: string; at: string; status: 'accepted' | 'forwarded'; forwardedAt?: string }
+export interface Acceptance { id: string; postId: string; seekerId: string; at: string; status: 'accepted' | 'forwarded'; forwardedAt?: string; /** from the database: the name the employer sees */ seekerName?: string }
 
 export interface MatchState {
   version: 1

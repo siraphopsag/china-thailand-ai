@@ -107,8 +107,8 @@ describe('C. confirm → posted', () => {
   it('flow: Check and post → (pre-check) → "Post this job?" → "Your post is live" with View the post / Post another', () => {
     const h = src('./pages/hire.tsx')
     expect(h).toMatch(/setStage\(r\.errors\.length \|\| r\.warnings\.length \? 'check' : 'confirm'\)/)
-    expect(h).toContain("t('m.cf.title')"); expect(h).toContain("t('m.cf.yes')"); expect(h).toContain("t('m.cf.back')")
-    expect(h).toContain("t('m.dn.title')")
+    expect(h).toContain("t(editing ? 'm.edit.cf.title' : 'm.cf.title')"); expect(h).toContain("t(editing ? 'm.edit.cf.yes' : 'm.cf.yes')"); expect(h).toContain("t('m.cf.back')")
+    expect(h).toContain("t(editing ? 'm.edit.done' : 'm.dn.title')")
     expect(h).toContain("go(`post?id=${pid}`)") // View the post → its page
     expect(h).toMatch(/const another = \(\) => \{[^}]*setForm\(false\); setC\(null\); setP\(null\)/) // Post another → back to choosing the country
     expect(src('./App.tsx')).toContain('post: <PostPage />')
@@ -134,7 +134,7 @@ describe('D. weekly allowance and membership package', () => {
     expect(card).toMatch(new RegExp(`<span class="price-was[^"]*"><span class="sr-only">${T('m.pk.priceSr')} </span>${T('m.pk.price')}</span>`))
     expect(card).toContain(T('m.pk.free')); expect(card).toContain(T('m.pk.note'))
     expect(src('./index.css')).toMatch(/\.price-was \{ text-decoration: line-through/)
-    expect(src('./matchData.tsx')).toContain('subscribe: () => setSt((s) => ({ ...s, member: true }))')
+    expect(src('./matchData.tsx')).toContain('subscribe: async () => { if (local) setLocal((s) => ({ ...s, member: true })); else await profile({ member: true }) }')
   })
   it('wording: "3 free posts per week" replaces "no fees during the prototype"', () => {
     for (const k of ['m.role.employer.p4', 'm.emp.noPay'] as const) expect(T(k)).toBe('โพสต์ฟรี 3 ครั้งต่อสัปดาห์')

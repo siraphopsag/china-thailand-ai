@@ -1,6 +1,7 @@
 import { useI18n } from '../i18n'
 import { go } from '../store'
 import { useMatch } from '../matchData'
+import { rememberNext } from '../auth'
 import { Icon, type IconName } from '../components/icons'
 
 /**
@@ -20,7 +21,7 @@ const ROLES: { role: RoleKey; to: string; icon: IconName; en: string }[] = [
 
 export function ChooseRolePage() {
   const { t, lang } = useI18n()
-  const { setRole } = useMatch()
+  const { setRole, mode } = useMatch()
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-4">
       <div className="text-center">
@@ -36,7 +37,7 @@ export function ChooseRolePage() {
           </div>
           <ul className="space-y-2.5 text-sm">{([1, 2, 3, 4] as const).map((n) => (
             <li key={n} className="flex items-start gap-2.5"><Icon name="check" size={17} className="role-tick shrink-0 mt-0.5" />{t(`m.role.${r.role}.p${n}`)}</li>))}</ul>
-          <button type="button" className="role-cta mt-auto" aria-describedby={`role-${r.role}-d`} onClick={() => { setRole(r.role); go(r.to) }}>
+          <button type="button" className="role-cta mt-auto" aria-describedby={`role-${r.role}-d`} onClick={async () => { if (mode === 'signedOut' || mode === 'loading') { rememberNext(r.to, r.role); go(`login?next=${r.to}`); return } await setRole(r.role); go(r.to) }}>
             {t(`m.role.start.${r.role}`)}<Icon name="next" size={18} className="role-arrow" />
           </button>
         </li>))}</ul>

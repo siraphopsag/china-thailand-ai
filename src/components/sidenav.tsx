@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go } from '../store'
 import { useMatch } from '../matchData'
 import { useAuth } from '../auth'
-import { Modal } from './modal'
 import { offersFor } from '../domain/match/logic'
 import { MY_EMPLOYER } from '../domain/match/types'
 import { Icon, type IconName } from './icons'
@@ -93,18 +92,15 @@ export function SideNav({ route }: { route: string }) {
 }
 
 /**
- * Header account control (owner, Oct 2026: Google sign-in first). Signed out: "Log in" opens a short notice of what is kept
- * (PDPA) and continues to Google. Signed in: the picture (or initial) opens a menu with the name, profile, back office for
- * administrators and log out. Without a configured sign-in service nothing is shown; if the service is down, the notice says so.
+ * Header account control. Signed out: "Log in" opens the sign-in page (e-mail + password or Google). Signed in: the picture (or
+ * initial) opens a menu with the name, profile, back office for administrators and log out. Hidden when accounts are not set up
+ * or the service is unreachable (the site then runs in its local demo mode).
  */
 export function LoginButton() {
   const { t } = useI18n()
-  const { status, user, isAdmin, failed, signIn, signOut } = useAuth()
-  const [open, setOpen] = useState(false)
+  const { status, online, user, isAdmin, signOut } = useAuth()
   const [menu, setMenu] = useState(false)
-  const [busy, setBusy] = useState(false)
   const btn = useRef<HTMLButtonElement>(null), list = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
   useEffect(() => {
     if (!menu) return
     list.current?.querySelector<HTMLElement>('a[href], button')?.focus()
@@ -113,7 +109,7 @@ export function LoginButton() {
     document.addEventListener('keydown', esc); document.addEventListener('pointerdown', away)
     return () => { document.removeEventListener('keydown', esc); document.removeEventListener('pointerdown', away) }
   }, [menu])
-  if (status === 'off') return null
+  if (status === 'off' || online === false) return null
   if (status === 'loading') return <span className="h-10 w-10 rounded-full bg-surface3 animate-pulse" aria-hidden />
   if (status === 'signedIn' && user) {
     const item = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2.5 min-h-[44px] hover:bg-surface3 text-sm'
@@ -134,33 +130,8 @@ export function LoginButton() {
     )
   }
   return (
-    <>
-      <button type="button" className="h-10 px-3 rounded-lg bg-primary text-onprimary text-sm font-medium flex items-center gap-1.5 hover:opacity-95" onClick={() => setOpen(true)}>
-        <Icon name="login" size={17} /><span className="sr-only sm:not-sr-only">{t('m.login')}</span>
-      </button>
-      <Modal open={open} onClose={close}>{(id) => (<>
-        <h2 id={id} className="h2">{t('m.auth.google')}</h2>
-        <p className="text-sm">{t('m.auth.d')}</p>
-        <ul className="text-xs text-muted space-y-1 list-disc pl-5"><li>{t('m.auth.optional')}</li><li>{t('m.auth.china')}</li></ul>
-        <NavLink to="privacy" className="text-sm font-medium text-primary underline underline-offset-4 inline-flex min-h-[24px] items-center" onNavigate={close}>{t('m.auth.privacy')}</NavLink>
-        <div role="status">{failed && <p className="text-sm text-danger-fg">{t('m.auth.fail')}</p>}</div>
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-          <button type="button" className="btn-ghost" onClick={close}>{t('jb.cancel')}</button>
-          <button type="button" className="btn-primary" disabled={busy} onClick={async () => { setBusy(true); await signIn(); setBusy(false) }}>
-            <GoogleMark />{t('m.auth.google')}</button>
-        </div>
-      </>)}</Modal>
-    </>
-  )
-}
-/** Google "G" mark (Google sign-in branding), drawn inline so no image is fetched from Google before the visitor agrees */
-function GoogleMark() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden className="bg-white rounded-full p-0.5">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17z" />
-      <path fill="#FBBC05" d="M10.6 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.3.8-4.7l-7.9-6.1C1 16.5 0 20.1 0 24s1 7.5 2.7 10.8l7.9-6.1z" />
-      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
-    </svg>
+    <NavLink to="login" className="h-10 px-3 rounded-lg bg-primary text-onprimary text-sm font-medium flex items-center gap-1.5 hover:opacity-95">
+      <Icon name="login" size={17} /><span className="sr-only sm:not-sr-only">{t('m.login')}</span>
+    </NavLink>
   )
 }

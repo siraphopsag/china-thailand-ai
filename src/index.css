@@ -197,6 +197,13 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
   background: linear-gradient(135deg, rgb(var(--cta-a)), rgb(var(--cta-b))); box-shadow: 0 8px 24px -10px rgb(var(--cta-b) / .6); transition: transform .15s ease, box-shadow .2s ease }
 .cta-core:hover { transform: translateY(-1px); box-shadow: 0 12px 30px -10px rgb(var(--cta-b) / .75) }
 .cta-core:active { transform: scale(.98) }
+.cta-core:disabled { opacity: .65; cursor: progress; transform: none }
+/* sign-in pages (owner, Oct 2026, after a reference he liked): a coloured band with a wave over a solid card */
+.auth-card { background: rgb(var(--surface)); box-shadow: var(--elev-hi), var(--elev-3) }
+.auth-hero { background: linear-gradient(135deg, rgb(var(--cta-a)), rgb(var(--cta-b))); color: #fff; overflow: hidden }
+.auth-wave path { fill: rgb(var(--surface)) }
+.auth-ring { position: absolute; right: -2.5rem; top: -2.5rem; width: 9rem; height: 9rem; border-radius: 9999px; border: 1.25rem solid rgb(255 255 255 / .12); pointer-events: none }
+.auth-ring::after { content: ''; position: absolute; left: -2.75rem; bottom: -2.25rem; width: 3.5rem; height: 3.5rem; border-radius: 9999px; border: .6rem solid rgb(255 255 255 / .12) }
 .glass { background: rgb(var(--surface) / .72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgb(var(--line)) }
 .hero-tilt { transform: perspective(1200px) rotateX(8deg); transform-origin: 50% 0 }
 @media (max-width: 640px) { .hero-tilt { transform: none } }

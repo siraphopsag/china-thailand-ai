@@ -1,39 +1,50 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { Session, SupabaseClient } from '@supabase/supabase-js'
+import type { AuthError, Session, SupabaseClient } from '@supabase/supabase-js'
 
 /*
- * Sign-in with Google through Supabase Auth (owner, Oct 2026). The browser only ever holds the public "anon" key; what each
- * person may read is enforced in the database (row level security, see supabase/migrations). Administrators are the accounts
- * whose profile row has role = 'admin' — set in the database by the owner, never from the browser.
- * When Supabase is not configured (no env vars) or cannot be reached, the rest of the site keeps working without sign-in.
+ * Accounts through Supabase Auth (owner, Oct 2026): e-mail + password (works everywhere, also in mainland China) and Google.
+ * The browser only ever holds the public "anon" key; what each person may read or change is enforced in the database (row level
+ * security, see supabase/migrations). Administrators are the accounts whose profile row has role = 'admin' — set in the database
+ * by the owner, never from the browser.
+ * Not configured (no env vars) → the site runs in its local demo mode without accounts. Configured but unreachable (e.g. the
+ * free project is paused) → `online` is false and the site falls back to the local demo mode with a notice.
  * The Supabase library is loaded only when configured, so the site stays light without it.
  */
 
 export type AuthStatus = 'off' | 'loading' | 'signedOut' | 'signedIn'
 export interface AuthUser { id: string; email: string; name: string; avatar: string | null }
+/** what an account action came back with; anything but 'ok' is shown as a message */
+export type AuthResult = 'ok' | 'invalid' | 'exists' | 'weak' | 'email' | 'rate' | 'unavailable' | 'error'
 interface Ctx {
   status: AuthStatus
   user: AuthUser | null
   isAdmin: boolean
-  /** a sign-in or sign-out step failed (e.g. the service is paused): show "not available right now" */
-  failed: boolean
-  signIn: () => Promise<void>
+  /** null while checking, false when the service cannot be reached (→ local demo mode) */
+  online: boolean | null
+  /** the visitor arrived from a "reset password" e-mail and may now set a new password */
+  recovery: boolean
+  signInGoogle: () => Promise<AuthResult>
+  signInEmail: (email: string, password: string) => Promise<AuthResult>
+  signUp: (name: string, email: string, password: string) => Promise<AuthResult>
+  sendReset: (email: string) => Promise<AuthResult>
+  updatePassword: (password: string) => Promise<AuthResult>
   signOut: () => Promise<void>
-  /** deletes the signed-in account and its profile (PDPA: right to erasure) */
+  /** deletes the signed-in account and everything tied to it (PDPA: right to erasure) */
   deleteAccount: () => Promise<boolean>
 }
 
 const ENV_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const ENV_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-/** only a real Supabase project URL and a key-shaped value turn sign-in on */
+/** only a real Supabase project URL and a key-shaped value turn accounts on */
 export const isConfigured = (url: unknown, key: unknown): url is string =>
   typeof url === 'string' && /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url) && typeof key === 'string' && key.length > 20
 
 let clientP: Promise<SupabaseClient> | null = null
-const getClient = () => (clientP ??= import('@supabase/supabase-js').then(({ createClient }) =>
+/** the shared Supabase client (loaded on first use); the data layer uses the same one, so it carries the signed-in session */
+export const getClient = () => (clientP ??= import('@supabase/supabase-js').then(({ createClient }) =>
   createClient(ENV_URL!, ENV_KEY!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' } })))
 
-/** name and picture as Google sends them; nothing else is read */
+/** name and picture as Google / the sign-up form give them; nothing else is read */
 export function toUser(s: Session | null): AuthUser | null {
   const u = s?.user; if (!u) return null
   const m = (u.user_metadata ?? {}) as Record<string, unknown>
@@ -42,11 +53,24 @@ export function toUser(s: Session | null): AuthUser | null {
   return { id: u.id, email: u.email ?? '', name: str(m.full_name) || str(m.name) || (u.email ?? '').split('@')[0], avatar: /^https:\/\//.test(avatar) ? avatar : null }
 }
 
-/** after the Google round trip the URL carries ?code=… (or an error); keep the address clean once it has been read */
+/** Supabase error → a message we can show (never the raw text) */
+export function authResult(e: Pick<AuthError, 'code' | 'status' | 'message'> | null | undefined): AuthResult {
+  if (!e) return 'ok'
+  const c = e.code ?? ''
+  if (c === 'invalid_credentials' || c === 'email_not_confirmed') return 'invalid'
+  if (c === 'user_already_exists' || c === 'email_exists') return 'exists'
+  if (c === 'weak_password') return 'weak'
+  if (c === 'email_address_invalid' || c === 'validation_failed') return 'email'
+  if (c.includes('rate_limit')) return 'rate'
+  if (!e.status || e.status >= 500) return 'unavailable'
+  return 'error'
+}
+
+/** after a sign-in round trip the URL carries ?code=… (or an error); keep the address clean once it has been read */
 const cleanUrl = () => {
   const q = new URLSearchParams(window.location.search)
   let changed = false
-  for (const k of ['code', 'error', 'error_code', 'error_description', 'state']) if (q.has(k)) { q.delete(k); changed = true }
+  for (const k of ['code', 'error', 'error_code', 'error_description', 'state', 'type']) if (q.has(k)) { q.delete(k); changed = true }
   const qs = q.toString()
   if (changed) window.history.replaceState(window.history.state, '', window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash)
 }
@@ -60,6 +84,19 @@ async function reachable(): Promise<boolean> {
   } catch { return false }
 }
 
+/* where to go (and which role to set) once signed in — kept across the Google round trip */
+const NEXT_KEY = 'call.auth.next'
+export function rememberNext(next: string, role?: 'seeker' | 'employer') { try { sessionStorage.setItem(NEXT_KEY, JSON.stringify({ next, role: role ?? null })) } catch { /* storage blocked */ } }
+export function takeNext(): { next: string; role: 'seeker' | 'employer' | null } | null {
+  try {
+    const raw = sessionStorage.getItem(NEXT_KEY); sessionStorage.removeItem(NEXT_KEY); if (!raw) return null
+    const v = JSON.parse(raw) as { next?: unknown; role?: unknown }
+    const next = typeof v.next === 'string' && /^[a-z-]*(\?[\w=&-]*)?$/.test(v.next) ? v.next : '' // in-site routes only
+    const role = v.role === 'seeker' || v.role === 'employer' ? v.role : null
+    return { next, role }
+  } catch { return null }
+}
+
 const C = createContext<Ctx | null>(null)
 /** for tests: render any sign-in state without a network */
 export const AuthContext = C
@@ -69,7 +106,8 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
   const [status, setStatus] = useState<AuthStatus>(enabled ? 'loading' : 'off')
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isAdmin, setAdmin] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [online, setOnline] = useState<boolean | null>(enabled ? null : false)
+  const [recovery, setRecovery] = useState(false)
   const alive = useRef(true)
 
   // role comes from the user's own profile row (row level security lets a user read only their own row)
@@ -86,26 +124,38 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
     alive.current = true
     if (!enabled) return
     let unsub: (() => void) | undefined
+    void reachable().then((up) => { if (alive.current) setOnline(up) })
     getClient().then(async (sb) => {
       const apply = (s: Session | null) => { if (!alive.current) return; const u = toUser(s); setUser(u); setStatus(u ? 'signedIn' : 'signedOut'); void loadRole(u) }
+      unsub = sb.auth.onAuthStateChange((e, s) => { if (e === 'PASSWORD_RECOVERY') setRecovery(true); apply(s) }).data.subscription.unsubscribe
       const { data } = await sb.auth.getSession()
       apply(data.session); cleanUrl()
-      unsub = sb.auth.onAuthStateChange((_e, s) => apply(s)).data.subscription.unsubscribe
-    }).catch(() => { if (alive.current) { setStatus('signedOut'); setFailed(true) } })
+    }).catch(() => { if (alive.current) { setStatus('signedOut'); setOnline(false) } })
     return () => { alive.current = false; unsub?.() }
   }, [enabled, loadRole])
 
+  const guard = useCallback(async (run: (sb: SupabaseClient) => Promise<AuthResult>): Promise<AuthResult> => {
+    if (!enabled) return 'unavailable'
+    try { return await run(await getClient()) } catch { return 'unavailable' }
+  }, [enabled])
+
   const value = useMemo<Ctx>(() => ({
-    status, user, isAdmin, failed,
-    signIn: async () => {
-      setFailed(false)
-      if (!enabled || !(await reachable())) { setFailed(true); return }
-      try {
-        const sb = await getClient()
-        const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname } })
-        if (error) setFailed(true)
-      } catch { setFailed(true) }
-    },
+    status, user, isAdmin, online, recovery,
+    signInGoogle: () => guard(async (sb) => {
+      if (!(await reachable())) return 'unavailable'
+      const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname } })
+      return authResult(error)
+    }),
+    signInEmail: (email, password) => guard(async (sb) => authResult((await sb.auth.signInWithPassword({ email: email.trim(), password })).error)),
+    signUp: (name, email, password) => guard(async (sb) => {
+      const { data, error } = await sb.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() } } })
+      if (error) return authResult(error)
+      // with "Confirm email" off a session comes back at once; an empty identity list means the address is already registered
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) return 'exists'
+      return 'ok'
+    }),
+    sendReset: (email) => guard(async (sb) => authResult((await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` })).error)),
+    updatePassword: (password) => guard(async (sb) => { const r = authResult((await sb.auth.updateUser({ password })).error); if (r === 'ok') setRecovery(false); return r }),
     signOut: async () => {
       // sign out everywhere; if the service cannot be reached, at least forget the session on this device
       try { const sb = await getClient(); const { error } = await sb.auth.signOut(); if (error) await sb.auth.signOut({ scope: 'local' }) } catch { try { const sb = await getClient(); await sb.auth.signOut({ scope: 'local' }) } catch { /* nothing stored */ } }
@@ -116,10 +166,10 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
         const sb = await getClient()
         const { error } = await sb.rpc('delete_my_account')
         if (error) return false
-        await sb.auth.signOut(); setUser(null); setAdmin(false); setStatus('signedOut'); return true
+        await sb.auth.signOut({ scope: 'local' }); setUser(null); setAdmin(false); setStatus('signedOut'); return true
       } catch { return false }
     },
-  }), [status, user, isAdmin, failed, enabled])
+  }), [status, user, isAdmin, online, recovery, enabled, guard])
   return <C.Provider value={value}>{children}</C.Provider>
 }
 export const useAuth = () => { const c = useContext(C); if (!c) throw new Error('auth'); return c }

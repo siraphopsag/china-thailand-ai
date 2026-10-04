@@ -109,7 +109,7 @@ export function Header(_: { route?: string }) {
 }
 
 /** where "Back" leads when the page was opened directly (no earlier in-app page to return to) */
-const PARENT: Record<string, string> = { seek: 'choose-role', hire: 'choose-role', post: 'hire', language: 'prepare', sources: 'prepare', privacy: '' }
+const PARENT: Record<string, string> = { seek: 'choose-role', hire: 'choose-role', post: 'hire', language: 'prepare', sources: 'prepare', privacy: '', register: 'login', forgot: 'login', 'reset-password': 'login' }
 /** "Back" on every page except the Lobby, so nobody has to return to the Lobby to go one step back */
 export function BackButton({ route }: { route: string }) {
   const { t } = useI18n()

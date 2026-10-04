@@ -1,7 +1,7 @@
 import {
   ArrowLeft, ArrowRight, BookOpen, Building2, BriefcaseBusiness, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, CircleAlert, CircleCheck, CircleDot, CircleHelp, ExternalLink, FileText,
   House, Info, Landmark, Languages, ListChecks, Menu, Minus, Moon, Network, PieChart, Radar, Scale, Search, Settings, ShieldAlert, SlidersHorizontal, Sparkles, Square, SquareCheck,
-  Sun, TrendingUp, TriangleAlert, UserCog, Wallet, X, Link2, LayoutDashboard, Globe2, Plus, LocateFixed, Plane, User, Bell, MapPin, ClipboardList, LogIn, LogOut, ShieldCheck, FastForward, Send, Ellipsis, CircleUserRound, Clock,
+  Sun, TrendingUp, TriangleAlert, UserCog, Wallet, X, Link2, LayoutDashboard, Globe2, Plus, LocateFixed, Plane, User, Bell, MapPin, ClipboardList, LogIn, LogOut, ShieldCheck, FastForward, Send, Ellipsis, CircleUserRound, Clock, Mail, Lock, Eye, EyeOff, Trash2, Pencil,
 } from 'lucide-react'
 
 /** One centralized icon system: lucide SVG icons, same stroke width, same default size. Never use emojis for functional UI. */
@@ -11,7 +11,7 @@ const ICONS = {
   ok: CircleCheck, warn: TriangleAlert, info: Info, help: CircleHelp, alert: CircleAlert, down: ChevronDown, up: ChevronUp, left: ChevronLeft, right: ChevronRight, external: ExternalLink, home: House, menu: Menu, close: X,
   check: Check, square: Square, squareCheck: SquareCheck, circle: Circle, circleDot: CircleDot, funding: Wallet, control: SlidersHorizontal, economic: TrendingUp,
   management: UserCog, ownershipCat: Landmark, monitor: Radar, sources: Link2, culture: BookOpen, overview: LayoutDashboard, dash: Minus, globe: Globe2, plus: Plus, minus: Minus, target: LocateFixed, plane: Plane,
-  user: User, bell: Bell, pin: MapPin, posts: ClipboardList, login: LogIn, logout: LogOut, shield: ShieldCheck, fastForward: FastForward, send: Send, more: Ellipsis, profile: CircleUserRound, clock: Clock,
+  user: User, bell: Bell, pin: MapPin, posts: ClipboardList, login: LogIn, logout: LogOut, shield: ShieldCheck, fastForward: FastForward, send: Send, more: Ellipsis, profile: CircleUserRound, clock: Clock, mail: Mail, lock: Lock, eye: Eye, eyeOff: EyeOff, trash: Trash2, edit: Pencil,
 } as const
 export type IconName = keyof typeof ICONS
 

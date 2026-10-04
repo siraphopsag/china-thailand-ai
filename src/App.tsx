@@ -3,17 +3,22 @@ import { go, NavLink, useRoute } from './store'
 import { LanguageProvider, useI18n } from './i18n'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
-import { AuthProvider } from './auth'
+import { AuthProvider, useAuth } from './auth'
 import { SideNav } from './components/sidenav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { BRAND } from './brand'
 import { pageTitle } from './utils/labels'
 import { BackButton, Header } from './components/shell'
+import { Icon } from './components/icons'
 import { Landing } from './pages/home'
 // the home page loads immediately; every other page loads on demand
 const LanguagePage = lazy(() => import('./pages/info').then((m) => ({ default: m.LanguagePage })))
 const SourcesPage = lazy(() => import('./pages/info').then((m) => ({ default: m.SourcesPage })))
 const PrivacyPage = lazy(() => import('./pages/info').then((m) => ({ default: m.PrivacyPage })))
+const LoginPage = lazy(() => import('./pages/auth').then((m) => ({ default: m.LoginPage })))
+const RegisterPage = lazy(() => import('./pages/auth').then((m) => ({ default: m.RegisterPage })))
+const ForgotPage = lazy(() => import('./pages/auth').then((m) => ({ default: m.ForgotPage })))
+const ResetPasswordPage = lazy(() => import('./pages/auth').then((m) => ({ default: m.ResetPasswordPage })))
 const SeekPage = lazy(() => import('./pages/match').then((m) => ({ default: m.SeekPage })))
 const HirePage = lazy(() => import('./pages/hire').then((m) => ({ default: m.HirePage })))
 const PostPage = lazy(() => import('./pages/hire').then((m) => ({ default: m.PostPage })))
@@ -55,7 +60,7 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <SideNav route={route} />
       {/* room for the menu capsule: on the left from 768 px, below the content on phones */}
       <div id="page-body" className="flex-1 flex flex-col md:pl-24">
-      <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 md:pb-10"><BackButton route={route} /><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
+      <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 md:pb-10"><DemoNotice /><BackButton route={route} /><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
       </div>
       {/* the footer band runs to both screen edges; its text keeps clear of the menu capsule */}
       <footer className="bg-surface border-t border-line text-xs text-muted px-4 md:pl-28 py-6 mb-20 md:mb-0">
@@ -68,11 +73,20 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
   )
 }
 
+/** accounts are set up but cannot be reached right now: the site runs on local demo data — say so on every page */
+function DemoNotice() {
+  const { t } = useI18n()
+  const { status, online } = useAuth()
+  if (status === 'off' || online !== false) return null
+  return <p role="status" className="mb-4 rounded-xl border border-warn-line bg-warn-bg text-warn-fg px-4 py-2.5 text-sm flex items-start gap-2"><Icon name="warn" size={16} className="shrink-0 mt-0.5" />{t('m.demo.banner')}</p>
+}
+
 function Router() {
   const r = useRoute()
   const { t } = useI18n()
   const pages: Record<string, ReactNode> = {
     '': <Landing />, language: <LanguagePage />, sources: <SourcesPage />, privacy: <PrivacyPage />,
+    login: <LoginPage />, register: <RegisterPage />, forgot: <ForgotPage />, 'reset-password': <ResetPasswordPage />,
     'choose-role': <ChooseRolePage />,
     seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, // matching prototype
   }

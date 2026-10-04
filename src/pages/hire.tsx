@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
@@ -9,12 +9,14 @@ import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
 import { Modal } from '../components/modal'
 import { Icon } from '../components/icons'
-import { Empty, IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PlaceFields, PostFacts, PostStatus, Req, SkillPicker, Steps, Toast, useFieldError, useNames } from './match'
+import { Empty, IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PlaceFields, PostFacts, PostStatus, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames } from './match'
+import { postToInput } from '../domain/match/remote'
 
 /**
  * Employer flow (owner, Oct 2026): place on the map → company and needs (4 groups) → "Check and post" → simulated AI pre-check →
  * "Post this job?" → "Your post is live" with [View the post] [Post another]. 3 free posts per rolling 7 days; after that the
  * membership package window (10 per 7 days; planned price shown struck through, free in the prototype — no payment).
+ * Editing (owner, Oct 2026): "Edit" on one of my posts (or hire?edit=<id>) fills the same form; saving keeps the posting date.
  */
 type Stage = null | 'check' | 'confirm' | 'done' | 'package' | 'joined'
 const today = (now: number) => new Date(now).toISOString().slice(0, 10)
@@ -30,7 +32,10 @@ const FIELD: Partial<Record<Problem, [string, string]>> = {
 export function HirePage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, post, subscribe } = useMatch()
+  const { st, now, post, editPost, deletePost, subscribe } = useMatch()
+  const editId = useSearchParam('edit')
+  const [editing, setEditing] = useState<Post | null>(null)
+  const [saving, setSaving] = useState(false)
   const [c, setC] = useState<GeoCode | null>(null), [p, setP] = useState<string | null>(null)
   const [form, setForm] = useState(false)
   const [company, setCompany] = useState(st.myCompany), [position, setPosition] = useState('')
@@ -45,6 +50,28 @@ export function HirePage() {
   const [pending, setPending] = useState<PostInput | null>(null)
   const [posted, setPosted] = useState<Post | null>(null)
   const fe = useFieldError()
+  const gate = useGate('hire')
+  const startEdit = (x: Post) => {
+    const i = postToInput(x)
+    setEditing(x); setC(i.place.country); setP(i.place.province); setCompany(i.company); setPosition(i.position); setIndustry(i.industry); setSkills(i.skills)
+    setYears(String(i.minYears)); setDetails(i.details); setHeadcount(String(i.headcount)); setEmployment(i.employment)
+    setSalMin(i.salary ? String(i.salary.min) : ''); setSalMax(i.salary ? String(i.salary.max) : ''); setCurrency(i.salary?.currency ?? 'THB')
+    setStart(i.startDate); setLangs(i.languages); setEdu(i.education); setBenefits(i.benefits); setForm(true); setMsg(null); fe.clear()
+    window.scrollTo(0, 0); focusHead.current = true
+  }
+  // move focus to the form heading after the edit form has rendered
+  const focusHead = useRef(false)
+  useEffect(() => { if (focusHead.current) { focusHead.current = false; document.getElementById('e2h')?.focus() } })
+  // the company name arrives with the account data: fill it in once, unless the employer already typed something
+  useEffect(() => { if (!company && st.myCompany && !editing) setCompany(st.myCompany) }, [st.myCompany]) // eslint-disable-line react-hooks/exhaustive-deps
+  // opened as hire?edit=<id> (from the post page): start editing once that post has loaded
+  const editOpened = useRef(false)
+  useEffect(() => {
+    if (editOpened.current || !editId) return
+    const x = st.posts.find((q) => q.id === editId && q.employerId === MY_EMPLOYER); if (!x) return
+    editOpened.current = true; startEdit(x)
+  })
+  if (gate) return <Page title={t('m.emp.title')}>{gate}</Page>
   if (st.role !== 'employer') return <Page title={t('m.emp.title')}><NeedRole role="employer" /></Page>
   const mine = st.posts.filter((x) => x.employerId === MY_EMPLOYER)
   const used = postsThisWeek(st, now), limit = postLimit(st)
@@ -60,25 +87,33 @@ export function HirePage() {
   const submit = (e: FormEvent) => {
     e.preventDefault(); setMsg(null); fe.clear()
     const i = input(); if (!i) { setMsg({ tone: 'danger', text: N.problem('place') }); return }
-    if (!canPost(st, now)) { setStage('package'); return }
+    if (!editing && !canPost(st, now)) { setStage('package'); return }
     const r = precheck(i, new Date(now).toISOString())
     setPending(i); setCheck(r)
     setStage(r.errors.length || r.warnings.length ? 'check' : 'confirm')
   }
   const closeCheck = () => { setStage(null); if (check?.errors[0]) showProblem(check.errors[0]) }
-  const confirm = () => {
-    if (!pending) return
-    const r = post(pending)
+  const confirm = async () => {
+    if (!pending || saving) return
+    setSaving(true)
+    const r = editing ? await editPost(editing.id, pending) : await post(pending)
+    setSaving(false)
     if (r.ok) { setPosted(r.value); setStage('done'); return }
     if (r.problem === 'quota') { setStage('package'); return }
     setStage(null); showProblem(r.problem)
   }
   const another = () => {
-    setStage(null); setPosted(null); setPending(null); setCheck(null)
+    setStage(null); setPosted(null); setPending(null); setCheck(null); setEditing(null)
     setPosition(''); setSkills([]); setDetails(''); setYears('0'); setHeadcount('1'); setEmployment('permanent'); setSalMin(''); setSalMax(''); setStart(''); setLangs([]); setEdu('none'); setBenefits([])
     setForm(false); setC(null); setP(null)
     // the form unmounts, so keyboard focus would fall back to the page: put it on the country field to start the next post
     requestAnimationFrame(() => document.getElementById('emp-prov-c')?.focus())
+  }
+  const remove = async (x: Post) => {
+    if (!window.confirm(t('m.post.delete.confirm'))) return
+    const ok = await deletePost(x.id)
+    if (ok && editing?.id === x.id) another()
+    setMsg(ok ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') })
   }
   const toggleLang = (l: LanguageSkill['lang']) => { setLangs((xs) => (xs.some((x) => x.lang === l) ? xs.filter((x) => x.lang !== l) : [...xs, { lang: l, level: 'conversational' }])); clear() }
   const setLevel = (l: LanguageSkill['lang'], level: LanguageSkill['level']) => setLangs((xs) => xs.map((x) => (x.lang === l ? { ...x, level } : x)))
@@ -99,7 +134,7 @@ export function HirePage() {
         </section>
       ) : (
         <form className="card space-y-5" onSubmit={submit} aria-labelledby="e2h" noValidate>
-          <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="e2h" className="h2">{t('m.emp.s2')}</h2><p className="text-sm text-muted">{c && p && N.place(c, p)} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => setForm(false)}>{t('m.edit')}</button></p></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="e2h" tabIndex={-1} className="h2 outline-none">{t(editing ? 'm.edit.title' : 'm.emp.s2')}</h2><p className="text-sm text-muted">{c && p && N.place(c, p)} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => setForm(false)}>{t('m.edit')}</button></p></div>
 
           <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="business" size={16} />{t('m.emp.sec.company')}</legend>
             <div className="grid sm:grid-cols-2 gap-3">
@@ -153,8 +188,8 @@ export function HirePage() {
           </fieldset>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button type="submit" className="btn-primary"><Icon name="ai" size={16} />{t('m.emp.post')}</button>
-            <QuotaNote used={used} limit={limit} member={st.member} />
+            <button type="submit" className="btn-primary"><Icon name="ai" size={16} />{t(editing ? 'm.edit.save' : 'm.emp.post')}</button>
+            {editing ? <button type="button" className="btn-ghost" onClick={another}>{t('m.edit.cancel')}</button> : <QuotaNote used={used} limit={limit} member={st.member} />}
           </div>
         </form>
       )}
@@ -165,7 +200,11 @@ export function HirePage() {
             <li key={x.id} className="glass-card p-4 space-y-2">
               <div><h3 className="font-semibold"><NavLink to={`post?id=${x.id}`} className="hover:underline underline-offset-4">{x.position}</NavLink></h3><p className="text-sm text-muted">{x.company} · {N.place(x.country, x.province)} · {N.industry(x.industry)}</p></div>
               <PostStatus post={x} />
-              <NavLink to={`post?id=${x.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-primary min-h-[24px]">{t('m.pp.view')}<Icon name="next" size={14} /></NavLink>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <NavLink to={`post?id=${x.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-primary min-h-[24px]">{t('m.pp.view')}<Icon name="next" size={14} /></NavLink>
+                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium min-h-[24px] hover:underline underline-offset-4" onClick={() => startEdit(x)} aria-label={`${t('m.post.edit')}: ${x.position}`}><Icon name="edit" size={14} />{t('m.post.edit')}</button>
+                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-danger-fg min-h-[24px] hover:underline underline-offset-4" onClick={() => remove(x)} aria-label={`${t('m.post.delete')}: ${x.position}`}><Icon name="trash" size={14} />{t('m.post.delete')}</button>
+              </div>
             </li>))}</ul>)}
       </section>
       </MapLayout>
@@ -185,18 +224,18 @@ export function HirePage() {
 
       {/* 2) are you sure? */}
       <Modal open={stage === 'confirm'} onClose={() => setStage(null)}>{(id) => pending && (<>
-        <h2 id={id} className="h2">{t('m.cf.title')}</h2>
+        <h2 id={id} className="h2">{t(editing ? 'm.edit.cf.title' : 'm.cf.title')}</h2>
         {check && check.warnings.length === 0 && check.errors.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')} <span className="text-muted">({t('m.chk.sim')})</span></p>}
         <div className="card-i space-y-1 text-sm"><p className="font-semibold">{pending.position} · {pending.company}</p><p className="text-muted">{N.place(pending.place.country, pending.place.province)} · {t('m.people', { n: pending.headcount })} · {N.employment(pending.employment)}</p></div>
-        <p className="text-xs text-muted">{t('m.cf.quota', { n: used + 1, max: limit })}</p>
-        <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setStage(null)}>{t('m.cf.back')}</button><button type="button" className="btn-primary" onClick={confirm}><Icon name="send" size={16} />{t('m.cf.yes')}</button></div></>)}</Modal>
+        <p className="text-xs text-muted">{editing ? t('m.edit.note') : t('m.cf.quota', { n: used + 1, max: limit })}</p>
+        <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setStage(null)}>{t('m.cf.back')}</button><button type="button" className="btn-primary" disabled={saving} onClick={confirm}><Icon name="send" size={16} />{t(editing ? 'm.edit.cf.yes' : 'm.cf.yes')}</button></div></>)}</Modal>
 
       {/* 3) posted */}
       <Modal open={stage === 'done'} onClose={another}>{(id) => posted && (<>
-        <div className="flex items-center gap-3"><span className="glass-drop w-11 h-11 shrink-0"><Icon name="check" size={22} /></span><h2 id={id} className="h2">{t('m.dn.title')}</h2></div>
-        <p className="text-sm text-muted">{t('m.dn.text')}</p>
+        <div className="flex items-center gap-3"><span className="glass-drop w-11 h-11 shrink-0"><Icon name="check" size={22} /></span><h2 id={id} className="h2">{t(editing ? 'm.edit.done' : 'm.dn.title')}</h2></div>
+        <p className="text-sm text-muted">{t(editing ? 'm.edit.note' : 'm.dn.text')}</p>
         <div className="grid sm:grid-cols-2 gap-2"><button type="button" className="btn-primary" onClick={() => { const pid = posted.id; another(); go(`post?id=${pid}`) }}><Icon name="posts" size={16} />{t('m.dn.view')}</button>
-          <button type="button" className="btn-ghost" onClick={another}><Icon name="plus" size={16} />{t('m.dn.more')}</button></div></>)}</Modal>
+          <button type="button" className="btn-ghost" onClick={another}><Icon name={editing ? 'back' : 'plus'} size={16} />{t(editing ? 'm.pk.ok' : 'm.dn.more')}</button></div></>)}</Modal>
 
       {/* 4) weekly allowance reached → membership package (simulated, no payment) */}
       <Modal open={stage === 'package' || stage === 'joined'} onClose={() => setStage(null)}>{(id) => stage === 'joined' ? (<>
@@ -206,7 +245,7 @@ export function HirePage() {
         <p className="text-sm text-muted">{t('m.pk.lead', { max: limit })}</p>
         <PackageCard />
         <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setStage(null)}>{t('m.pk.later')}</button>
-          <button type="button" className="btn-primary" onClick={() => { subscribe(); setStage('joined') }}>{t('m.pk.join')}</button></div></>)}</Modal>
+          <button type="button" className="btn-primary" onClick={async () => { await subscribe(); setStage('joined') }}>{t('m.pk.join')}</button></div></>)}</Modal>
     </Page>
   )
 }
@@ -231,8 +270,10 @@ export function PackageCard() {
 export function PostPage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now } = useMatch()
+  const { st, now, deletePost } = useMatch()
   const id = useSearchParam('id')
+  const gate = useGate(`post?id=${id}`)
+  if (gate) return <Page title={t('m.pp.title')}>{gate}</Page>
   const p = st.posts.find((x) => x.id === id)
   if (!p) return <Page title={t('m.pp.title')}><Empty icon="posts" text={t('m.pp.notFound')} to="hire" action={t('m.posts')} /></Page>
   const acc = st.acceptances.filter((a) => a.postId === p.id)
@@ -248,6 +289,11 @@ export function PostPage() {
   return (
     <Page title={p.position} sub={`${p.company} · ${N.place(p.country, p.province)} · ${N.industry(p.industry)}`}>
       <PostStatus post={p} />
+      {p.employerId === MY_EMPLOYER && (
+        <div className="flex flex-wrap gap-2">
+          <NavLink to={`hire?edit=${p.id}`} className="btn-ghost"><Icon name="edit" size={16} />{t('m.post.edit')}</NavLink>
+          <button type="button" className="btn-ghost text-danger-fg" onClick={async () => { if (window.confirm(t('m.post.delete.confirm')) && (await deletePost(p.id))) go('hire') }}><Icon name="trash" size={16} />{t('m.post.delete')}</button>
+        </div>)}
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-5 items-start">
         <section className="glass-card p-5 space-y-3" aria-labelledby="pp-tl"><h2 id="pp-tl" className="h2">{t('m.pp.timeline')}</h2>
           <ol className="space-y-3">{steps.map((s, i) => (
