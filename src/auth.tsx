@@ -33,11 +33,25 @@ interface Ctx {
   deleteAccount: () => Promise<boolean>
 }
 
-const ENV_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const ENV_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+/** values pasted into Vercel may carry spaces, quotes, a trailing slash or a path (e.g. /rest/v1): keep only the project address */
+const unquote = (v: string) => v.trim().replace(/^(['"])([\s\S]*)\1$/, '$2').trim()
+export function tidyUrl(v: unknown): string | undefined {
+  if (typeof v !== 'string') return undefined
+  const s = unquote(v)
+  try { const u = new URL(s); return u.protocol === 'https:' && !u.port && !u.username && /^[a-z0-9-]+\.supabase\.co$/.test(u.hostname) ? `https://${u.hostname}` : s } catch { return s }
+}
+export const tidyKey = (v: unknown) => (typeof v === 'string' ? unquote(v).replace(/\s+/g, '') : undefined)
 /** only a real Supabase project URL and a key-shaped value turn accounts on */
 export const isConfigured = (url: unknown, key: unknown): url is string =>
   typeof url === 'string' && /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url) && typeof key === 'string' && key.length > 20
+/** values were entered but are not usable: the site says so instead of silently running the demo (the values are never shown) */
+export const configProblem = (rawUrl: unknown, rawKey: unknown) =>
+  Boolean((typeof rawUrl === 'string' && rawUrl.trim()) || (typeof rawKey === 'string' && rawKey.trim())) && !isConfigured(tidyUrl(rawUrl), tidyKey(rawKey))
+const RAW_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
+const RAW_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const ENV_URL = tidyUrl(RAW_URL)
+const ENV_KEY = tidyKey(RAW_KEY)
+export const CONFIG_PROBLEM = configProblem(RAW_URL, RAW_KEY)
 
 let clientP: Promise<SupabaseClient> | null = null
 /** the shared Supabase client (loaded on first use); the data layer uses the same one, so it carries the signed-in session */

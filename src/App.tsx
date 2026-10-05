@@ -3,7 +3,7 @@ import { go, NavLink, useRoute } from './store'
 import { LanguageProvider, useI18n } from './i18n'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
-import { AuthProvider, useAuth } from './auth'
+import { AuthProvider, CONFIG_PROBLEM, useAuth } from './auth'
 import { SideNav } from './components/sidenav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { BRAND } from './brand'
@@ -77,8 +77,9 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
 function DemoNotice() {
   const { t } = useI18n()
   const { status, online } = useAuth()
-  if (status === 'off' || online !== false) return null
-  return <p role="status" className="mb-4 rounded-xl border border-warn-line bg-warn-bg text-warn-fg px-4 py-2.5 text-sm flex items-start gap-2"><Icon name="warn" size={16} className="shrink-0 mt-0.5" />{t('m.demo.banner')}</p>
+  const bad = status === 'off' && CONFIG_PROBLEM
+  if (!bad && (status === 'off' || online !== false)) return null
+  return <p role="status" className="mb-4 rounded-xl border border-warn-line bg-warn-bg text-warn-fg px-4 py-2.5 text-sm flex items-start gap-2"><Icon name="warn" size={16} className="shrink-0 mt-0.5" />{t(bad ? 'm.demo.config' : 'm.demo.banner')}</p>
 }
 
 function Router() {

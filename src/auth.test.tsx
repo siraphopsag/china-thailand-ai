@@ -11,7 +11,7 @@ import { tr } from './i18n/core'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
 import { seedState } from './domain/match/seed'
-import { AuthContext, AuthProvider, authResult, isConfigured, toUser, type AuthCtx } from './auth'
+import { AuthContext, AuthProvider, authResult, tidyKey, tidyUrl, configProblem, isConfigured, toUser, type AuthCtx } from './auth'
 import { LoginButton } from './components/sidenav'
 import { BackofficePage, MePage, NotificationsPage, SeekPage } from './pages/match'
 import { HirePage, PostPage } from './pages/hire'
@@ -43,6 +43,19 @@ describe('configuration', () => {
     for (const [u, k] of [[undefined, undefined], ['', ''], ['http://abcdefgh.supabase.co', 'x'.repeat(40)], ['https://evil.example.com', 'x'.repeat(40)], ['https://abc.supabase.co', 'short']]) expect(isConfigured(u, k), String(u)).toBe(false)
     expect(html(<LoginButton />)).toBe('') // not configured → no button
     expect(html(<LoginButton />, state({ online: false }))).toBe('') // unreachable → no button (demo mode)
+  })
+  it('values pasted with spaces, quotes, a trailing slash or a path still work; other sites never do', () => {
+    const ok = 'https://abcdefghijklmnop.supabase.co'
+    for (const u of [ok, ` ${ok} `, `${ok}/`, `"${ok}"`, `'${ok}/'\n`, `${ok}/rest/v1/`, 'https://ABCDEFGHIJKLMNOP.supabase.co']) expect(tidyUrl(u), u).toBe(ok)
+    for (const u of ['http://abcdefghijklmnop.supabase.co', 'https://evil.example.com/x.supabase.co', 'https://abc.supabase.co.evil.com', 'https://abc.supabase.co:8443', 'https://u@abc.supabase.co']) expect(isConfigured(tidyUrl(u), 'x'.repeat(40)), u).toBe(false)
+    expect(tidyKey(' "sb_publishable_abc\n def" ')).toBe('sb_publishable_abcdef')
+    expect(tidyUrl(undefined)).toBeUndefined()
+  })
+  it('entered but unusable values are reported (not set at all is not a problem)', () => {
+    expect(configProblem(undefined, undefined)).toBe(false); expect(configProblem('  ', '')).toBe(false)
+    expect(configProblem('https://abcdefghijklmnop.supabase.co/', 'x'.repeat(40))).toBe(false)
+    expect(configProblem('abcdefghijklmnop', 'x'.repeat(40))).toBe(true); expect(configProblem('https://abcdefghijklmnop.supabase.co', '')).toBe(true)
+    expect(src('./App.tsx')).toContain("const bad = status === 'off' && CONFIG_PROBLEM")
   })
   it('the Supabase library is loaded only when configured; PKCE flow', () => {
     const a = src('./auth.tsx')
@@ -108,7 +121,7 @@ describe('pages that need an account', () => {
   })
   it('accounts unreachable → the site keeps working on demo data, with a notice on every page', () => {
     expect(src('./matchData.tsx')).toContain(": auth.status === 'off' || auth.online === false ? 'local'")
-    expect(src('./App.tsx')).toContain("if (status === 'off' || online !== false) return null")
+    expect(src('./App.tsx')).toContain("if (!bad && (status === 'off' || online !== false)) return null")
     expect(tr('m.demo.banner', undefined, 'th')).toContain('โหมดสาธิต')
   })
 })

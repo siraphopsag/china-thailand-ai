@@ -71,6 +71,7 @@ export const match = {
   'm.rp.invalid': ['ลิงก์นี้หมดอายุหรือใช้ไม่ได้ ขอลิงก์ใหม่ได้ที่หน้าลืมรหัสผ่าน', '链接已过期或无效，请在"忘记密码"页面重新申请', 'This link has expired or is not valid — ask for a new one on the forgot-password page'],
   'm.need.title': ['เข้าสู่ระบบก่อนใช้งานส่วนนี้', '请先登录再使用此功能', 'Sign in to use this'],
   'm.need.d': ['ต้องมีบัญชีเพื่อบันทึกประกาศ หมุด และการรับงานของคุณ ให้ทุกเครื่องเห็นตรงกัน', '需要账号来保存您的招聘信息、图钉和接受的工作，并在所有设备上同步', 'An account keeps your posts, pins and accepted jobs — the same on every device'],
+  'm.demo.config': ['โหมดสาธิต: ค่าตั้งระบบบัญชีใน Vercel ไม่ถูกต้อง (ตรวจ VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY) ข้อมูลที่ทำตอนนี้เก็บในเครื่องนี้เท่านั้น', '演示模式：Vercel 中的账号设置无效（请检查 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY），现在的操作仅保存在本设备上', 'Demo mode: the account settings in Vercel are not valid (check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) — what you do now is kept on this device only'],
   'm.demo.banner': ['โหมดสาธิต: ระบบบัญชีใช้งานไม่ได้ชั่วคราว ข้อมูลที่ทำตอนนี้เก็บในเครื่องนี้เท่านั้น', '演示模式：账号服务暂时不可用，现在的操作仅保存在本设备上', 'Demo mode: accounts are unavailable right now — what you do now is kept on this device only'],
   'm.post.edit': ['แก้ไข', '编辑', 'Edit'],
   'm.post.delete': ['ลบ', '删除', 'Delete'],
