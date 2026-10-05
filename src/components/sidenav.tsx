@@ -4,30 +4,34 @@ import { NavLink, go } from '../store'
 import { useMatch } from '../matchData'
 import { useAuth } from '../auth'
 import { offersFor } from '../domain/match/logic'
-import { MY_EMPLOYER } from '../domain/match/types'
+import { scheduleOf } from '../domain/match/release'
+import { ME, MY_EMPLOYER } from '../domain/match/types'
 import { Icon, type IconName } from './icons'
 
-/** Unread count for the bell: open offers for a seeker, acceptances of my posts for an employer. */
+/** Count for the bell: open offers not applied to (seeker); applicants waiting for a decision + posts about to expire (employer). */
 export function useUnread(): number {
-  const { st, now } = useMatch()
-  if (st.role === 'seeker') return offersFor(st, st.me, now).filter((p) => !st.acceptances.some((a) => a.postId === p.id && a.seekerId === 'me')).length
-  if (st.role === 'employer') { const mine = new Set(st.posts.filter((p) => p.employerId === MY_EMPLOYER).map((p) => p.id)); return st.acceptances.filter((a) => mine.has(a.postId)).length }
+  const { st, now, pool } = useMatch()
+  if (st.role === 'seeker') return offersFor(st, pool, now).filter((p) => !st.acceptances.some((a) => a.postId === p.id && a.seekerId === ME)).length
+  if (st.role === 'employer') {
+    const mine = st.posts.filter((p) => p.employerId === MY_EMPLOYER), ids = new Set(mine.map((p) => p.id))
+    return st.acceptances.filter((a) => ids.has(a.postId) && a.status === 'accepted').length + mine.filter((p) => now >= scheduleOf(p, pool, now).warnAt).length
+  }
   return 0
 }
 
 type Item = { to: string; key: string; icon: IconName; match: string[] }
-/** menu order (owner, Oct 2026): home, my pins / my posts, notifications, prepare, settings, help, back office (admin), profile last */
+/** menu order (owner, Oct 2026): home, my pins / my posts, board, notifications, prepare, settings, help, back office (admin), profile last */
 export function sideItems(role: 'seeker' | 'employer' | null, admin: boolean): Item[] {
   const items: Item[] = [{ to: '', key: 'm.home', icon: 'home', match: [''] }]
   if (role === 'seeker') items.push({ to: 'seek', key: 'm.pins', icon: 'pin', match: ['seek'] })
   if (role === 'employer') items.push({ to: 'hire', key: 'm.posts', icon: 'posts', match: ['hire'] })
-  items.push({ to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
+  items.push({ to: 'board', key: 'm.board', icon: 'store', match: ['board', 'post'] }, { to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
   if (admin) items.push({ to: 'backoffice', key: 'm.admin', icon: 'shield', match: ['backoffice'] })
   items.push({ to: 'me', key: 'm.profile', icon: 'profile', match: ['me'] })
   return items
 }
 /** on phones the bottom bar keeps 5 main places; these go under "More" so the bar does not cover the screen */
-export const MORE_KEYS = ['m.settings', 'm.help', 'm.admin']
+export const MORE_KEYS = ['m.prepare', 'm.settings', 'm.help', 'm.admin']
 
 /**
  * Menu (owner, Oct 2026, after a reference he liked): a floating capsule of icons — on the left for computers and tablets

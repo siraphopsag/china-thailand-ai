@@ -1,7 +1,8 @@
 /**
- * C.A.L.L. matching prototype (owner's model, Oct 2026): job seekers pin up to 5 provinces with their skills; employers post what
- * they need for a province; posts reach seekers in steps (same area + same field → same area → whole country); a seeker accepts;
- * the admin forwards the case to the employment authority (simulated — nothing is sent anywhere).
+ * C.A.L.L. matching prototype (owner's model, Oct 2026): job seekers pin provinces with their skills (5 per weekly cycle, each pin
+ * lasts a month); employers post what they need for a province (3 per weekly cycle, a post lasts 6 months); a post reaches seekers in
+ * five levels (see release.ts); a seeker applies (or reserves a place once the post is full); the employer confirms or declines;
+ * the admin forwards a confirmed case to the employment authority (simulated — nothing is sent anywhere).
  * Everything here is synthetic prototype data kept in this browser. No identity documents or contact details are collected.
  */
 /* fields, skills and languages (came with the first job-board prototype, which was removed in Oct 2026) */
@@ -29,9 +30,21 @@ export const CURRENCIES = ['THB', 'CNY'] as const
 export type Currency = (typeof CURRENCIES)[number]
 /** monthly salary range (optional) */
 export interface Salary { min: number; max: number; currency: Currency }
-/** free posts per rolling 7 days, and with the membership package (price to be announced; free in the prototype) */
+/** posts (new or renewed) per weekly cycle, and with the membership package (price to be announced; free in the prototype).
+ *  A cycle starts with its first use and lasts 7 days; then the full allowance comes back (owner, Oct 2026). */
 export const FREE_POSTS_PER_WEEK = 3
 export const MEMBER_POSTS_PER_WEEK = 10
+export const PINS_PER_WEEK = 5
+export const CYCLE_DAYS = 7
+/** a pin lasts a month; a post lasts 6 months from its (re)release, with a warning one week before it is removed */
+export const PIN_LIFE_DAYS = 30
+export const POST_LIFE_DAYS = 182
+export const EXPIRY_WARN_DAYS = 7
+/** release: level 1 opens to hourly groups for up to 24 rounds, then waits 24 h; levels 2 and 3 last 24 h each; level 4 (whole
+ *  country) runs until a month after the release; level 5 (international) until the post expires */
+export const ROUNDS = 24
+export const STEP_HOURS = 24
+export const NATIONWIDE_UNTIL_DAYS = 30
 export type Country = 'TH' | 'CN'
 export const COUNTRIES: Country[] = ['TH', 'CN']
 export type Role = 'seeker' | 'employer'
@@ -39,7 +52,6 @@ export type Role = 'seeker' | 'employer'
 export interface Place { country: Country; province: string }
 /** a pinned destination: "I want this kind of work here" */
 export interface Pin extends Place { id: string; industry: Industry; skills: Skill[]; at: string }
-export const MAX_PINS = 5
 
 export interface Seeker {
   id: string
@@ -68,16 +80,34 @@ export interface Post extends Place {
   education: Edu
   benefits: Benefit[]
   createdAt: string
+  /** start of the current release (the posting time, or the last renewal) — the levels and the 6-month life count from here */
+  releasedAt: string
   synthetic: true
 }
-/** a seeker took a post; the admin then forwards it to the employment authority (simulated) */
-export interface Acceptance { id: string; postId: string; seekerId: string; at: string; status: 'accepted' | 'forwarded'; forwardedAt?: string; /** from the database: the name the employer sees */ seekerName?: string }
+/**
+ * An application. 'accepted' = holds a place and waits for the employer; 'reserved' = the post was full, so it waits in the queue
+ * (the earliest reservation moves up when a place frees); 'confirmed' / 'rejected' = the employer decided; 'forwarded' = the admin
+ * sent the confirmed case on (simulated).
+ */
+export type AppStatus = 'accepted' | 'reserved' | 'confirmed' | 'rejected' | 'forwarded'
+export const HOLDS_PLACE: readonly AppStatus[] = ['accepted', 'confirmed', 'forwarded']
+export interface Acceptance {
+  id: string; postId: string; seekerId: string; at: string; status: AppStatus
+  /** a short introduction (no contact details) and the first day the seeker can start */
+  intro: string; availableFrom: string | null
+  /** moved up from the reservation queue / decided by the employer / forwarded by the admin */
+  promotedAt?: string; decidedAt?: string; forwardedAt?: string
+  /** from the database: the name the employer sees */
+  seekerName?: string
+}
+/** one use of a weekly allowance: a new post or a renewal (they share one allowance), or a pin */
+export interface Credit { kind: 'post' | 'renew' | 'pin'; at: string }
 
 export interface MatchState {
-  version: 1
+  version: 2
   role: Role | null
-  /** demo clock: days added to the real time, so the step-by-step release can be shown without waiting */
-  dayOffset: number
+  /** demo clock: hours added to the real time, so the release levels can be shown without waiting */
+  clockHours: number
   me: Seeker
   myCompany: string
   /** employer membership package (simulated, no payment): 10 posts per rolling 7 days instead of 3 */
@@ -85,9 +115,18 @@ export interface MatchState {
   seekers: Seeker[]
   posts: Post[]
   acceptances: Acceptance[]
+  /** my uses of the weekly allowances (deleting a post or a pin does not give the use back) */
+  credits: Credit[]
 }
 
-/** step of the release: 1 = pinned area + same field, 2 = pinned area (any field), 3 = whole destination country */
-export type Tier = 1 | 2 | 3
+/**
+ * Release level (owner, Oct 2026), also the "rarity" shown on the board:
+ * 1 = same province + same field (hourly groups, earliest pins first) · 2 = same field, another province · 3 = same province, another
+ * field · 4 = anyone pinned in that country · 5 = international (everyone)
+ */
+export type Level = 1 | 2 | 3 | 4 | 5
+export const LEVELS: readonly Level[] = [1, 2, 3, 4, 5]
+/** the most a demo clock may run ahead: past the 6-month life of a post */
+export const MAX_CLOCK_HOURS = 24 * 200
 export const ME = 'me'
 export const MY_EMPLOYER = 'employer:me'

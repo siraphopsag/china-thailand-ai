@@ -1,4 +1,5 @@
-// Owner's matching model (Oct 2026): pins (≤5), employer posts, the 3-step release, accepting, simulated forwarding, admin gate,
+// Owner's matching model (Oct 2026): pins (5 a week, a month each), employer posts, the five-level release, applications and the
+// reservation queue, simulated forwarding, the board, admin gate,
 // and the reviewed shell (side menu, log-in, Lobby, two-role page). Static rendering only; clicks and the map were checked manually.
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -9,14 +10,16 @@ import { tr } from './i18n/core'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
 import { AuthProvider } from './auth'
-import { DAY_MS, accept, addPin, forward, isVisibleTo, makePost, offersFor, parseState, reachTier, tierOf } from './domain/match/logic'
+import { DAY_MS, HOUR_MS, activePins, addPin, applyTo, cancel, decide, forward, isFull, makePost, parseState, pinQuota, poolOf, postState, removePin, renewPost, withoutExpired } from './domain/match/logic'
+import { matchLevel, reachFor, scheduleOf, stageAt } from './domain/match/release'
 import { seedState } from './domain/match/seed'
-import { ME, type MatchState, type Seeker } from './domain/match/types'
+import { ME, MY_EMPLOYER, type Industry, type MatchState, type Pin, type Seeker, type Skill } from './domain/match/types'
 import { messages, type MsgKey } from './locales/index'
 import { match } from './locales/match'
 import { Landing } from './pages/home'
 import { ChooseRolePage } from './pages/choose'
 import { BackofficePage, NotificationsPage, SeekPage, SoonNote } from './pages/match'
+import { BoardPage } from './pages/board'
 import { TILT, leanPoint } from './components/geomap'
 import { BackButton, Header } from './components/shell'
 import { SideNav, sideItems } from './components/sidenav'
@@ -36,71 +39,149 @@ const at = (days: number) => new Date(NOW + days * DAY_MS).toISOString()
 /** the post details added in Oct 2026, filled with valid sample values */
 const EXTRA = { headcount: 1, employment: 'permanent' as const, salary: null, startDate: at(1).slice(0, 10), languages: [{ lang: 'zh' as const, level: 'basic' as const }], education: 'none' as const, benefits: [] }
 const seeker = (pins: Seeker['pins']): Seeker => ({ id: ME, name: 'you', origin: { country: 'TH', province: 'TH-10' }, pins, synthetic: true })
+const withMe = (pins: Pin[]): MatchState => ({ ...seedState(NOW), me: seeker(pins), credits: [] })
 const ROUTES = new Set([...src('./App.tsx').slice(src('./App.tsx').indexOf('const pages')).matchAll(/(?:^|[\s{,])'?([\w-]+)'?: </g)].map((m) => m[1]).concat(''))
 
-describe('pins', () => {
+describe('pins (owner, Oct 2026: 5 per weekly cycle, each lasts a month)', () => {
   const place = { country: 'CN' as const, province: 'CN-SH' }
-  it('up to 5 pins, no duplicate area, a real province of the chosen country, at least one skill', () => {
-    let s = seeker([])
-    for (const p of ['CN-SH', 'CN-GD', 'CN-JS', 'TH-10', 'TH-50']) { const r = addPin(s, { place: { country: p.slice(0, 2) as 'TH' | 'CN', province: p }, industry: 'manufacturing', skills: ['quality_control'] }, 'p' + p.toLowerCase(), at(0)); expect(r.ok, p).toBe(true); if (r.ok) s = r.value }
-    const sixth = addPin(s, { place: { country: 'CN', province: 'CN-ZJ' }, industry: 'manufacturing', skills: ['quality_control'] }, 'p6', at(0))
-    expect(sixth.ok ? 'ok' : sixth.problem).toBe('limit')
-    const fresh = seeker([])
+  /** add a pin the way the site does: the pin and one use of the allowance */
+  const pinIn = (st: MatchState, p: string, when: string, industry: Industry = 'manufacturing') => {
+    const r = addPin(st, { place: { country: p.slice(0, 2) as 'TH' | 'CN', province: p }, industry, skills: ['quality_control'] }, 'p' + p.toLowerCase() + when.slice(0, 13).replace(/\D/g, ''), when)
+    return r.ok ? { ok: true as const, st: { ...st, me: r.value, credits: [...st.credits, { kind: 'pin' as const, at: when }] } } : { ok: false as const, problem: r.problem }
+  }
+  it('5 pins per cycle; the cycle starts with the first pin; 7 days later 5 more (all at once)', () => {
+    let st = withMe([])
+    for (const p of ['CN-SH', 'CN-GD', 'CN-JS', 'TH-10', 'TH-50']) { const r = pinIn(st, p, at(0)); expect(r.ok, p).toBe(true); if (r.ok) st = r.st }
+    const sixth = pinIn(st, 'CN-ZJ', at(1)); expect(sixth.ok ? 'ok' : sixth.problem).toBe('limit')
+    expect(pinQuota(st, NOW)).toEqual({ used: 5, limit: 5, left: 0, resetAt: NOW + 7 * DAY_MS })
+    const later = pinIn(st, 'CN-ZJ', at(7)); expect(later.ok).toBe(true) // a new cycle
+    // removing a pin does not give the use back
+    expect(pinQuota({ ...st, me: removePin(st.me, st.me.pins[0].id) }, NOW).left).toBe(0)
+  })
+  it('one pin per province and field at a time; a real province of the chosen country; at least one skill', () => {
+    const fresh = withMe([])
     const bad = [
       addPin(fresh, { place: { country: 'CN', province: 'TH-10' }, industry: 'manufacturing', skills: ['quality_control'] }, 'x', at(0)),
       addPin(fresh, { place: { country: 'CN', province: 'CN-XX' }, industry: 'manufacturing', skills: ['quality_control'] }, 'x', at(0)),
       addPin(fresh, { place, industry: 'manufacturing', skills: [] }, 'x', at(0)),
     ].map((r) => (r.ok ? 'ok' : r.problem))
     expect(bad).toEqual(['place', 'place', 'skills'])
-    const once = addPin(fresh, { place, industry: 'hospitality', skills: ['hospitality_management'] }, 'a', at(0))
-    const twice = once.ok ? addPin(once.value, { place, industry: 'technology', skills: ['data_analysis'] }, 'b', at(0)) : once
-    expect(twice.ok ? 'ok' : twice.problem).toBe('duplicate')
+    const once = pinIn(fresh, 'CN-SH', at(0))
+    if (!once.ok) throw new Error('pin')
+    const same = pinIn(once.st, 'CN-SH', at(0)); expect(same.ok ? 'ok' : same.problem).toBe('duplicate')
+    expect(pinIn(once.st, 'CN-SH', at(0), 'hospitality').ok).toBe(true) // the same province for another field
+  })
+  it('a pin lasts a month, then it no longer counts (and the same place can be pinned again)', () => {
+    const st = withMe([{ id: 'old', ...place, industry: 'manufacturing', skills: ['quality_control'], at: at(-31) }])
+    expect(activePins(st.me, NOW)).toEqual([])
+    expect(pinIn(st, 'CN-SH', at(0)).ok).toBe(true)
   })
   it('the same country may be both origin and destination (work at home)', () => {
-    expect(addPin(seeker([]), { place: { country: 'TH', province: 'TH-10' }, industry: 'technology', skills: ['data_analysis'] }, 'h', at(0)).ok).toBe(true)
+    expect(addPin(withMe([]), { place: { country: 'TH', province: 'TH-10' }, industry: 'technology', skills: ['data_analysis'] }, 'h', at(0)).ok).toBe(true)
   })
 })
 
-describe('the step-by-step release', () => {
-  const post = makePost({ ...EXTRA, place: { country: 'CN', province: 'CN-SH' }, company: 'Sample Co', position: 'QC Engineer', industry: 'manufacturing', skills: ['quality_control'], minYears: 1, details: '' }, 'post-x', 'employer:me', at(0))
-  if (!post.ok) throw new Error('post')
-  const P = post.value
-  const area = seeker([{ id: 'a', country: 'CN', province: 'CN-SH', industry: 'manufacturing', skills: ['quality_control'], at: at(0) }])
-  const areaOther = seeker([{ id: 'b', country: 'CN', province: 'CN-SH', industry: 'hospitality', skills: ['culinary_arts'], at: at(0) }])
-  const country = seeker([{ id: 'c', country: 'CN', province: 'CN-GD', industry: 'manufacturing', skills: ['quality_control'], at: at(0) }])
-  const elsewhere = seeker([{ id: 'd', country: 'TH', province: 'TH-10', industry: 'manufacturing', skills: ['quality_control'], at: at(0) }])
-  it('who is reached at which step: same area + field → same area → whole country → never', () => {
-    expect([area, areaOther, country, elsewhere].map((s) => reachTier(P, s))).toEqual([1, 2, 3, null])
+describe('the release in five levels (owner, Oct 2026)', () => {
+  const made = makePost({ ...EXTRA, place: { country: 'CN', province: 'CN-SH' }, company: 'Sample Co', position: 'QC Engineer', industry: 'manufacturing', skills: ['quality_control'], minYears: 1, details: '' }, 'post-x', 'employer:me', at(0))
+  if (!made.ok) throw new Error('post')
+  const P = made.value
+  const pin = (id: string, province: string, industry: Industry, skills: Skill[], when: number): Pin => ({ id, country: province.slice(0, 2) as 'TH' | 'CN', province, industry, skills, at: new Date(when).toISOString() })
+  const H = HOUR_MS
+  const a = pin('a', 'CN-SH', 'manufacturing', ['quality_control'], NOW - 3 * DAY_MS) // level 1, first hourly group
+  const a2 = pin('a2', 'CN-SH', 'technology', ['quality_control'], NOW - 3 * DAY_MS + 0.5 * H) // same hour → same group
+  const b = pin('b', 'CN-SH', 'manufacturing', ['quality_control'], NOW - 2 * DAY_MS) // level 1, second group
+  const c = pin('c', 'CN-GD', 'manufacturing', ['quality_control'], NOW - DAY_MS) // level 2: same field, another province
+  const d = pin('d', 'CN-SH', 'food_service', ['culinary_arts'], NOW - DAY_MS) // level 3: same province, another field
+  const e = pin('e', 'CN-ZJ', 'technology', ['software_engineering'], NOW - DAY_MS) // level 4: same country
+  const f = pin('f', 'TH-10', 'manufacturing', ['quality_control'], NOW - DAY_MS) // level 5: another country
+  const pool = [a, a2, b, c, d, e, f]
+  it('each pin qualifies for one level: province + field → field → province → country → international', () => {
+    expect([a, b, c, d, e, f].map((p) => matchLevel(P, [p], NOW))).toEqual([1, 1, 2, 3, 4, 5])
+    expect(matchLevel(P, [e, c], NOW)).toBe(2) // the best of my pins
   })
-  it('the step grows by one each day without an acceptance (day 0 → 1, day 1 → 2, day 2+ → 3)', () => {
-    expect([0, 0.9, 1, 1.9, 2, 5].map((d) => tierOf(P, NOW + d * DAY_MS))).toEqual([1, 1, 2, 2, 3, 3])
-    expect(isVisibleTo(P, areaOther, NOW, [])).toBe(false)
-    expect(isVisibleTo(P, areaOther, NOW + DAY_MS, [])).toBe(true)
-    expect(isVisibleTo(P, country, NOW + DAY_MS, [])).toBe(false)
-    expect(isVisibleTo(P, country, NOW + 2 * DAY_MS, [])).toBe(true)
-    expect(isVisibleTo(P, elsewhere, NOW + 9 * DAY_MS, [])).toBe(false)
+  it('level 1 opens to hourly groups, earliest pins first; earlier groups keep it; 24 h after the last group level 2 starts', () => {
+    const s = scheduleOf(P, pool, NOW)
+    expect(s.groups.length).toBe(2)
+    expect(s.end1).toBe(NOW + H + 24 * H); expect(s.end2).toBe(s.end1 + 24 * H); expect(s.end3).toBe(s.end2 + 24 * H)
+    expect(s.end4).toBe(NOW + 30 * DAY_MS); expect(s.expiresAt).toBe(NOW + 182 * DAY_MS); expect(s.warnAt).toBe(s.expiresAt - 7 * DAY_MS)
+    expect(reachFor(P, [a], pool, NOW).visible).toBe(true)
+    expect(reachFor(P, [a2], pool, NOW).visible).toBe(true)
+    expect(reachFor(P, [b], pool, NOW)).toMatchObject({ visible: false, opensAt: NOW + H })
+    expect(reachFor(P, [b], pool, NOW + H).visible).toBe(true)
+    expect(reachFor(P, [a], pool, NOW + H).visible).toBe(true)
   })
-  it('an acceptance stops the escalation at the step it reached', () => {
-    const acc = [{ id: 'acc', postId: P.id, seekerId: 'seeker-a', at: at(0.5), status: 'accepted' as const }]
-    expect(tierOf(P, NOW + 5 * DAY_MS, acc)).toBe(1)
+  it('then level 2 (24 h), level 3 (24 h), level 4 until a month, level 5 (international) until 6 months — then it is gone', () => {
+    const s = scheduleOf(P, pool, NOW)
+    const seen = (p: Pin, t: number) => reachFor(P, [p], pool, t).visible
+    expect([seen(c, s.end1 - 1), seen(c, s.end1)]).toEqual([false, true])
+    expect([seen(d, s.end2 - 1), seen(d, s.end2)]).toEqual([false, true])
+    expect([seen(e, s.end3 - 1), seen(e, s.end3)]).toEqual([false, true])
+    expect([seen(f, s.end4 - 1), seen(f, s.end4)]).toEqual([false, true])
+    expect([stageAt(s, NOW), stageAt(s, s.end1), stageAt(s, s.end2), stageAt(s, s.end3), stageAt(s, s.end4), stageAt(s, s.expiresAt)]).toEqual([1, 2, 3, 4, 5, 'expired'])
+    expect(seen(a, s.expiresAt)).toBe(false)
+    expect(withoutExpired({ ...seedState(NOW), posts: [P] }, s.expiresAt).posts).toEqual([])
+  })
+  it('no matching pin → straight to level 2; a pin made after the 24 rounds waits for level 2', () => {
+    expect(scheduleOf(P, [c, d, e], NOW).end1).toBe(NOW)
+    const late = pin('late', 'CN-SH', 'manufacturing', ['quality_control'], NOW + 25 * H)
+    const s = scheduleOf(P, [...pool, late], NOW + 26 * H)
+    expect(s.groups.length).toBe(2)
+    expect(reachFor(P, [late], [...pool, late], NOW + 25.5 * H).visible).toBe(true) // level 2 started at NOW + 25 h
+    expect(reachFor(P, [late], [...pool, late], NOW + 25 * H - 1).visible).toBe(false)
+  })
+  it('renewing starts again at level 1 with a fresh 6 months, and uses the weekly allowance', () => {
+    const st = { ...seedState(NOW), posts: [{ ...P, createdAt: at(-40), releasedAt: at(-40) }] }
+    const r = renewPost(st, P.id, at(0))
+    expect(r.ok && stageAt(scheduleOf(r.value, pool, NOW), NOW)).toBe(1)
+    expect(r.ok && r.value.createdAt).toBe(at(-40))
+    const full = { ...st, credits: [0, 1, 2].map((i) => ({ kind: 'post' as const, at: at(-i) })) }
+    const q = renewPost(full, P.id, at(0)); expect(q.ok ? 'ok' : q.problem).toBe('quota')
   })
 })
 
-describe('accepting and forwarding (simulated)', () => {
-  it('a seeker can accept only a post that has reached them, once; forwarding only changes the status', () => {
+describe('applications, reservations and the queue (owner, Oct 2026)', () => {
+  // a post over a month old: level 5, so everyone may apply
+  const base = (): MatchState => {
     const st = seedState(NOW)
-    st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(0) }])
-    expect(offersFor(st, st.me, NOW).map((p) => p.id)).toEqual(['post-s2'])
-    const ok = accept(st, 'post-s2', ME, 'acc-1', at(0))
-    expect(ok.ok).toBe(true)
-    const notYet = accept(st, 'post-s1', ME, 'acc-2', at(0)) // Shanghai post: not pinned
-    expect(notYet.ok ? 'ok' : notYet.problem).toBe('notOpen')
-    if (ok.ok) {
-      st.acceptances.push(ok.value)
-      const again = accept(st, 'post-s2', ME, 'acc-3', at(0))
-      expect(again.ok ? 'ok' : again.problem).toBe('already')
-      expect(forward(ok.value, at(1))).toEqual({ ...ok.value, status: 'forwarded', forwardedAt: at(1) })
-    }
+    st.posts = [{ ...st.posts[2], headcount: 1 }]
+    st.acceptances = []
+    return st
+  }
+  const form = { intro: 'Hello, I can start next month.', availableFrom: at(30).slice(0, 10) }
+  it('the first applicant takes the place; once full, the next one reserves; only once each', () => {
+    let st = base()
+    const pool = poolOf(st)
+    const mine = applyTo(st, pool, 'post-s3', ME, form, 'acc-me', at(0))
+    expect(mine.ok && mine.value.status).toBe('accepted')
+    if (mine.ok) st = { ...st, acceptances: [mine.value] }
+    const next = applyTo(st, pool, 'post-s3', 'seeker-a', form, 'acc-a', at(0.1))
+    expect(next.ok && next.value.status).toBe('reserved')
+    const again = applyTo(st, pool, 'post-s3', ME, form, 'acc-x', at(0.2)); expect(again.ok ? 'ok' : again.problem).toBe('already')
+    expect(isFull(st.acceptances, st.posts[0])).toBe(true)
+  })
+  it('the introduction refuses contact details; the start day is from today, within two years', () => {
+    const st = base(), pool = poolOf(st)
+    const r = (i: Partial<typeof form>) => { const x = applyTo(st, pool, 'post-s3', ME, { ...form, ...i }, 'a', at(0)); return x.ok ? 'ok' : x.problem }
+    expect([r({ intro: 'call 081 234 5678' }), r({ intro: 'x'.repeat(301) }), r({ availableFrom: at(-2).slice(0, 10) }), r({ availableFrom: at(800).slice(0, 10) })]).toEqual(['contact', 'intro', 'available', 'available'])
+  })
+  it('declining frees the place for the earliest reservation; withdrawing does the same; a decision is final', () => {
+    const acc = (id: string, seekerId: string, status: 'accepted' | 'reserved', d: number) => ({ id, postId: 'post-s3', seekerId, at: at(d), status, intro: '', availableFrom: null })
+    const st = { ...base(), acceptances: [acc('a1', 'seeker-a', 'accepted', 0), acc('a2', 'seeker-b', 'reserved', 0.2), acc('a3', ME, 'reserved', 0.1)] }
+    const d = decide(st, 'a1', false, at(1)); if (!d.ok) throw new Error('decide')
+    expect(d.value.find((x) => x.id === 'a1')).toMatchObject({ status: 'rejected', decidedAt: at(1) })
+    expect(d.value.find((x) => x.id === 'a3')).toMatchObject({ status: 'accepted', promotedAt: at(1) }) // reserved earlier than a2
+    expect(d.value.find((x) => x.id === 'a2')!.status).toBe('reserved')
+    const twice = decide({ ...st, acceptances: d.value }, 'a1', true, at(2)); expect(twice.ok ? 'ok' : twice.problem).toBe('state')
+    const w = cancel({ ...st, acceptances: d.value }, 'a3', at(2)); if (!w.ok) throw new Error('cancel')
+    expect(w.value.find((x) => x.id === 'a2')).toMatchObject({ status: 'accepted', promotedAt: at(2) })
+    expect(postState(w.value, st.posts[0])).toBe('waiting')
+  })
+  it('only a confirmed case is forwarded (simulated); my own post is not open to me', () => {
+    const a = { id: 'a', postId: 'post-s3', seekerId: ME, at: at(0), status: 'accepted' as const, intro: '', availableFrom: null }
+    expect(forward(a, at(1))).toBe(a)
+    expect(forward({ ...a, status: 'confirmed' }, at(1))).toMatchObject({ status: 'forwarded', forwardedAt: at(1) })
+    const st = base(); st.posts[0] = { ...st.posts[0], employerId: MY_EMPLOYER }
+    const own = applyTo(st, poolOf(st), 'post-s3', ME, form, 'x', at(0)); expect(own.ok ? 'ok' : own.problem).toBe('notOpen')
     expect(src('./domain/match/logic.ts') + src('./matchData.tsx')).not.toMatch(/fetch\(|XMLHttpRequest|sendBeacon|WebSocket/)
   })
   it('posts refuse contact details and missing fields', () => {
@@ -111,15 +192,56 @@ describe('accepting and forwarding (simulated)', () => {
 })
 
 describe('stored data is validated', () => {
-  it('the seed is valid; tampered data is rejected', () => {
+  it('the seed is valid; data saved before the five levels is upgraded; tampered data is rejected', () => {
     const st = seedState(NOW)
     expect(parseState(JSON.parse(JSON.stringify(st)))).not.toBeNull()
+    // version 1: days on the clock, no release time, no introductions, no allowance log
+    const v1 = JSON.parse(JSON.stringify(st)) as Record<string, unknown> & MatchState
+    const old = { ...v1, version: 1, dayOffset: 2, posts: v1.posts.map(({ releasedAt: _r, ...p }) => p), acceptances: v1.acceptances.map(({ intro: _i, availableFrom: _f, ...a }) => a) } as Record<string, unknown>
+    delete old.clockHours; delete old.credits
+    const up = parseState(old)
+    expect(up && [up.version, up.clockHours, up.posts[0].releasedAt === up.posts[0].createdAt, up.acceptances[0].intro]).toEqual([2, 48, true, ''])
     const bad = (f: (s: MatchState) => void) => { const s = JSON.parse(JSON.stringify(st)) as MatchState; f(s); return parseState(s) }
-    expect(bad((s) => { s.seekers[0].pins = Array.from({ length: 6 }, (_, i) => ({ ...s.seekers[0].pins[0], id: 'x' + i })) })).toBeNull()
+    expect(bad((s) => { s.seekers[0].pins = Array.from({ length: 31 }, (_, i) => ({ ...s.seekers[0].pins[0], id: 'x' + i })) })).toBeNull()
     expect(bad((s) => { s.posts[0].province = 'CN-XX' })).toBeNull()
-    expect(bad((s) => { s.acceptances.push({ id: 'a', postId: 'nope', seekerId: ME, at: at(0), status: 'accepted' }) })).toBeNull()
-    expect(bad((s) => { (s as { dayOffset: number }).dayOffset = -1 })).toBeNull()
+    expect(bad((s) => { s.acceptances.push({ id: 'a', postId: 'nope', seekerId: ME, at: at(0), status: 'accepted', intro: '', availableFrom: null }) })).toBeNull()
+    expect(bad((s) => { s.acceptances.push({ ...s.acceptances[0], id: 'twice' }) })).toBeNull()
+    expect(bad((s) => { s.acceptances[0].intro = 'mail me hr@example.com' })).toBeNull()
+    expect(bad((s) => { s.clockHours = -1 })).toBeNull()
+    expect(bad((s) => { s.posts[0].releasedAt = at(-400) })).toBeNull() // released before it was posted
     expect(bad((s) => { s.posts[0].details = 'mail me hr@example.com' })).toBeNull()
+  })
+})
+
+describe('the board (owner, Oct 2026)', () => {
+  const real = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString()
+  it('job seeker: the shop shelves (levels with stars, colour and name), search and filters, newest first, and my pins', () => {
+    const st = seedState(); st.role = 'seeker'
+    st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: real(-5) }])
+    const page = html(<BoardPage />, st)
+    for (const l of [1, 2, 3, 4, 5] as const) expect(page, `level ${l}`).toContain(T('m.lv.short', { n: l }))
+    expect(page).toContain('role="search"'); expect(page).toContain(T('m.board.searchHint'))
+    expect(page).toContain('Quality Control Engineer') // level 1 for my pin
+    expect(page).toContain('Warehouse Coordinator') // level 5: over a month old, open to everyone
+    expect(page).not.toContain('Front Office Manager') // Shanghai: not for me yet
+    expect(page).toMatch(/class="chip rar rar-1"><span class="inline-flex" aria-hidden="true">(<svg[^>]*class="lucide[^"]*fill-current[^"]*"[^]*?<\/svg>){5}<\/span>/)
+    expect(page).toContain(T('m.sort.new')); expect(page).toContain(T('m.board.myPins')); expect(page).toContain(T('m.pin.new'))
+    expect(page).toContain(T('m.qb.pins', { n: 0, max: 5 }))
+  })
+  it('employer: my posts with the level each reached, places and reservations, and my weekly allowance', () => {
+    const st = seedState(); st.role = 'employer'
+    st.posts = st.posts.map((p) => (p.id === 'post-s1' ? { ...p, employerId: MY_EMPLOYER } : p))
+    st.credits = [{ kind: 'post', at: real(-1.2) }]
+    const page = html(<BoardPage />, st)
+    expect(page).toContain('Front Office Manager'); expect(page).not.toContain('Warehouse Coordinator')
+    expect(page).toContain(T('m.lv.reached', { l: T('m.lv.2') }))
+    expect(page).toContain(T('m.cnt.held', { n: 1, max: 2 }))
+    expect(page).toContain(T('m.qb.posts', { n: 1, max: 3 }))
+  })
+  it('the map shows counts only, also listed in text; menu has the board; posts link to their page', () => {
+    expect(src('./components/geomap.tsx')).toContain('className="g-count"')
+    expect(src('./pages/board.tsx')).toContain("t('m.board.top', { list: top.map(([p, n]) => `${N.prov(p)} ${n}`).join(' · ') })")
+    expect(ROUTES.has('board')).toBe(true)
   })
 })
 
@@ -141,11 +263,11 @@ describe('reviewed shell and pages', () => {
     for (const k of ['nav.jobs', 'nav.employerArea', 'nav.bizPlanning'] as const) expect(h, k).not.toContain(T(k))
     expect(h).not.toMatch(/<a [^>]*href="\/"/) // the logo is no longer a link
   })
-  it('menu order: home, my pins / my posts by role, notifications, prepare, settings, help, back office (admin only), profile last', () => {
+  it('menu order: home, my pins / my posts by role, board, notifications, prepare, settings, help, back office (admin only), profile last', () => {
     const keys = (r: 'seeker' | 'employer' | null, a: boolean) => sideItems(r, a).map((i) => i.key)
-    expect(keys(null, false)).toEqual(['m.home', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.profile'])
-    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.profile'])
-    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.admin', 'm.profile'])
+    expect(keys(null, false)).toEqual(['m.home', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.profile'])
+    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.profile'])
+    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.admin', 'm.profile'])
     for (const r of [null, 'seeker', 'employer'] as const) for (const i of sideItems(r, true)) expect(ROUTES.has(i.to), i.to).toBe(true)
     expect(src('./components/sidenav.tsx')).not.toMatch(/to: '(start|interview|dashboard|plan|documents|jobs|employer|review)'/)
   })
@@ -164,10 +286,10 @@ describe('reviewed shell and pages', () => {
     expect(page).not.toContain(T('choose.business.t'))
   })
   it('new routes are registered; agency links are the official sites and say nothing was sent', () => {
-    for (const r of ['choose-role', 'seek', 'hire', 'notifications', 'me', 'prepare', 'settings', 'help', 'backoffice']) expect(ROUTES.has(r), r).toBe(true)
+    for (const r of ['choose-role', 'seek', 'hire', 'board', 'post', 'notifications', 'me', 'prepare', 'settings', 'help', 'backoffice']) expect(ROUTES.has(r), r).toBe(true)
     const st = seedState(NOW); st.role = 'seeker'
-    st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(0) }])
-    st.acceptances.push({ id: 'acc-1', postId: 'post-s2', seekerId: ME, at: new Date().toISOString(), status: 'forwarded', forwardedAt: new Date().toISOString() })
+    st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(-5) }])
+    st.acceptances.push({ id: 'acc-1', postId: 'post-s2', seekerId: ME, at: at(0), status: 'forwarded', forwardedAt: at(0), intro: '', availableFrom: null })
     const page = html(<NotificationsPage />, st)
     expect(page).toContain('href="https://www.doe.go.th/"'); expect(page).toContain('href="https://www.dsd.go.th/"')
     expect(page).toContain(T('m.agency.note')); expect(page).toContain(T('m.st.forwarded'))
@@ -213,7 +335,7 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
     expect(current.length).toBe(2) // the side capsule and the phone bar
     for (const a of current) { expect(a).toContain('href="/seek"'); expect(a).toContain('nav-on') }
     expect(css).toMatch(/\.nav-on, \.nav-on:hover \{ color: rgb\(var\(--onprimary\)\);[\s\S]*?linear-gradient\(180deg, rgb\(var\(--primary-hi\)\), rgb\(var\(--primary\)\)\)/)
-    for (const k of ['m.home', 'm.notif', 'm.pins', 'm.prepare', 'm.settings', 'm.help', 'm.profile'] as const) expect(page, k).toContain(`aria-label="${T(k)}"`)
+    for (const k of ['m.home', 'm.notif', 'm.pins', 'm.board', 'm.prepare', 'm.settings', 'm.help', 'm.profile'] as const) expect(page, k).toContain(`aria-label="${T(k)}`) // the bell may add its count
     expect(page).not.toMatch(/<a [^>]*title=/)
     // computers and tablets: left capsule; phones: bottom capsule with 5 places + More
     expect(page).toMatch(/class="nav-pill hidden md:flex fixed left-4 top-1\/2/)
@@ -233,8 +355,8 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
   })
   it('#5 job titles on notifications and in the back office are headings', () => {
     const st = seedState(NOW); st.role = 'seeker'
-    st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(0) }])
-    expect(html(<NotificationsPage />, st)).toMatch(/<h2 class="[^"]*">Quality Control Engineer<\/h2>/)
+    st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(-5) }])
+    expect(html(<NotificationsPage />, st)).toMatch(/<h3 class="[^"]*"><a href="\/post\?id=post-s2"[^>]*>Quality Control Engineer<\/a><\/h3>/)
     expect(src('./pages/match.tsx')).toMatch(/<h3 className="font-semibold">\{p\.position\} · \{p\.company\}/)
   })
   it('#6 #8 the pin form marks required fields, offers tick chips and ties errors to their field', () => {
@@ -306,7 +428,7 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
   it('glass on the other short-reading cards (roles, prepare, notifications, lists, profile, help, empty states); settings stays solid; footer band reaches both edges', () => {
     expect(html(<ChooseRolePage />).match(/<li class="glass-card role-card/g)?.length).toBe(2)
     const m = src('./pages/match.tsx')
-    for (const s of ['className="glass-card p-5 flex gap-4 items-start h-full"', '<li key={p.id} className="glass-card p-4 space-y-2">', '<li key={p.id} className="glass-card glass-lite p-4 space-y-3">', '<section className="glass-card p-5 space-y-3 text-sm">', '<div className="glass-card p-5 flex flex-col items-center'])
+    for (const s of ['className="glass-card p-5 flex gap-4 items-start h-full"', '<li key={a.id} className="glass-card p-4 space-y-2">', '<li key={p.id} className="glass-card glass-lite p-4 space-y-3">', '<section className="glass-card p-5 space-y-3 text-sm">', '<div className="glass-card p-5 flex flex-col items-center'])
       expect(m, s).toContain(s)
     expect(m).toContain('<section className="card space-y-4">') // settings
     const app = src('./App.tsx')
@@ -439,7 +561,7 @@ describe('map review 2 (owner, Oct 2026): lean, upright labels, all ASEAN countr
   it('5 every ASEAN country can be tapped; only Thailand and China ever reach saved data', () => {
     expect(geo).toContain('else if (d.code && d.code in GEO) onPickCountry(d.code as GeoCode)')
     for (const c of ['VN', 'SG', 'TL']) {
-      const r = addPin(seeker([]), { place: { country: c, province: 'X' } as never, industry: 'technology', skills: ['data_analysis'] }, 'p', at(0))
+      const r = addPin(withMe([]), { place: { country: c, province: 'X' } as never, industry: 'technology', skills: ['data_analysis'] }, 'p', at(0))
       expect(r.ok ? 'ok' : r.problem, c).toBe('place')
     }
   })
@@ -472,7 +594,7 @@ describe('map review 2 (owner, Oct 2026): lean, upright labels, all ASEAN countr
     const m = src('./pages/match.tsx')
     expect(m).toContain('disabled={!open}') // no provinces for a planned country
     expect(m).toContain('disabled={!!oc && !isCountry(oc)} onClick={confirmOrigin}')
-    expect(m).toContain("disabled={st.me.pins.length >= MAX_PINS || (!!dc && !isCountry(dc))}")
+    expect(m).toContain("disabled={pq.left <= 0 || (!!dc && !isCountry(dc))}")
     expect(src('./pages/hire.tsx')).toContain('disabled={!isCountry(c) || !p}')
   })
   it('7–9 capitals: Bangkok and Beijing on the overview, otherwise the chosen country; names in 3 languages', () => {

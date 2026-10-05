@@ -328,3 +328,38 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .chip-box svg { opacity: 0 }
 .chip-check:has(input:checked) .chip-box { background: rgb(var(--primary)); border-color: rgb(var(--primary)); color: rgb(var(--onprimary)) }
 .chip-check:has(input:checked) .chip-box svg { opacity: 1 }
+
+/* ── board (owner, Oct 2026): release levels shown as game-like rarity — stars + name + colour (never colour alone) ──
+   level 1 legendary gold · 2 epic purple · 3 rare blue · 4 uncommon green · 5 common grey; text ≥ 4.5:1 on its tint in both themes */
+:root, :root[data-theme='light'] {
+  --rar1-bg: 254 243 199; --rar1-fg: 146 64 14; --rar1-line: 245 158 11;
+  --rar2-bg: 243 232 255; --rar2-fg: 107 33 168; --rar2-line: 168 85 247;
+  --rar3-bg: 219 234 254; --rar3-fg: 30 64 175; --rar3-line: 59 130 246;
+  --rar4-bg: 220 252 231; --rar4-fg: 22 101 52; --rar4-line: 34 197 94;
+  --rar5-bg: 241 245 249; --rar5-fg: 51 65 85; --rar5-line: 148 163 184;
+}
+:root[data-theme='dark'] {
+  --rar1-bg: 69 46 8; --rar1-fg: 252 211 77; --rar1-line: 180 83 9;
+  --rar2-bg: 52 26 82; --rar2-fg: 233 213 255; --rar2-line: 126 34 206;
+  --rar3-bg: 23 37 84; --rar3-fg: 191 219 254; --rar3-line: 29 78 216;
+  --rar4-bg: 14 56 33; --rar4-fg: 187 247 208; --rar4-line: 21 128 61;
+  --rar5-bg: 39 44 54; --rar5-fg: 226 232 240; --rar5-line: 100 116 139;
+}
+.rar-1 { --rar-bg: var(--rar1-bg); --rar-fg: var(--rar1-fg); --rar-line: var(--rar1-line) }
+.rar-2 { --rar-bg: var(--rar2-bg); --rar-fg: var(--rar2-fg); --rar-line: var(--rar2-line) }
+.rar-3 { --rar-bg: var(--rar3-bg); --rar-fg: var(--rar3-fg); --rar-line: var(--rar3-line) }
+.rar-4 { --rar-bg: var(--rar4-bg); --rar-fg: var(--rar4-fg); --rar-line: var(--rar4-line) }
+.rar-5 { --rar-bg: var(--rar5-bg); --rar-fg: var(--rar5-fg); --rar-line: var(--rar5-line) }
+.rar { background: rgb(var(--rar-bg)); color: rgb(var(--rar-fg)); border-color: rgb(var(--rar-line)) }
+/* the card carries its level as a coloured edge; level 1 also glows a little, like a legendary item */
+.rar-edge-1 { border-left: 4px solid rgb(var(--rar1-line)); box-shadow: 0 0 0 1px rgb(var(--rar1-line) / .35), 0 6px 22px -10px rgb(var(--rar1-line) / .7) }
+.rar-edge-2 { border-left: 4px solid rgb(var(--rar2-line)) }
+.rar-edge-3 { border-left: 4px solid rgb(var(--rar3-line)) }
+.rar-edge-4 { border-left: 4px solid rgb(var(--rar4-line)) }
+.rar-edge-5 { border-left: 4px solid rgb(var(--rar5-line)) }
+.rar-tab { border-color: rgb(var(--rar-line)); color: rgb(var(--ink)) }
+.rar-tab:hover { background: rgb(var(--rar-bg)) }
+.rar-tab.is-on { background: rgb(var(--rar-bg)); color: rgb(var(--rar-fg)); box-shadow: inset 0 0 0 1px rgb(var(--rar-line)) }
+/* board map: how many posts / pins per province */
+.g-count { fill: rgb(var(--primary) / .9); stroke: rgb(var(--page)); stroke-width: 2 }
+.g-count-n { fill: rgb(var(--onprimary)); font: 700 11px/1 system-ui, sans-serif }

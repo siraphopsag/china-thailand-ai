@@ -1,52 +1,80 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { accept, addPin, canPost, forward, makePost, nowWith, parseState, removePin, type Outcome, type PostInput } from './domain/match/logic'
+import { addPin, applyTo, canPost, cancel, decide, forward, makePost, parseState, poolOf, removePin, renewPost, withoutExpired, type ApplyInput, type Outcome, type PostInput } from './domain/match/logic'
+import { HOUR_MS, pinActive, type PinLike } from './domain/match/release'
 import { seedState } from './domain/match/seed'
-import { ME, MY_EMPLOYER, type Acceptance, type Industry, type MatchState, type Place, type Post, type Role, type Skill } from './domain/match/types'
-import { buildState, dbProblem, postToRow, rowToPost, type AdminStats, type PostRow } from './domain/match/remote'
+import { HOLDS_PLACE, MAX_CLOCK_HOURS, ME, MY_EMPLOYER, type Acceptance, type Industry, type MatchState, type Place, type Post, type Role, type Skill } from './domain/match/types'
+import { buildState, dbProblem, postToRow, rowToAcceptance, rowToPost, statsByProvince, statsToPool, type AcceptanceRow, type AdminStats, type PinStatRow, type PostRow } from './domain/match/remote'
 import { getClient, takeNext, useAuth } from './auth'
 import { go } from './store'
 
 /**
  * State of the matching prototype (owner, Oct 2026) in one of two modes, behind the same interface so the pages do not care:
- *  • 'remote' — signed in: posts, pins, acceptances and profile settings live in the Supabase database (shared by everyone,
- *    permissions enforced there by row level security; see supabase/migrations/0002_matching.sql);
+ *  • 'remote' — signed in: posts, pins, applications, allowance uses and profile settings live in the Supabase database (shared by
+ *    everyone, permissions enforced there; see supabase/migrations). Other people's pins arrive only as anonymous counts;
  *  • 'local'  — the demo kept in this browser (key below): used when accounts are not set up, and as the fallback when the
  *    service cannot be reached, so the site keeps working (a notice says so).
  * 'signedOut' (accounts work, nobody signed in) and 'loading' show the sign-in prompt / a wait instead of data.
- * The demo clock (days added to the real time, to show the step-by-step release) always stays in this browser.
+ * The demo clock (hours added to the real time, to show the release levels) always stays in this browser; it moves what the
+ * website shows, not the database's own limits.
  */
 export const MATCH_KEY = 'call.match.poc.v1'
-const CLOCK_KEY = 'call.match.clock'
+const CLOCK_KEY = 'call.match.clock.h'
 export type DataMode = 'local' | 'remote' | 'signedOut' | 'loading'
+/** per post: places held, of those waiting for the employer, and reservations */
+export interface Counts { held: number; pending: number; reserved: number }
 
 function load(): MatchState {
   try { const raw = localStorage.getItem(MATCH_KEY); if (raw) { const st = parseState(JSON.parse(raw)); if (st) return st } } catch { /* fall back to the seed */ }
   return seedState()
 }
-const readClock = () => { try { const n = Number(localStorage.getItem(CLOCK_KEY)); return Number.isInteger(n) && n >= 0 && n <= 60 ? n : 0 } catch { return 0 } }
+const readClock = () => { try { const n = Number(localStorage.getItem(CLOCK_KEY)); return Number.isInteger(n) && n >= 0 && n <= MAX_CLOCK_HOURS ? n : 0 } catch { return 0 } }
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
-const emptyState = (dayOffset = 0): MatchState => ({ ...seedState(), role: null, posts: [], seekers: [], acceptances: [], dayOffset, myCompany: '', member: false })
+const emptyState = (clockHours = 0): MatchState => ({ ...seedState(), role: null, posts: [], seekers: [], acceptances: [], clockHours, myCompany: '', member: false, credits: [] })
 const fail = <T,>(problem: 'network' | 'unknown'): Outcome<T> => ({ ok: false, problem })
+export const nowWith = (clockHours: number, real = Date.now()) => real + clockHours * HOUR_MS
+export function countsFrom(acc: Acceptance[]): Record<string, Counts> {
+  const out: Record<string, Counts> = {}
+  for (const a of acc) {
+    const c = (out[a.postId] ??= { held: 0, pending: 0, reserved: 0 })
+    if (HOLDS_PLACE.includes(a.status)) c.held++
+    if (a.status === 'accepted') c.pending++
+    if (a.status === 'reserved') c.reserved++
+  }
+  return out
+}
 type Db = Awaited<ReturnType<typeof getClient>>
 
 interface Ctx {
   st: MatchState
   now: number
   mode: DataMode
+  /** every active pin as the release needs it (others' pins: anonymous in database mode) */
+  pool: PinLike[]
+  /** active pins per province (board map) */
+  pinsByProvince: Record<string, number>
+  counts: Record<string, Counts>
   setRole: (r: Role | null) => Promise<void>
   setOrigin: (p: Place | null) => Promise<void>
   pin: (input: { place: Place; industry: Industry; skills: Skill[] }) => Promise<Outcome<unknown>>
   unpin: (id: string) => Promise<void>
   post: (input: PostInput) => Promise<Outcome<Post>>
-  /** change one of my own posts (keeps its date, so its place in the step-by-step release) */
+  /** change one of my own posts (keeps its dates, so its place in the release) */
   editPost: (id: string, input: PostInput) => Promise<Outcome<Post>>
   /** delete one of my own posts — or any post when signed in as an administrator */
   deletePost: (id: string) => Promise<boolean>
+  /** start the release of my post again (uses one post of the weekly allowance) */
+  renew: (id: string) => Promise<Outcome<unknown>>
   /** membership package (simulated: free in the prototype, no payment) */
   subscribe: () => Promise<void>
-  acceptOffer: (postId: string) => Promise<Outcome<Acceptance>>
+  /** apply (takes a place) or reserve (the post is full) */
+  apply: (postId: string, input: ApplyInput) => Promise<Outcome<Acceptance>>
+  /** the employer confirms or declines an application */
+  decide: (accId: string, confirm: boolean) => Promise<boolean>
+  /** the seeker withdraws an application or a reservation */
+  withdraw: (accId: string) => Promise<boolean>
   forwardCase: (accId: string) => Promise<void>
-  advanceDay: () => void
+  advanceClock: (hours: number) => void
+  resetClock: () => void
   reset: () => void
   /** numbers for the back office (administrators, database mode only) */
   stats: AdminStats | null
@@ -68,35 +96,43 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
   /* ---------- database ---------- */
   const [clock, setClock] = useState(() => (typeof window === 'undefined' ? 0 : readClock()))
   const [remoteSt, setRemote] = useState<MatchState>(() => emptyState())
+  const [remotePool, setPool] = useState<PinStatRow[]>([])
+  const [remoteCounts, setCounts] = useState<Record<string, Counts> | null>(null)
   const [stats, setStats] = useState<AdminStats | null>(null)
   // until the first load for this account has arrived, pages wait instead of showing an empty state (e.g. "choose a role")
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
   const mode: DataMode = base === 'remote' && loadedFor !== userId ? 'loading' : base
-  const loadSeq = useRef(0)
+  const loadSeq = useRef(0), purged = useRef(false)
   const refresh = useCallback(async () => {
     if (base !== 'remote' || !userId) return
     const seq = ++loadSeq.current
     try {
       const sb = await getClient()
-      const [prof, posts, pins, accs, people, allPins, st] = await Promise.all([
+      if (!purged.current) { purged.current = true; void sb.rpc('purge_expired').then(() => undefined, () => undefined) } // posts past 6 months, pins past a month
+      const [prof, posts, pins, accs, uses, pinStats, counts, people, allPins, st] = await Promise.all([
         sb.from('profiles').select('user_type, company, origin_country, origin_province, member').eq('id', userId).maybeSingle(),
         sb.from('posts').select('*').order('created_at', { ascending: false }),
         sb.from('pins').select('*').eq('seeker_id', userId).order('created_at'),
         sb.from('acceptances').select('*').order('created_at'),
+        sb.from('quota_events').select('kind, created_at').order('created_at'),
+        sb.rpc('pin_stats'),
+        sb.rpc('post_counts'),
         admin ? sb.from('profiles').select('id, full_name, user_type, company, origin_country, origin_province, member') : Promise.resolve({ data: [] }),
         admin ? sb.from('pins').select('*') : Promise.resolve({ data: [] }),
         admin ? sb.rpc('admin_stats') : Promise.resolve({ data: null }),
       ])
       if (seq !== loadSeq.current) return // a newer load started meanwhile
       setRemote(buildState({ uid: userId, name: userName, profile: prof.data ?? null, posts: (posts.data ?? []) as PostRow[], pins: pins.data ?? [], acceptances: accs.data ?? [],
-        dayOffset: 0, people: people.data ?? [], allPins: allPins.data ?? [] }))
+        clockHours: 0, credits: uses.data ?? [], people: people.data ?? [], allPins: allPins.data ?? [] }))
+      setPool(Array.isArray(pinStats.data) ? pinStats.data as PinStatRow[] : [])
+      setCounts(Array.isArray(counts.data) ? Object.fromEntries((counts.data as { post_id: string; held: number; pending: number; reserved: number }[]).map((r) => [r.post_id, { held: Number(r.held), pending: Number(r.pending), reserved: Number(r.reserved) }])) : null)
       const s = Array.isArray(st.data) ? st.data[0] : st.data
       setStats(s ? Object.fromEntries(Object.entries(s).map(([k, v]) => [k, Number(v)])) as unknown as AdminStats : null)
       setLoadedFor(userId)
     } catch { /* keep what we have; the next refresh tries again */ }
   }, [base, userId, userName, admin])
   useEffect(() => { void refresh() }, [refresh])
-  // others' changes (new posts, someone accepted) show up when the tab comes back into view and every 30 s while it is visible
+  // others' changes (new posts, someone applied) show up when the tab comes back into view and every 30 s while it is visible
   useEffect(() => {
     if (base !== 'remote') return
     const onFocus = () => { if (document.visibilityState === 'visible') void refresh() }
@@ -115,9 +151,17 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
   }, [mode, userId, refresh])
   useEffect(() => { try { localStorage.setItem(CLOCK_KEY, String(clock)) } catch { /* ignore */ } }, [clock])
 
-  const st = mode === 'local' ? localSt : mode === 'remote' ? { ...remoteSt, dayOffset: clock } : emptyState(clock)
-  const now = nowWith(st.dayOffset)
-  const at = useCallback(() => new Date(nowWith(st.dayOffset)).toISOString(), [st.dayOffset])
+  const raw = mode === 'local' ? localSt : mode === 'remote' ? { ...remoteSt, clockHours: clock } : emptyState(clock)
+  const now = nowWith(raw.clockHours)
+  // posts past their 6 months are gone (the database removes them too)
+  const st = useMemo(() => withoutExpired(raw, now), [raw, now])
+  const pool = useMemo<PinLike[]>(() => (mode === 'remote' ? [...st.me.pins, ...statsToPool(remotePool)] : poolOf(st)), [mode, st, remotePool])
+  const pinsByProvince = useMemo(() => {
+    if (mode === 'remote') return statsByProvince(remotePool.filter((r) => Date.parse(r.hour) > now - 30 * 24 * HOUR_MS))
+    return pool.filter((p) => pinActive(p, now)).reduce<Record<string, number>>((m, p) => ({ ...m, [p.province]: (m[p.province] ?? 0) + 1 }), {})
+  }, [mode, remotePool, pool, now])
+  const counts = useMemo(() => (mode === 'remote' && remoteCounts ? remoteCounts : countsFrom(st.acceptances)), [mode, remoteCounts, st.acceptances])
+  const at = useCallback(() => new Date(nowWith(raw.clockHours)).toISOString(), [raw.clockHours])
 
   const value = useMemo<Ctx>(() => {
     const local = mode === 'local' // nothing is written while signed out or still checking
@@ -132,28 +176,31 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       } catch { return fail('network') }
     }
     const profile = (patch: Record<string, unknown>) => write((sb) => sb.from('profiles').update(patch).eq('id', userId!), () => null)
+    const mineAcc = (accId: string) => st.acceptances.find((a) => a.id === accId)
     return {
-      st, now, mode, stats: local ? null : stats,
+      st, now, mode, pool, pinsByProvince, counts, stats: local ? null : stats,
       setRole: async (role) => { if (local) setLocal((s) => ({ ...s, role })); else await profile({ user_type: role }) },
       setOrigin: async (origin) => { if (local) setLocal((s) => ({ ...s, me: { ...s.me, origin } })); else await profile({ origin_country: origin?.country ?? null, origin_province: origin?.province ?? null }) },
       pin: async (input) => {
-        const r = addPin(st.me, input, uid('pin'), at()) // the same checks as the database, with field-level messages
+        const when = at()
+        const r = addPin(st, input, uid('pin'), when) // the same checks as the database, with field-level messages
         if (!r.ok) return r
-        if (local) { setLocal((s) => ({ ...s, me: r.value })); return r }
+        if (local) { setLocal((s) => ({ ...s, me: r.value, credits: [...s.credits, { kind: 'pin', at: when }] })); return r }
         return write((sb) => sb.from('pins').insert({ country: input.place.country, province: input.place.province, industry: input.industry, skills: input.skills }), () => null)
       },
       unpin: async (id) => { if (local) setLocal((s) => ({ ...s, me: removePin(s.me, id) })); else await write((sb) => sb.from('pins').delete().eq('id', id), () => null) },
       post: async (input) => {
-        if (!canPost(st, now)) return { ok: false, problem: 'quota' } as const // weekly allowance reached
-        const r = makePost(input, uid('post'), MY_EMPLOYER, at()); if (!r.ok) return r
-        if (local) { setLocal((s) => ({ ...s, myCompany: input.company, posts: [r.value, ...s.posts] })); return r }
+        if (!canPost(st, now)) return { ok: false, problem: 'quota' } as const // weekly allowance used up
+        const when = at()
+        const r = makePost(input, uid('post'), MY_EMPLOYER, when); if (!r.ok) return r
+        if (local) { setLocal((s) => ({ ...s, myCompany: input.company, posts: [r.value, ...s.posts], credits: [...s.credits, { kind: 'post', at: when }] })); return r }
         if (input.company !== st.myCompany) await profile({ company: input.company })
         return write((sb) => sb.from('posts').insert(postToRow(input)).select().single(), (row) => rowToPost(row as PostRow, userId!))
       },
       editPost: async (id, input) => {
         const old = st.posts.find((p) => p.id === id && p.employerId === MY_EMPLOYER); if (!old) return fail('unknown')
         const r = makePost(input, id, MY_EMPLOYER, at()); if (!r.ok) return r
-        const value = { ...r.value, createdAt: old.createdAt }
+        const value = { ...r.value, createdAt: old.createdAt, releasedAt: old.releasedAt }
         if (local) { setLocal((s) => ({ ...s, myCompany: input.company, posts: s.posts.map((p) => (p.id === id ? value : p)) })); return { ok: true, value } }
         return write((sb) => sb.from('posts').update(postToRow(input)).eq('id', id).select().single(), (row) => rowToPost(row as PostRow, userId!))
       },
@@ -161,20 +208,43 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         if (local) { setLocal((s) => ({ ...s, posts: s.posts.filter((p) => p.id !== id), acceptances: s.acceptances.filter((a) => a.postId !== id) })); return true }
         return (await write((sb) => sb.from('posts').delete().eq('id', id), () => null)).ok
       },
+      renew: async (id) => {
+        const when = at()
+        const r = renewPost(st, id, when); if (!r.ok) return r
+        if (local) { setLocal((s) => ({ ...s, posts: s.posts.map((p) => (p.id === id ? r.value : p)), credits: [...s.credits, { kind: 'renew', at: when }] })); return r }
+        return write((sb) => sb.rpc('renew_post', { p_id: id }), () => null)
+      },
       subscribe: async () => { if (local) setLocal((s) => ({ ...s, member: true })); else await profile({ member: true }) },
-      acceptOffer: async (postId) => {
-        const r = accept(st, postId, ME, uid('acc'), at()); if (!r.ok) return r
+      apply: async (postId, input) => {
+        const r = applyTo(st, pool, postId, ME, input, uid('acc'), at()); if (!r.ok) return r
         if (local) { setLocal((s) => ({ ...s, acceptances: [...s.acceptances, r.value] })); return r }
-        return write((sb) => sb.from('acceptances').insert({ post_id: postId }), () => r.value)
+        return write((sb) => sb.from('acceptances').insert({ post_id: postId, intro: input.intro, available_from: input.availableFrom }).select().single(), (row) => rowToAcceptance(row as AcceptanceRow, userId!))
+      },
+      decide: async (accId, confirm) => {
+        if (local) {
+          const a = mineAcc(accId), p = a && st.posts.find((x) => x.id === a.postId)
+          if (!p || p.employerId !== MY_EMPLOYER) return false
+          const r = decide(st, accId, confirm, at()); if (!r.ok) return false
+          setLocal((s) => ({ ...s, acceptances: r.value })); return true
+        }
+        return (await write((sb) => sb.rpc('decide_application', { p_id: accId, p_confirm: confirm }), () => null)).ok
+      },
+      withdraw: async (accId) => {
+        if (local) { const r = cancel(st, accId, at()); if (!r.ok) return false; setLocal((s) => ({ ...s, acceptances: r.value })); return true }
+        return (await write((sb) => sb.from('acceptances').delete().eq('id', accId), () => null)).ok
       },
       forwardCase: async (accId) => {
         if (local) setLocal((s) => ({ ...s, acceptances: s.acceptances.map((a) => (a.id === accId ? forward(a, at()) : a)) }))
-        else await write((sb) => sb.from('acceptances').update({ status: 'forwarded' }).eq('id', accId), () => null)
+        else await write((sb) => sb.rpc('forward_case', { p_id: accId }), () => null)
       },
-      advanceDay: () => { if (local) setLocal((s) => ({ ...s, dayOffset: Math.min(60, s.dayOffset + 1) })); else setClock((c) => Math.min(60, c + 1)) },
+      advanceClock: (hours) => {
+        const step = (c: number) => Math.min(MAX_CLOCK_HOURS, c + hours)
+        if (local) setLocal((s) => ({ ...s, clockHours: step(s.clockHours) })); else setClock(step)
+      },
+      resetClock: () => { if (local) setLocal((s) => ({ ...s, clockHours: 0 })); else setClock(0) },
       reset: () => { if (local) { const fresh = seedState(); setLocal((s) => ({ ...fresh, role: s.role })) } else setClock(0) },
     }
-  }, [st, now, mode, stats, at, refresh, userId])
+  }, [st, now, mode, pool, pinsByProvince, counts, stats, at, refresh, userId])
   return <C.Provider value={value}>{children}</C.Provider>
 }
 export const useMatch = () => { const c = useContext(C); if (!c) throw new Error('match'); return c }

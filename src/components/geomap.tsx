@@ -66,8 +66,9 @@ export function leanPoint(x: number, y: number, w: number, h: number, deg: numbe
 }
 
 export interface MapPin { country: 'TH' | 'CN'; province: string; label: string; tone?: 'mine' | 'post' }
-export function GeoMap({ country, province, pins = [], onPickCountry, onPickProvince, label, className = 'h-[46vh] min-h-[280px] max-h-[520px]' }: {
-  country: GeoCode | null; province: string | null; pins?: MapPin[]; onPickCountry: (c: GeoCode) => void; onPickProvince: (code: string | null) => void; label: string; className?: string
+/** `counts` (the board): a number per province drawn as a bubble at its centre — the same numbers are listed in text next to the map */
+export function GeoMap({ country, province, pins = [], counts, onPickCountry, onPickProvince, label, className = 'h-[46vh] min-h-[280px] max-h-[520px]' }: {
+  country: GeoCode | null; province: string | null; pins?: MapPin[]; counts?: Record<string, number>; onPickCountry: (c: GeoCode) => void; onPickProvince: (code: string | null) => void; label: string; className?: string
 }) {
   const { t } = useI18n()
   const [data, setData] = useState<{ countries: CountryF[]; provinces: ProvinceF[] } | null>(null)
@@ -191,6 +192,12 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
             return <g key={i} transform={`translate(${p[0]},${p[1]})`}><title>{pn.label}</title>
               <ellipse cx={0} cy={0} rx={6} ry={2.2} className="g-shadow" />
               <path d="M0 0 C-7 -9 -9 -13 -9 -17 A9 9 0 1 1 9 -17 C9 -13 7 -9 0 0 Z" className={pn.tone === 'post' ? 'g-pin-post' : 'g-pin'} /><circle cx={0} cy={-17} r={3.2} className="g-pin-dot" /></g>
+          })}
+          {counts && Object.entries(counts).filter(([, n]) => n > 0).map(([code, n]) => {
+            const pv = provs.find((x) => x.code === code); if (!pv) return null
+            const p = geoPt(pv.c[0], pv.c[1], (code === province ? provLift : 0) + (pv.country === country ? countryLift : 0)); if (!inView(p)) return null
+            const r = 10 + Math.min(12, Math.sqrt(n) * 3)
+            return <g key={`n-${code}`} transform={`translate(${p[0]},${p[1]})`}><circle r={r} className="g-count" /><text y={4} textAnchor="middle" className="g-count-n">{n}</text></g>
           })}
         </svg>)}
       {data && (

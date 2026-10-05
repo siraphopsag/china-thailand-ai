@@ -1,5 +1,5 @@
 // Employer flow, Oct 2026 (owner): 7 more post details, simulated-AI pre-check, confirm → posted windows, post page,
-// 3 free posts per rolling 7 days + membership package (planned price struck through, free now — no payment),
+// 3 free posts per weekly cycle + membership package (planned price struck through, free now — no payment),
 // and planned ("coming soon") countries made clearly not open yet.
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -10,10 +10,10 @@ import { tr } from './i18n/core'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
 import { AuthProvider } from './auth'
-import { DAY_MS, canPost, makePost, parseState, postLimit, postsThisWeek, type PostInput } from './domain/match/logic'
+import { DAY_MS, canPost, makePost, parseState, postLimit, postQuota, type PostInput } from './domain/match/logic'
 import { precheck } from './domain/match/precheck'
 import { seedState } from './domain/match/seed'
-import { MY_EMPLOYER, type MatchState, type Post } from './domain/match/types'
+import { MY_EMPLOYER, type Credit, type MatchState, type Post } from './domain/match/types'
 import type { MsgKey } from './locales/index'
 import { PostFacts } from './pages/match'
 import { PackageCard } from './pages/hire'
@@ -76,8 +76,9 @@ describe('A. post details', () => {
     const legacy: Post = { ...st.posts[0], headcount: null, employment: null, salary: null, startDate: null, languages: [], education: 'none', benefits: [] }
     expect(html(<PostFacts post={legacy} />).split(T('m.notStated')).length - 1).toBe(6)
     const m = src('./pages/match.tsx')
-    expect(m.split('<PostFacts post={p} compact />').length - 1).toBe(2) // job seekers' notifications + back office
-    expect(src('./pages/hire.tsx')).toContain('<PostFacts post={p} />') // the post page
+    expect(m).toContain('<PostFacts post={post} compact />') // every post card: board, notifications, my posts
+    expect(m).toContain('<PostFacts post={p} compact />') // back office
+    expect(src('./pages/post.tsx')).toContain('<PostFacts post={p} />') // the post page
   })
 })
 
@@ -118,17 +119,19 @@ describe('C. confirm → posted', () => {
 })
 
 describe('D. weekly allowance and membership package', () => {
-  const mine = (days: number, id: string): Post => ({ ...seedState(NOW).posts[1], id, employerId: MY_EMPLOYER, createdAt: at(days) })
-  it('3 free posts per rolling 7 days (demo clock counts); posts older than 7 days no longer count', () => {
-    const st = { ...seedState(NOW), posts: [mine(-1, 'a'), mine(-3, 'b'), mine(-6.5, 'c'), mine(-8, 'old')] }
-    expect(postsThisWeek(st, NOW)).toBe(3)
+  const use = (days: number, kind: Credit['kind'] = 'post'): Credit => ({ kind, at: at(days) })
+  it('3 free posts per weekly cycle (owner, Oct 2026): the cycle starts with its first use; after 7 days the whole allowance is back', () => {
+    const st = { ...seedState(NOW), credits: [use(-6.5), use(-3), use(-1), use(-2, 'pin')] }
+    expect(postQuota(st, NOW)).toEqual({ used: 3, limit: 3, left: 0, resetAt: NOW + 0.5 * DAY_MS }) // pins have their own allowance
     expect(postLimit(st)).toBe(3)
     expect(canPost(st, NOW)).toBe(false)
-    expect(canPost(st, NOW + 0.6 * DAY_MS)).toBe(true) // a day later the oldest one has left the window
+    expect(postQuota(st, NOW + 0.6 * DAY_MS)).toEqual({ used: 0, limit: 3, left: 3, resetAt: null }) // all three come back at once
+    // a renewal uses the same allowance; a new cycle starts with the first use after the old one ended
+    expect(postQuota({ ...st, credits: [use(-9), use(-1), use(-0.5, 'renew')] }, NOW)).toEqual({ used: 2, limit: 3, left: 1, resetAt: NOW + 6 * DAY_MS })
     expect(src('./matchData.tsx')).toContain("if (!canPost(st, now)) return { ok: false, problem: 'quota' } as const")
   })
   it('membership: 10 per 7 days; the window shows the planned price struck through and "free now"; no payment', () => {
-    const st = { ...seedState(NOW), member: true, posts: [mine(-1, 'a'), mine(-3, 'b'), mine(-6.5, 'c')] }
+    const st = { ...seedState(NOW), member: true, credits: [use(-1), use(-3), use(-6.5)] }
     expect(postLimit(st)).toBe(10); expect(canPost(st, NOW)).toBe(true)
     const card = html(<PackageCard />)
     expect(card).toMatch(new RegExp(`<span class="price-was[^"]*"><span class="sr-only">${T('m.pk.priceSr')} </span>${T('m.pk.price')}</span>`))

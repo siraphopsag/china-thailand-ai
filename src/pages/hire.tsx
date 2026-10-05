@@ -2,20 +2,21 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { canPost, isCountry, isTaken, postLimit, postsThisWeek, tierOf, type PostInput, type Problem } from '../domain/match/logic'
+import { canPost, isCountry, postQuota, type PostInput, type Problem } from '../domain/match/logic'
+import { scheduleOf, stageAt } from '../domain/match/release'
 import { precheck, type Precheck } from '../domain/match/precheck'
 import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MEMBER_POSTS_PER_WEEK, MY_EMPLOYER, type Benefit, type Currency, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Skill } from '../domain/match/types'
 import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
 import { Modal } from '../components/modal'
 import { Icon } from '../components/icons'
-import { Empty, IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PlaceFields, PostFacts, PostStatus, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames } from './match'
+import { IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
 import { postToInput } from '../domain/match/remote'
 
 /**
  * Employer flow (owner, Oct 2026): place on the map → company and needs (4 groups) → "Check and post" → simulated AI pre-check →
- * "Post this job?" → "Your post is live" with [View the post] [Post another]. 3 free posts per rolling 7 days; after that the
- * membership package window (10 per 7 days; planned price shown struck through, free in the prototype — no payment).
+ * "Post this job?" → "Your post is live" with [View the post] [Post another]. 3 free posts per weekly cycle (new or renewed); after
+ * that the membership package window (10 per cycle; planned price shown struck through, free in the prototype — no payment).
  * Editing (owner, Oct 2026): "Edit" on one of my posts (or hire?edit=<id>) fills the same form; saving keeps the posting date.
  */
 type Stage = null | 'check' | 'confirm' | 'done' | 'package' | 'joined'
@@ -32,7 +33,8 @@ const FIELD: Partial<Record<Problem, [string, string]>> = {
 export function HirePage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, post, editPost, deletePost, subscribe } = useMatch()
+  const { st, now, pool, post, editPost, deletePost, renew, subscribe } = useMatch()
+  const { until } = useRel()
   const editId = useSearchParam('edit')
   const [editing, setEditing] = useState<Post | null>(null)
   const [saving, setSaving] = useState(false)
@@ -74,7 +76,7 @@ export function HirePage() {
   if (gate) return <Page title={t('m.emp.title')}>{gate}</Page>
   if (st.role !== 'employer') return <Page title={t('m.emp.title')}><NeedRole role="employer" /></Page>
   const mine = st.posts.filter((x) => x.employerId === MY_EMPLOYER)
-  const used = postsThisWeek(st, now), limit = postLimit(st)
+  const q = postQuota(st, now), used = q.used, limit = q.limit
   const clear = () => fe.clear()
   const showProblem = (pr: Problem) => { const f = FIELD[pr]; if (f) fe.set(f[0], f[1], N.problem(pr)); else setMsg({ tone: 'danger', text: N.problem(pr) }) }
 
@@ -114,6 +116,13 @@ export function HirePage() {
     const ok = await deletePost(x.id)
     if (ok && editing?.id === x.id) another()
     setMsg(ok ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') })
+  }
+  const renewIt = async (x: Post) => {
+    if (!window.confirm(t('m.em.renew.confirm'))) return
+    const r = await renew(x.id)
+    if (r.ok) setMsg({ tone: 'info', text: t('m.em.renewed') })
+    else if (r.problem === 'quota') setStage('package')
+    else setMsg({ tone: 'danger', text: N.problem(r.problem) })
   }
   const toggleLang = (l: LanguageSkill['lang']) => { setLangs((xs) => (xs.some((x) => x.lang === l) ? xs.filter((x) => x.lang !== l) : [...xs, { lang: l, level: 'conversational' }])); clear() }
   const setLevel = (l: LanguageSkill['lang'], level: LanguageSkill['level']) => setLangs((xs) => xs.map((x) => (x.lang === l ? { ...x, level } : x)))
@@ -194,18 +203,19 @@ export function HirePage() {
         </form>
       )}
       <section className="space-y-2" aria-labelledby="myposts-h">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="myposts-h" className="h2">{t('m.posts')}</h2><QuotaNote used={used} limit={limit} member={st.member} /></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="myposts-h" className="h2">{t('m.posts')}</h2><NavLink to="board" className="text-sm font-medium text-primary inline-flex items-center gap-1 min-h-[24px]">{t('m.board')}<Icon name="next" size={14} /></NavLink></div>
+        <QuotaBar q={q} kind="post" />
         {!mine.length ? <div className="glass-card p-5 text-muted">{t('m.posts.none')}</div> : (
-          <ul className="space-y-2">{mine.map((x) => (
-            <li key={x.id} className="glass-card p-4 space-y-2">
-              <div><h3 className="font-semibold"><NavLink to={`post?id=${x.id}`} className="hover:underline underline-offset-4">{x.position}</NavLink></h3><p className="text-sm text-muted">{x.company} · {N.place(x.country, x.province)} · {N.industry(x.industry)}</p></div>
-              <PostStatus post={x} />
+          <ul className="space-y-2">{mine.map((x) => { const sc = scheduleOf(x, pool, now), stage = stageAt(sc, now); return stage === 'expired' ? null : (
+            <PostCard key={x.id} post={x} level={stage} reached>
+              {now >= sc.warnAt && <p className="text-sm text-warn-fg flex items-center gap-1.5"><Icon name="hourglass" size={15} />{t('m.em.expiring', { t: until(sc.expiresAt) })}</p>}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <NavLink to={`post?id=${x.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-primary min-h-[24px]">{t('m.pp.view')}<Icon name="next" size={14} /></NavLink>
                 <button type="button" className="inline-flex items-center gap-1 text-sm font-medium min-h-[24px] hover:underline underline-offset-4" onClick={() => startEdit(x)} aria-label={`${t('m.post.edit')}: ${x.position}`}><Icon name="edit" size={14} />{t('m.post.edit')}</button>
+                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium min-h-[24px] hover:underline underline-offset-4" onClick={() => renewIt(x)} aria-label={`${t('m.em.renew')}: ${x.position}`}><Icon name="renew" size={14} />{t('m.em.renew')}</button>
                 <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-danger-fg min-h-[24px] hover:underline underline-offset-4" onClick={() => remove(x)} aria-label={`${t('m.post.delete')}: ${x.position}`}><Icon name="trash" size={14} />{t('m.post.delete')}</button>
               </div>
-            </li>))}</ul>)}
+            </PostCard>) })}</ul>)}
       </section>
       </MapLayout>
 
@@ -263,51 +273,5 @@ export function PackageCard() {
       <p className="flex items-baseline gap-3"><span className="price-was text-lg text-muted"><span className="sr-only">{t('m.pk.priceSr')} </span>{t('m.pk.price')}</span><span className="text-2xl font-bold text-ok-fg">{t('m.pk.free')}</span></p>
       <p className="text-xs text-muted">{t('m.pk.note')}</p>
     </div>
-  )
-}
-
-/* ================= one post: details, status and progress ================= */
-export function PostPage() {
-  const { t } = useI18n()
-  const N = useNames()
-  const { st, now, deletePost } = useMatch()
-  const id = useSearchParam('id')
-  const gate = useGate(`post?id=${id}`)
-  if (gate) return <Page title={t('m.pp.title')}>{gate}</Page>
-  const p = st.posts.find((x) => x.id === id)
-  if (!p) return <Page title={t('m.pp.title')}><Empty icon="posts" text={t('m.pp.notFound')} to="hire" action={t('m.posts')} /></Page>
-  const acc = st.acceptances.filter((a) => a.postId === p.id)
-  const firstAcc = [...acc].sort((a, b) => a.at.localeCompare(b.at))[0]
-  const fwd = acc.find((a) => a.status === 'forwarded')
-  const tier = tierOf(p, now, st.acceptances)
-  const steps: { done: boolean; current: boolean; label: string }[] = [
-    { done: true, current: false, label: t('m.pp.posted', { d: N.day(p.createdAt) }) },
-    { done: isTaken(p, st.acceptances), current: !isTaken(p, st.acceptances), label: t('m.pp.notify', { tier: t(`m.tier.${tier}` as never) }) },
-    { done: !!firstAcc, current: !!firstAcc && !fwd, label: firstAcc ? `${t('m.pp.accepted')} · ${N.day(firstAcc.at)}` : t('m.pp.waiting') },
-    { done: !!fwd, current: false, label: fwd?.forwardedAt ? `${t('m.pp.forwarded')} · ${N.day(fwd.forwardedAt)}` : t('m.pp.forwarded') },
-  ]
-  return (
-    <Page title={p.position} sub={`${p.company} · ${N.place(p.country, p.province)} · ${N.industry(p.industry)}`}>
-      <PostStatus post={p} />
-      {p.employerId === MY_EMPLOYER && (
-        <div className="flex flex-wrap gap-2">
-          <NavLink to={`hire?edit=${p.id}`} className="btn-ghost"><Icon name="edit" size={16} />{t('m.post.edit')}</NavLink>
-          <button type="button" className="btn-ghost text-danger-fg" onClick={async () => { if (window.confirm(t('m.post.delete.confirm')) && (await deletePost(p.id))) go('hire') }}><Icon name="trash" size={16} />{t('m.post.delete')}</button>
-        </div>)}
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-5 items-start">
-        <section className="glass-card p-5 space-y-3" aria-labelledby="pp-tl"><h2 id="pp-tl" className="h2">{t('m.pp.timeline')}</h2>
-          <ol className="space-y-3">{steps.map((s, i) => (
-            <li key={i} aria-current={s.current ? 'step' : undefined} className="flex items-start gap-3">
-              <span className={`w-7 h-7 shrink-0 rounded-full grid place-items-center text-xs font-bold ${s.done ? 'bg-ok-fg text-ok-bg' : s.current ? 'bg-primary text-onprimary' : 'bg-surface3 text-muted'}`}>{s.done ? <Icon name="check" size={14} /> : i + 1}</span>
-              <span className={`pt-0.5 text-sm ${s.current ? 'font-semibold' : s.done ? '' : 'text-muted'}`}>{s.label}</span>
-            </li>))}</ol>
-        </section>
-        <section className="glass-card p-5 space-y-4" aria-labelledby="pp-dt"><h2 id="pp-dt" className="h2">{t('m.pp.details')}</h2>
-          <p className="text-sm">{t('jb.minYearsShort', { n: p.minYears })} · {p.skills.map(N.skill).join(', ')}</p>
-          <PostFacts post={p} />
-          {p.details && <p className="text-sm text-muted border-t border-line pt-3">{p.details}</p>}
-        </section>
-      </div>
-    </Page>
   )
 }

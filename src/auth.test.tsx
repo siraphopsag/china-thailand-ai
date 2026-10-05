@@ -14,7 +14,8 @@ import { seedState } from './domain/match/seed'
 import { AuthContext, AuthProvider, authResult, tidyKey, tidyUrl, configProblem, isConfigured, toUser, type AuthCtx } from './auth'
 import { LoginButton } from './components/sidenav'
 import { BackofficePage, MePage, NotificationsPage, SeekPage } from './pages/match'
-import { HirePage, PostPage } from './pages/hire'
+import { HirePage } from './pages/hire'
+import { PostPage } from './pages/post'
 import { ForgotPage, LoginPage, RegisterPage, ResetPasswordPage } from './pages/auth'
 import { buildState, dbProblem, postToInput, postToRow, rowToPost, type PostRow } from './domain/match/remote'
 import { MY_EMPLOYER, ME } from './domain/match/types'
@@ -180,11 +181,11 @@ describe('database rows ↔ the app\'s data (domain/match/remote.ts)', () => {
   })
   it('the signed-in person\'s view: role, company, pins, acceptances (mine marked as "me"), and other seekers only for admins', () => {
     const st = buildState({ uid: 'u1', name: 'Ann', profile: { user_type: 'employer', company: 'Shop', origin_country: 'TH', origin_province: 'TH-50', member: true },
-      posts: [row], pins: [], acceptances: [{ id: 'a1', post_id: 'p1', seeker_id: 'u2', seeker_name: 'Bo', status: 'accepted', created_at: '2026-10-05T02:00:00Z', forwarded_at: null }], dayOffset: 0 })
+      posts: [row], pins: [], acceptances: [{ id: 'a1', post_id: 'p1', seeker_id: 'u2', seeker_name: 'Bo', status: 'accepted', created_at: '2026-10-05T02:00:00Z', forwarded_at: null }], clockHours: 0 })
     expect(st.role).toBe('employer'); expect(st.myCompany).toBe('Shop'); expect(st.member).toBe(true); expect(st.me.origin).toEqual({ country: 'TH', province: 'TH-50' })
     expect(st.acceptances[0]).toMatchObject({ seekerId: 'u2', seekerName: 'Bo', status: 'accepted' })
     expect(st.seekers).toEqual([])
-    const mine = buildState({ uid: 'u2', name: 'Bo', profile: null, posts: [row], pins: [], acceptances: [{ id: 'a1', post_id: 'p1', seeker_id: 'u2', seeker_name: 'Bo', status: 'forwarded', created_at: '2026-10-05T02:00:00Z', forwarded_at: '2026-10-06T02:00:00Z' }], dayOffset: 0 })
+    const mine = buildState({ uid: 'u2', name: 'Bo', profile: null, posts: [row], pins: [], acceptances: [{ id: 'a1', post_id: 'p1', seeker_id: 'u2', seeker_name: 'Bo', status: 'forwarded', created_at: '2026-10-05T02:00:00Z', forwarded_at: '2026-10-06T02:00:00Z' }], clockHours: 0 })
     expect(mine.acceptances[0]).toMatchObject({ seekerId: ME, status: 'forwarded' })
   })
   it('database refusals map to the app\'s messages', () => {
@@ -198,11 +199,11 @@ describe('editing and deleting posts', () => {
   it('my posts have Edit and Delete; the post page too; admins delete any post from the back office', () => {
     const h = src('./pages/hire.tsx'), m = src('./pages/match.tsx')
     expect(h).toContain("onClick={() => startEdit(x)}"); expect(h).toContain("onClick={() => remove(x)}")
-    expect(h).toContain('<NavLink to={`hire?edit=${p.id}`}')
+    expect(src('./pages/post.tsx')).toContain('<NavLink to={`hire?edit=${p.id}`}')
     expect(h).toContain("const r = editing ? await editPost(editing.id, pending) : await post(pending)")
     expect(h).toContain("if (!editing && !canPost(st, now)) { setStage('package'); return }") // editing does not use the weekly allowance
     expect(m).toContain("setMsg((await deletePost(p.id)) ? { tone: 'info', text: t('m.post.deleted') }")
-    expect(src('./matchData.tsx')).toContain('const value = { ...r.value, createdAt: old.createdAt }') // the posting date stays
+    expect(src('./matchData.tsx')).toContain('const value = { ...r.value, createdAt: old.createdAt, releasedAt: old.releasedAt }') // the posting and release dates stay
   })
 })
 
@@ -234,6 +235,6 @@ describe('keep-alive and security header', () => {
   it('the browser may talk to Supabase and show Google profile pictures — nothing else is added', () => {
     const v = JSON.parse(src('../vercel.json')) as { headers: { headers: { key: string; value: string }[] }[] }
     const csp = v.headers.flatMap((h) => h.headers).find((h) => h.key === 'Content-Security-Policy')!.value
-    expect(csp).toContain("connect-src 'self' https://*.supabase.co;"); expect(csp).toContain("img-src 'self' data: https://*.googleusercontent.com;"); expect(csp).toContain("script-src 'self';")
+    expect(csp).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co;") // wss: who else is viewing a post (realtime); expect(csp).toContain("img-src 'self' data: https://*.googleusercontent.com;"); expect(csp).toContain("script-src 'self';")
   })
 })
