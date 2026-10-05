@@ -201,7 +201,7 @@ describe('editing and deleting posts', () => {
     expect(h).toContain("onClick={() => startEdit(x)}"); expect(h).toContain("onClick={() => remove(x)}")
     expect(src('./pages/post.tsx')).toContain('<NavLink to={`hire?edit=${p.id}`}')
     expect(h).toContain("const r = editing ? await editPost(editing.id, pending) : await post(pending)")
-    expect(h).toContain("if (!editing && !canPost(st, now)) { setStage('package'); return }") // editing does not use the weekly allowance
+    expect(h).toContain("if (!editing && !canPost(st, limitNow)) { setStage('package'); return }") // editing does not use the weekly allowance
     expect(m).toContain("setMsg((await deletePost(p.id)) ? { tone: 'info', text: t('m.post.deleted') }")
     expect(src('./matchData.tsx')).toContain('const value = { ...r.value, createdAt: old.createdAt, releasedAt: old.releasedAt }') // the posting and release dates stay
   })

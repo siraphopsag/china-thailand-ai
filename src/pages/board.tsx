@@ -22,7 +22,7 @@ const NO_FILTER: Filter = { q: '', country: '', province: '', skill: '', salary:
 export function BoardPage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, pool, pinsByProvince } = useMatch()
+  const { st, now, limitNow, pool, pinsByProvince } = useMatch()
   const [tab, setTab] = useState<'all' | Level>('all')
   const [order, setOrder] = useState<'new' | 'old'>('new')
   const [f, setF] = useState<Filter>(NO_FILTER)
@@ -58,10 +58,10 @@ export function BoardPage() {
   const filtering = JSON.stringify(f) !== JSON.stringify(NO_FILTER)
 
   // map: active posts or active pins per province (counts only)
-  const postsByProvince = st.posts.reduce<Record<string, number>>((m, p) => ({ ...m, [p.province]: (m[p.province] ?? 0) + 1 }), {})
+  const postsByProvince = (seeker ? items.map((x) => x.post) : st.posts).reduce<Record<string, number>>((m, p) => ({ ...m, [p.province]: (m[p.province] ?? 0) + 1 }), {})
   const counts = showMap === 'posts' ? postsByProvince : pinsByProvince
   const top = Object.entries(counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 5)
-  const q = seeker ? pinQuota(st, now) : postQuota(st, now)
+  const q = seeker ? pinQuota(st, limitNow) : postQuota(st, limitNow)
   const set = (patch: Partial<Filter>) => setF((x) => ({ ...x, ...patch }))
 
   return (
@@ -80,7 +80,7 @@ export function BoardPage() {
           <h2 id="bd-me" className="h2">{t(seeker ? 'm.board.mePins' : 'm.board.mePosts')}</h2>
           <QuotaBar q={q} kind={seeker ? 'pin' : 'post'} />
           <p className="text-sm flex flex-wrap items-center justify-between gap-2">
-            <span>{seeker ? t('m.pin.active', { n: activePins(st.me, now).length }) : t('m.board.open', { n: items.length })}</span>
+            <span>{seeker ? t('m.pin.active', { n: activePins(st.me, limitNow).length }) : t('m.board.open', { n: items.length })}</span>
             <NavLink to={seeker ? 'seek' : 'hire'} className="btn-primary text-sm">{t(seeker ? 'm.pin.go' : 'm.emp.post')}<Icon name="next" size={15} /></NavLink>
           </p>
         </section>

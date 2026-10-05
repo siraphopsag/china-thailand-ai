@@ -5,9 +5,9 @@ import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { useAuth } from '../auth'
 import { provinces } from '../locales/provinces'
-import { activePins, capacityOf, isCountry, offersFor, pinQuota, type Problem } from '../domain/match/logic'
+import { activePins, capacityOf, inbox, isCountry, pinQuota, type Problem } from '../domain/match/logic'
 import { DAY_MS, reachFor, scheduleOf, stageAt, type Quota } from '../domain/match/release'
-import { INDUSTRIES, ME, MY_EMPLOYER, PIN_LIFE_DAYS, SKILLS, type Acceptance, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type Level, type Post, type Salary, type Skill } from '../domain/match/types'
+import { INDUSTRIES, MY_EMPLOYER, PIN_LIFE_DAYS, SKILLS, type Acceptance, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type Level, type Post, type Salary, type Skill } from '../domain/match/types'
 import { ACTIVE, GEO, SOON, type GeoCode } from '../geo'
 import capitalsData from '../data/geo/capitals.json'
 import { GeoMap, type MapPin } from '../components/geomap'
@@ -214,7 +214,7 @@ export function MapLayout({ map, children }: { map: ReactNode; children: ReactNo
 export function SeekPage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, setOrigin, pin, unpin } = useMatch()
+  const { st, limitNow, setOrigin, pin, unpin } = useMatch()
   const [editOrigin, setEditOrigin] = useState(false)
   const [oc, setOc] = useState<GeoCode | null>(st.me.origin?.country ?? null), [op, setOp] = useState<string | null>(st.me.origin?.province ?? null)
   const [dc, setDc] = useState<GeoCode | null>(null), [dp, setDp] = useState<string | null>(null)
@@ -226,8 +226,8 @@ export function SeekPage() {
   if (gate) return <Page title={t('m.seek.title')}>{gate}</Page>
   if (st.role !== 'seeker') return <Page title={t('m.seek.title')}><NeedRole role="seeker" /></Page>
   const originStep = !st.me.origin || editOrigin
-  const pq = pinQuota(st, now)
-  const pins: MapPin[] = activePins(st.me, now).map((p) => ({ country: p.country, province: p.province, label: N.place(p.country, p.province), tone: 'mine' }))
+  const pq = pinQuota(st, limitNow)
+  const pins: MapPin[] = activePins(st.me, limitNow).map((p) => ({ country: p.country, province: p.province, label: N.place(p.country, p.province), tone: 'mine' }))
   const confirmOrigin = async () => {
     if (isCountry(oc) && op) { await setOrigin({ country: oc, province: op }); setEditOrigin(false); setMsg(null); fe.clear() }
     else { setMsg(null); fe.set('origin-prov', oc ? 'origin-prov' : 'origin-prov-c', N.problem('place')) }
@@ -273,7 +273,7 @@ export function SeekPage() {
         </form>
       )}
       <section className="space-y-2" aria-labelledby="pins-h">
-        <h2 id="pins-h" className="h2">{t('m.pin.active', { n: activePins(st.me, now).length })}</h2>
+        <h2 id="pins-h" className="h2">{t('m.pin.active', { n: activePins(st.me, limitNow).length })}</h2>
         <QuotaBar q={pq} kind="pin" />
         <p className="text-xs text-muted">{t('m.pin.why')}</p>
         <PinList onRemove={async (id) => { await unpin(id); setMsg({ tone: 'info', text: t('m.pin.removed') }) }} />
@@ -352,15 +352,15 @@ export function PinList({ onRemove }: { onRemove?: (id: string) => void }) {
   const { t } = useI18n()
   const N = useNames()
   const { ago, until } = useRel()
-  const { st, now } = useMatch()
+  const { st, limitNow } = useMatch()
   const [order, setOrder] = useState<'new' | 'old'>('new')
-  const pins = activePins(st.me, now).sort((a, b) => (order === 'new' ? b.at.localeCompare(a.at) : a.at.localeCompare(b.at)))
+  const pins = activePins(st.me, limitNow).sort((a, b) => (order === 'new' ? b.at.localeCompare(a.at) : a.at.localeCompare(b.at)))
   if (!pins.length) return <div className="glass-card p-5 text-muted">{t('m.pin.none')}</div>
   return (
     <div className="space-y-2">
       <SortToggle order={order} onChange={setOrder} />
       <ul className="grid sm:grid-cols-2 gap-2">{pins.map((p) => {
-        const fresh = now - Date.parse(p.at) < 7 * DAY_MS
+        const fresh = limitNow - Date.parse(p.at) < 7 * DAY_MS
         return (
           <li key={p.id} className="glass-card p-3 flex items-start gap-3">
             <Icon name="pin" size={20} className="text-danger-fg mt-0.5" />
@@ -379,7 +379,7 @@ export function PinList({ onRemove }: { onRemove?: (id: string) => void }) {
 export function ClockControls() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, advanceClock, resetClock } = useMatch()
+  const { st, now, mode, advanceClock, resetClock } = useMatch()
   const h = st.clockHours
   return (
     <div className="space-y-2">
@@ -389,6 +389,7 @@ export function ClockControls() {
         {h > 0 && <button type="button" className="btn-ghost text-sm" onClick={resetClock}>{t('m.clock.reset')}</button>}
       </div>
       <p className="text-xs text-muted">{t('m.clock.note')}</p>
+      {mode === 'remote' && <p className="text-xs text-muted">{t('m.clock.noteRemote')}</p>}
     </div>
   )
 }
@@ -423,12 +424,11 @@ export function NotificationsPage() {
   const nameOf = useApplicantName()
   const gate = useGate('notifications')
   if (gate) return <Page title={t('m.notif.title')}>{gate}</Page>
+  const box = inbox(st, pool, now, (id) => counts[id]?.reserved ?? 0)
   if (st.role === 'employer') {
     const mine = st.posts.filter((p) => p.employerId === MY_EMPLOYER)
-    const ids = new Set(mine.map((p) => p.id))
-    const waiting = st.acceptances.filter((a) => ids.has(a.postId) && a.status === 'accepted')
-    const reserved = mine.filter((p) => (counts[p.id]?.reserved ?? 0) > 0)
-    const expiring = mine.map((p) => ({ p, s: scheduleOf(p, pool, now) })).filter(({ s }) => now >= s.warnAt)
+    const { waiting, reserved } = box
+    const expiring = box.expiring.map((p) => ({ p, s: scheduleOf(p, pool, now) }))
     return (
       <Page title={t('m.notif.title')}>
         {!waiting.length && !reserved.length && !expiring.length ? <Empty icon="bell" text={t('m.notif.none')} to="hire" action={t('m.posts')} /> : (
@@ -440,14 +440,11 @@ export function NotificationsPage() {
       </Page>)
   }
   if (st.role !== 'seeker') return <Page title={t('m.notif.title')}><Empty icon="bell" text={t('m.notif.none')} to="choose-role" action={t('hero.cta')} /></Page>
-  const applied = new Set(st.acceptances.filter((a) => a.seekerId === ME).map((a) => a.postId))
-  const offers = offersFor(st, pool, now).filter((p) => !applied.has(p.id))
-  // what changed for my applications: moved up from the queue, the employer's decision, forwarded
-  const updates = st.acceptances.filter((a) => a.seekerId === ME && (a.status === 'confirmed' || a.status === 'rejected' || a.status === 'forwarded' || (a.status === 'accepted' && a.promotedAt)))
+  const { offers, updates } = box
   const say = (a: Acceptance) => a.status === 'confirmed' ? 'm.n.confirmed' : a.status === 'rejected' ? 'm.n.rejected' : a.status === 'forwarded' ? 'm.n.forwarded' : 'm.n.promoted'
   return (
     <Page title={t('m.notif.title')}>
-      {!activePins(st.me, now).length && !updates.length ? <Empty icon="pin" text={t('m.notif.noPins')} to="seek" action={t('m.pins')} /> : (<>
+      {!box.hasPins && !updates.length ? <Empty icon="pin" text={t('m.notif.noPins')} to="seek" action={t('m.pins')} /> : (<>
         {updates.length > 0 && (
           <section className="space-y-2" aria-labelledby="n-up"><h2 id="n-up" className="h2">{t('m.n.updates')}</h2>
             <ul className="space-y-2">{updates.map((a) => { const p = st.posts.find((x) => x.id === a.postId); if (!p) return null; return (

@@ -26,14 +26,14 @@ const plusDays = (now: number, d: number) => localDay(new Date(now + d * 86_400_
 const FIELD: Partial<Record<Problem, [string, string]>> = {
   company: ['emp-company', 'emp-company'], position: ['emp-position', 'emp-position'], years: ['emp-years', 'emp-years'],
   details: ['emp-details', 'emp-details'], contact: ['emp-details', 'emp-details'], skills: ['emp-skills', 'emp-skills-0'],
-  headcount: ['emp-headcount', 'emp-headcount'], employment: ['emp-employment', 'emp-employment'], salary: ['emp-salary', 'emp-salary-min'],
+  headcount: ['emp-headcount', 'emp-headcount'], belowHeld: ['emp-headcount', 'emp-headcount'], employment: ['emp-employment', 'emp-employment'], salary: ['emp-salary', 'emp-salary-min'],
   startDate: ['emp-start', 'emp-start'], languages: ['emp-langs', 'emp-langs-th'], education: ['emp-edu', 'emp-edu'],
 }
 
 export function HirePage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, pool, post, editPost, deletePost, renew, subscribe } = useMatch()
+  const { st, now, limitNow, pool, post, editPost, deletePost, renew, subscribe } = useMatch()
   const { until } = useRel()
   const editId = useSearchParam('edit')
   const [editing, setEditing] = useState<Post | null>(null)
@@ -76,7 +76,7 @@ export function HirePage() {
   if (gate) return <Page title={t('m.emp.title')}>{gate}</Page>
   if (st.role !== 'employer') return <Page title={t('m.emp.title')}><NeedRole role="employer" /></Page>
   const mine = st.posts.filter((x) => x.employerId === MY_EMPLOYER)
-  const q = postQuota(st, now), used = q.used, limit = q.limit
+  const q = postQuota(st, limitNow), used = q.used, limit = q.limit
   const clear = () => fe.clear()
   const showProblem = (pr: Problem) => { const f = FIELD[pr]; if (f) fe.set(f[0], f[1], N.problem(pr)); else setMsg({ tone: 'danger', text: N.problem(pr) }) }
 
@@ -89,7 +89,7 @@ export function HirePage() {
   const submit = (e: FormEvent) => {
     e.preventDefault(); setMsg(null); fe.clear()
     const i = input(); if (!i) { setMsg({ tone: 'danger', text: N.problem('place') }); return }
-    if (!editing && !canPost(st, now)) { setStage('package'); return }
+    if (!editing && !canPost(st, limitNow)) { setStage('package'); return }
     // editing without changing the start date: it is checked against the posting day, so a post whose start has passed can still be fixed
     const r = precheck(i, editing && editing.startDate && i.startDate === editing.startDate ? editing.createdAt : new Date(now).toISOString())
     setPending(i); setCheck(r)

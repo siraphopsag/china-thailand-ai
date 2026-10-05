@@ -86,6 +86,11 @@ begin
     new.released_at := coalesce(new.released_at, new.created_at);
   else
     new.created_at := old.created_at; new.employer_id := old.employer_id; new.is_sample := old.is_sample;
+    -- fewer people than already hold a place cannot be asked for
+    if new.headcount is distinct from old.headcount and coalesce(new.headcount, 1) <
+       (select count(*) from public.acceptances where post_id = old.id and status in ('accepted', 'confirmed', 'forwarded')) then
+      raise exception 'below_held' using errcode = 'P0001';
+    end if;
     -- only renew_post() moves the release time
     if coalesce(current_setting('call.renewing', true), '') <> 'on' then new.released_at := old.released_at; end if;
   end if;

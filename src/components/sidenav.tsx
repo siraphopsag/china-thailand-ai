@@ -3,20 +3,13 @@ import { useI18n } from '../i18n'
 import { NavLink, go } from '../store'
 import { useMatch } from '../matchData'
 import { useAuth } from '../auth'
-import { offersFor } from '../domain/match/logic'
-import { scheduleOf } from '../domain/match/release'
-import { ME, MY_EMPLOYER } from '../domain/match/types'
+import { inbox } from '../domain/match/logic'
 import { Icon, type IconName } from './icons'
 
-/** Count for the bell: open offers not applied to (seeker); applicants waiting for a decision + posts about to expire (employer). */
+/** Count for the bell: exactly what the notifications page lists (see inbox in domain/match/logic.ts) */
 export function useUnread(): number {
-  const { st, now, pool } = useMatch()
-  if (st.role === 'seeker') return offersFor(st, pool, now).filter((p) => !st.acceptances.some((a) => a.postId === p.id && a.seekerId === ME)).length
-  if (st.role === 'employer') {
-    const mine = st.posts.filter((p) => p.employerId === MY_EMPLOYER), ids = new Set(mine.map((p) => p.id))
-    return st.acceptances.filter((a) => ids.has(a.postId) && a.status === 'accepted').length + mine.filter((p) => now >= scheduleOf(p, pool, now).warnAt).length
-  }
-  return 0
+  const { st, now, pool, counts } = useMatch()
+  return inbox(st, pool, now, (id) => counts[id]?.reserved ?? 0).count
 }
 
 type Item = { to: string; key: string; icon: IconName; match: string[] }

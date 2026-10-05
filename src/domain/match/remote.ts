@@ -101,9 +101,10 @@ export function buildState(input: { uid: string; name: string; profile: ProfileR
 }
 
 /** database error → one of the prototype's problems (the message text is never shown as is) */
-export function dbProblem(e: { message?: string; code?: string } | null | undefined): 'quota' | 'limit' | 'duplicate' | 'already' | 'contact' | 'notOpen' | 'state' | 'network' {
+export function dbProblem(e: { message?: string; code?: string } | null | undefined): 'quota' | 'limit' | 'duplicate' | 'already' | 'contact' | 'notOpen' | 'state' | 'belowHeld' | 'network' {
   const m = e?.message ?? ''
   if (m.includes('quota')) return 'quota'
+  if (m.includes('below_held')) return 'belowHeld'
   if (m.includes('pin_limit')) return 'limit'
   if (m.includes('pin_duplicate')) return 'duplicate'
   if (m.includes('not_open') || m.includes('expired')) return 'notOpen'

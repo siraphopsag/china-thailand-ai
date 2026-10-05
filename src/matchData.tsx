@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { addPin, applyTo, canPost, cancel, decide, forward, makePost, parseState, poolOf, removePin, renewPost, withoutExpired, type ApplyInput, type Outcome, type PostInput } from './domain/match/logic'
+import { addPin, applyTo, canPost, cancel, clampFuture, decide, forward, holding, makePost, parseState, poolOf, promote, removePin, renewPost, withoutExpired, type ApplyInput, type Outcome, type PostInput } from './domain/match/logic'
 import { HOUR_MS, pinActive, type PinLike } from './domain/match/release'
 import { seedState } from './domain/match/seed'
 import { HOLDS_PLACE, MAX_CLOCK_HOURS, ME, MY_EMPLOYER, type Acceptance, type Industry, type MatchState, type Place, type Post, type Role, type Skill } from './domain/match/types'
@@ -46,7 +46,11 @@ type Db = Awaited<ReturnType<typeof getClient>>
 
 interface Ctx {
   st: MatchState
+  /** the (demo) clock: what the release levels and ages show */
   now: number
+  /** the time the weekly allowances and pin lifetimes follow: the demo clock in the local demo; real time when signed in,
+   *  because the database keeps its own real time (bug hunt, Oct 2026: the two disagreed) */
+  limitNow: number
   mode: DataMode
   /** every active pin as the release needs it (others' pins: anonymous in database mode) */
   pool: PinLike[]
@@ -162,6 +166,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
   }, [mode, remotePool, pool, now])
   const counts = useMemo(() => (mode === 'remote' && remoteCounts ? remoteCounts : countsFrom(st.acceptances)), [mode, remoteCounts, st.acceptances])
   const at = useCallback(() => new Date(nowWith(raw.clockHours)).toISOString(), [raw.clockHours])
+  const limitNow = mode === 'remote' ? Date.now() : now
 
   const value = useMemo<Ctx>(() => {
     const local = mode === 'local' // nothing is written while signed out or still checking
@@ -177,12 +182,14 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     }
     const profile = (patch: Record<string, unknown>) => write((sb) => sb.from('profiles').update(patch).eq('id', userId!), () => null)
     const mineAcc = (accId: string) => st.acceptances.find((a) => a.id === accId)
+    // signed in: limits are checked at the real time, like the database does
+    const limitAt = () => (local ? at() : new Date().toISOString())
     return {
-      st, now, mode, pool, pinsByProvince, counts, stats: local ? null : stats,
+      st, now, limitNow, mode, pool, pinsByProvince, counts, stats: local ? null : stats,
       setRole: async (role) => { if (local) setLocal((s) => ({ ...s, role })); else await profile({ user_type: role }) },
       setOrigin: async (origin) => { if (local) setLocal((s) => ({ ...s, me: { ...s.me, origin } })); else await profile({ origin_country: origin?.country ?? null, origin_province: origin?.province ?? null }) },
       pin: async (input) => {
-        const when = at()
+        const when = limitAt()
         const r = addPin(st, input, uid('pin'), when) // the same checks as the database, with field-level messages
         if (!r.ok) return r
         if (local) { setLocal((s) => ({ ...s, me: r.value, credits: [...s.credits, { kind: 'pin', at: when }] })); return r }
@@ -190,7 +197,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       },
       unpin: async (id) => { if (local) setLocal((s) => ({ ...s, me: removePin(s.me, id) })); else await write((sb) => sb.from('pins').delete().eq('id', id), () => null) },
       post: async (input) => {
-        if (!canPost(st, now)) return { ok: false, problem: 'quota' } as const // weekly allowance used up
+        if (!canPost(st, limitNow)) return { ok: false, problem: 'quota' } as const // weekly allowance used up
         const when = at()
         const r = makePost(input, uid('post'), MY_EMPLOYER, when); if (!r.ok) return r
         if (local) { setLocal((s) => ({ ...s, myCompany: input.company, posts: [r.value, ...s.posts], credits: [...s.credits, { kind: 'post', at: when }] })); return r }
@@ -199,10 +206,13 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       },
       editPost: async (id, input) => {
         const old = st.posts.find((p) => p.id === id && p.employerId === MY_EMPLOYER); if (!old) return fail('unknown')
+        // fewer people than already hold a place cannot be asked for (bug hunt, Oct 2026: it showed "3/1 places")
+        if (input.headcount < (counts[id]?.held ?? holding(st.acceptances, id))) return { ok: false, problem: 'belowHeld' } as const
         // an unchanged start date is checked against the posting day (a post whose start has passed can still be corrected)
         const r = makePost(input, id, MY_EMPLOYER, old.startDate && input.startDate === old.startDate ? old.createdAt : at()); if (!r.ok) return r
         const value = { ...r.value, createdAt: old.createdAt, releasedAt: old.releasedAt }
-        if (local) { setLocal((s) => ({ ...s, myCompany: input.company, posts: s.posts.map((p) => (p.id === id ? value : p)) })); return { ok: true, value } }
+        // more people wanted: places go to the queue at once, as the database does
+        if (local) { setLocal((s) => ({ ...s, myCompany: input.company, posts: s.posts.map((p) => (p.id === id ? value : p)), acceptances: promote(s.acceptances, value, at()) })); return { ok: true, value } }
         return write((sb) => sb.from('posts').update(postToRow(input)).eq('id', id).select().single(), (row) => rowToPost(row as PostRow, userId!))
       },
       deletePost: async (id) => {
@@ -210,7 +220,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         return (await write((sb) => sb.from('posts').delete().eq('id', id), () => null)).ok
       },
       renew: async (id) => {
-        const when = at()
+        const when = limitAt()
         const r = renewPost(st, id, when); if (!r.ok) return r
         if (local) { setLocal((s) => ({ ...s, posts: s.posts.map((p) => (p.id === id ? r.value : p)), credits: [...s.credits, { kind: 'renew', at: when }] })); return r }
         return write((sb) => sb.rpc('renew_post', { p_id: id }), () => null)
@@ -242,10 +252,11 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         const step = (c: number) => Math.min(MAX_CLOCK_HOURS, c + hours)
         if (local) setLocal((s) => ({ ...s, clockHours: step(s.clockHours) })); else setClock(step)
       },
-      resetClock: () => { if (local) setLocal((s) => ({ ...s, clockHours: 0 })); else setClock(0) },
+      // back to real time: whatever was made while the clock ran ahead moves to now, so it does not vanish (demo)
+      resetClock: () => { if (local) setLocal((s) => clampFuture(s, Date.now())); else setClock(0) },
       reset: () => { if (local) { const fresh = seedState(); setLocal((s) => ({ ...fresh, role: s.role })) } else setClock(0) },
     }
-  }, [st, now, mode, pool, pinsByProvince, counts, stats, at, refresh, userId])
+  }, [st, now, limitNow, mode, pool, pinsByProvince, counts, stats, at, refresh, userId])
   return <C.Provider value={value}>{children}</C.Provider>
 }
 export const useMatch = () => { const c = useContext(C); if (!c) throw new Error('match'); return c }

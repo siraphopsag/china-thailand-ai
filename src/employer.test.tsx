@@ -56,7 +56,7 @@ describe('A. post details', () => {
     expect(fails({ education: 'phd' as never })).toBe('education')
     expect(fails({ benefits: ['housing', 'housing'] })).toBe('benefits')
   })
-  it('posts saved before these details existed still load, read as "not stated"; tampered details are rejected', () => {
+  it('posts saved before these details existed still load, read as "not stated"; a tampered post is dropped (the rest stays)', () => {
     const st = seedState(NOW)
     const old = JSON.parse(JSON.stringify(st)); delete old.member
     for (const p of old.posts) for (const k of ['headcount', 'employment', 'salary', 'startDate', 'languages', 'education', 'benefits']) delete p[k]
@@ -65,9 +65,9 @@ describe('A. post details', () => {
     expect(parsed!.member).toBe(false)
     expect(parsed!.posts[0]).toMatchObject({ headcount: null, employment: null, salary: null, startDate: null, languages: [], education: 'none', benefits: [] })
     const bad = JSON.parse(JSON.stringify(st)); bad.posts[0].headcount = 500
-    expect(parseState(bad)).toBeNull()
+    expect(parseState(bad)!.posts.map((p) => p.id)).toEqual(st.posts.slice(1).map((p) => p.id))
     const bad2 = JSON.parse(JSON.stringify(st)); bad2.member = 'yes'
-    expect(parseState(bad2)).toBeNull()
+    expect(parseState(bad2)!.member).toBe(false)
   })
   it('details show everywhere a post appears; missing ones say "not stated"', () => {
     const st = seedState(NOW)
@@ -128,7 +128,7 @@ describe('D. weekly allowance and membership package', () => {
     expect(postQuota(st, NOW + 0.6 * DAY_MS)).toEqual({ used: 0, limit: 3, left: 3, resetAt: null }) // all three come back at once
     // a renewal uses the same allowance; a new cycle starts with the first use after the old one ended
     expect(postQuota({ ...st, credits: [use(-9), use(-1), use(-0.5, 'renew')] }, NOW)).toEqual({ used: 2, limit: 3, left: 1, resetAt: NOW + 6 * DAY_MS })
-    expect(src('./matchData.tsx')).toContain("if (!canPost(st, now)) return { ok: false, problem: 'quota' } as const")
+    expect(src('./matchData.tsx')).toContain("if (!canPost(st, limitNow)) return { ok: false, problem: 'quota' } as const")
   })
   it('membership: 10 per 7 days; the window shows the planned price struck through and "free now"; no payment', () => {
     const st = { ...seedState(NOW), member: true, credits: [use(-1), use(-3), use(-6.5)] }

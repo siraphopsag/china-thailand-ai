@@ -10,7 +10,7 @@ import { tr } from './i18n/core'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
 import { AuthProvider } from './auth'
-import { DAY_MS, HOUR_MS, activePins, addPin, applyTo, cancel, decide, forward, isFull, makePost, parseState, pinQuota, poolOf, postState, removePin, renewPost, withoutExpired } from './domain/match/logic'
+import { DAY_MS, HOUR_MS, activePins, addPin, applyTo, cancel, clampFuture, decide, forward, inbox, isFull, makePost, parseState, pinQuota, poolOf, postState, removePin, renewPost, withoutExpired } from './domain/match/logic'
 import { matchLevel, reachFor, scheduleOf, stageAt } from './domain/match/release'
 import { seedState } from './domain/match/seed'
 import { ME, MY_EMPLOYER, type Industry, type MatchState, type Pin, type Seeker, type Skill } from './domain/match/types'
@@ -192,7 +192,7 @@ describe('applications, reservations and the queue (owner, Oct 2026)', () => {
 })
 
 describe('stored data is validated', () => {
-  it('the seed is valid; data saved before the five levels is upgraded; tampered data is rejected', () => {
+  it('the seed is valid; data saved before the five levels is upgraded; tampered items are dropped one by one (the rest stays)', () => {
     const st = seedState(NOW)
     expect(parseState(JSON.parse(JSON.stringify(st)))).not.toBeNull()
     // version 1: days on the clock, no release time, no introductions, no allowance log
@@ -201,15 +201,61 @@ describe('stored data is validated', () => {
     delete old.clockHours; delete old.credits
     const up = parseState(old)
     expect(up && [up.version, up.clockHours, up.posts[0].releasedAt === up.posts[0].createdAt, up.acceptances[0].intro]).toEqual([2, 48, true, ''])
-    const bad = (f: (s: MatchState) => void) => { const s = JSON.parse(JSON.stringify(st)) as MatchState; f(s); return parseState(s) }
-    expect(bad((s) => { s.seekers[0].pins = Array.from({ length: 31 }, (_, i) => ({ ...s.seekers[0].pins[0], id: 'x' + i })) })).toBeNull()
-    expect(bad((s) => { s.posts[0].province = 'CN-XX' })).toBeNull()
-    expect(bad((s) => { s.acceptances.push({ id: 'a', postId: 'nope', seekerId: ME, at: at(0), status: 'accepted', intro: '', availableFrom: null }) })).toBeNull()
-    expect(bad((s) => { s.acceptances.push({ ...s.acceptances[0], id: 'twice' }) })).toBeNull()
-    expect(bad((s) => { s.acceptances[0].intro = 'mail me hr@example.com' })).toBeNull()
-    expect(bad((s) => { s.clockHours = -1 })).toBeNull()
-    expect(bad((s) => { s.posts[0].releasedAt = at(-400) })).toBeNull() // released before it was posted
-    expect(bad((s) => { s.posts[0].details = 'mail me hr@example.com' })).toBeNull()
+    const bad = (f: (s: MatchState) => void) => { const s = JSON.parse(JSON.stringify(st)) as MatchState; f(s); return parseState(s)! }
+    expect(bad((s) => { s.seekers[0].pins = Array.from({ length: 40 }, (_, i) => ({ ...s.seekers[0].pins[0], id: 'x' + i, at: at(-i) })) }).seekers[0].pins.length).toBe(30) // the newest 30 are kept
+    expect(bad((s) => { s.posts[0].province = 'CN-XX' }).posts.map((p) => p.id)).not.toContain('post-s1')
+    expect(bad((s) => { s.posts[0].province = 'CN-XX' }).acceptances).toEqual([]) // its application goes with it
+    expect(bad((s) => { s.acceptances.push({ id: 'a', postId: 'nope', seekerId: ME, at: at(0), status: 'accepted', intro: '', availableFrom: null }) }).acceptances.map((a) => a.id)).toEqual(['acc-s1'])
+    expect(bad((s) => { s.acceptances.push({ ...s.acceptances[0], id: 'twice' }) }).acceptances.map((a) => a.id)).toEqual(['acc-s1'])
+    expect(bad((s) => { s.acceptances[0].intro = 'mail me hr@example.com' }).acceptances).toEqual([])
+    expect(bad((s) => { s.clockHours = -1 }).clockHours).toBe(0)
+    expect(bad((s) => { s.posts[0].releasedAt = at(-400) }).posts.map((p) => p.id)).not.toContain('post-s1') // released before it was posted
+    expect(bad((s) => { s.posts[0].details = 'mail me hr@example.com' }).posts.map((p) => p.id)).not.toContain('post-s1')
+    expect(parseState({ ...JSON.parse(JSON.stringify(st)), me: { id: 'someone' } })).toBeNull() // a broken frame starts over
+    // a start date picked near the far end while editing no longer breaks the reload
+    expect(bad((s) => { s.posts[0].startDate = at(735).slice(0, 10) }).posts.map((p) => p.id)).toContain('post-s1')
+  })
+})
+
+describe('board bug hunt (Oct 2026)', () => {
+  it('adding a pin drops my expired pins, so a long-used demo never grows past what can be stored', () => {
+    const old = Array.from({ length: 31 }, (_, i): Pin => ({ id: `o${i}`, country: 'TH', province: 'TH-10', industry: 'technology', skills: ['data_analysis'], at: at(-40 - i) }))
+    const r = addPin(withMe(old), { place: { country: 'CN', province: 'CN-SH' }, industry: 'manufacturing', skills: ['quality_control'] }, 'new', at(0))
+    expect(r.ok && r.value.pins.map((p) => p.id)).toEqual(['new'])
+  })
+  it('the bell counts exactly what the notifications page lists', () => {
+    const st = seedState(NOW); st.role = 'seeker' // no pins yet: the page says "pin first", so the bell says nothing
+    expect(inbox(st, poolOf(st), NOW, () => 0).count).toBe(0)
+    st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(-5) }])
+    const box = inbox(st, poolOf(st), NOW, () => 0)
+    expect(box.offers.map((p) => p.id).sort()).toEqual(['post-s2', 'post-s3']); expect(box.count).toBe(2)
+    expect(src('./components/sidenav.tsx')).toContain('return inbox(st, pool, now, (id) => counts[id]?.reserved ?? 0).count')
+    expect(src('./pages/match.tsx')).toContain('const box = inbox(st, pool, now, (id) => counts[id]?.reserved ?? 0)')
+    const emp = seedState(NOW); emp.role = 'employer'; emp.posts = emp.posts.map((p) => (p.id === 'post-s1' ? { ...p, employerId: MY_EMPLOYER } : p))
+    expect(inbox(emp, poolOf(emp), NOW, (id) => (id === 'post-s1' ? 2 : 0))).toMatchObject({ count: 2 }) // one applicant waiting + reservations on that post
+  })
+  it('"Back to real time" moves anything made while the clock ran ahead to now, so nothing vanishes', () => {
+    const st = withMe([{ id: 'f', country: 'CN', province: 'CN-SH', industry: 'manufacturing', skills: ['quality_control'], at: at(20) }])
+    const back = clampFuture({ ...st, clockHours: 480, credits: [{ kind: 'pin', at: at(20) }] }, NOW)
+    expect(back.clockHours).toBe(0); expect(back.me.pins[0].at).toBe(at(0)); expect(back.credits[0].at).toBe(at(0))
+    expect(activePins(back.me, NOW).length).toBe(1)
+  })
+  it('wanting fewer people than already hold a place is refused (site and database); wanting more moves the queue up in the demo too', () => {
+    const m = src('./matchData.tsx')
+    expect(m).toContain("if (input.headcount < (counts[id]?.held ?? holding(st.acceptances, id))) return { ok: false, problem: 'belowHeld' } as const")
+    expect(m).toContain('acceptances: promote(s.acceptances, value, at())')
+    expect(src('../supabase/migrations/0003_board.sql')).toContain("raise exception 'below_held'")
+    expect(tr('m.err.belowHeld', undefined, 'th')).toContain('ลดจำนวน')
+  })
+  it('signed in, limits follow real time (the database does too); the demo clock only moves levels and ages, and says so', () => {
+    const m = src('./matchData.tsx')
+    expect(m).toContain("const limitNow = mode === 'remote' ? Date.now() : now")
+    expect(m).toContain('if (!canPost(st, limitNow))')
+    expect(src('./pages/board.tsx')).toContain('pinQuota(st, limitNow) : postQuota(st, limitNow)')
+    expect(src('./pages/match.tsx')).toContain("{mode === 'remote' && <p className=\"text-xs text-muted\">{t('m.clock.noteRemote')}</p>}")
+  })
+  it('a job seeker\'s map counts only the posts their list can show', () => {
+    expect(src('./pages/board.tsx')).toContain('(seeker ? items.map((x) => x.post) : st.posts).reduce')
   })
 })
 

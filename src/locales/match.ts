@@ -407,6 +407,7 @@ export const match = {
   'm.clock.m': ['+1 เดือน', '+1 个月', '+1 month'],
   'm.clock.reset': ['กลับเวลาจริง', '恢复真实时间', 'Back to real time'],
   'm.clock.note': ['ใช้ดูการขยายระดับ อายุหมุด และอายุประกาศโดยไม่ต้องรอ — เปลี่ยนแค่สิ่งที่หน้าเว็บแสดงในเบราว์เซอร์นี้ ไม่เปลี่ยนข้อจำกัดในฐานข้อมูล', '无需等待即可查看逐级扩大、标记和招聘的有效期——只改变本浏览器中网页显示的内容，不改变数据库中的限制', 'Watch the levels, pins and posts age without waiting — it only changes what this browser shows, not the limits in the database'],
+  'm.clock.noteRemote': ['ตอนเข้าสู่ระบบ: เวลาจำลองเปลี่ยนแค่ระดับและอายุที่แสดง ส่วนสิทธิ์รายสัปดาห์ อายุหมุด และการต่ออายุใช้เวลาจริงของฐานข้อมูล', '登录时：模拟时间只改变显示的等级和时长；每周次数、标记有效期和续期使用数据库的真实时间', 'Signed in: the demo clock only changes the levels and ages shown; weekly allowances, pin lifetimes and renewals follow the database’s real time'],
   'm.n.updates': ['ความคืบหน้าของงานที่คุณสมัคร', '您申请的工作进展', 'Your applications'],
   'm.n.offers': ['งานใหม่ที่เปิดให้คุณ', '向您开放的新工作', 'New work open to you'],
   'm.n.expiring': ['“{p}” จะถูกลบ{t}', '“{p}”将于{t}删除', '“{p}” will be removed {t}'],
@@ -471,4 +472,5 @@ export const match = {
   'm.err.intro': ['ข้อความแนะนำตัวยาวเกินไป (ไม่เกิน 300 ตัวอักษร)', '自我介绍过长（不超过 300 个字符）', 'The introduction is too long (300 characters at most)'],
   'm.err.available': ['เลือกวันที่เริ่มงานได้ ตั้งแต่วันนี้ และไม่เกิน 2 ปี', '请选择可入职日期：从今天起，两年内', 'Choose the day you can start: from today, within two years'],
   'm.err.state': ['ทำรายการนี้ไม่ได้แล้ว ลองรีเฟรชหน้า', '此操作已无法进行，请刷新页面', 'This can no longer be done — refresh the page'],
+  'm.err.belowHeld': ['มีคนได้ที่แล้วมากกว่าจำนวนนี้ — ลดจำนวนคนต่ำกว่าคนที่ได้ที่แล้วไม่ได้', '已占名额的人数多于此数——不能少于已占名额的人数', 'More people already hold a place — the number cannot go below them'],
 } as const satisfies Record<string, Msg>
