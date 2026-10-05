@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go } from '../store'
-import { rememberNext, useAuth, type AuthResult } from '../auth'
+import { rememberNext, takeAuthError, useAuth, type AuthResult } from '../auth'
 import { Icon, type IconName } from '../components/icons'
 import { Warn } from '../components/ui'
 import { useFieldError, type FieldError } from './match'
@@ -97,9 +97,10 @@ export function LoginPage() {
   const next = useNext()
   const [email, setEmail] = useState(''), [pw, setPw] = useState('')
   const [busy, setBusy] = useState(false), [err, setErr] = useState<AuthResult | null>(null)
+  const [googleErr] = useState(() => typeof window !== 'undefined' && takeAuthError()) // back from Google without signing in
   const fe = useFieldError()
   // already signed in (or just back from Google): carry on
-  useEffect(() => { if (status === 'signedIn') go(next) }, [status, next])
+  useEffect(() => { if (status === 'signedIn') go(next, { replace: true }) }, [status, next])
   const submit = async (e: FormEvent) => {
     e.preventDefault(); setErr(null)
     if (!EMAIL.test(email.trim())) return fe.set('lg-email', 'lg-email', t('m.lg.err.email'))
@@ -116,7 +117,7 @@ export function LoginPage() {
           <Field id="lg-email" label={t('m.lg.email')} icon="mail" type="email" autoComplete="email" value={email} onChange={setEmail} fe={fe} />
           <Field id="lg-pw" label={t('m.lg.password')} icon="lock" type="password" autoComplete="current-password" value={pw} onChange={setPw} fe={fe} reveal />
           <div className="flex justify-end -mt-2"><NavLink to="forgot" className="text-sm font-medium text-primary underline-offset-4 hover:underline min-h-[24px] inline-flex items-center">{t('m.lg.forgot')}</NavLink></div>
-          <div role="status">{err && <p className="text-sm text-danger-fg flex items-center gap-1.5"><Icon name="alert" size={15} />{t(errText(err))}</p>}</div>
+          <div role="status">{(err || googleErr) && <p className="text-sm text-danger-fg flex items-center gap-1.5"><Icon name="alert" size={15} />{t(err ? errText(err) : 'm.lg.err.google')}</p>}</div>
           <button type="submit" className="cta-core w-full justify-center" disabled={busy}>{busy ? t('m.lg.busy') : t('m.lg.go')}</button>
         </form>
         <GoogleButton next={next} />
@@ -134,7 +135,7 @@ export function RegisterPage() {
   const [agree, setAgree] = useState(false)
   const [busy, setBusy] = useState(false), [err, setErr] = useState<AuthResult | null>(null), [sentTo, setSentTo] = useState('')
   const fe = useFieldError()
-  useEffect(() => { if (status === 'signedIn') go(next || 'choose-role') }, [status, next])
+  useEffect(() => { if (status === 'signedIn') go(next || 'choose-role', { replace: true }) }, [status, next])
   const submit = async (e: FormEvent) => {
     e.preventDefault(); setErr(null)
     const n = name.trim()

@@ -86,6 +86,7 @@ export function authResult(e: Pick<AuthError, 'code' | 'status' | 'message'> | n
 /** after a sign-in round trip the URL carries ?code=… (or an error); keep the address clean once it has been read */
 const cleanUrl = () => {
   const q = new URLSearchParams(window.location.search)
+  if (q.has('error') || q.has('error_code')) { try { sessionStorage.setItem(ERR_KEY, '1'); sessionStorage.removeItem(NEXT_KEY) } catch { /* storage blocked */ } }
   let changed = false
   for (const k of ['code', 'error', 'error_code', 'error_description', 'state', 'type']) if (q.has(k)) { q.delete(k); changed = true }
   const qs = q.toString()
@@ -103,7 +104,17 @@ async function reachable(): Promise<boolean> {
 
 /* where to go (and which role to set) once signed in — kept across the Google round trip */
 const NEXT_KEY = 'call.auth.next'
-export function rememberNext(next: string, role?: 'seeker' | 'employer') { try { sessionStorage.setItem(NEXT_KEY, JSON.stringify({ next, role: role ?? null })) } catch { /* storage blocked */ } }
+/** without a role, a role already chosen for the same page is kept (choose a role → sign-in page → sign in) */
+export function rememberNext(next: string, role?: 'seeker' | 'employer') {
+  try {
+    let keep: string | null = null
+    if (!role) { const old = JSON.parse(sessionStorage.getItem(NEXT_KEY) ?? 'null') as { next?: unknown; role?: unknown } | null; if (old && old.next === next && (old.role === 'seeker' || old.role === 'employer')) keep = old.role }
+    sessionStorage.setItem(NEXT_KEY, JSON.stringify({ next, role: role ?? keep }))
+  } catch { /* storage blocked */ }
+}
+/** a Google sign-in that came back with an error (e.g. the person cancelled) — read once by the sign-in page */
+const ERR_KEY = 'call.auth.error'
+export function takeAuthError(): boolean { try { const v = sessionStorage.getItem(ERR_KEY); sessionStorage.removeItem(ERR_KEY); return v === '1' } catch { return false } }
 export function takeNext(): { next: string; role: 'seeker' | 'employer' | null } | null {
   try {
     const raw = sessionStorage.getItem(NEXT_KEY); sessionStorage.removeItem(NEXT_KEY); if (!raw) return null
@@ -141,14 +152,21 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
     alive.current = true
     if (!enabled) return
     let unsub: (() => void) | undefined
-    void reachable().then((up) => { if (alive.current) setOnline(up) })
+    // one slow answer must not keep the whole visit in demo mode: while unreachable, try again every 20 s
+    let retry: number | undefined
+    const check = () => void reachable().then((up) => {
+      if (!alive.current) return
+      setOnline(up)
+      if (up) { if (retry) window.clearInterval(retry); retry = undefined } else if (!retry) retry = window.setInterval(check, 20_000)
+    })
+    check()
     getClient().then(async (sb) => {
       const apply = (s: Session | null) => { if (!alive.current) return; const u = toUser(s); setUser(u); setStatus(u ? 'signedIn' : 'signedOut'); void loadRole(u) }
       unsub = sb.auth.onAuthStateChange((e, s) => { if (e === 'PASSWORD_RECOVERY') setRecovery(true); apply(s) }).data.subscription.unsubscribe
       const { data } = await sb.auth.getSession()
       apply(data.session); cleanUrl()
     }).catch(() => { if (alive.current) { setStatus('signedOut'); setOnline(false) } })
-    return () => { alive.current = false; unsub?.() }
+    return () => { alive.current = false; unsub?.(); if (retry) window.clearInterval(retry) }
   }, [enabled, loadRole])
 
   const guard = useCallback(async (run: (sb: SupabaseClient) => Promise<AuthResult>): Promise<AuthResult> => {

@@ -34,14 +34,14 @@ const ChooseRolePage = lazy(() => import('./pages/choose').then((m) => ({ defaul
 const FOOT = 'underline inline-flex items-center min-h-[24px]'
 function Shell({ route, children }: { route: string; children: ReactNode }) {
   const { t } = useI18n()
-  const first = useRef(true)
+  const shown = useRef(route)
   // Every view gets its own title (its h1 + the product name), and after a route change focus moves to that h1 so
   // keyboard and screen-reader users start at the new content and hear which page opened. Pages load lazily, so wait for the h1.
   useEffect(() => {
     const main = document.getElementById('main')
     if (!main) return
-    const moveFocus = !first.current
-    first.current = false
+    const moveFocus = shown.current !== route // a new page (not the first one, not a language change)
+    shown.current = route
     let focused = false
     const apply = () => {
       const h1 = main.querySelector('h1')

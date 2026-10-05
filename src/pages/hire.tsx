@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { canPost, isCountry, isTaken, postLimit, postsThisWeek, tierOf, type PostInput, type Problem } from '../domain/match/logic'
+import { canPost, isCountry, isTaken, localDay, postLimit, postsThisWeek, tierOf, type PostInput, type Problem } from '../domain/match/logic'
 import { precheck, type Precheck } from '../domain/match/precheck'
 import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MEMBER_POSTS_PER_WEEK, MY_EMPLOYER, type Benefit, type Currency, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Skill } from '../domain/match/types'
 import type { GeoCode } from '../geo'
@@ -19,8 +19,8 @@ import { postToInput } from '../domain/match/remote'
  * Editing (owner, Oct 2026): "Edit" on one of my posts (or hire?edit=<id>) fills the same form; saving keeps the posting date.
  */
 type Stage = null | 'check' | 'confirm' | 'done' | 'package' | 'joined'
-const today = (now: number) => new Date(now).toISOString().slice(0, 10)
-const plusDays = (now: number, d: number) => new Date(now + d * 86_400_000).toISOString().slice(0, 10)
+const today = (now: number) => localDay(new Date(now).toISOString())
+const plusDays = (now: number, d: number) => localDay(new Date(now + d * 86_400_000).toISOString())
 /** which field each problem belongs to: [error group, control to focus] */
 const FIELD: Partial<Record<Problem, [string, string]>> = {
   company: ['emp-company', 'emp-company'], position: ['emp-position', 'emp-position'], years: ['emp-years', 'emp-years'],
@@ -88,7 +88,8 @@ export function HirePage() {
     e.preventDefault(); setMsg(null); fe.clear()
     const i = input(); if (!i) { setMsg({ tone: 'danger', text: N.problem('place') }); return }
     if (!editing && !canPost(st, now)) { setStage('package'); return }
-    const r = precheck(i, new Date(now).toISOString())
+    // editing without changing the start date: it is checked against the posting day, so a post whose start has passed can still be fixed
+    const r = precheck(i, editing && editing.startDate && i.startDate === editing.startDate ? editing.createdAt : new Date(now).toISOString())
     setPending(i); setCheck(r)
     setStage(r.errors.length || r.warnings.length ? 'check' : 'confirm')
   }
@@ -165,7 +166,7 @@ export function HirePage() {
               <span id="emp-salary-hint" className="block text-xs text-muted mt-1">{t('m.f.salaryHint')}</span>{fe.msg('emp-salary')}
             </fieldset>
             <div className="grid sm:grid-cols-2 gap-3">
-              <div><label className="block"><span className="label">{t('m.f.start')}<Req /></span><input id="emp-start" className="input" type="date" min={today(now)} max={plusDays(now, 730)} aria-required="true" aria-invalid={fe.invalid('emp-start')} aria-describedby={fe.describe('emp-start')} value={start} onChange={(e) => { setStart(e.target.value); clear() }} /></label>{fe.msg('emp-start')}</div>
+              <div><label className="block"><span className="label">{t('m.f.start')}<Req /></span><input id="emp-start" className="input" type="date" min={editing?.startDate && editing.startDate < today(now) ? editing.startDate : today(now)} max={plusDays(now, 730)} aria-required="true" aria-invalid={fe.invalid('emp-start')} aria-describedby={fe.describe('emp-start')} value={start} onChange={(e) => { setStart(e.target.value); clear() }} /></label>{fe.msg('emp-start')}</div>
               <div><label className="block"><span className="label">{t('m.f.education')} <span className="font-normal text-muted">({t('m.opt')})</span></span><select id="emp-edu" className="input" value={edu} onChange={(e) => setEdu(e.target.value as Edu)}>{EDU.map((x) => <option key={x} value={x}>{N.edu(x)}</option>)}</select></label></div>
             </div>
             <fieldset aria-describedby={fe.describe('emp-langs', 'emp-langs-hint')}><legend className="label">{t('m.f.languages')}<Req /></legend>

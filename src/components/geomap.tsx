@@ -115,27 +115,54 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
   const provLift = useTween(province ? 9 : 0, 380)
   const tilt = useTween((country || province ? TILT.focused : TILT.overview) * (w < 640 ? TILT.phone : 1), 520)
 
-  // gestures: drag pans, wheel/buttons zoom, a tap picks a province (inside the focused country) or a country
+  // gestures: one finger (or the mouse) drags, two fingers pinch to zoom (owner, Oct 2026: pinching did nothing on phones),
+  // wheel/buttons zoom, a tap picks a province (inside the focused country) or a country
   const svg = useRef<SVGSVGElement>(null)
   const down = useRef<{ x: number; y: number; moved: number; code?: string; prov?: string } | null>(null)
+  const touches = useRef(new Map<number, { x: number; y: number }>())
+  const pinch = useRef<{ dist: number; mx: number; my: number } | null>(null)
   const zoomAt = (f: number, cx = w / 2, cy = h / 2) => setView((v) => { const k = Math.max(1, Math.min(MAX_K, v.k * f)); const r = k / v.k; return clampView({ k, x: cx - (cx - v.x) * r, y: cy - (cy - v.y) * r }, w, h) })
+  const lean = () => Math.cos((tilt * Math.PI) / 180) // the plane leans back, so vertical moves are foreshortened
+  const twoFingers = () => { const [a, b] = [...touches.current.values()]; return { dist: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 } }
   const onDown = (e: ReactPointerEvent) => {
     cancelAnimationFrame(anim.current)
+    touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId) } catch { /* the pointer is already gone */ }
+    if (touches.current.size >= 2) { if (touches.current.size === 2) pinch.current = twoFingers(); if (down.current) down.current.moved = Infinity; return } // a pinch is never a tap
     const el = e.target as Element
     down.current = { x: e.clientX, y: e.clientY, moved: 0, code: (el.closest('[data-code]') as HTMLElement | null)?.dataset.code, prov: (el.closest('[data-prov]') as HTMLElement | null)?.dataset.prov }
-    ;(e.currentTarget as Element).setPointerCapture?.(e.pointerId)
   }
   const onMove = (e: ReactPointerEvent) => {
+    if (!touches.current.has(e.pointerId)) return // a mouse moving without a pressed button
+    touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const p = pinch.current
+    if (p && touches.current.size >= 2) {
+      // zoom by how far the fingers spread, around the point between them, and follow that point as it moves
+      const n = twoFingers(), r = svg.current?.getBoundingClientRect()
+      zoomAt(n.dist / Math.max(1, p.dist), n.mx - (r?.left ?? 0), n.my - (r?.top ?? 0))
+      setView((v) => clampView({ ...v, x: v.x + (n.mx - p.mx), y: v.y + (n.my - p.my) / lean() }, w, h))
+      pinch.current = n
+      return
+    }
     const d = down.current; if (!d) return
     const dx = e.clientX - d.x, dy = e.clientY - d.y; d.x = e.clientX; d.y = e.clientY; d.moved += Math.abs(dx) + Math.abs(dy)
-    setView((v) => clampView({ ...v, x: v.x + dx, y: v.y + dy / Math.cos((tilt * Math.PI) / 180) }, w, h)) // the plane leans back, so vertical moves are foreshortened
+    setView((v) => clampView({ ...v, x: v.x + dx, y: v.y + dy / lean() }, w, h))
   }
-  const onUp = () => {
+  const onUp = (e: ReactPointerEvent) => {
+    touches.current.delete(e.pointerId)
+    if (pinch.current) {
+      // one finger lifted: keep dragging with the other one (no tap)
+      pinch.current = null
+      const rest = [...touches.current.values()][0]
+      down.current = rest ? { x: rest.x, y: rest.y, moved: Infinity } : null
+      return
+    }
     const d = down.current; down.current = null
     if (!d || d.moved > 6) return
     if (d.prov && country && d.prov.startsWith(country + '-')) onPickProvince(d.prov === province ? null : d.prov)
     else if (d.code && d.code in GEO) onPickCountry(d.code as GeoCode)
   }
+  const onCancel = (e: ReactPointerEvent) => { touches.current.delete(e.pointerId); pinch.current = null; down.current = null }
   useEffect(() => {
     const el = svg.current; if (!el) return
     const wheel = (e: WheelEvent) => { e.preventDefault(); const r = el.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top) }
@@ -161,7 +188,7 @@ export function GeoMap({ country, province, pins = [], onPickCountry, onPickProv
       {!data && !failed && <p className="absolute inset-0 grid place-items-center" role="status"><span className="flex items-center gap-2"><Icon name="globe" size={18} className="animate-pulse text-primary" />{t('geo.loading')}</span></p>}
       {data && (
         <div className="map-tilt map-stage" style={{ transform: `perspective(${perspectiveFor(w)}px) rotateX(${tilt}deg) scale(${scaleFor(tilt)})` }}>
-          <svg ref={svg} width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => { down.current = null }}
+          <svg ref={svg} width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel}
             className="block select-none cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
             <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
               {shapes.map((s, i) => <path key={i} d={s.d} data-code={s.code} className={'g-c ' + paint(s.code)}>{s.code && <title>{name(s.code)}</title>}</path>)}

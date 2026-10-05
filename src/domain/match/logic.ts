@@ -18,6 +18,8 @@ export function textProblem(v: unknown, min: number, max: number): 'type' | 'len
 }
 
 export const DAY_MS = 86_400_000
+/** the calendar day (YYYY-MM-DD) of a moment in the visitor's own time zone — date pickers work in local days, not UTC */
+export const localDay = (iso: string) => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 export const isCountry = (v: unknown): v is Country => v === 'TH' || v === 'CN'
 /** a first-level division code of that country that exists on the map (e.g. TH-50, CN-SH) */
 export const isProvinceOf = (c: Country, v: unknown): v is string => typeof v === 'string' && v.startsWith(c + '-') && `prov.${v}` in provinces
@@ -68,8 +70,8 @@ export function makePost(input: PostInput, id: string, employerId: string, at: s
   if (!intIn(input.headcount, 1, 99)) return fail('headcount')
   if (!oneOf(EMPLOYMENT, input.employment)) return fail('employment')
   if (input.salary !== null && (!isSalary(input.salary) || input.salary.min > input.salary.max)) return fail('salary')
-  // start date: a real day, not before the posting day, at most two years ahead
-  const day = at.slice(0, 10)
+  // start date: a real day, not before the posting day (the visitor's own calendar day), at most two years ahead
+  const day = localDay(at)
   if (!isDay(input.startDate) || input.startDate < day || Date.parse(input.startDate) > Date.parse(day) + 731 * DAY_MS) return fail('startDate')
   if (!isLangs(input.languages) || input.languages.length === 0) return fail('languages')
   if (!oneOf(EDU, input.education)) return fail('education')
