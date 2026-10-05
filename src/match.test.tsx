@@ -202,7 +202,7 @@ describe('stored data is validated', () => {
     const up = parseState(old)
     expect(up && [up.version, up.clockHours, up.posts[0].releasedAt === up.posts[0].createdAt, up.acceptances[0].intro]).toEqual([2, 48, true, ''])
     const bad = (f: (s: MatchState) => void) => { const s = JSON.parse(JSON.stringify(st)) as MatchState; f(s); return parseState(s)! }
-    expect(bad((s) => { s.seekers[0].pins = Array.from({ length: 40 }, (_, i) => ({ ...s.seekers[0].pins[0], id: 'x' + i, at: at(-i) })) }).seekers[0].pins.length).toBe(30) // the newest 30 are kept
+    expect(bad((s) => { s.seekers[0].pins = Array.from({ length: 70 }, (_, i) => ({ ...s.seekers[0].pins[0], id: 'x' + i, at: at(-i) })) }).seekers[0].pins.length).toBe(60) // the newest 60 are kept
     expect(bad((s) => { s.posts[0].province = 'CN-XX' }).posts.map((p) => p.id)).not.toContain('post-s1')
     expect(bad((s) => { s.posts[0].province = 'CN-XX' }).acceptances).toEqual([]) // its application goes with it
     expect(bad((s) => { s.acceptances.push({ id: 'a', postId: 'nope', seekerId: ME, at: at(0), status: 'accepted', intro: '', availableFrom: null }) }).acceptances.map((a) => a.id)).toEqual(['acc-s1'])
@@ -311,9 +311,9 @@ describe('reviewed shell and pages', () => {
   })
   it('menu order: home, my pins / my posts by role, board, notifications, prepare, settings, help, back office (admin only), profile last', () => {
     const keys = (r: 'seeker' | 'employer' | null, a: boolean) => sideItems(r, a).map((i) => i.key)
-    expect(keys(null, false)).toEqual(['m.home', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.profile'])
-    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.profile'])
-    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.admin', 'm.profile'])
+    expect(keys(null, false)).toEqual(['m.home', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
+    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
+    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.admin', 'm.profile'])
     for (const r of [null, 'seeker', 'employer'] as const) for (const i of sideItems(r, true)) expect(ROUTES.has(i.to), i.to).toBe(true)
     expect(src('./components/sidenav.tsx')).not.toMatch(/to: '(start|interview|dashboard|plan|documents|jobs|employer|review)'/)
   })

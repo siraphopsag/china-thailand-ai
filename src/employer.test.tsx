@@ -10,13 +10,13 @@ import { tr } from './i18n/core'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
 import { AuthProvider } from './auth'
-import { DAY_MS, canPost, makePost, parseState, postLimit, postQuota, type PostInput } from './domain/match/logic'
+import { DAY_MS, canPost, inbox, makePost, memberActive, parseState, pinQuota, planUntil, poolOf, postLimit, postQuota, type PostInput } from './domain/match/logic'
 import { precheck } from './domain/match/precheck'
 import { seedState } from './domain/match/seed'
 import { MY_EMPLOYER, type Credit, type MatchState, type Post } from './domain/match/types'
 import type { MsgKey } from './locales/index'
 import { PostFacts } from './pages/match'
-import { PackageCard } from './pages/hire'
+import { PlanGrid } from './pages/member'
 import { ListSelect } from './components/listselect'
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
@@ -123,21 +123,38 @@ describe('D. weekly allowance and membership package', () => {
   it('3 free posts per weekly cycle (owner, Oct 2026): the cycle starts with its first use; after 7 days the whole allowance is back', () => {
     const st = { ...seedState(NOW), credits: [use(-6.5), use(-3), use(-1), use(-2, 'pin')] }
     expect(postQuota(st, NOW)).toEqual({ used: 3, limit: 3, left: 0, resetAt: NOW + 0.5 * DAY_MS }) // pins have their own allowance
-    expect(postLimit(st)).toBe(3)
+    expect(postLimit(st, NOW)).toBe(3)
     expect(canPost(st, NOW)).toBe(false)
     expect(postQuota(st, NOW + 0.6 * DAY_MS)).toEqual({ used: 0, limit: 3, left: 3, resetAt: null }) // all three come back at once
     // a renewal uses the same allowance; a new cycle starts with the first use after the old one ended
     expect(postQuota({ ...st, credits: [use(-9), use(-1), use(-0.5, 'renew')] }, NOW)).toEqual({ used: 2, limit: 3, left: 1, resetAt: NOW + 6 * DAY_MS })
     expect(src('./matchData.tsx')).toContain("if (!canPost(st, limitNow)) return { ok: false, problem: 'quota' } as const")
   })
-  it('membership: 10 per 7 days; the window shows the planned price struck through and "free now"; no payment', () => {
-    const st = { ...seedState(NOW), member: true, credits: [use(-1), use(-3), use(-6.5)] }
-    expect(postLimit(st)).toBe(10); expect(canPost(st, NOW)).toBe(true)
-    const card = html(<PackageCard />)
-    expect(card).toMatch(new RegExp(`<span class="price-was[^"]*"><span class="sr-only">${T('m.pk.priceSr')} </span>${T('m.pk.price')}</span>`))
-    expect(card).toContain(T('m.pk.free')); expect(card).toContain(T('m.pk.note'))
+  it('membership plans (owner, Oct 2026): 1 month 59, 6 months 349, 1 year 599 baht — struck through, free in the trial, no payment', () => {
+    const card = html(<PlanGrid />)
+    for (const [n, k] of [['59', 'm.plan.m1'], ['349', 'm.plan.m6'], ['599', 'm.plan.y1']] as const) {
+      expect(card, n).toContain(`<span class="price-was text-lg text-muted"><span class="sr-only">${T('m.pk.priceSr')} </span>${T('m.plan.price', { n })}</span>`)
+      expect(card, k).toContain(T(k))
+    }
+    expect(card.split('>' + T('m.plan.free') + '</span>').length - 1).toBe(3); expect(card).toContain(T('m.plan.best'))
+    expect(card).toContain(T('m.plan.perMonth', { n: '50' })); expect(card).toContain(T('m.plan.save', { n: 15 }))
     expect(src('./index.css')).toMatch(/\.price-was \{ text-decoration: line-through/)
-    expect(src('./matchData.tsx')).toContain('subscribe: async () => { if (local) setLocal((s) => ({ ...s, member: true })); else await profile({ member: true }) }')
+    expect(src('./pages/member.tsx')).not.toMatch(/cvv|card.?number|payment_method|stripe|<input/i) // nothing to type in, nothing charged
+  })
+  it('a member posts 10 per cycle and pins 10; a plan runs from today or adds on; it ends by itself; a reminder 7 days before', () => {
+    const st = { ...seedState(NOW), credits: [use(-1), use(-3), use(-6.5)] }
+    const until = planUntil(st, 'm1', NOW)
+    expect(new Date(until).getUTCMonth()).toBe((new Date(NOW).getUTCMonth() + 1) % 12)
+    const m = { ...st, member: true, memberUntil: until }
+    expect(memberActive(m, NOW)).toBe(true); expect(postLimit(m, NOW)).toBe(10); expect(canPost(m, NOW)).toBe(true); expect(pinQuota(m, NOW).limit).toBe(10)
+    expect(Date.parse(planUntil(m, 'm6', NOW))).toBeGreaterThan(Date.parse(until) + 150 * DAY_MS) // adds on to the running month
+    const after = Date.parse(until) + 1
+    expect(memberActive(m, after)).toBe(false); expect(postLimit(m, after)).toBe(3); expect(pinQuota(m, after).limit).toBe(5)
+    expect(inbox({ ...m, role: 'employer' }, poolOf(m), Date.parse(until) - 3 * DAY_MS, () => 0).memberEnds).toBe(Date.parse(until))
+    expect(memberActive({ ...st, member: true, memberUntil: null }, NOW)).toBe(true) // a membership from before the plans
+    const sql = src('../supabase/migrations/0003_board.sql')
+    expect(sql).toContain('alter table public.profiles add column if not exists member_until timestamptz;')
+    expect(sql).toContain("then 10 else 5 end) then raise exception 'pin_limit'")
   })
   it('wording: "3 free posts per week" replaces "no fees during the prototype"', () => {
     for (const k of ['m.role.employer.p4', 'm.emp.noPay'] as const) expect(T(k)).toBe('โพสต์ฟรี 3 ครั้งต่อสัปดาห์')

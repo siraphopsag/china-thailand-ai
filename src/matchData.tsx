@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { addPin, applyTo, canPost, cancel, clampFuture, decide, forward, holding, makePost, parseState, poolOf, promote, removePin, renewPost, withoutExpired, type ApplyInput, type Outcome, type PostInput } from './domain/match/logic'
+import { addPin, applyTo, canPost, cancel, clampFuture, decide, forward, holding, makePost, parseState, planUntil, poolOf, promote, removePin, renewPost, withoutExpired, type ApplyInput, type Outcome, type PostInput } from './domain/match/logic'
 import { HOUR_MS, pinActive, type PinLike } from './domain/match/release'
 import { seedState } from './domain/match/seed'
-import { HOLDS_PLACE, MAX_CLOCK_HOURS, ME, MY_EMPLOYER, type Acceptance, type Industry, type MatchState, type Place, type Post, type Role, type Skill } from './domain/match/types'
+import { HOLDS_PLACE, MAX_CLOCK_HOURS, ME, MY_EMPLOYER, type Acceptance, type Industry, type MatchState, type PlanId, type Place, type Post, type Role, type Skill } from './domain/match/types'
 import { buildState, dbProblem, postToRow, rowToAcceptance, rowToPost, statsByProvince, statsToPool, type AcceptanceRow, type AdminStats, type PinStatRow, type PostRow } from './domain/match/remote'
 import { getClient, takeNext, useAuth } from './auth'
 import { go } from './store'
@@ -29,7 +29,7 @@ function load(): MatchState {
 }
 const readClock = () => { try { const n = Number(localStorage.getItem(CLOCK_KEY)); return Number.isInteger(n) && n >= 0 && n <= MAX_CLOCK_HOURS ? n : 0 } catch { return 0 } }
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
-const emptyState = (clockHours = 0): MatchState => ({ ...seedState(), role: null, posts: [], seekers: [], acceptances: [], clockHours, myCompany: '', member: false, credits: [] })
+const emptyState = (clockHours = 0): MatchState => ({ ...seedState(), role: null, posts: [], seekers: [], acceptances: [], clockHours, myCompany: '', member: false, memberUntil: null, credits: [] })
 const fail = <T,>(problem: 'network' | 'unknown'): Outcome<T> => ({ ok: false, problem })
 export const nowWith = (clockHours: number, real = Date.now()) => real + clockHours * HOUR_MS
 export function countsFrom(acc: Acceptance[]): Record<string, Counts> {
@@ -68,8 +68,8 @@ interface Ctx {
   deletePost: (id: string) => Promise<boolean>
   /** start the release of my post again (uses one post of the weekly allowance) */
   renew: (id: string) => Promise<Outcome<unknown>>
-  /** membership package (simulated: free in the prototype, no payment) */
-  subscribe: () => Promise<void>
+  /** take a membership plan (simulated: free during the trial, no payment); returns the new end date */
+  subscribe: (plan: PlanId) => Promise<string | null>
   /** apply (takes a place) or reserve (the post is full) */
   apply: (postId: string, input: ApplyInput) => Promise<Outcome<Acceptance>>
   /** the employer confirms or declines an application */
@@ -114,7 +114,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       const sb = await getClient()
       if (!purged.current) { purged.current = true; void sb.rpc('purge_expired').then(() => undefined, () => undefined) } // posts past 6 months, pins past a month
       const [prof, posts, pins, accs, uses, pinStats, counts, people, allPins, st] = await Promise.all([
-        sb.from('profiles').select('user_type, company, origin_country, origin_province, member').eq('id', userId).maybeSingle(),
+        sb.from('profiles').select('*').eq('id', userId).maybeSingle(),
         sb.from('posts').select('*').order('created_at', { ascending: false }),
         sb.from('pins').select('*').eq('seeker_id', userId).order('created_at'),
         sb.from('acceptances').select('*').order('created_at'),
@@ -225,7 +225,11 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         if (local) { setLocal((s) => ({ ...s, posts: s.posts.map((p) => (p.id === id ? r.value : p)), credits: [...s.credits, { kind: 'renew', at: when }] })); return r }
         return write((sb) => sb.rpc('renew_post', { p_id: id }), () => null)
       },
-      subscribe: async () => { if (local) setLocal((s) => ({ ...s, member: true })); else await profile({ member: true }) },
+      subscribe: async (plan) => {
+        const until = planUntil(st, plan, limitNow) // signed in: from the real time, like the database
+        if (local) { setLocal((s) => ({ ...s, member: true, memberUntil: until })); return until }
+        return (await profile({ member: true, member_until: until })).ok ? until : null
+      },
       apply: async (postId, input) => {
         const r = applyTo(st, pool, postId, ME, input, uid('acc'), at()); if (!r.ok) return r
         if (local) { setLocal((s) => ({ ...s, acceptances: [...s.acceptances, r.value] })); return r }

@@ -2,7 +2,7 @@
 // queue, renewals, and the validation of stored data. The release levels live in release.ts.
 import { isObj } from '../../profileSchema'
 import { provinces } from '../../locales/provinces'
-import { BENEFITS, COUNTRIES, CURRENCIES, EDU, EMPLOYMENT, EXPIRY_WARN_DAYS, FREE_POSTS_PER_WEEK, HOLDS_PLACE, INDUSTRIES, LANGS, LANG_LEVELS, MAX_CLOCK_HOURS, ME, MEMBER_POSTS_PER_WEEK, MY_EMPLOYER,
+import { BENEFITS, COUNTRIES, CURRENCIES, EDU, EMPLOYMENT, EXPIRY_WARN_DAYS, FREE_POSTS_PER_WEEK, HOLDS_PLACE, MEMBER_PINS_PER_WEEK, MEMBER_WARN_DAYS, PLANS, type PlanId, INDUSTRIES, LANGS, LANG_LEVELS, MAX_CLOCK_HOURS, ME, MEMBER_POSTS_PER_WEEK, MY_EMPLOYER,
   PINS_PER_WEEK, POST_LIFE_DAYS, SKILLS, type Acceptance, type AppStatus, type Benefit, type Country, type Credit, type Edu, type Employment, type Industry, type LanguageSkill, type MatchState,
   type Pin, type Place, type Post, type Salary, type Seeker, type Skill } from './types'
 import { DAY_MS, HOUR_MS, cycleQuota, isExpired, pinActive, reachFor, type PinLike } from './release'
@@ -48,10 +48,19 @@ const fail = <T,>(problem: Problem): Outcome<T> => ({ ok: false, problem })
 const text = (v: unknown, min: number, max: number, field: Problem): Problem | null => { const p = textProblem(v, min, max); return p === null ? null : p === 'contact' ? 'contact' : field }
 
 /* ---------- weekly allowances (owner, Oct 2026): a cycle starts with its first use; after 7 days the full allowance is back ---------- */
-export const postLimit = (st: MatchState) => (st.member ? MEMBER_POSTS_PER_WEEK : FREE_POSTS_PER_WEEK)
+/** a membership counts until its end date (memberships from before the plans have none) */
+export const memberActive = (st: MatchState, now: number) => st.member && (!st.memberUntil || Date.parse(st.memberUntil) > now)
+export const postLimit = (st: MatchState, now: number) => (memberActive(st, now) ? MEMBER_POSTS_PER_WEEK : FREE_POSTS_PER_WEEK)
 /** new posts and renewals share one allowance */
-export const postQuota = (st: MatchState, now: number) => cycleQuota(st.credits.filter((c) => c.kind !== 'pin').map((c) => c.at), now, postLimit(st))
-export const pinQuota = (st: MatchState, now: number) => cycleQuota(st.credits.filter((c) => c.kind === 'pin').map((c) => c.at), now, PINS_PER_WEEK)
+export const postQuota = (st: MatchState, now: number) => cycleQuota(st.credits.filter((c) => c.kind !== 'pin').map((c) => c.at), now, postLimit(st, now))
+export const pinQuota = (st: MatchState, now: number) => cycleQuota(st.credits.filter((c) => c.kind === 'pin').map((c) => c.at), now, memberActive(st, now) ? MEMBER_PINS_PER_WEEK : PINS_PER_WEEK)
+/** taking a plan: it runs from now, or adds on to a membership that is still running */
+export function planUntil(st: MatchState, plan: PlanId, now: number): string {
+  const months = PLANS.find((p) => p.id === plan)!.months
+  const from = new Date(memberActive(st, now) && st.memberUntil ? Math.max(now, Date.parse(st.memberUntil)) : now)
+  from.setUTCMonth(from.getUTCMonth() + months)
+  return from.toISOString()
+}
 export const canPost = (st: MatchState, now: number) => postQuota(st, now).left > 0
 
 /* ---------- pins ---------- */
@@ -169,7 +178,7 @@ export const forward = (a: Acceptance, at: string): Acceptance => (a.status === 
 /* ---------- validation of stored data (never trust the browser) ----------
  * Bug hunt, Oct 2026: one bad or out-of-range item used to throw away the whole saved demo (role, posts, pins, applications).
  * Now each item is checked on its own and only the bad ones are dropped; only a broken frame (version, "me") starts over. */
-const MAX_STORED_PINS = PINS_PER_WEEK * 6 // a month of pins at five a week, with room — the newest are kept
+const MAX_STORED_PINS = MEMBER_PINS_PER_WEEK * 6 // a month of pins at ten a week (members), with room — the newest are kept
 const isPin = (v: unknown): v is Pin => isPlace(v) && isObj(v) && isId(v.id) && isIndustry(v.industry) && isSkills(v.skills) && isIso(v.at)
 const pinsOf = (v: unknown): Pin[] => (Array.isArray(v) ? v.filter(isPin).sort((a, b) => b.at.localeCompare(a.at)).slice(0, MAX_STORED_PINS).reverse() : [])
 const isSeekerFrame = (v: unknown): v is Seeker => isObj(v) && isId(v.id) && typeof v.name === 'string' && v.name.length <= 40 && (v.origin === null || isPlace(v.origin)) && v.synthetic === true
@@ -225,7 +234,7 @@ export function parseState(input: unknown): MatchState | null {
     role: raw.role === 'seeker' || raw.role === 'employer' ? raw.role : null,
     clockHours: intIn(raw.clockHours, 0, MAX_CLOCK_HOURS) ? raw.clockHours : 0,
     me, myCompany: typeof raw.myCompany === 'string' && raw.myCompany.length <= 80 ? raw.myCompany : '',
-    member: raw.member === true, seekers, posts, acceptances, credits,
+    member: raw.member === true, memberUntil: isIso(raw.memberUntil) ? raw.memberUntil : null, seekers, posts, acceptances, credits,
   }
 }
 /** "Back to real time" (demo): anything stamped later than now is moved to now, so nothing made while the clock ran ahead disappears */
@@ -256,6 +265,8 @@ export function inbox(st: MatchState, pool: PinLike[], now: number, reservedOf: 
   const waiting = st.acceptances.filter((a) => ids.has(a.postId) && a.status === 'accepted')
   const reserved = mine.filter((p) => reservedOf(p.id) > 0)
   const expiring = mine.filter((p) => now >= Date.parse(p.releasedAt) + (POST_LIFE_DAYS - EXPIRY_WARN_DAYS) * DAY_MS)
-  return { hasPins, offers, updates, waiting, reserved, expiring, count: offers.length + updates.length + waiting.length + reserved.length + expiring.length }
+  // a membership ending within a week (both roles)
+  const memberEnds = memberActive(st, now) && st.memberUntil && Date.parse(st.memberUntil) - now <= MEMBER_WARN_DAYS * DAY_MS ? Date.parse(st.memberUntil) : null
+  return { hasPins, offers, updates, waiting, reserved, expiring, memberEnds, count: offers.length + updates.length + waiting.length + reserved.length + expiring.length + (memberEnds ? 1 : 0) }
 }
 export { COUNTRIES }

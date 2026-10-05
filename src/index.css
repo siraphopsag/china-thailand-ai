@@ -23,7 +23,7 @@
   --danger-bg: 254 226 226; --danger-fg: 153 27 27; --danger-line: 252 165 165;
   --review-bg: 255 237 213; --review-fg: 154 52 18; --review-line: 253 186 116;
   --info-bg: 224 242 254; --info-fg: 7 89 133; --info-line: 125 211 252;
-  --globe-bg: 236 238 244; --globe-ocean: 226 229 237; --globe-land: 196 201 213; --globe-soon: 112 119 136; --globe-active: 67 56 202; --globe-line: 255 255 255; --globe-capital: 220 38 38; --pin-post: 217 119 6; --globe-route: 67 56 202; --globe-side: 36 30 112; --globe-soon-side: 84 90 110; --globe-prov: 99 102 241; --globe-pside: 49 46 129;
+  --globe-border: 51 65 85; --globe-bg: 236 238 244; --globe-ocean: 226 229 237; --globe-land: 196 201 213; --globe-soon: 112 119 136; --globe-active: 67 56 202; --globe-line: 255 255 255; --globe-capital: 220 38 38; --pin-post: 217 119 6; --globe-route: 67 56 202; --globe-side: 36 30 112; --globe-soon-side: 84 90 110; --globe-prov: 99 102 241; --globe-pside: 49 46 129;
   --grid-line: 17 19 26; --grid-a: .08; --glow-a: 99 102 241; --glow-b: 14 165 233; --glow-k: .16;
   --grad-a: 67 56 202; --grad-b: 3 105 161; --cta-a: 67 56 202; --cta-b: 29 78 216; --hero-base: 250 250 253; --paths-c: 55 48 163; --paths-sheen: 67 56 202; --paths-a: 1;
 }
@@ -45,7 +45,7 @@
   --danger-bg: 72 26 30; --danger-fg: 252 165 165; --danger-line: 140 50 56;
   --review-bg: 70 40 18; --review-fg: 253 186 116; --review-line: 138 78 30;
   --info-bg: 16 52 78; --info-fg: 125 211 252; --info-line: 30 100 150;
-  --globe-bg: 9 10 13; --globe-ocean: 14 15 20; --globe-land: 48 51 63; --globe-soon: 92 97 116; --globe-active: 129 140 248; --globe-line: 255 255 255; --globe-capital: 239 68 68; --pin-post: 251 191 36; --globe-route: 165 180 252; --globe-side: 55 48 163; --globe-soon-side: 58 61 76; --globe-prov: 165 180 252; --globe-pside: 79 70 229;
+  --globe-border: 203 213 225; --globe-bg: 9 10 13; --globe-ocean: 14 15 20; --globe-land: 48 51 63; --globe-soon: 92 97 116; --globe-active: 129 140 248; --globe-line: 255 255 255; --globe-capital: 239 68 68; --pin-post: 251 191 36; --globe-route: 165 180 252; --globe-side: 55 48 163; --globe-soon-side: 58 61 76; --globe-prov: 165 180 252; --globe-pside: 79 70 229;
   --grid-line: 160 164 178; --grid-a: .1; --glow-a: 99 102 241; --glow-b: 14 165 233; --glow-k: .26;
   --grad-a: 165 180 252; --grad-b: 125 211 252; --cta-a: 79 70 229; --cta-b: 37 99 235; --hero-base: 11 11 18; --paths-c: 255 255 255; --paths-sheen: 224 231 255; --paths-a: 1;
 }
@@ -110,7 +110,7 @@ h1[tabindex="-1"]:focus { outline: none }
 .bar-hatch { background-image: repeating-linear-gradient(135deg, rgb(0 0 0 / .2) 0 3px, transparent 3px 7px) }
 
 /* ---------- geographic onboarding (ASEAN + China map) ---------- */
-.g-c { stroke: rgb(var(--globe-line) / .75); stroke-width: .8; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: fill .3s ease }
+.g-c { stroke: rgb(var(--globe-border)); stroke-width: 1.3; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: fill .3s ease }
 .g-land { fill: rgb(var(--globe-land) / .55); stroke: rgb(var(--globe-line) / .3) }
 .g-dim { fill: rgb(var(--globe-land) / .55) }.g-active { fill: rgb(var(--globe-active) / .72); cursor: pointer }
 .g-soon { fill: rgb(var(--globe-soon)); cursor: pointer }
@@ -363,3 +363,22 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 /* board map: how many posts / pins per province */
 .g-count { fill: rgb(var(--primary) / .9); stroke: rgb(var(--page)); stroke-width: 2 }
 .g-count-n { fill: rgb(var(--onprimary)); font: 700 11px/1 system-ui, sans-serif }
+
+/* map: country borders strong enough to tell neighbours apart (owner, Oct 2026), rings for tiny countries, the opening scene */
+.g-tiny { fill: none; stroke: rgb(var(--globe-active)); stroke-width: 2; stroke-dasharray: 3 2.5 }
+.g-intro-line { stroke: rgb(var(--ink) / .7); stroke-width: 1.2 }
+.g-intro-dot { fill: rgb(var(--globe-capital)); stroke: rgb(var(--page)); stroke-width: 1.5 }
+.map-intro { animation: map-intro-in .35s ease-out both }
+@keyframes map-intro-in { from { opacity: 0 } to { opacity: 1 } }
+.map-flag { position: absolute; display: flex; align-items: center; gap: .35rem; padding: 0 .45rem; border-radius: .5rem; font-size: .75rem; font-weight: 600;
+  color: rgb(var(--ink)); background: rgb(var(--surface) / .92); border: 1px solid rgb(var(--line)); box-shadow: 0 2px 8px rgb(0 0 0 / .12) }
+.map-flag:hover { background: rgb(var(--surface)); border-color: rgb(var(--primary)) }
+.map-flag:focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: 2px }
+.map-flag-img { width: 20px; height: 15px; flex-shrink: 0; border-radius: 2px; box-shadow: 0 0 0 1px rgb(0 0 0 / .15); object-fit: cover }
+.map-intro-go { position: absolute; left: 50%; bottom: .75rem; transform: translateX(-50%); display: inline-flex; align-items: center; gap: .4rem; min-height: 40px;
+  padding: 0 1rem; border-radius: 999px; font-size: .85rem; font-weight: 600; color: rgb(var(--onprimary)); background: rgb(var(--primary)); box-shadow: 0 6px 18px rgb(var(--primary) / .35) }
+.map-intro-go:focus-visible { outline: 3px solid rgb(var(--ink)); outline-offset: 2px }
+@media (prefers-reduced-motion: reduce) { .map-intro { animation: none } }
+
+/* membership plans: the 1-year plan carries the gold edge of level 1 */
+.plan-best { box-shadow: 0 0 0 2px rgb(var(--rar1-line)), 0 8px 26px -12px rgb(var(--rar1-line) / .8) }

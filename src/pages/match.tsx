@@ -5,7 +5,7 @@ import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { useAuth } from '../auth'
 import { provinces } from '../locales/provinces'
-import { activePins, capacityOf, inbox, isCountry, pinQuota, type Problem } from '../domain/match/logic'
+import { activePins, capacityOf, inbox, isCountry, memberActive, pinQuota, type Problem } from '../domain/match/logic'
 import { DAY_MS, reachFor, scheduleOf, stageAt, type Quota } from '../domain/match/release'
 import { INDUSTRIES, MY_EMPLOYER, PIN_LIFE_DAYS, SKILLS, type Acceptance, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type Level, type Post, type Salary, type Skill } from '../domain/match/types'
 import { ACTIVE, GEO, SOON, type GeoCode } from '../geo'
@@ -425,14 +425,16 @@ export function NotificationsPage() {
   const gate = useGate('notifications')
   if (gate) return <Page title={t('m.notif.title')}>{gate}</Page>
   const box = inbox(st, pool, now, (id) => counts[id]?.reserved ?? 0)
+  const memberNote = box.memberEnds ? <NoteItem icon="crown" tone="warn" title={t('m.n.memberEnds', { t: until(box.memberEnds) })} text={t('m.n.memberHint')} to="member" /> : null
   if (st.role === 'employer') {
     const mine = st.posts.filter((p) => p.employerId === MY_EMPLOYER)
     const { waiting, reserved } = box
     const expiring = box.expiring.map((p) => ({ p, s: scheduleOf(p, pool, now) }))
     return (
       <Page title={t('m.notif.title')}>
-        {!waiting.length && !reserved.length && !expiring.length ? <Empty icon="bell" text={t('m.notif.none')} to="hire" action={t('m.posts')} /> : (
+        {!waiting.length && !reserved.length && !expiring.length && !memberNote ? <Empty icon="bell" text={t('m.notif.none')} to="hire" action={t('m.posts')} /> : (
           <ul className="space-y-2">
+            {memberNote}
             {expiring.map(({ p, s }) => <NoteItem key={`x-${p.id}`} icon="hourglass" tone="warn" title={t('m.n.expiring', { p: p.position, t: until(s.expiresAt) })} text={t('m.n.renewHint')} to={`post?id=${p.id}`} />)}
             {waiting.map((a) => { const p = mine.find((x) => x.id === a.postId)!; return <NoteItem key={a.id} icon="users" title={t('m.n.applied', { p: p.position })} text={`${nameOf(a)} · ${t(a.promotedAt ? 'm.n.fromQueue' : 'm.n.waitYou')}`} to={`post?id=${p.id}`} /> })}
             {reserved.map((p) => <NoteItem key={`r-${p.id}`} icon="ticket" title={t('m.n.reserved', { p: p.position, n: counts[p.id]?.reserved ?? 0 })} to={`post?id=${p.id}`} />)}
@@ -444,6 +446,7 @@ export function NotificationsPage() {
   const say = (a: Acceptance) => a.status === 'confirmed' ? 'm.n.confirmed' : a.status === 'rejected' ? 'm.n.rejected' : a.status === 'forwarded' ? 'm.n.forwarded' : 'm.n.promoted'
   return (
     <Page title={t('m.notif.title')}>
+      {memberNote && <ul>{memberNote}</ul>}
       {!box.hasPins && !updates.length ? <Empty icon="pin" text={t('m.notif.noPins')} to="seek" action={t('m.pins')} /> : (<>
         {updates.length > 0 && (
           <section className="space-y-2" aria-labelledby="n-up"><h2 id="n-up" className="h2">{t('m.n.updates')}</h2>
@@ -470,16 +473,16 @@ export function NotificationsPage() {
 export function MePage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now } = useMatch()
+  const { st, limitNow } = useMatch()
   const gate = useGate('me')
   if (gate) return <Page title={t('m.profile.title')}>{gate}</Page>
   return (
     <Page title={t('m.profile.title')}>
       <section className="glass-card p-5 space-y-2">
         <p><span className="text-muted">{t('m.profile.role')}:</span> <b>{st.role ? t(st.role === 'seeker' ? 'm.role.seeker' : 'm.role.employer') : t('m.profile.none')}</b></p>
-        {st.role === 'seeker' && st.me.origin && <p className="text-sm">{t('m.seek.from', { p: N.place(st.me.origin.country, st.me.origin.province) })} · {t('m.pin.active', { n: activePins(st.me, now).length })}</p>}
+        {st.role === 'seeker' && st.me.origin && <p className="text-sm">{t('m.seek.from', { p: N.place(st.me.origin.country, st.me.origin.province) })} · {t('m.pin.active', { n: activePins(st.me, limitNow).length })}</p>}
         {st.role === 'employer' && st.myCompany && <p className="text-sm">{t('m.emp.company')}: {st.myCompany}</p>}
-        {st.role === 'employer' && <p className="text-sm flex items-center gap-2"><Icon name="shield" size={15} className="text-primary" />{t(st.member ? 'm.pk.statusMember' : 'm.pk.statusFree')}</p>}
+        <p className="text-sm flex flex-wrap items-center gap-2"><Icon name="crown" size={15} className="text-primary" />{memberActive(st, limitNow) ? (st.memberUntil ? t('m.plan.until', { d: N.day(st.memberUntil) }) : t('m.plan.member')) : t('m.plan.free')} <NavLink to="member" className="text-primary underline underline-offset-4 min-h-[24px] inline-flex items-center">{t('m.plan.see')}</NavLink></p>
         <NavLink to="choose-role" className="btn-ghost inline-flex">{t('m.profile.change')}</NavLink>
         <p className="text-xs text-muted">{t('m.profile.note')}</p>
       </section>

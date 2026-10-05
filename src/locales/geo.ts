@@ -7,6 +7,7 @@ export const geo = {
   'geo.soon.t': ['C.A.L.L. มีแผนขยายการสนับสนุนด้านธุรกิจและกฎหมายข้ามพรมแดนให้ครอบคลุมภูมิภาคอาเซียน ประเทศนี้อยู่ในแผนการขยายนั้น', 'C.A.L.L. 计划将跨境商业与法律支持扩展至整个东盟，此国家属于该扩展计划。', 'C.A.L.L. is planned to expand its cross-border business and legal support across ASEAN. This country is part of that plan.'],
   'geo.soon.now': ['ตอนนี้ C.A.L.L. รองรับเส้นทางไทย ↔ จีน', '目前 C.A.L.L. 支持泰国 ↔ 中国路线。', 'Today C.A.L.L. supports the Thailand ↔ China route.'],
   'geo.capital': ['เมืองหลวง', '首都', 'Capital'],
+  'geo.introGo': ['ดูแผนที่', '查看地图', 'Show the map'],
   'geo.zoomIn': ['ซูมเข้า', '放大', 'Zoom in'],
   'geo.zoomOut': ['ซูมออก', '缩小', 'Zoom out'],
   'geo.resetView': ['กลับมุมมองเดิม', '恢复视图', 'Reset view'],

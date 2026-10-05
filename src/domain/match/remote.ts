@@ -18,7 +18,7 @@ export interface AcceptanceRow { id: string; post_id: string; seeker_id: string;
 export interface QuotaRow { kind: string; created_at: string }
 /** anonymous counts of active pins (public.pin_stats): place, field and the hour they were made — no owner */
 export interface PinStatRow { country: string; province: string; industry: string; skills: string[]; hour: string; n: number }
-export interface ProfileRow { id?: string; full_name?: string | null; user_type: string | null; company: string | null; origin_country: string | null; origin_province: string | null; member: boolean | null }
+export interface ProfileRow { id?: string; full_name?: string | null; user_type: string | null; company: string | null; origin_country: string | null; origin_province: string | null; member: boolean | null; member_until?: string | null }
 export interface AdminStats { users: number; employers: number; seekers: number; posts: number; posts_7d: number; acceptances: number }
 
 const one = <T extends string>(all: readonly T[], v: unknown): T | null => (typeof v === 'string' && (all as readonly string[]).includes(v) ? (v as T) : null)
@@ -91,7 +91,7 @@ export function buildState(input: { uid: string; name: string; profile: ProfileR
     pins: (input.allPins ?? []).filter((r) => r.seeker_id === x.id).map(rowToPin), synthetic: true,
   }))
   return {
-    version: 2, role: one<Role>(['seeker', 'employer'], p?.user_type), clockHours: input.clockHours, myCompany: p?.company ?? '', member: !!p?.member,
+    version: 2, role: one<Role>(['seeker', 'employer'], p?.user_type), clockHours: input.clockHours, myCompany: p?.company ?? '', member: !!p?.member, memberUntil: p?.member_until ? iso(p.member_until) : null,
     me: { id: ME, name: input.name, origin, pins: input.pins.map(rowToPin), synthetic: true },
     seekers,
     posts: input.posts.map((r) => rowToPost(r, input.uid)),

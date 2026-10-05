@@ -19,12 +19,13 @@ export function sideItems(role: 'seeker' | 'employer' | null, admin: boolean): I
   if (role === 'seeker') items.push({ to: 'seek', key: 'm.pins', icon: 'pin', match: ['seek'] })
   if (role === 'employer') items.push({ to: 'hire', key: 'm.posts', icon: 'posts', match: ['hire'] })
   items.push({ to: 'board', key: 'm.board', icon: 'store', match: ['board', 'post'] }, { to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
+  items.push({ to: 'member', key: 'm.member', icon: 'crown', match: ['member'] })
   if (admin) items.push({ to: 'backoffice', key: 'm.admin', icon: 'shield', match: ['backoffice'] })
   items.push({ to: 'me', key: 'm.profile', icon: 'profile', match: ['me'] })
   return items
 }
 /** on phones the bottom bar keeps 5 main places; these go under "More" so the bar does not cover the screen */
-export const MORE_KEYS = ['m.prepare', 'm.settings', 'm.help', 'm.admin']
+export const MORE_KEYS = ['m.prepare', 'm.member', 'm.settings', 'm.help', 'm.admin']
 
 /**
  * Menu (owner, Oct 2026, after a reference he liked): a floating capsule of icons — on the left for computers and tablets

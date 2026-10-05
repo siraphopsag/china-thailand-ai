@@ -182,7 +182,7 @@ describe('database rows ↔ the app\'s data (domain/match/remote.ts)', () => {
   it('the signed-in person\'s view: role, company, pins, acceptances (mine marked as "me"), and other seekers only for admins', () => {
     const st = buildState({ uid: 'u1', name: 'Ann', profile: { user_type: 'employer', company: 'Shop', origin_country: 'TH', origin_province: 'TH-50', member: true },
       posts: [row], pins: [], acceptances: [{ id: 'a1', post_id: 'p1', seeker_id: 'u2', seeker_name: 'Bo', status: 'accepted', created_at: '2026-10-05T02:00:00Z', forwarded_at: null }], clockHours: 0 })
-    expect(st.role).toBe('employer'); expect(st.myCompany).toBe('Shop'); expect(st.member).toBe(true); expect(st.me.origin).toEqual({ country: 'TH', province: 'TH-50' })
+    expect(st.role).toBe('employer'); expect(st.myCompany).toBe('Shop'); expect(st.member).toBe(true); expect(st.memberUntil).toBeNull(); expect(st.me.origin).toEqual({ country: 'TH', province: 'TH-50' })
     expect(st.acceptances[0]).toMatchObject({ seekerId: 'u2', seekerName: 'Bo', status: 'accepted' })
     expect(st.seekers).toEqual([])
     const mine = buildState({ uid: 'u2', name: 'Bo', profile: null, posts: [row], pins: [], acceptances: [{ id: 'a1', post_id: 'p1', seeker_id: 'u2', seeker_name: 'Bo', status: 'forwarded', created_at: '2026-10-05T02:00:00Z', forwarded_at: '2026-10-06T02:00:00Z' }], clockHours: 0 })

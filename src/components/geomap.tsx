@@ -7,12 +7,17 @@ import { useI18n } from '../i18n'
 import { Icon } from './icons'
 import { GEO, HOME, MAX_K, clampView, codeOfIso, lerpView, viewForBox, type GeoCode, type View } from '../geo'
 import capitals from '../data/geo/capitals.json'
+import { FLAGS } from './flags'
 
 /**
  * Reusable map of China + ASEAN with Thai and Chinese provinces (same Natural Earth data and raised-relief style as the original
  * map). Controlled: the parent decides the focused country and province; the map frames them, raises them, and draws pins.
  * Every ASEAN country can be focused (its capital is shown); only Thailand and China have provinces today — the parent shows
  * "coming soon" for the others.
+ *
+ * Opening scene (owner, Oct 2026): when a map opens with nothing chosen, all 12 countries are framed, each with a straight line
+ * from its capital to a label with its flag and name (tiny Singapore and Brunei were hard to find). Tapping a flag chooses that
+ * country; tapping or dragging the map — or "Show the map" — goes on to the normal map. Small countries keep a ring around them.
  *
  * Camera: the map plane leans back (oblique view). The lean is stronger on the overview and smaller once a country is chosen,
  * so provinces are easy to read. Labels, capitals and pins are drawn on a flat layer above the plane, positioned through the same
@@ -23,6 +28,9 @@ type CountryF = Feature<Geometry, { name?: string }>
 type ProvinceF = Feature<Geometry, { iso_3166_2?: string; adm0_a3?: string }>
 type Capital = { country: GeoCode; name: string; lon: number; lat: number }
 const CAPITALS = capitals as Capital[]
+const ALL: GeoCode[] = ['TH', 'CN', 'VN', 'MM', 'LA', 'SG', 'KH', 'MY', 'ID', 'PH', 'BN', 'TL']
+/** countries too small to spot when zoomed out: a ring marks them */
+const TINY: GeoCode[] = ['SG', 'BN']
 let cache: Promise<{ countries: CountryF[]; provinces: ProvinceF[] }> | null = null
 function loadGeo() {
   cache ??= Promise.all([import('../data/geo/region-asean-china.json'), import('../data/geo/admin1-th-cn.json')]).then(([r, a]) => {
@@ -88,11 +96,21 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   const shapes = useMemo(() => (data?.countries ?? []).map((f) => ({ code: codeOfIso(f.id), d: path(f) ?? '', b: path.bounds(f) as [[number, number], [number, number]] })), [data, path])
   const provs = useMemo(() => (data?.provinces ?? []).map((f) => ({ f, code: f.properties.iso_3166_2!, country: (f.properties.adm0_a3 === 'THA' ? 'TH' : 'CN') as 'TH' | 'CN', d: path(f) ?? '', c: geoCentroid(f) as [number, number] })), [data, path])
   const capitalOf = (c: GeoCode) => CAPITALS.find((x) => x.country === c)
+  // the opening scene: only when the map opens with nothing chosen; anything chosen (here or in the lists) ends it
+  const [intro, setIntro] = useState(() => !country && !province)
+  useEffect(() => { if (country || province) setIntro(false) }, [country, province])
 
   const [view, setView] = useState<View>(HOME)
   const viewRef = useRef(view); viewRef.current = view
   const anim = useRef(0)
   const target = useMemo<View>(() => {
+    if (intro) { // all 12 countries in view
+      const all = shapes.filter((x) => x.code)
+      if (all.length) {
+        const x0 = Math.min(...all.map((x) => x.b[0][0])), y0 = Math.min(...all.map((x) => x.b[0][1])), x1 = Math.max(...all.map((x) => x.b[1][0])), y1 = Math.max(...all.map((x) => x.b[1][1]))
+        return viewForBox([[x0, y0], [x1, y1 + (y1 - y0) * 0.12]], w, h, 0.96, 4)
+      }
+    }
     if (province) { const p = provs.find((x) => x.code === province); if (p) { const b = path.bounds(p.f) as [[number, number], [number, number]]; const pad = Math.max(b[1][0] - b[0][0], b[1][1] - b[0][1]) * 1.6; return viewForBox([[b[0][0] - pad, b[0][1] - pad], [b[1][0] + pad, b[1][1] + pad]], w, h, 0.9, 10) } }
     if (country === 'SG') { const c = capitalOf('SG'), p = c && proj([c.lon, c.lat]); if (p) return viewForBox([[p[0] - 12, p[1] - 12], [p[0] + 12, p[1] + 12]], w, h, 0.7, MAX_K) } // too small to frame by its outline
     if (country) { const s = shapes.find((x) => x.code === country); if (s) return viewForBox(s.b, w, h, country === 'CN' ? 0.8 : 0.72, 7) }
@@ -104,7 +122,7 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
       return viewForBox([[x0, y0], [x1, y1 + (y1 - y0) * 0.22]], w, h, 0.94, 4)
     }
     return HOME
-  }, [country, province, provs, shapes, path, proj, w, h]) // eslint-disable-line react-hooks/exhaustive-deps -- capitalOf reads a constant
+  }, [intro, country, province, provs, shapes, path, proj, w, h]) // eslint-disable-line react-hooks/exhaustive-deps -- capitalOf reads a constant
   const flyTo = (to: View) => {
     cancelAnimationFrame(anim.current)
     const from = viewRef.current, t0 = performance.now()
@@ -126,6 +144,7 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   const lean = () => Math.cos((tilt * Math.PI) / 180) // the plane leans back, so vertical moves are foreshortened
   const twoFingers = () => { const [a, b] = [...touches.current.values()]; return { dist: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 } }
   const onDown = (e: ReactPointerEvent) => {
+    if (intro) { setIntro(false); return }
     cancelAnimationFrame(anim.current)
     touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId) } catch { /* the pointer is already gone */ }
@@ -166,7 +185,7 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   const onCancel = (e: ReactPointerEvent) => { touches.current.delete(e.pointerId); pinch.current = null; down.current = null }
   useEffect(() => {
     const el = svg.current; if (!el) return
-    const wheel = (e: WheelEvent) => { e.preventDefault(); const r = el.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top) }
+    const wheel = (e: WheelEvent) => { e.preventDefault(); if (intro) { setIntro(false); return } const r = el.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top) }
     el.addEventListener('wheel', wheel, { passive: false }); return () => el.removeEventListener('wheel', wheel)
   }) // re-bound each render so zoomAt sees the current size
 
@@ -183,6 +202,17 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   // capitals: Bangkok and Beijing on the overview, otherwise the chosen country's capital
   const shownCapitals = (country ? [capitalOf(country)] : [capitalOf('TH'), capitalOf('CN')]).filter((c): c is Capital => !!c)
   const inView = (p: [number, number] | null): p is [number, number] => !!p && p[0] > -40 && p[0] < w + 40 && p[1] > -40 && p[1] < h + 40
+  const labelW = w < 640 ? 100 : 128, labelH = 26, edge = 8
+  const scene = intro && data ? (() => {
+    const pts = ALL.flatMap((c) => { const cap = capitalOf(c), p = cap && geoPt(cap.lon, cap.lat); return p ? [{ c, x: p[0], y: p[1] }] : [] }).sort((a, b) => a.x - b.x)
+    const half = Math.ceil(pts.length / 2)
+    const column = (side: 'left' | 'right', list: typeof pts) => {
+      const top = 14, bottom = h - 64 // room for the "Show the map" button
+      const step = list.length > 1 ? (bottom - top - labelH) / (list.length - 1) : 0
+      return [...list].sort((a, b) => a.y - b.y).map((p, i) => ({ ...p, side, ly: top + i * step, lx: side === 'left' ? edge + labelW : w - edge - labelW }))
+    }
+    return [...column('left', pts.slice(0, half)), ...column('right', pts.slice(half))]
+  })() : []
   return (
     <div ref={box} className={`relative rounded-2xl overflow-hidden border border-line map-ocean ${className}`}>
       {failed && <p className="absolute inset-0 grid place-items-center p-6 text-center" role="alert">{t('geo.error')}</p>}
@@ -209,25 +239,36 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
             const cap = capitalOf(c), cp = cap && geoPt(cap.lon, cap.lat), near = cp && Math.abs(cp[1] - p[1]) < 22 && p[0] > cp[0] - 30 && p[0] < cp[0] + 130
             return <text key={c} x={near ? cp[0] - 12 : p[0]} y={near ? cp[1] - 16 : p[1]} textAnchor={near ? 'end' : 'middle'} className="g-label">{name(c)}</text>
           })}
+          {view.k < 3 && TINY.map((c) => { const cap = capitalOf(c), p = cap ? geoPt(cap.lon, cap.lat, c === country ? countryLift : 0) : null; return inView(p) ? <circle key={`ring-${c}`} cx={p[0]} cy={p[1]} r={11} className="g-tiny" /> : null })}
+          {scene.map((l) => <g key={`line-${l.c}`} className="g-intro"><line x1={l.x} y1={l.y} x2={l.lx} y2={l.ly + labelH / 2} className="g-intro-line" /><circle cx={l.x} cy={l.y} r={3.5} className="g-intro-dot" /></g>)}
           {shownCapitals.map((c) => { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); return inView(p) ? (
             <g key={c.country}><circle cx={p[0]} cy={p[1]} r={5.5} className="g-capital" /><text x={p[0] + 9} y={p[1] + 4} className="g-city">{cityName(c)}</text></g>) : null })}
           {provShape && (() => { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); const up = pins.some((pn) => pn.province === provShape.code) ? 30 : 0 /* a pin stands on the same spot: lift the name above it */
             return p ? <text x={p[0]} y={p[1] - 16 - up} textAnchor="middle" className="g-name">{t(`prov.${provShape.code}` as never)}</text> : null })()}
-          {pins.map((pn, i) => {
+          {!intro && pins.map((pn, i) => {
             const pv = provs.find((x) => x.code === pn.province); if (!pv) return null
             const p = geoPt(pv.c[0], pv.c[1], (pn.province === province ? provLift : 0) + (pn.country === country ? countryLift : 0)); if (!inView(p)) return null
             return <g key={i} transform={`translate(${p[0]},${p[1]})`}><title>{pn.label}</title>
               <ellipse cx={0} cy={0} rx={6} ry={2.2} className="g-shadow" />
               <path d="M0 0 C-7 -9 -9 -13 -9 -17 A9 9 0 1 1 9 -17 C9 -13 7 -9 0 0 Z" className={pn.tone === 'post' ? 'g-pin-post' : 'g-pin'} /><circle cx={0} cy={-17} r={3.2} className="g-pin-dot" /></g>
           })}
-          {counts && Object.entries(counts).filter(([, n]) => n > 0).map(([code, n]) => {
+          {!intro && counts && Object.entries(counts).filter(([, n]) => n > 0).map(([code, n]) => {
             const pv = provs.find((x) => x.code === code); if (!pv) return null
             const p = geoPt(pv.c[0], pv.c[1], (code === province ? provLift : 0) + (pv.country === country ? countryLift : 0)); if (!inView(p)) return null
             const r = 10 + Math.min(12, Math.sqrt(n) * 3)
             return <g key={`n-${code}`} transform={`translate(${p[0]},${p[1]})`}><circle r={r} className="g-count" /><text y={4} textAnchor="middle" className="g-count-n">{n}</text></g>
           })}
         </svg>)}
-      {data && (
+      {scene.length > 0 && (
+        <div className="map-intro absolute inset-0 pointer-events-none">
+          {scene.map((l) => (
+            <button key={l.c} type="button" className="map-flag pointer-events-auto" style={{ top: l.ly, width: labelW, height: labelH, ...(l.side === 'left' ? { left: edge } : { right: edge }) }}
+              onClick={() => { setIntro(false); onPickCountry(l.c) }}>
+              <img src={FLAGS[l.c]} alt="" width={20} height={15} className="map-flag-img" /><span className="truncate">{name(l.c)}</span>
+            </button>))}
+          <button type="button" className="map-intro-go pointer-events-auto" onClick={() => setIntro(false)}><Icon name="globe" size={15} />{t('geo.introGo')}</button>
+        </div>)}
+      {data && !intro && (
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
           <button type="button" className="globe-ctl" onClick={() => zoomAt(1.3)} aria-label={t('geo.zoomIn')} title={t('geo.zoomIn')}><Icon name="plus" size={18} /></button>
           <button type="button" className="globe-ctl" onClick={() => zoomAt(1 / 1.3)} aria-label={t('geo.zoomOut')} title={t('geo.zoomOut')}><Icon name="minus" size={18} /></button>        </div>)}

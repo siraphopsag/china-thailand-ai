@@ -35,6 +35,12 @@ export interface Salary { min: number; max: number; currency: Currency }
 export const FREE_POSTS_PER_WEEK = 3
 export const MEMBER_POSTS_PER_WEEK = 10
 export const PINS_PER_WEEK = 5
+export const MEMBER_PINS_PER_WEEK = 10
+/** membership plans (owner, Oct 2026): planned prices in baht, shown struck through — free during the trial, no payment */
+export const PLANS = [{ id: 'm1', months: 1, price: 59 }, { id: 'm6', months: 6, price: 349 }, { id: 'y1', months: 12, price: 599 }] as const
+export type PlanId = (typeof PLANS)[number]['id']
+/** a membership ending within this many days is announced at the bell */
+export const MEMBER_WARN_DAYS = 7
 export const CYCLE_DAYS = 7
 /** a pin lasts a month; a post lasts 6 months from its (re)release, with a warning one week before it is removed */
 export const PIN_LIFE_DAYS = 30
@@ -110,8 +116,10 @@ export interface MatchState {
   clockHours: number
   me: Seeker
   myCompany: string
-  /** employer membership package (simulated, no payment): 10 posts per rolling 7 days instead of 3 */
+  /** membership (simulated, no payment): employers post 10 per cycle instead of 3, job seekers pin 10 instead of 5 */
   member: boolean
+  /** when the membership ends (null = no end date, from before the plans existed) */
+  memberUntil: string | null
   seekers: Seeker[]
   posts: Post[]
   acceptances: Acceptance[]

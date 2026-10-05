@@ -2,16 +2,17 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { canPost, isCountry, localDay, postQuota, type PostInput, type Problem } from '../domain/match/logic'
+import { canPost, isCountry, localDay, memberActive, postQuota, type PostInput, type Problem } from '../domain/match/logic'
 import { scheduleOf, stageAt } from '../domain/match/release'
 import { precheck, type Precheck } from '../domain/match/precheck'
-import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MEMBER_POSTS_PER_WEEK, MY_EMPLOYER, type Benefit, type Currency, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Skill } from '../domain/match/types'
+import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MY_EMPLOYER, type Benefit, type Currency, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Skill } from '../domain/match/types'
 import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
 import { Modal } from '../components/modal'
 import { Icon } from '../components/icons'
 import { IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
 import { postToInput } from '../domain/match/remote'
+import { PlanGrid } from './member'
 
 /**
  * Employer flow (owner, Oct 2026): place on the map → company and needs (4 groups) → "Check and post" → simulated AI pre-check →
@@ -33,7 +34,8 @@ const FIELD: Partial<Record<Problem, [string, string]>> = {
 export function HirePage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, limitNow, pool, post, editPost, deletePost, renew, subscribe } = useMatch()
+  const { st, now, limitNow, pool, post, editPost, deletePost, renew } = useMatch()
+  const [joinedUntil, setJoinedUntil] = useState<string | null>(null)
   const { until } = useRel()
   const editId = useSearchParam('edit')
   const [editing, setEditing] = useState<Post | null>(null)
@@ -199,7 +201,7 @@ export function HirePage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <button type="submit" className="btn-primary"><Icon name="ai" size={16} />{t(editing ? 'm.edit.save' : 'm.emp.post')}</button>
-            {editing ? <button type="button" className="btn-ghost" onClick={another}>{t('m.edit.cancel')}</button> : <QuotaNote used={used} limit={limit} member={st.member} />}
+            {editing ? <button type="button" className="btn-ghost" onClick={another}>{t('m.edit.cancel')}</button> : <QuotaNote used={used} limit={limit} member={memberActive(st, limitNow)} />}
           </div>
         </form>
       )}
@@ -250,13 +252,12 @@ export function HirePage() {
 
       {/* 4) weekly allowance reached → membership package (simulated, no payment) */}
       <Modal open={stage === 'package' || stage === 'joined'} onClose={() => setStage(null)}>{(id) => stage === 'joined' ? (<>
-        <div className="flex items-center gap-3"><span className="glass-drop w-11 h-11 shrink-0"><Icon name="ok" size={22} /></span><h2 id={id} className="h2">{t('m.pk.done', { n: MEMBER_POSTS_PER_WEEK })}</h2></div>
+        <div className="flex items-center gap-3"><span className="glass-drop w-11 h-11 shrink-0"><Icon name="ok" size={22} /></span><h2 id={id} className="h2">{t('m.plan.done', { d: joinedUntil ? N.day(joinedUntil) : '' })}</h2></div>
         <div className="flex justify-end"><button type="button" className="btn-primary" onClick={() => setStage(null)}>{t('m.pk.ok')}</button></div></>) : (<>
         <h2 id={id} className="h2">{t('m.pk.title')}</h2>
         <p className="text-sm text-muted">{t('m.pk.lead', { max: limit })}</p>
-        <PackageCard />
-        <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setStage(null)}>{t('m.pk.later')}</button>
-          <button type="button" className="btn-primary" onClick={async () => { await subscribe(); setStage('joined') }}>{t('m.pk.join')}</button></div></>)}</Modal>
+        <PlanGrid compact onJoined={(until) => { setJoinedUntil(until); setStage('joined') }} />
+        <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setStage(null)}>{t('m.pk.later')}</button></div></>)}</Modal>
     </Page>
   )
 }
@@ -264,15 +265,4 @@ export function HirePage() {
 function QuotaNote({ used, limit, member }: { used: number; limit: number; member: boolean }) {
   const { t } = useI18n()
   return <span className="text-xs text-muted inline-flex items-center gap-2">{t('m.q.count', { n: used, max: limit })}<span className={`chip ${member ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface3 text-muted border-line'}`}>{member ? t('m.q.member') : t('m.q.free')}</span></span>
-}
-/** the membership package as planned: 10 posts per 7 days, planned price struck through, free in the prototype */
-export function PackageCard() {
-  const { t } = useI18n()
-  return (
-    <div className="glass-card p-5 space-y-3">
-      <div className="flex items-center gap-3"><span className="glass-drop w-10 h-10 shrink-0"><Icon name="shield" size={20} /></span><div><p className="font-semibold">{t('m.pk.name')}</p><p className="text-sm text-muted">{t('m.pk.posts', { n: MEMBER_POSTS_PER_WEEK })}</p></div></div>
-      <p className="flex items-baseline gap-3"><span className="price-was text-lg text-muted"><span className="sr-only">{t('m.pk.priceSr')} </span>{t('m.pk.price')}</span><span className="text-2xl font-bold text-ok-fg">{t('m.pk.free')}</span></p>
-      <p className="text-xs text-muted">{t('m.pk.note')}</p>
-    </div>
-  )
 }

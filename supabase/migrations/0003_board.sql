@@ -52,6 +52,20 @@ end;
 $$;
 revoke all on function public.cycle_used(uuid, text[]) from public, anon, authenticated;
 
+-- membership plans (owner, Oct 2026: 1 month / 6 months / 1 year — free during the trial, no payment): an end date
+alter table public.profiles add column if not exists member_until timestamptz;
+grant update (member_until) on public.profiles to authenticated;
+create or replace function public.member_now(p_user uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((select member and (member_until is null or member_until > now()) from public.profiles where id = p_user), false);
+$$;
+revoke all on function public.member_now(uuid) from public, anon, authenticated;
+
 create or replace function public.post_limit(p_user uuid)
 returns int
 language sql
@@ -59,7 +73,7 @@ stable
 security definer
 set search_path = ''
 as $$
-  select coalesce((select case when member then 10 else 3 end from public.profiles where id = p_user), 3);
+  select case when public.member_now(p_user) then 10 else 3 end;
 $$;
 revoke all on function public.post_limit(uuid) from public, anon, authenticated;
 
@@ -133,7 +147,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  if public.cycle_used(new.seeker_id, array['pin']) >= 5 then raise exception 'pin_limit' using errcode = 'P0001'; end if;
+  if public.cycle_used(new.seeker_id, array['pin']) >= (case when public.member_now(new.seeker_id) then 10 else 5 end) then raise exception 'pin_limit' using errcode = 'P0001'; end if;
   if exists (select 1 from public.pins where seeker_id = new.seeker_id and country = new.country and province = new.province
              and industry = new.industry and created_at > now() - interval '30 days') then
     raise exception 'pin_duplicate' using errcode = 'P0001';
