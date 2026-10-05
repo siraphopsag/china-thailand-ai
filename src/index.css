@@ -366,16 +366,19 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 
 /* map: country borders strong enough to tell neighbours apart (owner, Oct 2026), rings for tiny countries, the opening scene */
 .g-tiny { fill: none; stroke: rgb(var(--globe-active)); stroke-width: 2; stroke-dasharray: 3 2.5 }
-.g-intro-line { stroke: rgb(var(--ink) / .7); stroke-width: 1.2 }
-.g-intro-dot { fill: rgb(var(--globe-capital)); stroke: rgb(var(--page)); stroke-width: 1.5 }
+.g-uni { fill: rgb(var(--globe-soon)); cursor: pointer } /* opening scene: every country in one colour */
+.g-pole { stroke: rgb(var(--ink) / .65); stroke-width: 1.5; stroke-linecap: round }
+.g-pole-foot { fill: rgb(var(--globe-capital)); stroke: rgb(var(--page)); stroke-width: 1.2 }
 .map-intro { animation: map-intro-in .35s ease-out both }
 @keyframes map-intro-in { from { opacity: 0 } to { opacity: 1 } }
-.map-flag { position: absolute; display: flex; align-items: center; gap: .35rem; padding: 0 .45rem; border-radius: .5rem; font-size: .75rem; font-weight: 600;
+.map-flag { position: absolute; display: flex; align-items: center; gap: 5px; padding: 0 7px 0 6px; border-radius: .45rem; font-size: 12px; font-weight: 600; white-space: nowrap; line-height: 1;
   color: rgb(var(--ink)); background: rgb(var(--surface) / .92); border: 1px solid rgb(var(--line)); box-shadow: 0 2px 8px rgb(0 0 0 / .12) }
 .map-flag:hover { background: rgb(var(--surface)); border-color: rgb(var(--primary)) }
 .map-flag:focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: 2px }
-.map-flag-img { width: 20px; height: 15px; flex-shrink: 0; border-radius: 2px; box-shadow: 0 0 0 1px rgb(0 0 0 / .15); object-fit: cover }
-.map-intro-go { position: absolute; left: 50%; bottom: .75rem; transform: translateX(-50%); display: inline-flex; align-items: center; gap: .4rem; min-height: 40px;
+.map-flag.is-small { gap: 4px; padding: 0 5px; font-size: 11px }
+.map-flag.is-small .map-flag-img { width: 15px; height: 11px }
+.map-flag-img { width: 18px; height: 13px; flex-shrink: 0; border-radius: 2px; box-shadow: 0 0 0 1px rgb(0 0 0 / .15); object-fit: cover }
+.map-intro-go { position: absolute; right: .75rem; bottom: .75rem; display: inline-flex; align-items: center; gap: .4rem; min-height: 40px;
   padding: 0 1rem; border-radius: 999px; font-size: .85rem; font-weight: 600; color: rgb(var(--onprimary)); background: rgb(var(--primary)); box-shadow: 0 6px 18px rgb(var(--primary) / .35) }
 .map-intro-go:focus-visible { outline: 3px solid rgb(var(--ink)); outline-offset: 2px }
 @media (prefers-reduced-motion: reduce) { .map-intro { animation: none } }

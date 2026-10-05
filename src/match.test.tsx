@@ -20,7 +20,8 @@ import { Landing } from './pages/home'
 import { ChooseRolePage } from './pages/choose'
 import { BackofficePage, NotificationsPage, SeekPage, SoonNote } from './pages/match'
 import { BoardPage } from './pages/board'
-import { TILT, leanPoint } from './components/geomap'
+import { TILT, layoutFlags, leanPoint } from './components/geomap'
+import type { GeoCode } from './geo'
 import { BackButton, Header } from './components/shell'
 import { SideNav, sideItems } from './components/sidenav'
 
@@ -256,6 +257,33 @@ describe('board bug hunt (Oct 2026)', () => {
   })
   it('a job seeker\'s map counts only the posts their list can show', () => {
     expect(src('./pages/board.tsx')).toContain('(seeker ? items.map((x) => x.post) : st.posts).reduce')
+  })
+})
+
+describe('map opening scene (owner, Oct 2026: poles with flags, a bare map in one colour)', () => {
+  it('flag labels on short upright poles never overlap, even in a dense group, and keep clear of the button', () => {
+    // a tight group like Laos – Thailand – Cambodia – Vietnam on a phone, plus neighbours
+    const pts = ([['LA', 160, 240], ['TH', 150, 262], ['KH', 172, 272], ['VN', 185, 230], ['MM', 120, 236], ['MY', 150, 320], ['SG', 165, 332], ['CN', 220, 120]] as const)
+      .map(([c, x, y]) => ({ c: c as GeoCode, x, y, width: 70 }))
+    const out = layoutFlags(pts, 340, 420, 20, [{ l: 190, t: 360, r: 340, b: 420 }])
+    const box = (q: (typeof out)[number]) => ({ l: q.left, t: q.top, r: q.left + q.width, b: q.top + 20 })
+    for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) {
+      const a = box(out[i]), b = box(out[j])
+      expect(a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b, `${out[i].c} × ${out[j].c}`).toBe(false)
+    }
+    for (const q of out) { expect(q.pole).toBeGreaterThanOrEqual(15); expect(q.pole).toBeLessThanOrEqual(68); expect(q.left).toBeGreaterThanOrEqual(4); expect(q.left + q.width).toBeLessThanOrEqual(336) }
+    expect(out.filter((q) => q.pole === 20).length).toBeGreaterThanOrEqual(3) // most poles stay short
+  })
+  it('the scene is a bare map in one colour (no country or capital names, no rings); poles are upright; labels fit their name', () => {
+    const g = src('./components/geomap.tsx')
+    expect(g).toContain("(!c ? 'g-dim' : intro ? 'g-uni' :")
+    expect(g).toContain('{!country && !intro && ([\'TH\', \'CN\'] as const)')
+    expect(g).toContain('{!intro && shownCapitals.map(')
+    expect(g).toContain('{!intro && view.k < 3 && TINY.map(')
+    expect(g).toContain('<line x1={l.x} y1={l.y} x2={l.x} y2={l.y - l.pole} className="g-pole" />')
+    expect(g).not.toContain('width: labelW') // no fixed label width
+    expect(src('./index.css')).toMatch(/\.map-flag \{[^}]*white-space: nowrap/)
+    expect(src('./components/flags.ts')).toContain("from 'flag-icons/flags/4x3/sg.svg'")
   })
 })
 
