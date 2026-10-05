@@ -328,3 +328,6 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .chip-box svg { opacity: 0 }
 .chip-check:has(input:checked) .chip-box { background: rgb(var(--primary)); border-color: rgb(var(--primary)); color: rgb(var(--onprimary)) }
 .chip-check:has(input:checked) .chip-box svg { opacity: 1 }
+
+/* in-page "are you sure?" (components/confirm.tsx): the yes of a destructive question is red */
+.btn-danger { background: rgb(var(--danger-fg)); border-color: rgb(var(--danger-fg)); color: rgb(var(--page)) }

@@ -357,4 +357,8 @@ export const match = {
   'm.pp.details': ['ข้อมูลประกาศ', '招聘信息', 'About the job'],
   'm.pp.notFound': ['ไม่พบประกาศนี้', '找不到这条招聘', 'This post was not found'],
   'm.pp.view': ['ดูรายละเอียดและสถานะ', '查看详情与状态', 'View details and status'],
+  // ---------- in-page confirmations (owner, Oct 2026)
+  'm.ask.yes': ['ยืนยัน', '确认', 'Confirm'],
+  'm.ask.no': ['ยกเลิก', '取消', 'Cancel'],
+  'm.ask.busy': ['กำลังบันทึก…', '正在保存…', 'Saving…'],
 } as const satisfies Record<string, Msg>

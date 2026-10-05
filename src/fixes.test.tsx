@@ -111,3 +111,13 @@ describe('posts and dates', () => {
     expect(src('./pages/hire.tsx')).toContain('const today = (now: number) => localDay(new Date(now).toISOString())')
   })
 })
+
+describe('in-page confirmations (owner, Oct 2026: delete / renew seemed to do nothing)', () => {
+  it('no page uses the browser confirm() box (blocked in some in-app browsers); the site asks in its own window', () => {
+    for (const p of ['./pages/hire.tsx', './pages/match.tsx', './pages/auth.tsx', './components/sidenav.tsx']) expect(src(p), p).not.toContain('window.confirm')
+    const c = src('./components/confirm.tsx')
+    expect(c).toContain('<Modal open={!!ask} onClose={() => answer(false)}>')
+    expect(src('./pages/hire.tsx')).toContain("if (!(await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true }))) return")
+    expect(src('./pages/hire.tsx')).toContain("{deleting === x.id ? t('m.ask.busy') : t('m.post.delete')}")
+  })
+})

@@ -8,6 +8,7 @@ import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MEMBER_POSTS
 import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
 import { Modal } from '../components/modal'
+import { useConfirm } from '../components/confirm'
 import { Icon } from '../components/icons'
 import { Empty, IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PlaceFields, PostFacts, PostStatus, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames } from './match'
 import { postToInput } from '../domain/match/remote'
@@ -50,6 +51,8 @@ export function HirePage() {
   const [pending, setPending] = useState<PostInput | null>(null)
   const [posted, setPosted] = useState<Post | null>(null)
   const fe = useFieldError()
+  const [ask, askDialog] = useConfirm()
+  const [deleting, setDeleting] = useState<string | null>(null)
   const gate = useGate('hire')
   const startEdit = (x: Post) => {
     const i = postToInput(x)
@@ -111,8 +114,10 @@ export function HirePage() {
     requestAnimationFrame(() => document.getElementById('emp-prov-c')?.focus())
   }
   const remove = async (x: Post) => {
-    if (!window.confirm(t('m.post.delete.confirm'))) return
+    if (!(await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true }))) return
+    setDeleting(x.id)
     const ok = await deletePost(x.id)
+    setDeleting(null)
     if (ok && editing?.id === x.id) another()
     setMsg(ok ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') })
   }
@@ -204,12 +209,13 @@ export function HirePage() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <NavLink to={`post?id=${x.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-primary min-h-[24px]">{t('m.pp.view')}<Icon name="next" size={14} /></NavLink>
                 <button type="button" className="inline-flex items-center gap-1 text-sm font-medium min-h-[24px] hover:underline underline-offset-4" onClick={() => startEdit(x)} aria-label={`${t('m.post.edit')}: ${x.position}`}><Icon name="edit" size={14} />{t('m.post.edit')}</button>
-                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-danger-fg min-h-[24px] hover:underline underline-offset-4" onClick={() => remove(x)} aria-label={`${t('m.post.delete')}: ${x.position}`}><Icon name="trash" size={14} />{t('m.post.delete')}</button>
+                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-danger-fg min-h-[24px] hover:underline underline-offset-4" onClick={() => remove(x)} disabled={deleting === x.id} aria-label={`${t('m.post.delete')}: ${x.position}`}><Icon name="trash" size={14} />{deleting === x.id ? t('m.ask.busy') : t('m.post.delete')}</button>
               </div>
             </li>))}</ul>)}
       </section>
       </MapLayout>
 
+      {askDialog}
       {/* 1) pre-check (simulated AI) */}
       <Modal open={stage === 'check'} onClose={closeCheck} wide>{(id) => check && (<>
         <div className="flex flex-wrap items-center gap-2"><h2 id={id} className="h2">{t('m.chk.title')}</h2><span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ai" size={12} />{t('m.chk.sim')}</span></div>
@@ -273,6 +279,8 @@ export function PostPage() {
   const N = useNames()
   const { st, now, deletePost } = useMatch()
   const id = useSearchParam('id')
+  const [ask, askDialog] = useConfirm()
+  const [busy, setBusy] = useState(false), [failed, setFailed] = useState(false)
   const gate = useGate(`post?id=${id}`)
   if (gate) return <Page title={t('m.pp.title')}>{gate}</Page>
   const p = st.posts.find((x) => x.id === id)
@@ -293,8 +301,14 @@ export function PostPage() {
       {p.employerId === MY_EMPLOYER && (
         <div className="flex flex-wrap gap-2">
           <NavLink to={`hire?edit=${p.id}`} className="btn-ghost"><Icon name="edit" size={16} />{t('m.post.edit')}</NavLink>
-          <button type="button" className="btn-ghost text-danger-fg" onClick={async () => { if (window.confirm(t('m.post.delete.confirm')) && (await deletePost(p.id))) go('hire') }}><Icon name="trash" size={16} />{t('m.post.delete')}</button>
+          <button type="button" className="btn-ghost text-danger-fg" disabled={busy} onClick={async () => {
+            if (!(await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true }))) return
+            setBusy(true); setFailed(false); const ok = await deletePost(p.id); setBusy(false)
+            if (ok) go('hire'); else setFailed(true)
+          }}><Icon name="trash" size={16} />{busy ? t('m.ask.busy') : t('m.post.delete')}</button>
         </div>)}
+      <div role="status">{failed && <p className="text-sm text-danger-fg">{t('m.post.delete.fail')}</p>}</div>
+      {askDialog}
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-5 items-start">
         <section className="glass-card p-5 space-y-3" aria-labelledby="pp-tl"><h2 id="pp-tl" className="h2">{t('m.pp.timeline')}</h2>
           <ol className="space-y-3">{steps.map((s, i) => (
