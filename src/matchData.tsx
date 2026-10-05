@@ -146,7 +146,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     const n = takeNext(); if (!n) return
     void (async () => {
       if (n.role) { try { const sb = await getClient(); await sb.from('profiles').update({ user_type: n.role }).eq('id', userId); await refresh() } catch { /* the role can be chosen again */ } }
-      go(n.next || (n.role === 'employer' ? 'hire' : n.role === 'seeker' ? 'seek' : ''))
+      go(n.next || (n.role === 'employer' ? 'hire' : n.role === 'seeker' ? 'seek' : ''), { replace: true })
     })()
   }, [mode, userId, refresh])
   useEffect(() => { try { localStorage.setItem(CLOCK_KEY, String(clock)) } catch { /* ignore */ } }, [clock])
@@ -199,7 +199,8 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       },
       editPost: async (id, input) => {
         const old = st.posts.find((p) => p.id === id && p.employerId === MY_EMPLOYER); if (!old) return fail('unknown')
-        const r = makePost(input, id, MY_EMPLOYER, at()); if (!r.ok) return r
+        // an unchanged start date is checked against the posting day (a post whose start has passed can still be corrected)
+        const r = makePost(input, id, MY_EMPLOYER, old.startDate && input.startDate === old.startDate ? old.createdAt : at()); if (!r.ok) return r
         const value = { ...r.value, createdAt: old.createdAt, releasedAt: old.releasedAt }
         if (local) { setLocal((s) => ({ ...s, myCompany: input.company, posts: s.posts.map((p) => (p.id === id ? value : p)) })); return { ok: true, value } }
         return write((sb) => sb.from('posts').update(postToRow(input)).eq('id', id).select().single(), (row) => rowToPost(row as PostRow, userId!))

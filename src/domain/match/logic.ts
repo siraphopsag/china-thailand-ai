@@ -21,6 +21,8 @@ export function textProblem(v: unknown, min: number, max: number): 'type' | 'len
   return null
 }
 
+/** the calendar day (YYYY-MM-DD) of a moment in the visitor's own time zone — date pickers work in local days, not UTC */
+export const localDay = (iso: string) => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 export const isCountry = (v: unknown): v is Country => v === 'TH' || v === 'CN'
 /** a first-level division code of that country that exists on the map (e.g. TH-50, CN-SH) */
 export const isProvinceOf = (c: Country, v: unknown): v is string => typeof v === 'string' && v.startsWith(c + '-') && `prov.${v}` in provinces
@@ -40,7 +42,7 @@ const isBenefits = (v: unknown): v is Benefit[] => Array.isArray(v) && v.every((
 const isSalary = (v: unknown): v is Salary => isObj(v) && Object.keys(v).length === 3 && intIn(v.min, 1, 10_000_000) && intIn(v.max, 1, 10_000_000) && oneOf(CURRENCIES, v.currency)
 const isDay = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v + 'T00:00:00Z'))
 /** a real day, not before `at`'s day, at most two years ahead */
-const dayWithin = (v: unknown, at: string): v is string => { const day = at.slice(0, 10); return isDay(v) && v >= day && Date.parse(v) <= Date.parse(day) + 731 * DAY_MS }
+const dayWithin = (v: unknown, at: string): v is string => { const day = localDay(at); return isDay(v) && v >= day && Date.parse(v) <= Date.parse(day) + 731 * DAY_MS }
 export type Outcome<T> = { ok: true; value: T } | { ok: false; problem: Problem }
 const fail = <T,>(problem: Problem): Outcome<T> => ({ ok: false, problem })
 const text = (v: unknown, min: number, max: number, field: Problem): Problem | null => { const p = textProblem(v, min, max); return p === null ? null : p === 'contact' ? 'contact' : field }

@@ -260,7 +260,7 @@ export function SeekPage() {
         <form className="card space-y-4" onSubmit={submitPin} aria-labelledby="s2h">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="s2h" className="h2">{t('m.seek.s2')}</h2>
-            <p className="text-sm text-muted">{t('m.seek.from', { p: N.place(st.me.origin!.country, st.me.origin!.province) })} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => setEditOrigin(true)}>{t('m.edit')}</button></p>
+            <p className="text-sm text-muted">{t('m.seek.from', { p: N.place(st.me.origin!.country, st.me.origin!.province) })} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => { setOc(st.me.origin?.country ?? null); setOp(st.me.origin?.province ?? null); setEditOrigin(true) }}>{t('m.edit')}</button></p>
           </div>
           <PlaceFields idp="dest-prov" fe={fe} country={dc} province={dp} onCountry={(c) => { setDc(c); setDp(null); fe.clear() }} onProvince={(p) => { setDp(p); fe.clear() }} />
           <p className="text-xs text-muted">{t('m.seek.same')}</p>
@@ -474,6 +474,8 @@ export function MePage() {
   const { t } = useI18n()
   const N = useNames()
   const { st, now } = useMatch()
+  const gate = useGate('me')
+  if (gate) return <Page title={t('m.profile.title')}>{gate}</Page>
   return (
     <Page title={t('m.profile.title')}>
       <section className="glass-card p-5 space-y-2">

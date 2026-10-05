@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { capacityOf, type Outcome, type Problem } from '../domain/match/logic'
+import { capacityOf, localDay, type Outcome, type Problem } from '../domain/match/logic'
 import { reachFor, scheduleOf, stageAt } from '../domain/match/release'
 import { LEVELS, ME, MY_EMPLOYER, type Acceptance } from '../domain/match/types'
 import { usePresence } from '../presence'
@@ -15,8 +15,8 @@ import { AgencyLinks, Empty, LevelBadge, Page, PostFacts, Toast, useApplicantNam
  * for a job seeker — apply (or reserve a place in the queue when it is full) with a short introduction and a start date, or
  * withdraw; for its employer — confirm or decline applicants, see the queue, renew, edit, delete.
  */
-const today = (now: number) => new Date(now).toISOString().slice(0, 10)
-const plusDays = (now: number, d: number) => new Date(now + d * 86_400_000).toISOString().slice(0, 10)
+const today = (now: number) => localDay(new Date(now).toISOString())
+const plusDays = (now: number, d: number) => localDay(new Date(now + d * 86_400_000).toISOString())
 
 export function PostPage() {
   const { t } = useI18n()

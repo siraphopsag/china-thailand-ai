@@ -6,9 +6,13 @@ const ROUTE_EVENT = 'app:navigate'
 const current = () => window.location.pathname.split('/').filter(Boolean).join('/')
 /** how many in-app pages lie behind the current history entry (0 = the visitor arrived here directly) */
 export const appDepth = (): number => { const d = (window.history.state as { d?: unknown } | null)?.d; return typeof d === 'number' ? d : 0 }
-export const go = (r: string) => {
+/** `replace`: take the place of the current entry (after signing in, so Back does not return to the sign-in page and bounce) */
+export const go = (r: string, opts?: { replace?: boolean }) => {
   // compare path + query, so going from /post?id=… to another post is a real navigation (paths without a query behave as before)
-  if (window.location.pathname + window.location.search !== '/' + r) window.history.pushState({ d: appDepth() + 1 }, '', '/' + r)
+  if (window.location.pathname + window.location.search !== '/' + r) {
+    if (opts?.replace) window.history.replaceState({ d: appDepth() }, '', '/' + r)
+    else window.history.pushState({ d: appDepth() + 1 }, '', '/' + r)
+  }
   window.dispatchEvent(new Event(ROUTE_EVENT)); window.scrollTo(0, 0)
 }
 /** "Back": the previous in-app page when there is one, otherwise the given parent page (never leaves the site) */

@@ -113,7 +113,7 @@ export function LoginButton() {
     document.addEventListener('keydown', esc); document.addEventListener('pointerdown', away)
     return () => { document.removeEventListener('keydown', esc); document.removeEventListener('pointerdown', away) }
   }, [menu])
-  if (status === 'off' || online === false) return null
+  if (status === 'off' || (online === false && status !== 'signedIn')) return null
   if (status === 'loading') return <span className="h-10 w-10 rounded-full bg-surface3 animate-pulse" aria-hidden />
   if (status === 'signedIn' && user) {
     const item = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2.5 min-h-[44px] hover:bg-surface3 text-sm'
