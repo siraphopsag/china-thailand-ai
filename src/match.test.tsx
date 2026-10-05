@@ -12,6 +12,7 @@ import { MatchProvider } from './matchData'
 import { AuthProvider } from './auth'
 import { DAY_MS, HOUR_MS, activePins, addPin, applyTo, cancel, clampFuture, decide, forward, inbox, isFull, makePost, parseState, pinQuota, poolOf, postState, removePin, renewPost, withoutExpired } from './domain/match/logic'
 import { matchLevel, reachFor, scheduleOf, stageAt } from './domain/match/release'
+import { dbProblem } from './domain/match/remote'
 import { seedState } from './domain/match/seed'
 import { ME, MY_EMPLOYER, type Industry, type MatchState, type Pin, type Seeker, type Skill } from './domain/match/types'
 import { messages, type MsgKey } from './locales/index'
@@ -284,6 +285,22 @@ describe('map opening scene (owner, Oct 2026: poles with flags, a bare map in on
     expect(g).not.toContain('width: labelW') // no fixed label width
     expect(src('./index.css')).toMatch(/\.map-flag \{[^}]*white-space: nowrap/)
     expect(src('./components/flags.ts')).toContain("from 'flag-icons/flags/4x3/sg.svg'")
+  })
+})
+
+describe('renew and delete on the board (owner, Oct 2026: they seemed to do nothing)', () => {
+  it('the post page and my posts ask in the site window (renew, delete, decline, withdraw) and show “saving”', () => {
+    for (const p of ['./pages/post.tsx', './pages/hire.tsx', './pages/board.tsx']) expect(src(p), p).not.toContain('window.confirm')
+    const post = src('./pages/post.tsx')
+    expect(post).toContain("if (await ask(t('m.em.renew.confirm'), { yes: t('m.em.renew') })) void act(() => renew(p.id), t('m.em.renewed'))")
+    expect(post).toContain('{askDialog}')
+    expect(src('./pages/hire.tsx')).toContain("{renewing === x.id ? t('m.ask.busy') : t('m.em.renew')}")
+  })
+  it('a database that has not run 0003 yet says so (not “check your connection”)', () => {
+    expect(dbProblem({ code: 'PGRST202', message: 'Could not find the function public.renew_post(p_id) in the schema cache' })).toBe('dbOld')
+    expect(dbProblem({ code: '42P01', message: 'relation \"public.quota_events\" does not exist' })).toBe('dbOld')
+    expect(dbProblem({ message: 'Failed to fetch' })).toBe('network')
+    expect(tr('m.err.dbOld', undefined, 'th')).toContain('0003_board.sql')
   })
 })
 

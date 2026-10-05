@@ -9,6 +9,7 @@ import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MY_EMPLOYER,
 import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
 import { Modal } from '../components/modal'
+import { useConfirm } from '../components/confirm'
 import { Icon } from '../components/icons'
 import { IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
 import { postToInput } from '../domain/match/remote'
@@ -54,6 +55,8 @@ export function HirePage() {
   const [pending, setPending] = useState<PostInput | null>(null)
   const [posted, setPosted] = useState<Post | null>(null)
   const fe = useFieldError()
+  const [ask, askDialog] = useConfirm()
+  const [deleting, setDeleting] = useState<string | null>(null), [renewing, setRenewing] = useState<string | null>(null)
   const gate = useGate('hire')
   const startEdit = (x: Post) => {
     const i = postToInput(x)
@@ -115,14 +118,18 @@ export function HirePage() {
     requestAnimationFrame(() => document.getElementById('emp-prov-c')?.focus())
   }
   const remove = async (x: Post) => {
-    if (!window.confirm(t('m.post.delete.confirm'))) return
+    if (!(await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true }))) return
+    setDeleting(x.id)
     const ok = await deletePost(x.id)
+    setDeleting(null)
     if (ok && editing?.id === x.id) another()
     setMsg(ok ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') })
   }
   const renewIt = async (x: Post) => {
-    if (!window.confirm(t('m.em.renew.confirm'))) return
+    if (!(await ask(t('m.em.renew.confirm'), { yes: t('m.em.renew') }))) return
+    setRenewing(x.id)
     const r = await renew(x.id)
+    setRenewing(null)
     if (r.ok) setMsg({ tone: 'info', text: t('m.em.renewed') })
     else if (r.problem === 'quota') setStage('package')
     else setMsg({ tone: 'danger', text: N.problem(r.problem) })
@@ -215,13 +222,14 @@ export function HirePage() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <NavLink to={`post?id=${x.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-primary min-h-[24px]">{t('m.pp.view')}<Icon name="next" size={14} /></NavLink>
                 <button type="button" className="inline-flex items-center gap-1 text-sm font-medium min-h-[24px] hover:underline underline-offset-4" onClick={() => startEdit(x)} aria-label={`${t('m.post.edit')}: ${x.position}`}><Icon name="edit" size={14} />{t('m.post.edit')}</button>
-                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium min-h-[24px] hover:underline underline-offset-4" onClick={() => renewIt(x)} aria-label={`${t('m.em.renew')}: ${x.position}`}><Icon name="renew" size={14} />{t('m.em.renew')}</button>
-                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-danger-fg min-h-[24px] hover:underline underline-offset-4" onClick={() => remove(x)} aria-label={`${t('m.post.delete')}: ${x.position}`}><Icon name="trash" size={14} />{t('m.post.delete')}</button>
+                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium min-h-[24px] hover:underline underline-offset-4" onClick={() => renewIt(x)} disabled={renewing === x.id} aria-label={`${t('m.em.renew')}: ${x.position}`}><Icon name="renew" size={14} />{renewing === x.id ? t('m.ask.busy') : t('m.em.renew')}</button>
+                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-danger-fg min-h-[24px] hover:underline underline-offset-4" onClick={() => remove(x)} disabled={deleting === x.id} aria-label={`${t('m.post.delete')}: ${x.position}`}><Icon name="trash" size={14} />{deleting === x.id ? t('m.ask.busy') : t('m.post.delete')}</button>
               </div>
             </PostCard>) })}</ul>)}
       </section>
       </MapLayout>
 
+      {askDialog}
       {/* 1) pre-check (simulated AI) */}
       <Modal open={stage === 'check'} onClose={closeCheck} wide>{(id) => check && (<>
         <div className="flex flex-wrap items-center gap-2"><h2 id={id} className="h2">{t('m.chk.title')}</h2><span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ai" size={12} />{t('m.chk.sim')}</span></div>

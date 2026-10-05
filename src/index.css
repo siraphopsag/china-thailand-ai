@@ -385,3 +385,5 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 
 /* membership plans: the 1-year plan carries the gold edge of level 1 */
 .plan-best { box-shadow: 0 0 0 2px rgb(var(--rar1-line)), 0 8px 26px -12px rgb(var(--rar1-line) / .8) }
+/* in-page "are you sure?" (components/confirm.tsx): the yes of a destructive question is red */
+.btn-danger { background: rgb(var(--danger-fg)); border-color: rgb(var(--danger-fg)); color: rgb(var(--page)) }

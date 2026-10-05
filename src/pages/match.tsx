@@ -14,6 +14,7 @@ import { GeoMap, type MapPin } from '../components/geomap'
 import { ListSelect } from '../components/listselect'
 import { Warn } from '../components/ui'
 import { Icon, type IconName } from '../components/icons'
+import { useConfirm } from '../components/confirm'
 import { motionOff, setMotionOff } from '../components/ui/background-paths'
 import { NeedLogin } from './auth'
 
@@ -495,6 +496,8 @@ function AccountSection() {
   const { t } = useI18n()
   const { status, user, isAdmin, deleteAccount } = useAuth()
   const [msg, setMsg] = useState<'done' | 'fail' | null>(null)
+  const [ask, askDialog] = useConfirm()
+  const [busy, setBusy] = useState(false)
   if (status === 'off' || status === 'loading') return null
   return (
     <section className="glass-card p-5 space-y-2" aria-labelledby="account-h">
@@ -502,9 +505,10 @@ function AccountSection() {
       {user ? (<>
         <p className="font-medium">{user.name} <span className="text-sm text-muted">· {user.email}</span></p>
         {isAdmin && <p className="text-sm inline-flex items-center gap-1.5 text-primary"><Icon name="shield" size={15} />{t('m.auth.admin')}</p>}
-        <div><button type="button" className="btn-ghost text-danger-fg" onClick={async () => { if (window.confirm(t('m.auth.delete.confirm'))) setMsg((await deleteAccount()) ? 'done' : 'fail') }}>{t('m.auth.delete')}</button></div>
+        <div><button type="button" className="btn-ghost text-danger-fg" disabled={busy} onClick={async () => { if (!(await ask(t('m.auth.delete.confirm'), { yes: t('m.auth.delete'), danger: true }))) return; setBusy(true); setMsg((await deleteAccount()) ? 'done' : 'fail'); setBusy(false) }}>{busy ? t('m.ask.busy') : t('m.auth.delete')}</button></div>
       </>) : <p className="text-sm text-muted">{t('m.auth.signedOut')} · {t('m.auth.optional')}</p>}
       <p role="status" className="text-sm">{msg === 'done' ? t('m.auth.delete.done') : msg === 'fail' ? t('m.auth.delete.fail') : ''}</p>
+      {askDialog}
     </section>
   )
 }
@@ -524,6 +528,7 @@ export function SettingsPage() {
   const { reset, mode } = useMatch()
   const [done, setDone] = useState(false)
   const [motion, setMotion] = useState(() => !motionOff())
+  const [ask, askDialog] = useConfirm()
   return (
     <Page title={t('m.settings.title')}>
       <section className="card space-y-4">
@@ -534,8 +539,9 @@ export function SettingsPage() {
           <p id="motion-hint" className="text-xs text-muted mt-1">{t('m.settings.motion.d')}</p></fieldset>
         <fieldset className="border-t border-line pt-3"><legend className="label">{t('m.clock.title')}</legend><ClockControls /></fieldset>
         {mode === 'local' && <div className="border-t border-line pt-3 space-y-2"><p className="text-sm text-muted">{t('m.settings.reset.d')}</p>
-          <button type="button" className="btn-ghost" onClick={() => { if (window.confirm(t('m.settings.reset.d'))) { reset(); setDone(true) } }}>{t('m.settings.reset')}</button>
+          <button type="button" className="btn-ghost" onClick={async () => { if (await ask(t('m.settings.reset.d'), { yes: t('m.settings.reset'), danger: true })) { reset(); setDone(true) } }}>{t('m.settings.reset')}</button>
           <p role="status" className="text-sm">{done && t('m.settings.resetDone')}</p></div>}
+        {askDialog}
       </section>
     </Page>
   )
@@ -553,6 +559,7 @@ export function BackofficePage() {
   const { isAdmin } = useAuth()
   const nameOf = useApplicantName()
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
+  const [ask, askDialog] = useConfirm()
   if (!isAdmin) return <Page title={t('m.adm.title')}><Warn>{t('m.adm.gate')}</Warn></Page>
   const people = [{ ...st.me, name: t('m.adm.you') }, ...st.seekers]
   return (
@@ -560,6 +567,7 @@ export function BackofficePage() {
       <ClockControls />
       <p className="text-xs text-muted">{t('m.adm.ai')}</p>
       <Toast msg={msg} />
+      {askDialog}
       {mode === 'remote' && stats && (
         <section aria-labelledby="adm-stats" className="space-y-2">
           <h2 id="adm-stats" className="h2">{t('m.adm.stats')}</h2>
@@ -583,7 +591,7 @@ export function BackofficePage() {
                 <div><p className="font-medium">{t('m.adm.reached')} ({reached.length})</p><p className="text-muted">{reached.map((x) => x.s.name).join(', ') || t('m.adm.none')}</p></div>
                 <div><p className="font-medium">{t('m.adm.waiting')}</p><p className="text-muted">{waiting.map((x) => `${x.s.name} (${t('m.lv.short', { n: x.r.level })})`).join(', ') || t('m.adm.none')}</p></div>
               </div>
-              <div className="flex justify-end"><button type="button" className="btn-ghost text-sm text-danger-fg" onClick={async () => { if (window.confirm(t('m.post.delete.confirm'))) setMsg((await deletePost(p.id)) ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') }) }}><Icon name="trash" size={15} />{t('m.post.delete')}</button></div>
+              <div className="flex justify-end"><button type="button" className="btn-ghost text-sm text-danger-fg" onClick={async () => { if (await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true })) setMsg((await deletePost(p.id)) ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') }) }}><Icon name="trash" size={15} />{t('m.post.delete')}</button></div>
               {acc.map((a) => (
                 <div key={a.id} className="border-t border-line pt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span><Icon name="ok" size={15} className="inline text-ok-fg" /> {nameOf(a)} · {t(`m.as.${a.status}` as never)}</span>

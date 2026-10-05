@@ -8,6 +8,7 @@ import { LEVELS, ME, MY_EMPLOYER, type Acceptance } from '../domain/match/types'
 import { usePresence } from '../presence'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
+import { useConfirm } from '../components/confirm'
 import { AgencyLinks, Empty, LevelBadge, Page, PostFacts, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 
 /**
@@ -27,6 +28,7 @@ export function PostPage() {
   const id = useSearchParam('id')
   const [intro, setIntro] = useState(''), [from, setFrom] = useState(''), [focused, setFocused] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [ask, askDialog] = useConfirm()
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   const fe = useFieldError()
   const p = st.posts.find((x) => x.id === id)
@@ -80,6 +82,7 @@ export function PostPage() {
         {presence && presence.filling > 0 && <p className="text-sm font-medium text-warn-fg flex items-center gap-1.5"><Icon name="edit" size={16} />{t('m.live.filling', { n: presence.filling })}</p>}
       </div>
       <Toast msg={msg} />
+      {askDialog}
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-5 items-start">
         <div className="space-y-5 min-w-0">
@@ -92,7 +95,7 @@ export function PostPage() {
                 {myApp.promotedAt && <p className="text-sm text-muted">{t('m.ap.promoted', { d: N.dayTime(Date.parse(myApp.promotedAt)) })}</p>}
                 {(myApp.status === 'confirmed' || myApp.status === 'forwarded') && <AgencyLinks />}
                 {(myApp.status === 'accepted' || myApp.status === 'reserved' || myApp.status === 'confirmed') && (
-                  <button type="button" className="btn-ghost text-danger-fg" disabled={busy} onClick={() => { if (window.confirm(t('m.ap.withdraw.confirm'))) void act(() => withdraw(myApp.id), t('m.ap.withdrawn')) }}>{t(myApp.status === 'reserved' ? 'm.ap.withdrawQueue' : 'm.ap.withdraw')}</button>)}
+                  <button type="button" className="btn-ghost text-danger-fg" disabled={busy} onClick={async () => { if (await ask(t('m.ap.withdraw.confirm'), { yes: t(myApp.status === 'reserved' ? 'm.ap.withdrawQueue' : 'm.ap.withdraw'), danger: true })) void act(() => withdraw(myApp.id), t('m.ap.withdrawn')) }}>{busy ? t('m.ask.busy') : t(myApp.status === 'reserved' ? 'm.ap.withdrawQueue' : 'm.ap.withdraw')}</button>)}
               </>) : canApply ? (
                 <form className="space-y-3" onSubmit={submit} noValidate onFocus={() => setFocused(true)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false) }}>
                   <h2 id="ap-h" className="h2">{t(full ? 'm.ap.reserveTitle' : 'm.ap.title')}</h2>
@@ -117,9 +120,13 @@ export function PostPage() {
               {now >= s.warnAt && <Warn>{t('m.em.expiring', { t: until(s.expiresAt) })}</Warn>}
               <p className="text-sm text-muted">{t('m.em.life', { d: N.dayTime(s.expiresAt) })}</p>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn-primary text-sm" disabled={busy} onClick={() => { if (window.confirm(t('m.em.renew.confirm'))) void act(() => renew(p.id), t('m.em.renewed')) }}><Icon name="renew" size={15} />{t('m.em.renew')}</button>
+                <button type="button" className="btn-primary text-sm" disabled={busy} onClick={async () => { if (await ask(t('m.em.renew.confirm'), { yes: t('m.em.renew') })) void act(() => renew(p.id), t('m.em.renewed')) }}><Icon name="renew" size={15} />{busy ? t('m.ask.busy') : t('m.em.renew')}</button>
                 <NavLink to={`hire?edit=${p.id}`} className="btn-ghost text-sm"><Icon name="edit" size={15} />{t('m.post.edit')}</NavLink>
-                <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={async () => { if (window.confirm(t('m.post.delete.confirm')) && (await deletePost(p.id))) go('hire') }}><Icon name="trash" size={15} />{t('m.post.delete')}</button>
+                <button type="button" className="btn-ghost text-sm text-danger-fg" disabled={busy} onClick={async () => {
+                  if (!(await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true }))) return
+                  setBusy(true); const ok = await deletePost(p.id); setBusy(false)
+                  if (ok) go('hire'); else setMsg({ tone: 'danger', text: t('m.post.delete.fail') })
+                }}><Icon name="trash" size={15} />{t('m.post.delete')}</button>
               </div>
               <h3 className="font-semibold pt-2 border-t border-line">{t('m.em.applicants', { n: appsOf.filter((a) => a.status !== 'reserved').length })}</h3>
               {!appsOf.some((a) => a.status !== 'reserved') ? <p className="text-sm text-muted">{t('m.em.noneYet')}</p> : (
@@ -130,7 +137,7 @@ export function PostPage() {
                     {a.availableFrom && <p className="text-xs text-muted">{t('m.ap.fromShort', { d: N.day(a.availableFrom) })}{a.promotedAt ? ` · ${t('m.n.fromQueue')}` : ''}</p>}
                     {a.status === 'accepted' && <div className="flex flex-wrap gap-2 pt-1">
                       <button type="button" className="btn-primary text-sm" disabled={busy} onClick={() => void act(() => decide(a.id, true), t('m.em.confirmed'))}><Icon name="ok" size={15} />{t('m.em.confirm')}</button>
-                      <button type="button" className="btn-ghost text-sm" disabled={busy} onClick={() => { if (window.confirm(t('m.em.decline.confirm'))) void act(() => decide(a.id, false), t('m.em.declined')) }}>{t('m.em.decline')}</button>
+                      <button type="button" className="btn-ghost text-sm" disabled={busy} onClick={async () => { if (await ask(t('m.em.decline.confirm'), { yes: t('m.em.decline'), danger: true })) void act(() => decide(a.id, false), t('m.em.declined')) }}>{t('m.em.decline')}</button>
                     </div>}
                   </li>))}</ul>)}
               <h3 className="font-semibold pt-2 border-t border-line">{t('m.em.queue', { n: queue.length })}</h3>

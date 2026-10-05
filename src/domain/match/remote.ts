@@ -101,8 +101,10 @@ export function buildState(input: { uid: string; name: string; profile: ProfileR
 }
 
 /** database error → one of the prototype's problems (the message text is never shown as is) */
-export function dbProblem(e: { message?: string; code?: string } | null | undefined): 'quota' | 'limit' | 'duplicate' | 'already' | 'contact' | 'notOpen' | 'state' | 'belowHeld' | 'network' {
+export function dbProblem(e: { message?: string; code?: string } | null | undefined): 'quota' | 'limit' | 'duplicate' | 'already' | 'contact' | 'notOpen' | 'state' | 'belowHeld' | 'dbOld' | 'network' {
   const m = e?.message ?? ''
+  // a function, table or column this website needs is missing: the database has not been updated (0003_board.sql)
+  if (['PGRST202', 'PGRST204', 'PGRST205', '42883', '42P01', '42703'].includes(e?.code ?? '') || /schema cache|does not exist/i.test(m)) return 'dbOld'
   if (m.includes('quota')) return 'quota'
   if (m.includes('below_held')) return 'belowHeld'
   if (m.includes('pin_limit')) return 'limit'

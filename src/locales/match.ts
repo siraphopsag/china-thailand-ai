@@ -473,6 +473,7 @@ export const match = {
   'm.err.available': ['เลือกวันที่เริ่มงานได้ ตั้งแต่วันนี้ และไม่เกิน 2 ปี', '请选择可入职日期：从今天起，两年内', 'Choose the day you can start: from today, within two years'],
   'm.err.state': ['ทำรายการนี้ไม่ได้แล้ว ลองรีเฟรชหน้า', '此操作已无法进行，请刷新页面', 'This can no longer be done — refresh the page'],
   'm.err.belowHeld': ['มีคนได้ที่แล้วมากกว่าจำนวนนี้ — ลดจำนวนคนต่ำกว่าคนที่ได้ที่แล้วไม่ได้', '已占名额的人数多于此数——不能少于已占名额的人数', 'More people already hold a place — the number cannot go below them'],
+  'm.err.dbOld': ['ฐานข้อมูลยังไม่ได้อัปเดต — เจ้าของระบบต้องรันไฟล์ 0003_board.sql ใน Supabase ก่อน (คู่มือข้อ 12)', '数据库尚未更新——系统所有者需先在 Supabase 中运行 0003_board.sql（指南第 12 步）', 'The database has not been updated yet — the site owner needs to run 0003_board.sql in Supabase first (guide step 12)'],
   // ---------- membership plans (owner, Oct 2026)
   'm.member': ['สมาชิก', '会员', 'Membership'],
   'm.plan.title': ['สมัครสมาชิก', '开通会员', 'Membership'],
@@ -503,4 +504,8 @@ export const match = {
   'm.plan.perkBadge.d': ['ป้าย "สมาชิก" ในโปรไฟล์ · หมดอายุแล้วกลับเป็นแบบฟรีอัตโนมัติ (แจ้งเตือนก่อน 7 วัน)', '个人资料中的"会员"标识 · 到期后自动恢复免费（提前 7 天提醒）', 'A "member" badge on your profile · when it ends you are back on the free plan (a reminder 7 days before)'],
   'm.n.memberEnds': ['สมาชิกของคุณจะหมดอายุ{t}', '您的会员将于{t}到期', 'Your membership ends {t}'],
   'm.n.memberHint': ['ต่ออายุได้ที่หน้าสมาชิก (ฟรีช่วงทดลอง)', '可在会员页面续期（试用期免费）', 'Extend it on the membership page (free in the trial)'],
+  // ---------- in-page confirmations (owner, Oct 2026)
+  'm.ask.yes': ['ยืนยัน', '确认', 'Confirm'],
+  'm.ask.no': ['ยกเลิก', '取消', 'Cancel'],
+  'm.ask.busy': ['กำลังบันทึก…', '正在保存…', 'Saving…'],
 } as const satisfies Record<string, Msg>
