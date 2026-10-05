@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { canPost, isCountry, localDay, memberActive, postQuota, type PostInput, type Problem } from '../domain/match/logic'
-import { scheduleOf, stageAt } from '../domain/match/release'
+import { canPost, caseBlocksDelete, employerVerified, isCountry, localDay, memberActive, postQuota, type PostInput, type Problem } from '../domain/match/logic'
+import { scheduleOf, stageAt, capStage } from '../domain/match/release'
 import { precheck, type Precheck } from '../domain/match/precheck'
 import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MY_EMPLOYER, type Benefit, type Currency, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Skill } from '../domain/match/types'
 import type { GeoCode } from '../geo'
@@ -12,6 +12,7 @@ import { Modal } from '../components/modal'
 import { useConfirm } from '../components/confirm'
 import { Icon } from '../components/icons'
 import { IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
+import { VerifyCard } from './case'
 import { postToInput } from '../domain/match/remote'
 import { PlanGrid } from './member'
 
@@ -118,6 +119,7 @@ export function HirePage() {
     requestAnimationFrame(() => document.getElementById('emp-prov-c')?.focus())
   }
   const remove = async (x: Post) => {
+    if (caseBlocksDelete(st, x.id)) { setMsg({ tone: 'danger', text: N.problem('caseStarted') }); return }
     if (!(await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true }))) return
     setDeleting(x.id)
     const ok = await deletePost(x.id)
@@ -212,11 +214,12 @@ export function HirePage() {
           </div>
         </form>
       )}
+      {!employerVerified(st) && <VerifyCard />}
       <section className="space-y-2" aria-labelledby="myposts-h">
         <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="myposts-h" className="h2">{t('m.posts')}</h2><NavLink to="board" className="text-sm font-medium text-primary inline-flex items-center gap-1 min-h-[24px]">{t('m.board')}<Icon name="next" size={14} /></NavLink></div>
         <QuotaBar q={q} kind="post" />
         {!mine.length ? <div className="glass-card p-5 text-muted">{t('m.posts.none')}</div> : (
-          <ul className="space-y-2">{mine.map((x) => { const sc = scheduleOf(x, pool, now), stage = stageAt(sc, now); return stage === 'expired' ? null : (
+          <ul className="space-y-2">{mine.map((x) => { const sc = scheduleOf(x, pool, now), stage = capStage(stageAt(sc, now), x); return stage === 'expired' ? null : (
             <PostCard key={x.id} post={x} level={stage} reached>
               {now >= sc.warnAt && <p className="text-sm text-warn-fg flex items-center gap-1.5"><Icon name="hourglass" size={15} />{t('m.em.expiring', { t: until(sc.expiresAt) })}</p>}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

@@ -6,7 +6,7 @@ import { useMatch } from '../matchData'
 import { useAuth } from '../auth'
 import { provinces } from '../locales/provinces'
 import { activePins, capacityOf, inbox, isCountry, memberActive, pinQuota, type Problem } from '../domain/match/logic'
-import { DAY_MS, reachFor, scheduleOf, stageAt, type Quota } from '../domain/match/release'
+import { DAY_MS, reachFor, scheduleOf, stageAt, type Quota, capStage } from '../domain/match/release'
 import { INDUSTRIES, MY_EMPLOYER, PIN_LIFE_DAYS, SKILLS, type Acceptance, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type Level, type Post, type Salary, type Skill } from '../domain/match/types'
 import { ACTIVE, GEO, SOON, type GeoCode } from '../geo'
 import capitalsData from '../data/geo/capitals.json'
@@ -17,10 +17,12 @@ import { Icon, type IconName } from '../components/icons'
 import { useConfirm } from '../components/confirm'
 import { motionOff, setMotionOff } from '../components/ui/background-paths'
 import { NeedLogin } from './auth'
+import { VerifyCard } from './case'
+import { currentStep, stepsDone } from '../domain/match/cases'
 
 /**
- * Pages of the matching prototype. Data stay in this browser (see matchData.tsx); forwarding to agencies is simulated and
- * nothing is sent anywhere. Links to agencies open their official websites.
+ * Pages of the matching prototype. Data stay in this browser or the project's database (see matchData.tsx); after a match the
+ * case is followed on pages/case.tsx, where an administrator plays the agency. Links to agencies open their official websites.
  */
 const CAPITALS = capitalsData as { country: GeoCode; name: string }[]
 const AGENCIES = [{ key: 'm.agency.doe', url: 'https://www.doe.go.th/' }, { key: 'm.agency.dsd', url: 'https://www.dsd.go.th/' }] as const
@@ -320,6 +322,8 @@ export function PostCard({ post, level, reached, children }: { post: Post; level
         <span className="chip bg-surface3 border-line"><Icon name="users" size={12} />{t('m.cnt.held', { n: c.held, max: cap })}</span>
         {c.reserved > 0 && <span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ticket" size={12} />{t('m.cnt.reserved', { n: c.reserved })}</span>}
         {state !== 'open' && <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(state === 'waiting' ? 'm.state.waiting' : 'm.state.closed')}</span>}
+        {post.verified ? <span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name="shield" size={12} />{t('m.vf.badge')}</span>
+          : <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="warn" size={12} />{t('m.vf.unverified')}</span>}
       </p>
       {children}
     </li>
@@ -426,6 +430,16 @@ export function NotificationsPage() {
   const gate = useGate('notifications')
   if (gate) return <Page title={t('m.notif.title')}>{gate}</Page>
   const box = inbox(st, pool, now, (id) => counts[id]?.reserved ?? 0)
+  const caseNotes = box.cases.map((c) => {
+    const p = st.posts.find((x) => x.id === c.postId); if (!p) return null
+    const cur = currentStep(c), news = box.caseNews.includes(c)
+    const arrive = st.role === 'employer' && cur === 'arrived'
+    return <NoteItem key={`c-${c.id}`} icon="plane" tone={arrive ? 'warn' : undefined} to={`case?id=${c.id}`}
+      title={t('m.cs.n.item', { p: p.position, s: cur ? t(`m.cs.s.${cur}` as never) : t('m.cs.n.closed') })}
+      text={[t('m.cs.progress', { n: stepsDone(c) }), arrive ? t('m.cs.n.arrive') : news ? t('m.cs.n.updated') : ''].filter(Boolean).join(' · ')} />
+  })
+  const caseSection = box.cases.length > 0 && (
+    <section className="space-y-2" aria-labelledby="n-cs"><h2 id="n-cs" className="h2">{t('m.cs.n.h')}</h2><ul className="space-y-2">{caseNotes}</ul></section>)
   const memberNote = box.memberEnds ? <NoteItem icon="crown" tone="warn" title={t('m.n.memberEnds', { t: until(box.memberEnds) })} text={t('m.n.memberHint')} to="member" /> : null
   if (st.role === 'employer') {
     const mine = st.posts.filter((p) => p.employerId === MY_EMPLOYER)
@@ -433,7 +447,8 @@ export function NotificationsPage() {
     const expiring = box.expiring.map((p) => ({ p, s: scheduleOf(p, pool, now) }))
     return (
       <Page title={t('m.notif.title')}>
-        {!waiting.length && !reserved.length && !expiring.length && !memberNote ? <Empty icon="bell" text={t('m.notif.none')} to="hire" action={t('m.posts')} /> : (
+        {caseSection}
+        {!waiting.length && !reserved.length && !expiring.length && !memberNote ? (box.cases.length ? null : <Empty icon="bell" text={t('m.notif.none')} to="hire" action={t('m.posts')} />) : (
           <ul className="space-y-2">
             {memberNote}
             {expiring.map(({ p, s }) => <NoteItem key={`x-${p.id}`} icon="hourglass" tone="warn" title={t('m.n.expiring', { p: p.position, t: until(s.expiresAt) })} text={t('m.n.renewHint')} to={`post?id=${p.id}`} />)}
@@ -448,7 +463,8 @@ export function NotificationsPage() {
   return (
     <Page title={t('m.notif.title')}>
       {memberNote && <ul>{memberNote}</ul>}
-      {!box.hasPins && !updates.length ? <Empty icon="pin" text={t('m.notif.noPins')} to="seek" action={t('m.pins')} /> : (<>
+      {caseSection}
+      {!box.hasPins && !updates.length ? ( <Empty icon="pin" text={t('m.notif.noPins')} to="seek" action={t('m.pins')} />) : (<>
         {updates.length > 0 && (
           <section className="space-y-2" aria-labelledby="n-up"><h2 id="n-up" className="h2">{t('m.n.updates')}</h2>
             <ul className="space-y-2">{updates.map((a) => { const p = st.posts.find((x) => x.id === a.postId); if (!p) return null; return (
@@ -487,6 +503,7 @@ export function MePage() {
         <NavLink to="choose-role" className="btn-ghost inline-flex">{t('m.profile.change')}</NavLink>
         <p className="text-xs text-muted">{t('m.profile.note')}</p>
       </section>
+      {st.role === 'employer' && <VerifyCard />}
       <AccountSection />
     </Page>
   )
@@ -555,13 +572,17 @@ export function HelpPage() {
 export function BackofficePage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, pool, forwardCase, deletePost, stats, mode } = useMatch()
+  const { st, now, pool, deletePost, stats, mode, pendingVerifications, decideVerification } = useMatch()
   const { isAdmin } = useAuth()
   const nameOf = useApplicantName()
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   const [ask, askDialog] = useConfirm()
   if (!isAdmin) return <Page title={t('m.adm.title')}><Warn>{t('m.adm.gate')}</Warn></Page>
   const people = [{ ...st.me, name: t('m.adm.you') }, ...st.seekers]
+  const decideV = async (id: string | null, ok: boolean) => {
+    if (!ok && !(await ask(t('m.adm.reject.confirm'), { yes: t('m.adm.reject'), danger: true }))) return
+    setMsg((await decideVerification(id, ok)) ? { tone: 'info', text: t('m.adm.verifyDone') } : { tone: 'danger', text: t('m.err.network') })
+  }
   return (
     <Page title={t('m.adm.title')} sub={t('m.adm.sub')}>
       <ClockControls />
@@ -574,10 +595,35 @@ export function BackofficePage() {
           <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">{([['m.adm.st.users', stats.users], ['m.adm.st.employers', stats.employers], ['m.adm.st.seekers', stats.seekers], ['m.adm.st.posts', stats.posts], ['m.adm.st.posts7', stats.posts_7d], ['m.adm.st.acc', stats.acceptances]] as const).map(([k, v]) => (
             <div key={k} className="glass-card glass-lite p-3"><dt className="text-xs text-muted">{t(k)}</dt><dd className="text-2xl font-bold">{v}</dd></div>))}</dl>
         </section>)}
+      <section className="space-y-2" aria-labelledby="adm-vf">
+        <h2 id="adm-vf" className="h2">{t('m.adm.verify', { n: pendingVerifications.length })}</h2>
+        <p className="text-xs text-muted">{t('m.adm.verifyCheck')}</p>
+        {!pendingVerifications.length ? <p className="text-sm text-muted">{t('m.adm.verifyNone')}</p> : (
+          <ul className="space-y-2">{pendingVerifications.map((v) => (
+            <li key={v.id ?? 'me'} className="glass-card glass-lite p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+              <div><p className="font-semibold">{v.company || '—'} <span className="font-normal text-muted">· {v.name}</span></p>
+                <p className="text-muted">{t(`geo.c.${v.country}` as never)} · <span className="font-mono">{v.regNo}</span>{v.at ? ` · ${N.dayTime(Date.parse(v.at))}` : ''}</p></div>
+              <div className="flex gap-2"><button type="button" className="btn-primary text-sm" onClick={() => void decideV(v.id, true)}><Icon name="ok" size={15} />{t('m.adm.approve')}</button>
+                <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideV(v.id, false)}>{t('m.adm.reject')}</button></div>
+            </li>))}</ul>)}
+      </section>
+      <section className="space-y-2" aria-labelledby="adm-cs">
+        <h2 id="adm-cs" className="h2">{t('m.adm.cases', { n: st.cases.length })}</h2>
+        {!st.cases.length ? <p className="text-sm text-muted">{t('m.adm.casesNone')}</p> : (
+          <ul className="space-y-2">{st.cases.map((c) => {
+            const p = st.posts.find((x) => x.id === c.postId), a = st.acceptances.find((x) => x.id === c.accId), cur = currentStep(c)
+            return (
+              <li key={c.id} className="glass-card glass-lite p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <div><p className="font-semibold">{p ? `${p.position} · ${p.company}` : '—'}</p>
+                  <p className="text-muted">{a ? nameOf(a) : '—'} · {cur ? t(`m.cs.s.${cur}` as never) : t('m.cs.n.closed')} · {t('m.cs.progress', { n: stepsDone(c) })}</p></div>
+                <NavLink to={`case?id=${c.id}`} className="btn-ghost text-sm"><Icon name="plane" size={15} />{t('m.cs.open')}</NavLink>
+              </li>)
+          })}</ul>)}
+      </section>
       <section className="space-y-3" aria-labelledby="adm-posts">
         <h2 id="adm-posts" className="h2">{t('m.adm.posts')}</h2>
         <ul className="space-y-3">{st.posts.map((p) => {
-          const stage = stageAt(scheduleOf(p, pool, now), now)
+          const stage = capStage(stageAt(scheduleOf(p, pool, now), now), p)
           const reach = people.map((s) => ({ s, r: reachFor(p, s.pins, pool, now) }))
           const reached = reach.filter((x) => x.r.visible), waiting = reach.filter((x) => !x.r.visible && x.r.level < 5)
           const acc = st.acceptances.filter((a) => a.postId === p.id).sort((a, b) => a.at.localeCompare(b.at))
@@ -595,8 +641,7 @@ export function BackofficePage() {
               {acc.map((a) => (
                 <div key={a.id} className="border-t border-line pt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span><Icon name="ok" size={15} className="inline text-ok-fg" /> {nameOf(a)} · {t(`m.as.${a.status}` as never)}</span>
-                  {a.status === 'confirmed' ? <button type="button" className="btn-primary text-sm" onClick={() => { void forwardCase(a.id) }}><Icon name="send" size={15} />{t('m.adm.forward')}</button>
-                    : a.status === 'forwarded' ? <span className="text-xs text-muted">{t('m.adm.forwarded')}</span> : null}
+                  {(() => { const c = st.cases.find((x) => x.accId === a.id); return c ? <NavLink to={`case?id=${c.id}`} className="text-sm text-primary underline underline-offset-4 min-h-[24px] inline-flex items-center">{t('m.adm.forwarded')}</NavLink> : null })()}
                 </div>))}
             </li>)
         })}</ul>

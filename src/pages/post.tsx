@@ -2,13 +2,14 @@ import { useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { capacityOf, localDay, type Outcome, type Problem } from '../domain/match/logic'
-import { reachFor, scheduleOf, stageAt } from '../domain/match/release'
+import { capacityOf, caseBlocksDelete, localDay, type Outcome, type Problem } from '../domain/match/logic'
+import { reachFor, scheduleOf, stageAt, capStage } from '../domain/match/release'
 import { LEVELS, ME, MY_EMPLOYER, type Acceptance } from '../domain/match/types'
 import { usePresence } from '../presence'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
+import { CaseLink } from './case'
 import { AgencyLinks, Empty, LevelBadge, Page, PostFacts, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 
 /**
@@ -34,6 +35,8 @@ export function PostPage() {
   const p = st.posts.find((x) => x.id === id)
   const mine = !!p && p.employerId === MY_EMPLOYER
   const myApp = p ? st.acceptances.find((a) => a.postId === p.id && a.seekerId === ME) : undefined
+  const caseOf = (accId: string) => st.cases.find((c) => c.accId === accId)
+  const myCase = myApp ? caseOf(myApp.id) : undefined
   const reach = p && !mine ? reachFor(p, st.me.pins, pool, now) : null
   const canApply = !!p && !mine && !myApp && st.role === 'seeker' && !!reach?.visible
   const presence = usePresence(p?.id ?? null, mode === 'remote', canApply && (focused || intro !== '' || from !== ''))
@@ -41,7 +44,7 @@ export function PostPage() {
   if (gate) return <Page title={t('m.pp.title')}>{gate}</Page>
   if (!p) return <Page title={t('m.pp.title')}><Empty icon="posts" text={t('m.pp.notFound')} to="board" action={t('m.board')} /></Page>
 
-  const s = scheduleOf(p, pool, now), stage = stageAt(s, now)
+  const s = scheduleOf(p, pool, now), stage = capStage(stageAt(s, now), p)
   const c = counts[p.id] ?? { held: 0, pending: 0, reserved: 0 }, cap = capacityOf(p)
   const full = c.held >= cap
   const state = full ? (c.pending > 0 ? 'waiting' : 'closed') : 'open'
@@ -75,12 +78,15 @@ export function PostPage() {
         <span className="chip bg-surface3 border-line"><Icon name="users" size={12} />{t('m.cnt.held', { n: c.held, max: cap })}</span>
         {c.reserved > 0 && <span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ticket" size={12} />{t('m.cnt.reserved', { n: c.reserved })}</span>}
         {state !== 'open' && <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(state === 'waiting' ? 'm.state.waiting' : 'm.state.closed')}</span>}
+        {p.verified ? <span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name="shield" size={12} />{t('m.vf.badge')}</span>
+          : <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="warn" size={12} />{t('m.vf.unverified')}</span>}
       </div>
       {/* real people only: others who have this post open now, and how many are filling in the form (database mode) */}
       <div role="status" aria-live="polite" className="space-y-1">
         {presence && presence.viewing > 0 && <p className="text-sm font-medium text-primary flex items-center gap-1.5"><Icon name="eye" size={16} />{t('m.live.viewing', { n: presence.viewing })}</p>}
         {presence && presence.filling > 0 && <p className="text-sm font-medium text-warn-fg flex items-center gap-1.5"><Icon name="edit" size={16} />{t('m.live.filling', { n: presence.filling })}</p>}
       </div>
+      {!p.verified && !mine && <Warn>{t('m.vf.warnSeeker')}</Warn>}
       <Toast msg={msg} />
       {askDialog}
 
@@ -93,8 +99,9 @@ export function PostPage() {
                 <h2 id="ap-h" className="h2">{t('m.ap.mine')}</h2>
                 <p className="font-medium flex items-center gap-2"><Icon name={myApp.status === 'rejected' ? 'info' : 'ok'} size={18} className={myApp.status === 'rejected' ? 'text-muted' : 'text-ok-fg'} />{statusLine(myApp)}</p>
                 {myApp.promotedAt && <p className="text-sm text-muted">{t('m.ap.promoted', { d: N.dayTime(Date.parse(myApp.promotedAt)) })}</p>}
+                {myCase && <CaseLink c={myCase} />}
                 {(myApp.status === 'confirmed' || myApp.status === 'forwarded') && <AgencyLinks />}
-                {(myApp.status === 'accepted' || myApp.status === 'reserved' || myApp.status === 'confirmed') && (
+                {(myApp.status === 'accepted' || myApp.status === 'reserved' || (myApp.status === 'confirmed' && !myCase?.steps.submitted)) && (
                   <button type="button" className="btn-ghost text-danger-fg" disabled={busy} onClick={async () => { if (await ask(t('m.ap.withdraw.confirm'), { yes: t(myApp.status === 'reserved' ? 'm.ap.withdrawQueue' : 'm.ap.withdraw'), danger: true })) void act(() => withdraw(myApp.id), t('m.ap.withdrawn')) }}>{busy ? t('m.ask.busy') : t(myApp.status === 'reserved' ? 'm.ap.withdrawQueue' : 'm.ap.withdraw')}</button>)}
               </>) : canApply ? (
                 <form className="space-y-3" onSubmit={submit} noValidate onFocus={() => setFocused(true)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false) }}>
@@ -123,6 +130,7 @@ export function PostPage() {
                 <button type="button" className="btn-primary text-sm" disabled={busy} onClick={async () => { if (await ask(t('m.em.renew.confirm'), { yes: t('m.em.renew') })) void act(() => renew(p.id), t('m.em.renewed')) }}><Icon name="renew" size={15} />{busy ? t('m.ask.busy') : t('m.em.renew')}</button>
                 <NavLink to={`hire?edit=${p.id}`} className="btn-ghost text-sm"><Icon name="edit" size={15} />{t('m.post.edit')}</NavLink>
                 <button type="button" className="btn-ghost text-sm text-danger-fg" disabled={busy} onClick={async () => {
+                  if (caseBlocksDelete(st, p.id)) { setMsg({ tone: 'danger', text: problemText('caseStarted') }); return }
                   if (!(await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true }))) return
                   setBusy(true); const ok = await deletePost(p.id); setBusy(false)
                   if (ok) go('hire'); else setMsg({ tone: 'danger', text: t('m.post.delete.fail') })
@@ -135,6 +143,7 @@ export function PostPage() {
                     <p className="flex flex-wrap items-center justify-between gap-2"><b>{nameOf(a)}</b><span className="chip bg-surface3 border-line">{t(`m.as.${a.status}` as never)}</span></p>
                     {a.intro && <p className="text-muted">“{a.intro}”</p>}
                     {a.availableFrom && <p className="text-xs text-muted">{t('m.ap.fromShort', { d: N.day(a.availableFrom) })}{a.promotedAt ? ` · ${t('m.n.fromQueue')}` : ''}</p>}
+                    {(() => { const c = caseOf(a.id); return c ? <div className="pt-1"><CaseLink c={c} /></div> : null })()}
                     {a.status === 'accepted' && <div className="flex flex-wrap gap-2 pt-1">
                       <button type="button" className="btn-primary text-sm" disabled={busy} onClick={() => void act(() => decide(a.id, true), t('m.em.confirmed'))}><Icon name="ok" size={15} />{t('m.em.confirm')}</button>
                       <button type="button" className="btn-ghost text-sm" disabled={busy} onClick={async () => { if (await ask(t('m.em.decline.confirm'), { yes: t('m.em.decline'), danger: true })) void act(() => decide(a.id, false), t('m.em.declined')) }}>{t('m.em.decline')}</button>
@@ -149,6 +158,7 @@ export function PostPage() {
           {/* ---------- the release, level by level ---------- */}
           <section className="glass-card p-5 space-y-3" aria-labelledby="pp-tl"><h2 id="pp-tl" className="h2">{t('m.pp.timeline')}</h2>
             <p className="text-sm text-muted">{t(p.releasedAt !== p.createdAt ? 'm.pp.renewedOn' : 'm.pp.posted', { d: N.dayTime(Date.parse(p.releasedAt)) })}</p>
+            {!p.verified && mine && <Warn>{t('m.vf.capNote')} <NavLink to="me" className="underline underline-offset-4 font-medium">{t('m.cs.goVerify')}</NavLink></Warn>}
             <ol className="space-y-3">{LEVELS.map((l, i) => {
               const done = stage !== 'expired' && l < stage, current = stage === l
               return (

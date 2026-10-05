@@ -30,6 +30,8 @@ const PreparePage = lazy(() => import('./pages/match').then((m) => ({ default: m
 const SettingsPage = lazy(() => import('./pages/match').then((m) => ({ default: m.SettingsPage })))
 const HelpPage = lazy(() => import('./pages/match').then((m) => ({ default: m.HelpPage })))
 const BackofficePage = lazy(() => import('./pages/match').then((m) => ({ default: m.BackofficePage })))
+const CasePage = lazy(() => import('./pages/case').then((m) => ({ default: m.CasePage })))
+const TermsPage = lazy(() => import('./pages/terms').then((m) => ({ default: m.TermsPage })))
 const ChooseRolePage = lazy(() => import('./pages/choose').then((m) => ({ default: m.ChooseRolePage })))
 
 /** footer targets are at least 24 px high (WCAG 2.5.8) */
@@ -68,6 +70,7 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <footer className="bg-surface border-t border-line text-xs text-muted px-4 md:pl-28 py-6 mb-20 md:mb-0">
         <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-2 items-center">
           <span className="font-semibold text-ink" lang="en">{BRAND.title}</span><span>{t('foot.note')}</span>
+          <NavLink to="terms" className={FOOT}>{t('m.tm.title')}</NavLink>
           <NavLink to="privacy" className={FOOT}>{t('nav.privacy')}</NavLink>
         </div>
       </footer>
@@ -91,7 +94,7 @@ function Router() {
     '': <Landing />, language: <LanguagePage />, sources: <SourcesPage />, privacy: <PrivacyPage />,
     login: <LoginPage />, register: <RegisterPage />, forgot: <ForgotPage />, 'reset-password': <ResetPasswordPage />,
     'choose-role': <ChooseRolePage />,
-    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, // matching prototype
+    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, case: <CasePage />, terms: <TermsPage />, // matching prototype
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>
 }

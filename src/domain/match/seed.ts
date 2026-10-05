@@ -1,19 +1,21 @@
 // Synthetic starting data for the matching prototype: invented sample job seekers and invented employer posts at different ages,
 // so every release level can be demonstrated. No real people, companies, contacts or documents.
 import { DAY_MS, HOUR_MS } from './release'
+import { newCase } from './cases'
 import { ME, type MatchState, type Pin, type Post, type Seeker } from './types'
+import type { Case } from './cases'
 
 const iso = (t: number) => new Date(t).toISOString()
 const day = (t: number) => iso(t).slice(0, 10)
 const pin = (id: string, country: 'TH' | 'CN', province: string, industry: Pin['industry'], skills: Pin['skills'], at: number): Pin => ({ id, country, province, industry, skills, at: iso(at) })
 const seeker = (id: string, name: string, origin: Seeker['origin'], pins: Pin[]): Seeker => ({ id, name, origin, pins, synthetic: true })
-const post = (p: Omit<Post, 'synthetic' | 'releasedAt'>): Post => ({ ...p, releasedAt: p.createdAt, synthetic: true })
+const post = (p: Omit<Post, 'synthetic' | 'releasedAt' | 'verified'>, verified = true): Post => ({ ...p, releasedAt: p.createdAt, verified, synthetic: true })
 
 /** a fresh seed relative to `now` (post ages decide which release level they are in) */
 export function seedState(now = Date.now()): MatchState {
   const t = now - DAY_MS * 3
   return {
-    version: 2, role: null, clockHours: 0, myCompany: '', member: false, memberUntil: null, credits: [],
+    version: 2, role: null, clockHours: 0, myCompany: '', member: false, memberUntil: null, credits: [], employerVerify: null,
     me: seeker(ME, 'you', null, []),
     seekers: [
       // pins made at different hours: they form separate level-1 groups (earliest first)
@@ -32,7 +34,7 @@ export function seedState(now = Date.now()): MatchState {
       post({ id: 'post-s2', employerId: 'employer:sample-2', company: 'Example Precision Parts', position: 'Quality Control Engineer', industry: 'manufacturing', skills: ['quality_control'], minYears: 2,
         details: 'Sample post for the prototype. Automotive parts line.', country: 'CN', province: 'CN-JS', createdAt: iso(now - HOUR_MS * 0.5),
         headcount: 3, employment: 'contract', salary: null, startDate: day(now + DAY_MS * 45),
-        languages: [{ lang: 'zh', level: 'conversational' }], education: 'vocational', benefits: ['housing', 'workDocs'] }),
+        languages: [{ lang: 'zh', level: 'conversational' }], education: 'vocational', benefits: ['housing', 'workDocs'] }, false), // not verified yet: stops at level 2, with a warning
       // nobody took it for over a month: it has reached level 5 (international) and sinks under newer posts
       post({ id: 'post-s3', employerId: 'employer:sample-3', company: 'Sample Eastern Logistics', position: 'Warehouse Coordinator', industry: 'logistics', skills: ['project_management'], minYears: 1,
         details: 'Sample post for the prototype. Cross-border shipments.', country: 'TH', province: 'TH-20', createdAt: iso(now - DAY_MS * 40),
@@ -41,6 +43,16 @@ export function seedState(now = Date.now()): MatchState {
     ],
     acceptances: [
       { id: 'acc-s1', postId: 'post-s1', seekerId: 'seeker-a', at: iso(now - DAY_MS * 1.1), status: 'accepted', intro: 'Sample application for the prototype.', availableFrom: day(now + DAY_MS * 30) },
+      // a sample case: "you" applied to the logistics post, the employer confirmed, and the agency is at the training step
+      { id: 'acc-me', postId: 'post-s3', seekerId: ME, at: iso(now - DAY_MS * 30), status: 'forwarded', intro: 'Sample application for the prototype.', availableFrom: day(now + DAY_MS * 20), decidedAt: iso(now - DAY_MS * 28), forwardedAt: iso(now - DAY_MS * 28) },
     ],
+    cases: [sampleCase(now)],
   }
+}
+/** the sample case, part way: documents and tests done, two of four courses done */
+function sampleCase(now: number): Case {
+  const c = newCase('case-s1', { id: 'acc-me', postId: 'post-s3', seekerId: ME }, iso(now - DAY_MS * 28), true)
+  return { ...c, steps: { ...c.steps, accepted: iso(now - DAY_MS * 27), documents: iso(now - DAY_MS * 20), tests: iso(now - DAY_MS * 12) },
+    docs: { passport: true, health: true, contract: true }, tests: { language: true, skill: true },
+    trainings: c.trainings.map((x, i) => ({ ...x, done: i < 2 })), note: 'Sample case for the prototype.' }
 }

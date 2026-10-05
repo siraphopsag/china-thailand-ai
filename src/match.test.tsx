@@ -86,7 +86,7 @@ describe('pins (owner, Oct 2026: 5 per weekly cycle, each lasts a month)', () =>
 describe('the release in five levels (owner, Oct 2026)', () => {
   const made = makePost({ ...EXTRA, place: { country: 'CN', province: 'CN-SH' }, company: 'Sample Co', position: 'QC Engineer', industry: 'manufacturing', skills: ['quality_control'], minYears: 1, details: '' }, 'post-x', 'employer:me', at(0))
   if (!made.ok) throw new Error('post')
-  const P = made.value
+  const P = { ...made.value, verified: true } // a verified employer: all five levels (unverified posts stop at level 2)
   const pin = (id: string, province: string, industry: Industry, skills: Skill[], when: number): Pin => ({ id, country: province.slice(0, 2) as 'TH' | 'CN', province, industry, skills, at: new Date(when).toISOString() })
   const H = HOUR_MS
   const a = pin('a', 'CN-SH', 'manufacturing', ['quality_control'], NOW - 3 * DAY_MS) // level 1, first hourly group
@@ -206,10 +206,10 @@ describe('stored data is validated', () => {
     const bad = (f: (s: MatchState) => void) => { const s = JSON.parse(JSON.stringify(st)) as MatchState; f(s); return parseState(s)! }
     expect(bad((s) => { s.seekers[0].pins = Array.from({ length: 70 }, (_, i) => ({ ...s.seekers[0].pins[0], id: 'x' + i, at: at(-i) })) }).seekers[0].pins.length).toBe(60) // the newest 60 are kept
     expect(bad((s) => { s.posts[0].province = 'CN-XX' }).posts.map((p) => p.id)).not.toContain('post-s1')
-    expect(bad((s) => { s.posts[0].province = 'CN-XX' }).acceptances).toEqual([]) // its application goes with it
-    expect(bad((s) => { s.acceptances.push({ id: 'a', postId: 'nope', seekerId: ME, at: at(0), status: 'accepted', intro: '', availableFrom: null }) }).acceptances.map((a) => a.id)).toEqual(['acc-s1'])
-    expect(bad((s) => { s.acceptances.push({ ...s.acceptances[0], id: 'twice' }) }).acceptances.map((a) => a.id)).toEqual(['acc-s1'])
-    expect(bad((s) => { s.acceptances[0].intro = 'mail me hr@example.com' }).acceptances).toEqual([])
+    expect(bad((s) => { s.posts[0].province = 'CN-XX' }).acceptances.map((a) => a.id)).toEqual(['acc-me']) // its application goes with it
+    expect(bad((s) => { s.acceptances.push({ id: 'a', postId: 'nope', seekerId: ME, at: at(0), status: 'accepted', intro: '', availableFrom: null }) }).acceptances.map((a) => a.id)).toEqual(['acc-s1', 'acc-me'])
+    expect(bad((s) => { s.acceptances.push({ ...s.acceptances[0], id: 'twice' }) }).acceptances.map((a) => a.id)).toEqual(['acc-s1', 'acc-me'])
+    expect(bad((s) => { s.acceptances[0].intro = 'mail me hr@example.com' }).acceptances.map((a) => a.id)).toEqual(['acc-me'])
     expect(bad((s) => { s.clockHours = -1 }).clockHours).toBe(0)
     expect(bad((s) => { s.posts[0].releasedAt = at(-400) }).posts.map((p) => p.id)).not.toContain('post-s1') // released before it was posted
     expect(bad((s) => { s.posts[0].details = 'mail me hr@example.com' }).posts.map((p) => p.id)).not.toContain('post-s1')
@@ -230,7 +230,7 @@ describe('board bug hunt (Oct 2026)', () => {
     expect(inbox(st, poolOf(st), NOW, () => 0).count).toBe(0)
     st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(-5) }])
     const box = inbox(st, poolOf(st), NOW, () => 0)
-    expect(box.offers.map((p) => p.id).sort()).toEqual(['post-s2', 'post-s3']); expect(box.count).toBe(2)
+    expect(box.offers.map((p) => p.id).sort()).toEqual(['post-s2']); expect(box.count).toBe(1) // post-s3 is the sample case's post: already applied
     expect(src('./components/sidenav.tsx')).toContain('return inbox(st, pool, now, (id) => counts[id]?.reserved ?? 0).count')
     expect(src('./pages/match.tsx')).toContain('const box = inbox(st, pool, now, (id) => counts[id]?.reserved ?? 0)')
     const emp = seedState(NOW); emp.role = 'employer'; emp.posts = emp.posts.map((p) => (p.id === 'post-s1' ? { ...p, employerId: MY_EMPLOYER } : p))

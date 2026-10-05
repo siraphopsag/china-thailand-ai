@@ -168,7 +168,7 @@ export function RegisterPage() {
           <div>
             <label className="flex items-start gap-2.5 text-sm cursor-pointer min-h-[24px]">
               <input id="rg-agree" type="checkbox" className="mt-0.5 w-5 h-5 accent-[rgb(var(--primary))]" checked={agree} onChange={(e) => { setAgree(e.target.checked); fe.clear() }} aria-invalid={fe.invalid('rg-agree')} aria-describedby={fe.describe('rg-agree')} />
-              <span>{t('m.rg.consent')} · <NavLink to="privacy" className="text-primary underline underline-offset-4">{t('m.auth.privacy')}</NavLink></span>
+              <span>{t('m.rg.consent')} · <NavLink to="terms" className="text-primary underline underline-offset-4">{t('m.tm.title')}</NavLink> · <NavLink to="privacy" className="text-primary underline underline-offset-4">{t('m.auth.privacy')}</NavLink></span>
             </label>
             {fe.msg('rg-agree')}
           </div>

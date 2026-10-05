@@ -6,6 +6,8 @@ import { BENEFITS, COUNTRIES, CURRENCIES, EDU, EMPLOYMENT, EXPIRY_WARN_DAYS, FRE
   PINS_PER_WEEK, POST_LIFE_DAYS, SKILLS, type Acceptance, type AppStatus, type Benefit, type Country, type Credit, type Edu, type Employment, type Industry, type LanguageSkill, type MatchState,
   type Pin, type Place, type Post, type Salary, type Seeker, type Skill } from './types'
 import { DAY_MS, HOUR_MS, cycleQuota, isExpired, pinActive, reachFor, type PinLike } from './release'
+import { currentStep, lastUpdate, newCase, parseCase, type Case } from './cases'
+import { isRegNo } from './verify'
 
 export { DAY_MS, HOUR_MS }
 /**
@@ -33,7 +35,7 @@ const isIso = (v: unknown): v is string => typeof v === 'string' && !Number.isNa
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9:_-]{1,40}$/.test(v)
 
 export type Problem = 'place' | 'industry' | 'skills' | 'limit' | 'duplicate' | 'company' | 'position' | 'details' | 'years' | 'contact' | 'notOpen' | 'already' | 'unknown'
-  | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits' | 'quota' | 'network' | 'intro' | 'available' | 'state' | 'belowHeld' | 'dbOld'
+  | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits' | 'quota' | 'network' | 'intro' | 'available' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'caseText' | 'departDate'
 const oneOf = <T extends string>(all: readonly T[], v: unknown): v is T => typeof v === 'string' && (all as readonly string[]).includes(v)
 const intIn = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max
 const isLangs = (v: unknown): v is LanguageSkill[] => Array.isArray(v) && v.length <= LANGS.length && v.every((l) => isObj(l) && Object.keys(l).length === 2 && oneOf(LANGS, l.lang) && oneOf(LANG_LEVELS, l.level))
@@ -101,7 +103,7 @@ export function makePost(input: PostInput, id: string, employerId: string, at: s
   return { ok: true, value: { id, employerId, company: input.company, position: input.position, industry: input.industry, skills: [...input.skills], minYears: input.minYears, details: input.details,
     headcount: input.headcount, employment: input.employment, salary: input.salary ? { ...input.salary } : null, startDate: input.startDate,
     languages: input.languages.map((l) => ({ ...l })), education: input.education, benefits: [...input.benefits],
-    country: input.place.country, province: input.place.province, createdAt: at, releasedAt: at, synthetic: true } }
+    country: input.place.country, province: input.place.province, createdAt: at, releasedAt: at, verified: false, synthetic: true } }
 }
 /** renewing uses one post from the weekly allowance and starts the release again at level 1, with a fresh 6 months */
 export function renewPost(st: MatchState, postId: string, at: string): Outcome<Post> {
@@ -118,10 +120,30 @@ export const offersFor = (st: MatchState, pool: PinLike[], now: number) => st.po
   .filter((p) => p.employerId !== MY_EMPLOYER && reachFor(p, st.me.pins, pool, now).visible)
   .sort((a, b) => b.releasedAt.localeCompare(a.releasedAt))
 /** what a post still shows after its 6 months: nothing (the post and its applications are removed) */
+export const hasOpenCase = (st: MatchState, postId: string) => st.cases.some((c) => c.postId === postId && currentStep(c) !== null)
 export const withoutExpired = (st: MatchState, now: number): MatchState => {
-  if (!st.posts.some((p) => isExpired(p, now))) return st
-  const posts = st.posts.filter((p) => !isExpired(p, now)), ids = new Set(posts.map((p) => p.id))
-  return { ...st, posts, acceptances: st.acceptances.filter((a) => ids.has(a.postId)) }
+  const gone = (p: Post) => isExpired(p, now) && !hasOpenCase(st, p.id) // a case still running keeps its post (it can take months)
+  if (!st.posts.some(gone)) return st
+  const posts = st.posts.filter((p) => !gone(p)), ids = new Set(posts.map((p) => p.id))
+  return { ...st, posts, acceptances: st.acceptances.filter((a) => ids.has(a.postId)), cases: st.cases.filter((c) => ids.has(c.postId)) }
+}
+/** a post whose case the agency has taken (and that has not finished) cannot be deleted by its employer */
+export const caseBlocksDelete = (st: MatchState, postId: string) => st.cases.some((c) => c.postId === postId && !!c.steps.accepted && !c.steps.arrived)
+/** my posts carry my verification (local demo); in the database it is kept on each post */
+export const employerVerified = (st: MatchState) => st.employerVerify?.status === 'verified'
+/** the employer confirms: a case opens and goes to the agency at once if the employer is verified (then the application reads "forwarded") */
+export function openCaseFor(st: MatchState, accs: Acceptance[], accId: string, caseId: string, at: string): { acceptances: Acceptance[]; cases: Case[] } {
+  const a = accs.find((x) => x.id === accId)
+  const post = a && st.posts.find((p) => p.id === a.postId)
+  if (!a || !post || a.status !== 'confirmed' || st.cases.some((c) => c.accId === accId)) return { acceptances: accs, cases: st.cases }
+  const verified = post.employerId === MY_EMPLOYER ? employerVerified(st) : post.verified
+  const c = newCase(caseId, a, at, verified)
+  return { acceptances: verified ? accs.map((x) => (x.id === accId ? { ...x, status: 'forwarded' as const, forwardedAt: at } : x)) : accs, cases: [...st.cases, c] }
+}
+/** a registration number for verification: right form and check digit, then it waits for approval */
+export function requestVerify(country: Country, regNo: string, at: string): Outcome<NonNullable<MatchState['employerVerify']>> {
+  if (!isCountry(country) || !isRegNo(country, regNo)) return fail('regNo')
+  return { ok: true, value: { country, regNo, status: 'pending', at } }
 }
 
 /* ---------- applications and the reservation queue ---------- */
@@ -167,6 +189,7 @@ export function decide(st: MatchState, accId: string, confirm: boolean, at: stri
 /** the seeker withdraws (an application or a reservation); a freed place goes to the queue */
 export function cancel(st: MatchState, accId: string, at: string): Outcome<Acceptance[]> {
   const a = st.acceptances.find((x) => x.id === accId && x.seekerId === ME); if (!a) return fail('unknown')
+  if (st.cases.some((c) => c.accId === accId && (c.steps.submitted || c.steps.accepted))) return fail('caseStarted')
   if (a.status === 'forwarded' || a.status === 'rejected') return fail('state')
   const post = st.posts.find((p) => p.id === a.postId)
   const next = st.acceptances.filter((x) => x.id !== accId)
@@ -195,7 +218,7 @@ const isPost = (v: unknown): v is Post => {
   // the original fields are checked with the same rules as a new post; the new details either all present and valid, or all "not stated"
   if (isLegacyDetails(v)) return makePost({ ...base, headcount: 1, employment: 'permanent', salary: null, startDate: localDay(v.createdAt), languages: [{ lang: 'th', level: 'basic' }], education: 'none', benefits: [] }, 'x', 'y', v.createdAt).ok
   // the start date was checked when it was saved (against that day); here any real day is fine, so an edit cannot break a reload
-  return isDay(v.startDate) && makePost({ ...base, startDate: localDay(v.createdAt) }, 'x', 'y', v.createdAt).ok
+  return typeof v.verified === 'boolean' && isDay(v.startDate) && makePost({ ...base, startDate: localDay(v.createdAt) }, 'x', 'y', v.createdAt).ok
 }
 const STATUSES: readonly AppStatus[] = ['accepted', 'reserved', 'confirmed', 'rejected', 'forwarded']
 const optIso = (v: unknown) => v === undefined || isIso(v)
@@ -222,19 +245,26 @@ export function parseState(input: unknown): MatchState | null {
   const seekers = (Array.isArray(raw.seekers) ? raw.seekers.map(seekerOf) : []).filter((s): s is Seeker => !!s && s.id !== ME)
     .filter((s, i, all) => all.findIndex((x) => x.id === s.id) === i)
   // data saved before Oct 2026: posts without the new details
-  const posts = (Array.isArray(raw.posts) ? raw.posts.map((p) => (isObj(p) ? withLegacy(p) : p)) : []).filter(isPost)
+  // posts saved before verification existed: samples count as verified, my own as not yet
+  const posts = (Array.isArray(raw.posts) ? raw.posts.map((p) => (isObj(p) ? { ...withLegacy(p), verified: typeof p.verified === 'boolean' ? p.verified : p.employerId !== MY_EMPLOYER } : p)) : []).filter(isPost)
     .filter((p, i, all) => all.findIndex((x) => x.id === p.id) === i)
   const postIds = new Set(posts.map((p) => p.id)), people = new Set([ME, ...seekers.map((s) => s.id)])
   const seen = new Set<string>()
   const acceptances = (Array.isArray(raw.acceptances) ? raw.acceptances : []).filter(isAcc)
     .filter((a) => { const k = `${a.postId}|${a.seekerId}`; if (!postIds.has(a.postId) || !people.has(a.seekerId) || seen.has(k)) return false; seen.add(k); return true })
   const credits = (Array.isArray(raw.credits) ? raw.credits.filter(isCredit) : []).sort((a, b) => a.at.localeCompare(b.at)).slice(-500)
+  const accIds = new Set(acceptances.map((a) => a.id))
+  const cases = (Array.isArray(raw.cases) ? raw.cases.map(parseCase) : []).filter((c): c is Case => !!c && accIds.has(c.accId) && postIds.has(c.postId))
+    .filter((c, i, all) => all.findIndex((x) => x.accId === c.accId) === i)
+  const ev = raw.employerVerify
+  const employerVerify = isObj(ev) && isCountry(ev.country) && typeof ev.regNo === 'string' && isRegNo(ev.country, ev.regNo) && (ev.status === 'pending' || ev.status === 'verified' || ev.status === 'rejected') && isIso(ev.at)
+    ? { country: ev.country, regNo: ev.regNo, status: ev.status, at: ev.at, ...(isIso(ev.decidedAt) ? { decidedAt: ev.decidedAt } : {}) } as MatchState['employerVerify'] : null
   return {
     version: 2,
     role: raw.role === 'seeker' || raw.role === 'employer' ? raw.role : null,
     clockHours: intIn(raw.clockHours, 0, MAX_CLOCK_HOURS) ? raw.clockHours : 0,
     me, myCompany: typeof raw.myCompany === 'string' && raw.myCompany.length <= 80 ? raw.myCompany : '',
-    member: raw.member === true, memberUntil: isIso(raw.memberUntil) ? raw.memberUntil : null, seekers, posts, acceptances, credits,
+    member: raw.member === true, memberUntil: isIso(raw.memberUntil) ? raw.memberUntil : null, seekers, posts, acceptances, credits, cases, employerVerify,
   }
 }
 /** "Back to real time" (demo): anything stamped later than now is moved to now, so nothing made while the clock ran ahead disappears */
@@ -248,6 +278,7 @@ export function clampFuture(st: MatchState, now: number): MatchState {
     posts: st.posts.map((p) => ({ ...p, createdAt: fix(p.createdAt), releasedAt: fix(p.releasedAt) })),
     acceptances: st.acceptances.map((a) => ({ ...a, at: fix(a.at), promotedAt: fixOpt(a.promotedAt), decidedAt: fixOpt(a.decidedAt), forwardedAt: fixOpt(a.forwardedAt) })),
     credits: st.credits.map((c) => ({ ...c, at: fix(c.at) })),
+    cases: st.cases.map((c) => ({ ...c, createdAt: fix(c.createdAt), steps: Object.fromEntries(Object.entries(c.steps).map(([k, v]) => [k, v ? fix(v) : v])) })),
   }
 }
 /**
@@ -259,7 +290,8 @@ export function inbox(st: MatchState, pool: PinLike[], now: number, reservedOf: 
   const applied = new Set(st.acceptances.filter((a) => a.seekerId === ME).map((a) => a.postId))
   const hasPins = activePins(st.me, now).length > 0
   const offers = st.role === 'seeker' && hasPins ? offersFor(st, pool, now).filter((p) => !applied.has(p.id)) : []
-  const updates = st.role === 'seeker' ? st.acceptances.filter((a) => a.seekerId === ME && (a.status === 'confirmed' || a.status === 'rejected' || a.status === 'forwarded' || (a.status === 'accepted' && !!a.promotedAt))) : []
+  // an application with a case is followed through the case (its news counts there, not here)
+  const updates = st.role === 'seeker' ? st.acceptances.filter((a) => a.seekerId === ME && !st.cases.some((c) => c.accId === a.id) && (a.status === 'confirmed' || a.status === 'rejected' || a.status === 'forwarded' || (a.status === 'accepted' && !!a.promotedAt))) : []
   const mine = st.role === 'employer' ? st.posts.filter((p) => p.employerId === MY_EMPLOYER) : []
   const ids = new Set(mine.map((p) => p.id))
   const waiting = st.acceptances.filter((a) => ids.has(a.postId) && a.status === 'accepted')
@@ -267,6 +299,9 @@ export function inbox(st: MatchState, pool: PinLike[], now: number, reservedOf: 
   const expiring = mine.filter((p) => now >= Date.parse(p.releasedAt) + (POST_LIFE_DAYS - EXPIRY_WARN_DAYS) * DAY_MS)
   // a membership ending within a week (both roles)
   const memberEnds = memberActive(st, now) && st.memberUntil && Date.parse(st.memberUntil) - now <= MEMBER_WARN_DAYS * DAY_MS ? Date.parse(st.memberUntil) : null
-  return { hasPins, offers, updates, waiting, reserved, expiring, memberEnds, count: offers.length + updates.length + waiting.length + reserved.length + expiring.length + (memberEnds ? 1 : 0) }
+  const myCases = st.cases.filter((c) => (st.role === 'seeker' && c.seekerId === ME) || (st.role === 'employer' && ids.has(c.postId)))
+  const caseNews = myCases.filter((c) => currentStep(c) !== null && (now - Date.parse(lastUpdate(c)) < 3 * DAY_MS || (st.role === 'employer' && currentStep(c) === 'arrived')))
+  return { hasPins, offers, updates, waiting, reserved, expiring, memberEnds, cases: myCases, caseNews,
+    count: offers.length + updates.length + waiting.length + reserved.length + expiring.length + (memberEnds ? 1 : 0) + caseNews.length }
 }
 export { COUNTRIES }

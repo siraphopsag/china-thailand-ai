@@ -3,7 +3,7 @@ import { useI18n } from '../i18n'
 import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { activePins, isCountry, pinQuota, postQuota } from '../domain/match/logic'
-import { reachFor, scheduleOf, stageAt } from '../domain/match/release'
+import { reachFor, scheduleOf, stageAt, capStage } from '../domain/match/release'
 import { CURRENCIES, LEVELS, ME, MY_EMPLOYER, SKILLS, type Currency, type Level, type Post, type Skill } from '../domain/match/types'
 import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
@@ -37,7 +37,7 @@ export function BoardPage() {
   const mineApplied = new Set(st.acceptances.filter((a) => a.seekerId === ME).map((a) => a.postId))
   const items: { post: Post; level: Level }[] = seeker
     ? st.posts.filter((p) => p.employerId !== MY_EMPLOYER).flatMap((p) => { const r = reachFor(p, st.me.pins, pool, now); return r.visible || mineApplied.has(p.id) ? [{ post: p, level: r.level }] : [] })
-    : st.posts.filter((p) => p.employerId === MY_EMPLOYER).flatMap((p) => { const s = stageAt(scheduleOf(p, pool, now), now); return s === 'expired' ? [] : [{ post: p, level: s }] })
+    : st.posts.filter((p) => p.employerId === MY_EMPLOYER).flatMap((p) => { const s = capStage(stageAt(scheduleOf(p, pool, now), now), p); return s === 'expired' ? [] : [{ post: p, level: s }] })
   const matches = (p: Post) => {
     const q = f.q.trim().toLowerCase()
     if (q) {

@@ -2,9 +2,11 @@
  * C.A.L.L. matching prototype (owner's model, Oct 2026): job seekers pin provinces with their skills (5 per weekly cycle, each pin
  * lasts a month); employers post what they need for a province (3 per weekly cycle, a post lasts 6 months); a post reaches seekers in
  * five levels (see release.ts); a seeker applies (or reserves a place once the post is full); the employer confirms or declines;
- * the admin forwards a confirmed case to the employment authority (simulated — nothing is sent anywhere).
+ * a confirmed match opens a case that goes to the employment agency and is followed step by step until the worker starts (cases.ts;
+ * the agency's part is simulated — nothing is sent anywhere).
  * Everything here is synthetic prototype data kept in this browser. No identity documents or contact details are collected.
  */
+import type { Case } from './cases'
 /* fields, skills and languages (came with the first job-board prototype, which was removed in Oct 2026) */
 export const SKILLS = [
   'software_engineering', 'data_analysis', 'mechanical_engineering', 'electrical_engineering', 'civil_engineering', 'quality_control',
@@ -88,6 +90,8 @@ export interface Post extends Place {
   createdAt: string
   /** start of the current release (the posting time, or the last renewal) — the levels and the 6-month life count from here */
   releasedAt: string
+  /** the employer's company registration was approved (owner, Oct 2026): unverified posts stop at level 2 and carry a warning */
+  verified: boolean
   synthetic: true
 }
 /**
@@ -125,7 +129,13 @@ export interface MatchState {
   acceptances: Acceptance[]
   /** my uses of the weekly allowances (deleting a post or a pin does not give the use back) */
   credits: Credit[]
+  /** cases after a match (see cases.ts) */
+  cases: Case[]
+  /** my employer verification (company registration number) */
+  employerVerify: EmployerVerify | null
 }
+/** employer verification: the number is checked at once; an administrator (the agency in the prototype) approves it */
+export interface EmployerVerify { country: Country; regNo: string; status: 'pending' | 'verified' | 'rejected'; at: string; decidedAt?: string }
 
 /**
  * Release level (owner, Oct 2026), also the "rarity" shown on the board:
