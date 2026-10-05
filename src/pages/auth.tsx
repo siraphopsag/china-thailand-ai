@@ -132,7 +132,7 @@ export function RegisterPage() {
   const next = useNext()
   const [name, setName] = useState(''), [email, setEmail] = useState(''), [pw, setPw] = useState(''), [pw2, setPw2] = useState('')
   const [agree, setAgree] = useState(false)
-  const [busy, setBusy] = useState(false), [err, setErr] = useState<AuthResult | null>(null)
+  const [busy, setBusy] = useState(false), [err, setErr] = useState<AuthResult | null>(null), [sentTo, setSentTo] = useState('')
   const fe = useFieldError()
   useEffect(() => { if (status === 'signedIn') go(next || 'choose-role') }, [status, next])
   const submit = async (e: FormEvent) => {
@@ -146,11 +146,18 @@ export function RegisterPage() {
     setBusy(true); rememberNext(next || 'choose-role')
     const r = await signUp(n, email, pw)
     setBusy(false)
-    if (r !== 'ok') setErr(r)
+    if (r === 'checkMail') setSentTo(email.trim()) // the address is shown so a typo can be spotted
+    else if (r !== 'ok') setErr(r)
   }
   return (
     <AuthShell title={t('m.rg.title')} sub={t('m.rg.sub')}>
-      {status === 'off' || online === false ? <Unavailable /> : (<>
+      {status === 'off' || online === false ? <Unavailable /> : sentTo ? (<>
+        <Warn tone="info"><span>{t('m.rg.checkMail', { email: sentTo })}</span></Warn>
+        <div className="flex flex-wrap gap-2">
+          <NavLink to={next ? `login?next=${next}` : 'login'} className="cta-core">{t('m.lg.go')}</NavLink>
+          <button type="button" className="btn-ghost" onClick={() => { setSentTo(''); setErr(null) }}>{t('m.rg.otherMail')}</button>
+        </div>
+      </>) : (<>
         <form className="space-y-4" onSubmit={submit} noValidate>
           <Field id="rg-name" label={t('m.rg.name')} icon="user" autoComplete="name" value={name} onChange={setName} fe={fe} hint={t('m.rg.nameHint')} />
           <Field id="rg-email" label={t('m.lg.email')} icon="mail" type="email" autoComplete="email" value={email} onChange={setEmail} fe={fe} />

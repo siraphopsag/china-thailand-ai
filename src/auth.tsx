@@ -14,7 +14,7 @@ import type { AuthError, Session, SupabaseClient } from '@supabase/supabase-js'
 export type AuthStatus = 'off' | 'loading' | 'signedOut' | 'signedIn'
 export interface AuthUser { id: string; email: string; name: string; avatar: string | null }
 /** what an account action came back with; anything but 'ok' is shown as a message */
-export type AuthResult = 'ok' | 'invalid' | 'unconfirmed' | 'exists' | 'weak' | 'email' | 'rate' | 'mailRate' | 'unavailable' | 'error'
+export type AuthResult = 'ok' | 'checkMail' | 'invalid' | 'unconfirmed' | 'exists' | 'weak' | 'email' | 'rate' | 'mailRate' | 'unavailable' | 'error'
 interface Ctx {
   status: AuthStatus
   user: AuthUser | null
@@ -169,7 +169,8 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
       if (error) return authResult(error)
       // with "Confirm email" off a session comes back at once; an empty identity list means the address is already registered
       if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) return 'exists'
-      return 'ok'
+      // "Confirm email" still on in Supabase: the account exists but needs the link in the e-mail before it can sign in
+      return data.session ? 'ok' : 'checkMail'
     }),
     sendReset: (email) => guard(async (sb) => authResult((await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` })).error)),
     updatePassword: (password) => guard(async (sb) => { const r = authResult((await sb.auth.updateUser({ password })).error); if (r === 'ok') setRecovery(false); return r }),

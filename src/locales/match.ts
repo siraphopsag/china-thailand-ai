@@ -65,6 +65,8 @@ export const match = {
   'm.fp.sub': ['กรอกอีเมลที่ใช้สมัคร เราจะส่งลิงก์ตั้งรหัสใหม่ไปให้', '输入注册邮箱，我们会发送重设密码的链接', 'Enter the e-mail you signed up with and we will send a link to set a new password'],
   'm.fp.go': ['ส่งลิงก์', '发送链接', 'Send link'],
   'm.fp.sent': ['ถ้ามีบัญชีของอีเมลนี้ เราได้ส่งลิงก์ไปแล้ว ตรวจกล่องจดหมาย (และโฟลเดอร์สแปม)', '如果该邮箱已注册，我们已发送链接。请查看收件箱（以及垃圾邮件）。', 'If this e-mail has an account, we have sent a link. Check your inbox (and spam folder).'],
+  'm.rg.checkMail': ['สร้างบัญชีแล้ว เราส่งลิงก์ยืนยันไปที่ {email} เปิดลิงก์ในอีเมลแล้วจึงเข้าสู่ระบบ (ถ้าไม่พบ ดูในโฟลเดอร์สแปม) · ถ้าอีเมลสะกดผิด ให้สมัครใหม่ด้วยอีเมลที่ถูกต้อง', '账号已创建。我们已将验证链接发送到 {email}，请打开邮件中的链接后再登录（如未找到，请查看垃圾邮件）· 如果邮箱拼写有误，请用正确的邮箱重新注册', 'Account created. We sent a confirmation link to {email} — open it, then sign in (check spam if you cannot find it) · If the address is misspelled, sign up again with the right one'],
+  'm.rg.otherMail': ['ใช้อีเมลอื่น', '使用其他邮箱', 'Use another e-mail'],
   'm.fp.back': ['กลับไปหน้าเข้าสู่ระบบ', '返回登录', 'Back to sign in'],
   'm.rp.title': ['ตั้งรหัสผ่านใหม่', '设置新密码', 'Set a new password'],
   'm.rp.new': ['รหัสผ่านใหม่', '新密码', 'New password'],

@@ -94,6 +94,10 @@ describe('sign-in pages (after the owner\'s reference: e-mail, password with an 
     const h = html(<RegisterPage />, state({}))
     for (const id of ['rg-name', 'rg-email', 'rg-pw', 'rg-pw2', 'rg-agree']) expect(h, id).toContain(`id="${id}"`)
     expect(h).toContain(T('m.auth.d')); expect(h).toContain('href="/privacy"'); expect(h).toContain(T('m.rg.pwHint'))
+    // Confirm email still on: no session comes back → say so and show the address (a typo can be spotted), instead of doing nothing
+    expect(src('./auth.tsx')).toContain("return data.session ? 'ok' : 'checkMail'")
+    expect(src('./pages/auth.tsx')).toContain("if (r === 'checkMail') setSentTo(email.trim())")
+    expect(tr('m.rg.checkMail', { email: 'a@gmai.com' }, 'th')).toContain('a@gmai.com')
   })
   it('forgot password answers the same whether or not the e-mail has an account; reset needs the e-mail link', () => {
     expect(src('./pages/auth.tsx')).toContain("if (r === 'ok' || r === 'invalid' || r === 'unconfirmed' || r === 'email') setSent(true)")
