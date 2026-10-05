@@ -14,7 +14,7 @@ import type { AuthError, Session, SupabaseClient } from '@supabase/supabase-js'
 export type AuthStatus = 'off' | 'loading' | 'signedOut' | 'signedIn'
 export interface AuthUser { id: string; email: string; name: string; avatar: string | null }
 /** what an account action came back with; anything but 'ok' is shown as a message */
-export type AuthResult = 'ok' | 'invalid' | 'exists' | 'weak' | 'email' | 'rate' | 'unavailable' | 'error'
+export type AuthResult = 'ok' | 'invalid' | 'unconfirmed' | 'exists' | 'weak' | 'email' | 'rate' | 'mailRate' | 'unavailable' | 'error'
 interface Ctx {
   status: AuthStatus
   user: AuthUser | null
@@ -71,11 +71,14 @@ export function toUser(s: Session | null): AuthUser | null {
 export function authResult(e: Pick<AuthError, 'code' | 'status' | 'message'> | null | undefined): AuthResult {
   if (!e) return 'ok'
   const c = e.code ?? ''
-  if (c === 'invalid_credentials' || c === 'email_not_confirmed') return 'invalid'
+  if (c === 'invalid_credentials') return 'invalid'
+  if (c === 'email_not_confirmed') return 'unconfirmed'
   if (c === 'user_already_exists' || c === 'email_exists') return 'exists'
   if (c === 'weak_password') return 'weak'
   if (c === 'email_address_invalid' || c === 'validation_failed') return 'email'
-  if (c.includes('rate_limit')) return 'rate'
+  // too many e-mails sent (sign-up confirmations, password resets) vs too many sign-in tries: different waits
+  if (c === 'over_email_send_rate_limit') return 'mailRate'
+  if (c.includes('rate_limit') || e.status === 429) return 'rate'
   if (!e.status || e.status >= 500) return 'unavailable'
   return 'error'
 }

@@ -88,8 +88,8 @@ function Unavailable() {
   const { t } = useI18n()
   return <Warn tone="info">{t('m.auth.fail')}</Warn>
 }
-const errText = (r: AuthResult): 'm.lg.err.invalid' | 'm.lg.err.rate' | 'm.auth.fail' | 'm.lg.err.email' | 'm.rg.err.exists' | 'm.rg.err.weak' | 'm.lg.err.error' =>
-  r === 'invalid' ? 'm.lg.err.invalid' : r === 'rate' ? 'm.lg.err.rate' : r === 'unavailable' ? 'm.auth.fail' : r === 'email' ? 'm.lg.err.email' : r === 'exists' ? 'm.rg.err.exists' : r === 'weak' ? 'm.rg.err.weak' : 'm.lg.err.error'
+const errText = (r: AuthResult): 'm.lg.err.invalid' | 'm.lg.err.unconfirmed' | 'm.lg.err.rate' | 'm.lg.err.mailRate' | 'm.auth.fail' | 'm.lg.err.email' | 'm.rg.err.exists' | 'm.rg.err.weak' | 'm.lg.err.error' =>
+  r === 'invalid' ? 'm.lg.err.invalid' : r === 'unconfirmed' ? 'm.lg.err.unconfirmed' : r === 'rate' ? 'm.lg.err.rate' : r === 'mailRate' ? 'm.lg.err.mailRate' : r === 'unavailable' ? 'm.auth.fail' : r === 'email' ? 'm.lg.err.email' : r === 'exists' ? 'm.rg.err.exists' : r === 'weak' ? 'm.rg.err.weak' : 'm.lg.err.error'
 
 export function LoginPage() {
   const { t } = useI18n()
@@ -187,7 +187,7 @@ export function ForgotPage() {
     const r = await sendReset(email)
     setBusy(false)
     // the same answer whether or not the address has an account (nobody can test which e-mails are registered)
-    if (r === 'ok' || r === 'invalid' || r === 'email') setSent(true); else setErr(r)
+    if (r === 'ok' || r === 'invalid' || r === 'unconfirmed' || r === 'email') setSent(true); else setErr(r)
   }
   return (
     <AuthShell title={t('m.fp.title')} sub={t('m.fp.sub')}>

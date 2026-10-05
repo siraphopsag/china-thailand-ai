@@ -73,7 +73,11 @@ describe('configuration', () => {
     expect(authResult({ code: 'invalid_credentials', status: 400, message: 'x' })).toBe('invalid')
     expect(authResult({ code: 'user_already_exists', status: 422, message: 'x' })).toBe('exists')
     expect(authResult({ code: 'weak_password', status: 422, message: 'x' })).toBe('weak')
-    expect(authResult({ code: 'over_email_send_rate_limit', status: 429, message: 'x' })).toBe('rate')
+    expect(authResult({ code: 'over_email_send_rate_limit', status: 429, message: 'x' })).toBe('mailRate') // e-mails: wait about an hour
+    expect(authResult({ code: 'over_request_rate_limit', status: 429, message: 'x' })).toBe('rate') // sign-in tries: about 5 minutes
+    expect(authResult({ code: '', status: 429, message: 'x' })).toBe('rate')
+    expect(authResult({ code: 'email_not_confirmed', status: 400, message: 'x' })).toBe('unconfirmed') // not shown as a wrong password
+    expect(tr('m.lg.err.mailRate', undefined, 'th')).toContain('1 ชั่วโมง'); expect(tr('m.lg.err.rate', undefined, 'th')).toContain('5 นาที')
     expect(authResult({ code: '', status: 0, message: 'Failed to fetch' })).toBe('unavailable')
   })
 })
@@ -92,7 +96,7 @@ describe('sign-in pages (after the owner\'s reference: e-mail, password with an 
     expect(h).toContain(T('m.auth.d')); expect(h).toContain('href="/privacy"'); expect(h).toContain(T('m.rg.pwHint'))
   })
   it('forgot password answers the same whether or not the e-mail has an account; reset needs the e-mail link', () => {
-    expect(src('./pages/auth.tsx')).toContain("if (r === 'ok' || r === 'invalid' || r === 'email') setSent(true)")
+    expect(src('./pages/auth.tsx')).toContain("if (r === 'ok' || r === 'invalid' || r === 'unconfirmed' || r === 'email') setSent(true)")
     expect(html(<ResetPasswordPage />, state({}))).toContain(T('m.rp.invalid'))
     expect(html(<ResetPasswordPage />, state({ recovery: true }))).toContain('id="rp-pw"')
     expect(html(<ForgotPage />, state({}))).toContain('id="fp-email"')
