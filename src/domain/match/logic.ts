@@ -7,6 +7,7 @@ import { BENEFITS, COUNTRIES, CURRENCIES, EDU, EMPLOYMENT, EXPIRY_WARN_DAYS, FRE
   type Pin, type Place, type Post, type Salary, type Seeker, type Skill } from './types'
 import { DAY_MS, HOUR_MS, cycleQuota, isExpired, pinActive, reachFor, type PinLike } from './release'
 import { currentStep, lastUpdate, newCase, parseCase, type Case } from './cases'
+import { parseReports, reportedIds } from './reports'
 import { isRegNo } from './verify'
 
 export { DAY_MS, HOUR_MS }
@@ -35,7 +36,7 @@ const isIso = (v: unknown): v is string => typeof v === 'string' && !Number.isNa
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9:_-]{1,40}$/.test(v)
 
 export type Problem = 'place' | 'industry' | 'skills' | 'limit' | 'duplicate' | 'company' | 'position' | 'details' | 'years' | 'contact' | 'notOpen' | 'already' | 'unknown'
-  | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits' | 'quota' | 'network' | 'intro' | 'available' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'caseText' | 'departDate'
+  | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits' | 'quota' | 'network' | 'intro' | 'available' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'caseText' | 'departDate' | 'reported' | 'reportLimit' | 'reportNote' | 'suspended'
 const oneOf = <T extends string>(all: readonly T[], v: unknown): v is T => typeof v === 'string' && (all as readonly string[]).includes(v)
 const intIn = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max
 const isLangs = (v: unknown): v is LanguageSkill[] => Array.isArray(v) && v.length <= LANGS.length && v.every((l) => isObj(l) && Object.keys(l).length === 2 && oneOf(LANGS, l.lang) && oneOf(LANG_LEVELS, l.level))
@@ -116,9 +117,9 @@ export function renewPost(st: MatchState, postId: string, at: string): Outcome<P
 /** every active pin as the release sees it (in the local demo: the sample seekers and me) */
 export const poolOf = (st: MatchState): PinLike[] => [...st.me.pins, ...st.seekers.flatMap((s) => s.pins)]
 /** the posts open to me now (not my own), newest release first */
-export const offersFor = (st: MatchState, pool: PinLike[], now: number) => st.posts
-  .filter((p) => p.employerId !== MY_EMPLOYER && reachFor(p, st.me.pins, pool, now).visible)
-  .sort((a, b) => b.releasedAt.localeCompare(a.releasedAt))
+export const offersFor = (st: MatchState, pool: PinLike[], now: number) => { const reported = reportedIds(st); return st.posts
+  .filter((p) => p.employerId !== MY_EMPLOYER && !reported.has(p.id) && reachFor(p, st.me.pins, pool, now).visible)
+  .sort((a, b) => b.releasedAt.localeCompare(a.releasedAt)) }
 /** what a post still shows after its 6 months: nothing (the post and its applications are removed) */
 export const hasOpenCase = (st: MatchState, postId: string) => st.cases.some((c) => c.postId === postId && currentStep(c) !== null)
 export const withoutExpired = (st: MatchState, now: number): MatchState => {
@@ -265,6 +266,7 @@ export function parseState(input: unknown): MatchState | null {
     clockHours: intIn(raw.clockHours, 0, MAX_CLOCK_HOURS) ? raw.clockHours : 0,
     me, myCompany: typeof raw.myCompany === 'string' && raw.myCompany.length <= 80 ? raw.myCompany : '',
     member: raw.member === true, memberUntil: isIso(raw.memberUntil) ? raw.memberUntil : null, seekers, posts, acceptances, credits, cases, employerVerify,
+    reports: parseReports(raw.reports, postIds),
   }
 }
 /** "Back to real time" (demo): anything stamped later than now is moved to now, so nothing made while the clock ran ahead disappears */
@@ -278,6 +280,7 @@ export function clampFuture(st: MatchState, now: number): MatchState {
     posts: st.posts.map((p) => ({ ...p, createdAt: fix(p.createdAt), releasedAt: fix(p.releasedAt) })),
     acceptances: st.acceptances.map((a) => ({ ...a, at: fix(a.at), promotedAt: fixOpt(a.promotedAt), decidedAt: fixOpt(a.decidedAt), forwardedAt: fixOpt(a.forwardedAt) })),
     credits: st.credits.map((c) => ({ ...c, at: fix(c.at) })),
+    reports: st.reports.map((r) => ({ ...r, at: fix(r.at) })),
     cases: st.cases.map((c) => ({ ...c, createdAt: fix(c.createdAt), steps: Object.fromEntries(Object.entries(c.steps).map(([k, v]) => [k, v ? fix(v) : v])) })),
   }
 }

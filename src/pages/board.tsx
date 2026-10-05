@@ -3,6 +3,7 @@ import { useI18n } from '../i18n'
 import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { activePins, isCountry, pinQuota, postQuota } from '../domain/match/logic'
+import { reportedIds } from '../domain/match/reports'
 import { reachFor, scheduleOf, stageAt, capStage } from '../domain/match/release'
 import { CURRENCIES, LEVELS, ME, MY_EMPLOYER, SKILLS, type Currency, type Level, type Post, type Skill } from '../domain/match/types'
 import type { GeoCode } from '../geo'
@@ -35,8 +36,9 @@ export function BoardPage() {
 
   // seekers: the posts open to them (and any they applied to), at their level · employers: their own posts, at the level reached
   const mineApplied = new Set(st.acceptances.filter((a) => a.seekerId === ME).map((a) => a.postId))
+  const reported = reportedIds(st) // posts I reported leave my board
   const items: { post: Post; level: Level }[] = seeker
-    ? st.posts.filter((p) => p.employerId !== MY_EMPLOYER).flatMap((p) => { const r = reachFor(p, st.me.pins, pool, now); return r.visible || mineApplied.has(p.id) ? [{ post: p, level: r.level }] : [] })
+    ? st.posts.filter((p) => p.employerId !== MY_EMPLOYER && (!reported.has(p.id) || mineApplied.has(p.id))).flatMap((p) => { const r = reachFor(p, st.me.pins, pool, now); return r.visible || mineApplied.has(p.id) ? [{ post: p, level: r.level }] : [] })
     : st.posts.filter((p) => p.employerId === MY_EMPLOYER).flatMap((p) => { const s = capStage(stageAt(scheduleOf(p, pool, now), now), p); return s === 'expired' ? [] : [{ post: p, level: s }] })
   const matches = (p: Post) => {
     const q = f.q.trim().toLowerCase()

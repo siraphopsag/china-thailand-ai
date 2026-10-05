@@ -531,7 +531,7 @@ function AccountSection() {
 }
 export function PreparePage() {
   const { t } = useI18n()
-  const cards = [['language', 'culture', 'm.prepare.lang', 'm.prepare.lang.d'], ['sources', 'legal', 'm.prepare.legal', 'm.prepare.legal.d']] as const
+  const cards = [['safety', 'shield', 'm.sc.prepare', 'm.sc.prepare.d'], ['language', 'culture', 'm.prepare.lang', 'm.prepare.lang.d'], ['sources', 'legal', 'm.prepare.legal', 'm.prepare.legal.d']] as const
   return (
     <Page title={t('m.prepare.title')}>
       <ul className="grid md:grid-cols-2 gap-3">{cards.map(([to, icon, h, d]) => (
@@ -572,13 +572,18 @@ export function HelpPage() {
 export function BackofficePage() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now, pool, deletePost, stats, mode, pendingVerifications, decideVerification } = useMatch()
+  const { st, now, pool, deletePost, stats, mode, pendingVerifications, decideVerification, reports, moderate } = useMatch()
   const { isAdmin } = useAuth()
   const nameOf = useApplicantName()
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   const [ask, askDialog] = useConfirm()
   if (!isAdmin) return <Page title={t('m.adm.title')}><Warn>{t('m.adm.gate')}</Warn></Page>
   const people = [{ ...st.me, name: t('m.adm.you') }, ...st.seekers]
+  const decideR = async (postId: string, action: 'dismiss' | 'remove' | 'suspend') => {
+    if (action !== 'dismiss' && !(await ask(t(action === 'remove' ? 'm.adm.remove.confirm' : 'm.adm.suspend.confirm'), { yes: t(action === 'remove' ? 'm.adm.remove' : 'm.adm.suspend'), danger: true }))) return
+    const r = await moderate(postId, action)
+    setMsg(r.ok ? { tone: 'info', text: t('m.adm.moderated') } : { tone: 'danger', text: N.problem(r.problem) })
+  }
   const decideV = async (id: string | null, ok: boolean) => {
     if (!ok && !(await ask(t('m.adm.reject.confirm'), { yes: t('m.adm.reject'), danger: true }))) return
     setMsg((await decideVerification(id, ok)) ? { tone: 'info', text: t('m.adm.verifyDone') } : { tone: 'danger', text: t('m.err.network') })
@@ -595,6 +600,28 @@ export function BackofficePage() {
           <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">{([['m.adm.st.users', stats.users], ['m.adm.st.employers', stats.employers], ['m.adm.st.seekers', stats.seekers], ['m.adm.st.posts', stats.posts], ['m.adm.st.posts7', stats.posts_7d], ['m.adm.st.acc', stats.acceptances]] as const).map(([k, v]) => (
             <div key={k} className="glass-card glass-lite p-3"><dt className="text-xs text-muted">{t(k)}</dt><dd className="text-2xl font-bold">{v}</dd></div>))}</dl>
         </section>)}
+      <section className="space-y-2" aria-labelledby="adm-rp">
+        <h2 id="adm-rp" className="h2">{t('m.adm.reports', { n: reports.length })}</h2>
+        {!reports.length ? <p className="text-sm text-muted">{t('m.adm.reportsNone')}</p> : (
+          <ul className="space-y-2">{reports.map((g) => {
+            const p = st.posts.find((x) => x.id === g.postId)
+            return (
+              <li key={g.postId} className="glass-card glass-lite p-4 space-y-2 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold">{p ? <NavLink to={`post?id=${p.id}`} className="hover:underline underline-offset-4">{p.position} · {p.company}</NavLink> : t('m.adm.reportsGone')}</p>
+                  <p className="flex flex-wrap gap-1.5"><span className="chip bg-danger-bg text-danger-fg border-danger-line"><Icon name="alert" size={12} />{t('m.adm.reportsBy', { n: g.count })}</span>
+                    {p?.hidden && <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="eyeOff" size={12} />{t('m.adm.hidden')}</span>}</p>
+                </div>
+                <p className="flex flex-wrap gap-1.5">{Object.entries(g.reasons).map(([k, n]) => <span key={k} className="chip bg-surface3 border-line">{t(`m.rpt.r.${k}` as never)} × {n}</span>)}</p>
+                {g.notes.length > 0 && <ul className="text-muted space-y-0.5">{g.notes.map((n, i) => <li key={i}>“{n}”</li>)}</ul>}
+                {p && <div className="flex flex-wrap gap-2 pt-1">
+                  <button type="button" className="btn-ghost text-sm" onClick={() => void decideR(g.postId, 'dismiss')}><Icon name="ok" size={15} />{t('m.adm.dismiss')}</button>
+                  <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideR(g.postId, 'remove')}><Icon name="trash" size={15} />{t('m.adm.remove')}</button>
+                  {!p.employerId.startsWith('sample:') && <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideR(g.postId, 'suspend')}><Icon name="lock" size={15} />{t('m.adm.suspend')}</button>}
+                </div>}
+              </li>)
+          })}</ul>)}
+      </section>
       <section className="space-y-2" aria-labelledby="adm-vf">
         <h2 id="adm-vf" className="h2">{t('m.adm.verify', { n: pendingVerifications.length })}</h2>
         <p className="text-xs text-muted">{t('m.adm.verifyCheck')}</p>

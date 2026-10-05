@@ -31,6 +31,7 @@ const SettingsPage = lazy(() => import('./pages/match').then((m) => ({ default: 
 const HelpPage = lazy(() => import('./pages/match').then((m) => ({ default: m.HelpPage })))
 const BackofficePage = lazy(() => import('./pages/match').then((m) => ({ default: m.BackofficePage })))
 const CasePage = lazy(() => import('./pages/case').then((m) => ({ default: m.CasePage })))
+const SafetyPage = lazy(() => import('./pages/safety').then((m) => ({ default: m.SafetyPage })))
 const TermsPage = lazy(() => import('./pages/terms').then((m) => ({ default: m.TermsPage })))
 const ChooseRolePage = lazy(() => import('./pages/choose').then((m) => ({ default: m.ChooseRolePage })))
 
@@ -94,7 +95,7 @@ function Router() {
     '': <Landing />, language: <LanguagePage />, sources: <SourcesPage />, privacy: <PrivacyPage />,
     login: <LoginPage />, register: <RegisterPage />, forgot: <ForgotPage />, 'reset-password': <ResetPasswordPage />,
     'choose-role': <ChooseRolePage />,
-    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, case: <CasePage />, terms: <TermsPage />, // matching prototype
+    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, case: <CasePage />, terms: <TermsPage />, safety: <SafetyPage />, // matching prototype
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>
 }

@@ -7,6 +7,7 @@
  * Everything here is synthetic prototype data kept in this browser. No identity documents or contact details are collected.
  */
 import type { Case } from './cases'
+import type { Report } from './reports'
 /* fields, skills and languages (came with the first job-board prototype, which was removed in Oct 2026) */
 export const SKILLS = [
   'software_engineering', 'data_analysis', 'mechanical_engineering', 'electrical_engineering', 'civil_engineering', 'quality_control',
@@ -92,6 +93,8 @@ export interface Post extends Place {
   releasedAt: string
   /** the employer's company registration was approved (owner, Oct 2026): unverified posts stop at level 2 and carry a warning */
   verified: boolean
+  /** hidden while an administrator checks reports (database only; its employer and administrators still see it) */
+  hidden?: boolean
   synthetic: true
 }
 /**
@@ -133,6 +136,10 @@ export interface MatchState {
   cases: Case[]
   /** my employer verification (company registration number) */
   employerVerify: EmployerVerify | null
+  /** posts I reported (see reports.ts) — they no longer show on my board */
+  reports: Report[]
+  /** an administrator suspended me as an employer after reports: no new posts or renewals (database only) */
+  suspended?: boolean
 }
 /** employer verification: the number is checked at once; an administrator (the agency in the prototype) approves it */
 export interface EmployerVerify { country: Country; regNo: string; status: 'pending' | 'verified' | 'rejected'; at: string; decidedAt?: string }

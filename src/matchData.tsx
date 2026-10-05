@@ -2,10 +2,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { addPin, applyTo, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, removePin, renewPost, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
 import { applyCaseAction, submitCase, type CaseAction } from './domain/match/cases'
 import { cleanRegNo } from './domain/match/verify'
+import { reportPost, type ReportGroup, type ReportReason } from './domain/match/reports'
 import { HOUR_MS, pinActive, type PinLike } from './domain/match/release'
 import { seedState } from './domain/match/seed'
 import { HOLDS_PLACE, MAX_CLOCK_HOURS, ME, MY_EMPLOYER, type Acceptance, type Country, type Industry, type MatchState, type PlanId, type Place, type Post, type Role, type Skill } from './domain/match/types'
-import { buildState, dbProblem, postToRow, rowToAcceptance, rowToPost, statsByProvince, statsToPool, type AcceptanceRow, type AdminStats, type CaseRow, type PinStatRow, type PostRow, type ProfileRow } from './domain/match/remote'
+import { buildState, dbProblem, postToRow, rowToAcceptance, rowToPost, statsByProvince, statsToPool, type AcceptanceRow, type AdminStats, type CaseRow, type PinStatRow, type PostRow, type ProfileRow, type ReportRow, reportQueue } from './domain/match/remote'
 import { getClient, takeNext, useAuth } from './auth'
 import { go } from './store'
 
@@ -91,6 +92,12 @@ interface Ctx {
   caseAct: (caseId: string, action: CaseAction) => Promise<Outcome<unknown>>
   /** may act as the agency: an administrator — or anyone in the local demo, where there are no accounts */
   agency: boolean
+  /** report a suspicious post (once per post, not my own); it then leaves my board */
+  report: (postId: string, reason: ReportReason, note: string) => Promise<Outcome<unknown>>
+  /** administrator: open reports grouped by post */
+  reports: ReportGroup[]
+  /** administrator: not a problem (shown again) · remove the post · suspend its employer */
+  moderate: (postId: string, action: 'dismiss' | 'remove' | 'suspend') => Promise<Outcome<unknown>>
   advanceClock: (hours: number) => void
   resetClock: () => void
   reset: () => void
@@ -118,6 +125,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
   const [remoteCounts, setCounts] = useState<Record<string, Counts> | null>(null)
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [people, setPeople] = useState<ProfileRow[]>([])
+  const [reportRows, setReportRows] = useState<ReportRow[]>([])
   // until the first load for this account has arrived, pages wait instead of showing an empty state (e.g. "choose a role")
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
   const mode: DataMode = base === 'remote' && loadedFor !== userId ? 'loading' : base
@@ -128,7 +136,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     try {
       const sb = await getClient()
       if (!purged.current) { purged.current = true; void sb.rpc('purge_expired').then(() => undefined, () => undefined) } // posts past 6 months, pins past a month
-      const [prof, posts, pins, accs, uses, pinStats, counts, people, allPins, st, cases] = await Promise.all([
+      const [prof, posts, pins, accs, uses, pinStats, counts, people, allPins, st, cases, reps] = await Promise.all([
         sb.from('profiles').select('*').eq('id', userId).maybeSingle(),
         sb.from('posts').select('*').order('created_at', { ascending: false }),
         sb.from('pins').select('*').eq('seeker_id', userId).order('created_at'),
@@ -140,11 +148,13 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         admin ? sb.from('pins').select('*') : Promise.resolve({ data: [] }),
         admin ? sb.rpc('admin_stats') : Promise.resolve({ data: null }),
         sb.from('cases').select('*').order('created_at'), // missing before 0004 → no cases
+        sb.from('reports').select('*').order('created_at'), // mine (everyone's for administrators); missing before 0005 → none
       ])
       if (seq !== loadSeq.current) return // a newer load started meanwhile
       setRemote(buildState({ uid: userId, name: userName, profile: prof.data ?? null, posts: (posts.data ?? []) as PostRow[], pins: pins.data ?? [], acceptances: accs.data ?? [],
-        clockHours: 0, credits: uses.data ?? [], people: people.data ?? [], allPins: allPins.data ?? [], cases: (cases.data ?? []) as CaseRow[] }))
+        clockHours: 0, credits: uses.data ?? [], people: people.data ?? [], allPins: allPins.data ?? [], cases: (cases.data ?? []) as CaseRow[], reports: (reps.data ?? []) as ReportRow[] }))
       setPeople((people.data ?? []) as ProfileRow[])
+      setReportRows(admin ? (reps.data ?? []) as ReportRow[] : [])
       setPool(Array.isArray(pinStats.data) ? pinStats.data as PinStatRow[] : [])
       setCounts(Array.isArray(counts.data) ? Object.fromEntries((counts.data as { post_id: string; held: number; pending: number; reserved: number }[]).map((r) => [r.post_id, { held: Number(r.held), pending: Number(r.pending), reserved: Number(r.reserved) }])) : null)
       const s = Array.isArray(st.data) ? st.data[0] : st.data
@@ -207,7 +217,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     // signed in: limits are checked at the real time, like the database does
     const limitAt = () => (local ? at() : new Date().toISOString())
     return {
-      st, now, limitNow, mode, pool, pinsByProvince, counts, stats: local ? null : stats, pendingVerifications, agency: local || admin,
+      st, now, limitNow, mode, pool, pinsByProvince, counts, stats: local ? null : stats, pendingVerifications, agency: local || admin, reports: local ? [] : reportQueue(reportRows),
       setRole: async (role) => { if (local) setLocal((s) => ({ ...s, role })); else await profile({ user_type: role }) },
       setOrigin: async (origin) => { if (local) setLocal((s) => ({ ...s, me: { ...s.me, origin } })); else await profile({ origin_country: origin?.country ?? null, origin_province: origin?.province ?? null }) },
       pin: async (input) => {
@@ -315,6 +325,17 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         const value = 'name' in action ? action.name : 'date' in action ? action.date : 'text' in action ? action.text : null
         return write((sb) => sb.rpc('case_action', { p_id: caseId, p_action: CASE_RPC[action.kind], p_key: key, p_value: value }), () => null)
       },
+      report: async (postId, reason, note) => {
+        const r = reportPost(st, postId, reason, note, uid('rep'), at())
+        if (!r.ok) return fail(r.problem)
+        if (local) { setLocal((s) => ({ ...s, reports: [...s.reports, r.value] })); return r }
+        const w = await write((sb) => sb.from('reports').insert({ post_id: postId, reason, note: r.value.note }), () => null)
+        return !w.ok && w.problem === 'already' ? fail('reported') : w
+      },
+      moderate: async (postId, action) => {
+        if (local) return fail('state') // no administrators in the local demo
+        return write((sb) => sb.rpc('moderate_post', { p_post: postId, p_action: action }), () => null)
+      },
       advanceClock: (hours) => {
         const step = (c: number) => Math.min(MAX_CLOCK_HOURS, c + hours)
         if (local) setLocal((s) => ({ ...s, clockHours: step(s.clockHours) })); else setClock(step)
@@ -323,7 +344,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       resetClock: () => { if (local) setLocal((s) => clampFuture(s, Date.now())); else setClock(0) },
       reset: () => { if (local) { const fresh = seedState(); setLocal((s) => ({ ...fresh, role: s.role })) } else setClock(0) },
     }
-  }, [st, now, limitNow, mode, pool, pinsByProvince, counts, stats, at, refresh, userId, admin, people])
+  }, [st, now, limitNow, mode, pool, pinsByProvince, counts, stats, at, refresh, userId, admin, people, reportRows])
   return <C.Provider value={value}>{children}</C.Provider>
 }
 export const useMatch = () => { const c = useContext(C); if (!c) throw new Error('match'); return c }

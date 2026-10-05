@@ -10,6 +10,7 @@ import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { AgencyLinks, Empty, Page, Toast, useApplicantName, useGate, useNames } from './match'
+import { ScamNote } from './safety'
 
 /**
  * The case after a match (owner, Oct 2026): nine steps from the employer's confirmation to the worker's arrival. The employer
@@ -57,6 +58,7 @@ export function CasePage() {
               <div className="h-full bg-primary" style={{ width: `${(n / 9) * 100}%` }} /></div>
             <p className="text-sm text-muted">{t('m.cs.progress', { n })}{isEmployer && acc ? ` · ${t('m.cs.with', { n: nameOf(acc) })}` : ''}</p>
             {cur && <p className="text-sm">{t(`m.cs.d.${cur}` as never)}</p>}
+            {isSeeker && (cur === 'documents' || cur === 'departure') && <ScamNote where={cur} />}
             {cur === 'submitted' && (isEmployer
               ? <Warn>{t('m.cs.waitVerify.employer')} <NavLink to="me" className="underline underline-offset-4 font-medium">{t('m.cs.goVerify')}</NavLink></Warn>
               : <Warn tone="info">{t('m.cs.waitVerify.seeker')}</Warn>)}

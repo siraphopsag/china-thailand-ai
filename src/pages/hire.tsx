@@ -11,6 +11,7 @@ import { GeoMap } from '../components/geomap'
 import { Modal } from '../components/modal'
 import { useConfirm } from '../components/confirm'
 import { Icon } from '../components/icons'
+import { Warn } from '../components/ui'
 import { IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
 import { VerifyCard } from './case'
 import { postToInput } from '../domain/match/remote'
@@ -145,6 +146,7 @@ export function HirePage() {
         <GeoMap className={MAP_SIZE} label={t('m.mapLabel')} country={c} province={p} pins={mine.map((x) => ({ country: x.country, province: x.province, label: `${x.position} · ${N.place(x.country, x.province)}`, tone: 'post' }))}
           onPickCountry={(x) => { setC(x); setP(null); setForm(false) }} onPickProvince={(x) => { setP(x); setForm(false) }} />
         <p className="text-xs text-muted">{t('m.mapHint')}</p></>}>
+      {st.suspended && <Warn tone="danger">{t('m.rpt.suspended')}</Warn>}
       <Steps items={[t('m.emp.s1'), t('m.emp.s2')]} at={form ? 1 : 0} />
       <Toast msg={msg} />
       {!form ? (

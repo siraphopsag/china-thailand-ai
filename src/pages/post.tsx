@@ -10,6 +10,7 @@ import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { CaseLink } from './case'
+import { ReportButton, ScamNote } from './safety'
 import { AgencyLinks, Empty, LevelBadge, Page, PostFacts, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 
 /**
@@ -87,6 +88,7 @@ export function PostPage() {
         {presence && presence.filling > 0 && <p className="text-sm font-medium text-warn-fg flex items-center gap-1.5"><Icon name="edit" size={16} />{t('m.live.filling', { n: presence.filling })}</p>}
       </div>
       {!p.verified && !mine && <Warn>{t('m.vf.warnSeeker')}</Warn>}
+      {mine && p.hidden && <Warn tone="danger">{t('m.rpt.hiddenOwner')}</Warn>}
       <Toast msg={msg} />
       {askDialog}
 
@@ -112,6 +114,7 @@ export function PostPage() {
                     <span id="ap-intro-hint" className="block text-xs text-muted mt-1">{t('m.ap.introHint')}</span>{fe.msg('ap-intro')}</div>
                   <div><label className="block"><span className="label">{t('m.ap.from')}<span className="font-normal text-muted"> ({t('m.req')})</span></span>
                     <input id="ap-from" className="input" type="date" min={today(now)} max={plusDays(now, 730)} aria-required="true" value={from} aria-invalid={fe.invalid('ap-from')} aria-describedby={fe.describe('ap-from')} onChange={(e) => { setFrom(e.target.value); fe.clear() }} /></label>{fe.msg('ap-from')}</div>
+                  <ScamNote where="apply" />
                   <button type="submit" className="btn-primary" disabled={busy}><Icon name={full ? 'ticket' : 'send'} size={16} />{t(full ? 'm.ap.reserve' : 'm.ap.go')}</button>
                 </form>
               ) : (<>
@@ -176,6 +179,7 @@ export function PostPage() {
           <p className="text-sm">{t('jb.minYearsShort', { n: p.minYears })} · {p.skills.map(N.skill).join(', ')}</p>
           <PostFacts post={p} />
           {p.details && <p className="text-sm text-muted border-t border-line pt-3">{p.details}</p>}
+          {!mine && <div className="border-t border-line pt-3"><ReportButton postId={p.id} /></div>}
         </section>
       </div>
     </Page>

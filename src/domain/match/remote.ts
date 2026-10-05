@@ -4,6 +4,11 @@ import { isObj } from '../../profileSchema'
 import type { PostInput } from './logic'
 import type { PinLike } from './release'
 import { CASE_STEPS, DOCS, PERMITS, TESTS, type Case, type CaseStep } from './cases'
+import { REPORT_REASONS, groupReports, type ReportGroup, type ReportReason } from './reports'
+export const isReason = (v: string): v is ReportReason => (REPORT_REASONS as readonly string[]).includes(v)
+/** the administrator's queue: open reports of everyone, grouped by post */
+export const reportQueue = (rows: ReportRow[]): ReportGroup[] =>
+  groupReports(rows.filter((r) => r.status === 'open').flatMap((r) => (isReason(r.reason) ? [{ postId: r.post_id, reason: r.reason, note: r.note ?? '', at: iso(r.created_at) }] : [])))
 import { BENEFITS, EDU, EMPLOYMENT, INDUSTRIES, LANGS, LANG_LEVELS, ME, MY_EMPLOYER, SKILLS, type Acceptance, type AppStatus, type Benefit, type Country, type Credit, type Edu, type Employment, type Industry, type LanguageSkill, type MatchState, type Pin, type Post, type Role, type Seeker, type Skill } from './types'
 
 export interface PostRow {
@@ -14,7 +19,10 @@ export interface PostRow {
   released_at?: string | null
   /** the employer is verified (0004); missing before 0004 → only the samples count as verified */
   verified?: boolean | null
+  /** hidden while an administrator checks reports (0005) */
+  hidden?: boolean | null
 }
+export interface ReportRow { id: string; post_id: string; reporter_id: string; reason: string; note: string | null; status: string; created_at: string }
 export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string }
 export interface PinRow { id: string; seeker_id: string; country: string; province: string; industry: string; skills: string[]; created_at: string }
 export interface AcceptanceRow { id: string; post_id: string; seeker_id: string; seeker_name: string; status: string; created_at: string; forwarded_at: string | null
@@ -23,7 +31,7 @@ export interface QuotaRow { kind: string; created_at: string }
 /** anonymous counts of active pins (public.pin_stats): place, field and the hour they were made — no owner */
 export interface PinStatRow { country: string; province: string; industry: string; skills: string[]; hour: string; n: number }
 export interface ProfileRow { id?: string; full_name?: string | null; user_type: string | null; company: string | null; origin_country: string | null; origin_province: string | null; member: boolean | null; member_until?: string | null
-  verify_country?: string | null; verify_reg?: string | null; verify_status?: string | null; verify_at?: string | null; verify_decided_at?: string | null }
+  verify_country?: string | null; verify_reg?: string | null; verify_status?: string | null; verify_at?: string | null; verify_decided_at?: string | null; suspended?: boolean | null }
 export interface AdminStats { users: number; employers: number; seekers: number; posts: number; posts_7d: number; acceptances: number }
 
 const one = <T extends string>(all: readonly T[], v: unknown): T | null => (typeof v === 'string' && (all as readonly string[]).includes(v) ? (v as T) : null)
@@ -42,7 +50,7 @@ export const rowToPost = (r: PostRow, uid: string): Post => ({
   headcount: r.headcount, employment: one(EMPLOYMENT, r.employment),
   salary: r.salary_min !== null && r.salary_max !== null && (r.salary_currency === 'THB' || r.salary_currency === 'CNY') ? { min: r.salary_min, max: r.salary_max, currency: r.salary_currency } : null,
   startDate: r.start_date, languages: toLanguages(r.languages), education: one(EDU, r.education) ?? 'none', benefits: many(BENEFITS, r.benefits),
-  country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, synthetic: true,
+  country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, ...(r.hidden ? { hidden: true } : {}), synthetic: true,
 })
 export function toLanguages(v: unknown): LanguageSkill[] {
   if (!Array.isArray(v)) return []
@@ -93,7 +101,7 @@ export function rowToCase(r: CaseRow, uid: string): Case {
     trainings, departureDate: r.departure_date, note: r.note ?? '', createdAt: iso(r.created_at) }
 }
 /** the whole matching state for one signed-in person, as the pages expect it */
-export function buildState(input: { uid: string; name: string; profile: ProfileRow | null; posts: PostRow[]; pins: PinRow[]; acceptances: AcceptanceRow[]; clockHours: number; credits?: QuotaRow[]; people?: ProfileRow[]; allPins?: PinRow[]; cases?: CaseRow[] }): MatchState {
+export function buildState(input: { uid: string; name: string; profile: ProfileRow | null; posts: PostRow[]; pins: PinRow[]; acceptances: AcceptanceRow[]; clockHours: number; credits?: QuotaRow[]; people?: ProfileRow[]; allPins?: PinRow[]; cases?: CaseRow[]; reports?: ReportRow[] }): MatchState {
   const p = input.profile
   const origin = p && country(p.origin_country) && p.origin_province ? { country: country(p.origin_country)!, province: p.origin_province } : null
   // administrators also see the other job seekers (names and pins) to follow the step-by-step release
@@ -110,13 +118,15 @@ export function buildState(input: { uid: string; name: string; profile: ProfileR
     acceptances: input.acceptances.map((r) => rowToAcceptance(r, input.uid)),
     credits: (input.credits ?? []).flatMap((r) => { const c = rowToCredit(r); return c ? [c] : [] }),
     cases: (input.cases ?? []).map((r) => rowToCase(r, input.uid)),
+    reports: (input.reports ?? []).filter((r) => r.reporter_id === input.uid).flatMap((r) => (isReason(r.reason) ? [{ id: r.id, postId: r.post_id, reason: r.reason, note: r.note ?? '', at: iso(r.created_at) }] : [])),
+    ...(p?.suspended ? { suspended: true } : {}),
     employerVerify: p && country(p.verify_country) && p.verify_reg && (p.verify_status === 'pending' || p.verify_status === 'verified' || p.verify_status === 'rejected')
       ? { country: country(p.verify_country)!, regNo: p.verify_reg, status: p.verify_status, at: iso(p.verify_at ?? new Date().toISOString()), ...(p.verify_decided_at ? { decidedAt: iso(p.verify_decided_at) } : {}) } : null,
   }
 }
 
 /** database error → one of the prototype's problems (the message text is never shown as is) */
-export function dbProblem(e: { message?: string; code?: string } | null | undefined): 'quota' | 'limit' | 'duplicate' | 'already' | 'contact' | 'notOpen' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'network' {
+export function dbProblem(e: { message?: string; code?: string } | null | undefined): 'quota' | 'limit' | 'duplicate' | 'already' | 'contact' | 'notOpen' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'reportLimit' | 'suspended' | 'network' {
   const m = e?.message ?? ''
   // a function, table or column this website needs is missing: the database has not been updated (0003_board.sql)
   if (['PGRST202', 'PGRST204', 'PGRST205', '42883', '42P01', '42703'].includes(e?.code ?? '') || /schema cache|does not exist/i.test(m)) return 'dbOld'
@@ -124,6 +134,8 @@ export function dbProblem(e: { message?: string; code?: string } | null | undefi
   if (m.includes('below_held')) return 'belowHeld'
   if (m.includes('bad_reg_no')) return 'regNo'
   if (m.includes('case_started')) return 'caseStarted'
+  if (m.includes('report_limit')) return 'reportLimit'
+  if (m.includes('suspended')) return 'suspended'
   if (m.includes('pin_limit')) return 'limit'
   if (m.includes('pin_duplicate')) return 'duplicate'
   if (m.includes('not_open') || m.includes('expired')) return 'notOpen'

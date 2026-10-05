@@ -15,7 +15,7 @@ const post = (p: Omit<Post, 'synthetic' | 'releasedAt' | 'verified'>, verified =
 export function seedState(now = Date.now()): MatchState {
   const t = now - DAY_MS * 3
   return {
-    version: 2, role: null, clockHours: 0, myCompany: '', member: false, memberUntil: null, credits: [], employerVerify: null,
+    version: 2, role: null, clockHours: 0, myCompany: '', member: false, memberUntil: null, credits: [], employerVerify: null, reports: [],
     me: seeker(ME, 'you', null, []),
     seekers: [
       // pins made at different hours: they form separate level-1 groups (earliest first)
