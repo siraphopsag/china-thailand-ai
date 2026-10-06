@@ -387,3 +387,83 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .plan-best { box-shadow: 0 0 0 2px rgb(var(--rar1-line)), 0 8px 26px -12px rgb(var(--rar1-line) / .8) }
 /* in-page "are you sure?" (components/confirm.tsx): the yes of a destructive question is red */
 .btn-danger { background: rgb(var(--danger-fg)); border-color: rgb(var(--danger-fg)); color: rgb(var(--page)) }
+
+/* ── accent colour (owner, Oct 2026): Settings → colour re-tints actions, selection, the map and the soft light; indigo is the default
+   (the tokens above). Status colours (ok / warn / danger) and the level colours never change. Every accent keeps text ≥ 4.5:1
+   (tested in a11y.test.ts). Set before first paint by /theme-init.js. */
+:root:not([data-theme='dark'])[data-accent='forest'] { --primary: 21 101 52; --onprimary: 255 255 255; --primary-hi: 22 163 74; --brand: 220 252 231; --brandfg: 20 83 45;
+  --globe-active: 21 101 52; --globe-route: 21 101 52; --globe-prov: 22 163 74; --globe-side: 20 83 45; --globe-pside: 20 83 45; --glow-a: 22 163 74; --grad-a: 21 101 52; --cta-a: 21 101 52; --cta-b: 20 83 45; --paths-c: 20 83 45; --paths-sheen: 21 101 52 }
+:root[data-theme='dark'][data-accent='forest'] { --primary: 74 222 128; --onprimary: 10 10 20; --primary-hi: 134 239 172; --brand: 20 58 38; --brandfg: 187 247 208;
+  --globe-active: 74 222 128; --globe-route: 134 239 172; --globe-prov: 134 239 172; --globe-side: 21 101 52; --globe-pside: 22 163 74; --glow-a: 22 163 74; --grad-a: 134 239 172; --cta-a: 21 101 52; --cta-b: 20 83 45; --paths-sheen: 187 247 208 }
+:root:not([data-theme='dark'])[data-accent='ocean'] { --primary: 29 78 216; --onprimary: 255 255 255; --primary-hi: 59 130 246; --brand: 219 234 254; --brandfg: 30 58 138;
+  --globe-active: 29 78 216; --globe-route: 29 78 216; --globe-prov: 59 130 246; --globe-side: 30 58 138; --globe-pside: 30 58 138; --glow-a: 59 130 246; --grad-a: 29 78 216; --cta-a: 29 78 216; --cta-b: 30 58 138; --paths-c: 30 58 138; --paths-sheen: 29 78 216 }
+:root[data-theme='dark'][data-accent='ocean'] { --primary: 96 165 250; --onprimary: 10 10 20; --primary-hi: 147 197 253; --brand: 23 37 84; --brandfg: 191 219 254;
+  --globe-active: 96 165 250; --globe-route: 147 197 253; --globe-prov: 147 197 253; --globe-side: 29 78 216; --globe-pside: 59 130 246; --glow-a: 59 130 246; --grad-a: 147 197 253; --cta-a: 29 78 216; --cta-b: 30 58 138; --paths-sheen: 191 219 254 }
+:root:not([data-theme='dark'])[data-accent='plum'] { --primary: 126 34 206; --onprimary: 255 255 255; --primary-hi: 168 85 247; --brand: 243 232 255; --brandfg: 88 28 135;
+  --globe-active: 126 34 206; --globe-route: 126 34 206; --globe-prov: 168 85 247; --globe-side: 88 28 135; --globe-pside: 88 28 135; --glow-a: 168 85 247; --grad-a: 126 34 206; --cta-a: 126 34 206; --cta-b: 88 28 135; --paths-c: 88 28 135; --paths-sheen: 126 34 206 }
+:root[data-theme='dark'][data-accent='plum'] { --primary: 192 132 252; --onprimary: 10 10 20; --primary-hi: 216 180 254; --brand: 52 26 82; --brandfg: 233 213 255;
+  --globe-active: 192 132 252; --globe-route: 216 180 254; --globe-prov: 216 180 254; --globe-side: 126 34 206; --globe-pside: 168 85 247; --glow-a: 168 85 247; --grad-a: 216 180 254; --cta-a: 126 34 206; --cta-b: 88 28 135; --paths-sheen: 233 213 255 }
+:root:not([data-theme='dark'])[data-accent='ember'] { --primary: 154 52 18; --onprimary: 255 255 255; --primary-hi: 234 88 12; --brand: 255 237 213; --brandfg: 124 45 18;
+  --globe-active: 154 52 18; --globe-route: 154 52 18; --globe-prov: 234 88 12; --globe-side: 124 45 18; --globe-pside: 124 45 18; --glow-a: 234 88 12; --grad-a: 154 52 18; --cta-a: 154 52 18; --cta-b: 124 45 18; --paths-c: 124 45 18; --paths-sheen: 154 52 18 }
+:root[data-theme='dark'][data-accent='ember'] { --primary: 251 146 60; --onprimary: 10 10 20; --primary-hi: 253 186 116; --brand: 70 40 18; --brandfg: 254 215 170;
+  --globe-active: 251 146 60; --globe-route: 253 186 116; --globe-prov: 253 186 116; --globe-side: 154 52 18; --globe-pside: 234 88 12; --glow-a: 234 88 12; --grad-a: 253 186 116; --cta-a: 154 52 18; --cta-b: 124 45 18; --paths-sheen: 254 215 170 }
+/* the accent swatches in Settings (decoration: the name next to each one is the label) */
+.swatch-indigo { background: linear-gradient(135deg, rgb(99 102 241), rgb(67 56 202)) }
+.swatch-forest { background: linear-gradient(135deg, rgb(22 163 74), rgb(21 101 52)) }
+.swatch-ocean { background: linear-gradient(135deg, rgb(59 130 246), rgb(29 78 216)) }
+.swatch-plum { background: linear-gradient(135deg, rgb(168 85 247), rgb(126 34 206)) }
+.swatch-ember { background: linear-gradient(135deg, rgb(234 88 12), rgb(154 52 18)) }
+/* the details panel (owner, Oct 2026): right side on wide screens, a bottom sheet on phones */
+.drawer-panel { position: fixed; margin: 0; inset: 0 0 0 auto; width: min(460px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; overflow-y: auto;
+  border-left: 1px solid rgb(var(--line)); border-radius: 1.5rem 0 0 1.5rem; background: linear-gradient(180deg, rgb(var(--surface)), rgb(var(--surface2)));
+  box-shadow: var(--elev-hi), -30px 0 80px -30px rgb(0 0 0 / .55) }
+.drawer-panel[open] { animation: drawer-in .22s ease-out }
+@keyframes drawer-in { from { transform: translateX(32px); opacity: 0 } to { transform: none; opacity: 1 } }
+@media (max-width: 639px) {
+  .drawer-panel { inset: auto 0 0 0; width: 100vw; height: auto; max-height: 88dvh; border-left: 0; border-top: 1px solid rgb(var(--line)); border-radius: 1.5rem 1.5rem 0 0 }
+  @keyframes drawer-in { from { transform: translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }
+}
+@media (prefers-reduced-motion: reduce) { .drawer-panel[open] { animation: none } }
+/* the company letter on a board card, in its level's colour */
+.rar-avatar { background: rgb(var(--rar-bg)); color: rgb(var(--rar-fg)); box-shadow: inset 0 0 0 2px rgb(var(--rar-line)) }
+.fill-bar { height: .375rem; border-radius: 9999px; background: rgb(var(--surface3)); overflow: hidden }
+.fill-bar > span { display: block; height: 100%; border-radius: inherit; background: rgb(var(--primary)) }
+/* calendar labels (owner, Oct 2026): every kind has its own colour, always with an icon or words (never colour alone); text ≥ 4.5:1 */
+.cal-ev { background: rgb(var(--cal-bg)); color: rgb(var(--cal-fg)); border-color: rgb(var(--cal-line)) }
+.cal-dot { display: inline-block; width: .5rem; height: .5rem; border-radius: 9999px; background: rgb(var(--cal-line)) }
+.cal-training { --cal-bg: var(--rar2-bg); --cal-fg: var(--rar2-fg); --cal-line: var(--rar2-line) }
+.cal-test { --cal-bg: var(--info-bg); --cal-fg: var(--info-fg); --cal-line: var(--info-line) }
+.cal-documents { --cal-bg: var(--warn-bg); --cal-fg: var(--warn-fg); --cal-line: var(--warn-line) }
+.cal-departure { --cal-bg: var(--ok-bg); --cal-fg: var(--ok-fg); --cal-line: var(--ok-line) }
+.cal-start { --cal-bg: var(--brand); --cal-fg: var(--brandfg); --cal-line: var(--primary) }
+.cal-expiry { --cal-bg: var(--danger-bg); --cal-fg: var(--danger-fg); --cal-line: var(--danger-line) }
+/* ── admin charts (owner, Oct 2026): one accent hue per series, the period before dashed in muted ink, recessive grid ── */
+.viz-line { fill: none; stroke: rgb(var(--primary)); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round }
+.viz-area { fill: rgb(var(--primary) / .14) }
+.viz-stop-top { stop-color: rgb(var(--primary)); stop-opacity: .26 } .viz-stop-bottom { stop-color: rgb(var(--primary)); stop-opacity: .02 }
+.viz-prev { fill: none; stroke: rgb(var(--muted)); stroke-width: 1.5; stroke-dasharray: 5 4 }
+.viz-grid { stroke: rgb(var(--line)); stroke-width: 1 }
+.viz-tick { fill: rgb(var(--muted)); font-size: 11px }
+.viz-big { fill: rgb(var(--ink)); font-size: 30px; font-weight: 700 }
+.viz-cross { stroke: rgb(var(--muted)); stroke-dasharray: 3 3 }
+.viz-dot { fill: rgb(var(--primary)); stroke: rgb(var(--surface)); stroke-width: 2 }
+.viz-tip { background: rgb(var(--ink)); color: rgb(var(--page)); min-width: 7rem; z-index: 5 }
+.viz-ring { fill: none; stroke: rgb(var(--surface3)); stroke-width: 24 }
+.viz-seg { fill: none; stroke-width: 24 }
+.viz-key { display: inline-block; width: .75rem; height: .75rem; border-radius: .2rem; background: var(--viz) }
+/* donut slots: the validated categorical order (blue, orange, aqua, yellow, magenta), stepped for each theme */
+:root, :root[data-theme='light'] { --viz1: #2a78d6; --viz2: #eb6834; --viz3: #1baf7a; --viz4: #eda100; --viz5: #e87ba4 }
+:root[data-theme='dark'] { --viz1: #3987e5; --viz2: #d95926; --viz3: #199e70; --viz4: #c98500; --viz5: #d55181 }
+.viz-c1 { stroke: var(--viz1); --viz: var(--viz1) } .viz-c2 { stroke: var(--viz2); --viz: var(--viz2) } .viz-c3 { stroke: var(--viz3); --viz: var(--viz3) }
+.viz-c4 { stroke: var(--viz4); --viz: var(--viz4) } .viz-c5 { stroke: var(--viz5); --viz: var(--viz5) }
+/* activity grid: one hue, light → dark */
+.viz-h0 { fill: rgb(var(--surface3)) } .viz-h1 { fill: rgb(var(--primary) / .25) } .viz-h2 { fill: rgb(var(--primary) / .5) }
+.viz-h3 { fill: rgb(var(--primary) / .75) } .viz-h4 { fill: rgb(var(--primary)) }
+/* capsule (owner's design reference, Oct 2026): a name bubble beside each icon on hover or keyboard focus, and a thin line
+   between the places people work in and the general ones */
+.nav-tip { position: absolute; left: calc(100% + .75rem); top: 50%; transform: translate(-4px, -50%); white-space: nowrap; pointer-events: none;
+  padding: .3rem .65rem; border-radius: .6rem; font-size: .8rem; font-weight: 600; background: rgb(var(--ink)); color: rgb(var(--page));
+  opacity: 0; transition: opacity .15s ease, transform .15s ease; box-shadow: 0 8px 20px -8px rgb(0 0 0 / .5) }
+.group:hover .nav-tip, .group:focus-visible .nav-tip { opacity: 1; transform: translate(0, -50%) }
+@media (prefers-reduced-motion: reduce) { .nav-tip { transition: none } }
+.nav-split { margin-top: .35rem; padding-top: .55rem; border-top: 1px solid rgb(var(--ink) / .12) }

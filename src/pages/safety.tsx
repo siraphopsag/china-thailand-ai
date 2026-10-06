@@ -68,7 +68,7 @@ export function ReportButton({ postId }: { postId: string }) {
   return (<>
     <button type="button" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-danger-fg underline underline-offset-4 min-h-[24px]" onClick={() => setOpen(true)}><Icon name="alert" size={15} />{t('m.rpt.button')}</button>
     <Modal open={open} onClose={close} wide>{(titleId) => (
-      <form className="p-5 sm:p-6 space-y-4" onSubmit={submit} noValidate>
+      <form className="space-y-4" onSubmit={submit} noValidate>
         <h2 id={titleId} className="h2">{t('m.rpt.title')}</h2>
         <p className="text-sm text-muted">{t('m.rpt.lead')}</p>
         <fieldset aria-describedby={err ? 'rp-err' : undefined}><legend className="label">{t('m.rpt.reason')}</legend>

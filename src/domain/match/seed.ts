@@ -54,5 +54,6 @@ function sampleCase(now: number): Case {
   const c = newCase('case-s1', { id: 'acc-me', postId: 'post-s3', seekerId: ME }, iso(now - DAY_MS * 28), true)
   return { ...c, steps: { ...c.steps, accepted: iso(now - DAY_MS * 27), documents: iso(now - DAY_MS * 20), tests: iso(now - DAY_MS * 12) },
     docs: { passport: true, health: true, contract: true }, tests: { language: true, skill: true },
-    trainings: c.trainings.map((x, i) => ({ ...x, done: i < 2 })), note: 'Sample case for the prototype.' }
+    trainings: c.trainings.map((x, i) => ({ ...x, done: i < 2, ...(i >= 2 ? { date: day(now + DAY_MS * (i === 2 ? 3 : 8)) } : {}) })), note: 'Sample case for the prototype.',
+    dates: { start: day(now + DAY_MS * 45) } }
 }

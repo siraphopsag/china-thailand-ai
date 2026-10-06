@@ -35,7 +35,7 @@ const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toStr
 const emptyState = (clockHours = 0): MatchState => ({ ...seedState(), role: null, posts: [], seekers: [], acceptances: [], clockHours, myCompany: '', member: false, memberUntil: null, credits: [], cases: [], employerVerify: null })
 /** an employer waiting for verification, as the agency (administrator) sees it; id null = me in the local demo */
 export interface PendingVerify { id: string | null; name: string; company: string; country: Country; regNo: string; at: string }
-const CASE_RPC: Record<CaseAction['kind'], string> = { accept: 'accept', doc: 'doc', test: 'test', train: 'train', trainAdd: 'train_add', trainRemove: 'train_remove', permit: 'permit', departure: 'departure', departOk: 'depart_ok', note: 'note', arrived: 'arrived' }
+const CASE_RPC: Record<CaseAction['kind'], string> = { accept: 'accept', doc: 'doc', test: 'test', train: 'train', trainAdd: 'train_add', trainRemove: 'train_remove', permit: 'permit', departure: 'departure', departOk: 'depart_ok', note: 'note', arrived: 'arrived', date: 'date', trainDate: 'train_date' }
 const fail = <T,>(problem: Problem): Outcome<T> => ({ ok: false, problem })
 export const nowWith = (clockHours: number, real = Date.now()) => real + clockHours * HOUR_MS
 export function countsFrom(acc: Acceptance[]): Record<string, Counts> {

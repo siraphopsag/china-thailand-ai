@@ -14,7 +14,11 @@ export type TestKey = (typeof TESTS)[number]
 export type PermitKey = (typeof PERMITS)[number]
 /** courses before departure: built-in ones start with "@" (shown in the visitor's language); the agency can add its own */
 export const DEFAULT_TRAININGS = ['orient', 'lang', 'law', 'safety'] as const
-export interface Training { id: string; name: string; done: boolean }
+/** an appointment day (YYYY-MM-DD) the agency sets for a course (calendar, owner Oct 2026) */
+export interface Training { id: string; name: string; done: boolean; date?: string | null }
+/** appointments the agency sets, shown on both sides' calendars: hand in documents, the two tests, the first working day */
+export const APPOINTMENTS = ['documents', 'language', 'skill', 'start'] as const
+export type Appointment = (typeof APPOINTMENTS)[number]
 export interface Case {
   id: string; accId: string; postId: string; seekerId: string
   /** when each step was completed */
@@ -25,12 +29,15 @@ export interface Case {
   departureDate: string | null
   /** a short note from the agency to both sides (no contact details) */
   note: string
+  /** appointment days (YYYY-MM-DD) */
+  dates: Partial<Record<Appointment, string>>
   createdAt: string
 }
 export type CaseAction =
   | { kind: 'accept' } | { kind: 'doc'; key: Doc } | { kind: 'test'; key: TestKey } | { kind: 'train'; id: string }
   | { kind: 'trainAdd'; name: string } | { kind: 'trainRemove'; id: string } | { kind: 'permit'; key: PermitKey }
   | { kind: 'departure'; date: string } | { kind: 'departOk' } | { kind: 'note'; text: string } | { kind: 'arrived' }
+  | { kind: 'date'; key: Appointment; date: string | null } | { kind: 'trainDate'; id: string; date: string | null }
 /** who may do it: the agency does everything except confirming the arrival, which is the employer's */
 export const actorOf = (a: CaseAction['kind']): 'agency' | 'employer' => (a === 'arrived' ? 'employer' : 'agency')
 export type CaseProblem = 'state' | 'contact' | 'name' | 'available' | 'unknown'
@@ -50,12 +57,13 @@ export function newCase(id: string, acc: { id: string; postId: string; seekerId:
     id, accId: acc.id, postId: acc.postId, seekerId: acc.seekerId,
     steps: employerVerified ? { opened: at, submitted: at } : { opened: at },
     docs: {}, tests: {}, permit: {}, trainings: DEFAULT_TRAININGS.map((k) => ({ id: k, name: `@${k}`, done: false })),
-    departureDate: null, note: '', createdAt: at,
+    departureDate: null, note: '', dates: {}, createdAt: at,
   }
 }
 /** handed to the agency (when the employer becomes verified later) */
 export const submitCase = (c: Case, at: string): Case => (c.steps.submitted ? c : { ...c, steps: { ...c.steps, submitted: at } })
 
+const isDay = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v))
 const done = (step: CaseStep, c: Case, at: string): Case => ({ ...c, steps: { ...c.steps, [step]: at } })
 const all = <K extends string>(keys: readonly K[], m: Partial<Record<K, boolean>>) => keys.every((k) => m[k])
 /**
@@ -107,7 +115,7 @@ export function applyCaseAction(c: Case, a: CaseAction, at: string, today: strin
     }
     case 'departure': {
       if (!need('departure')) return fail('state')
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date) || a.date < today) return fail('available')
+      if (!isDay(a.date) || a.date < today) return fail('available')
       return { ok: true, value: { ...c, departureDate: a.date } }
     }
     case 'departOk': return need('departure') && c.departureDate ? { ok: true, value: done('departure', c, at) } : fail('state')
@@ -116,6 +124,18 @@ export function applyCaseAction(c: Case, a: CaseAction, at: string, today: strin
       return { ok: true, value: { ...c, note: a.text } }
     }
     case 'arrived': return need('arrived') ? { ok: true, value: done('arrived', c, at) } : fail('state')
+    // appointments: once the case is with the agency and until the worker arrives; a day is set from today on, or cleared
+    case 'date': case 'trainDate': {
+      if (!c.steps.submitted || c.steps.arrived) return fail('state')
+      if (a.date !== null && (!isDay(a.date) || a.date < today)) return fail('available')
+      if (a.kind === 'date') {
+        if (!(APPOINTMENTS as readonly string[]).includes(a.key)) return fail('state')
+        const dates = { ...c.dates }; if (a.date) dates[a.key] = a.date; else delete dates[a.key]
+        return { ok: true, value: { ...c, dates } }
+      }
+      if (!c.trainings.some((x) => x.id === a.id)) return fail('state')
+      return { ok: true, value: { ...c, trainings: c.trainings.map((x) => (x.id === a.id ? { ...x, date: a.date } : x)) } }
+    }
   }
 }
 
@@ -132,8 +152,10 @@ export function parseCase(v: unknown): Case | null {
   if (!doneFlags[0] || doneFlags.some((d, i) => d && i > 0 && !doneFlags[i - 1])) return null
   const docs = flags(DOCS, v.docs), tests = flags(TESTS, v.tests), permit = flags(PERMITS, v.permit)
   if (!docs || !tests || !permit) return null
-  if (!Array.isArray(v.trainings) || v.trainings.length < 1 || v.trainings.length > 12 || !v.trainings.every((x) => isObj(x) && typeof x.id === 'string' && typeof x.name === 'string' && x.name.length <= 61 && typeof x.done === 'boolean')) return null
+  if (!Array.isArray(v.trainings) || v.trainings.length < 1 || v.trainings.length > 12 || !v.trainings.every((x) => isObj(x) && typeof x.id === 'string' && typeof x.name === 'string' && x.name.length <= 61 && typeof x.done === 'boolean' && (x.date === undefined || x.date === null || isDay(x.date)))) return null
   if (!(v.departureDate === null || (typeof v.departureDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.departureDate)))) return null
   if (typeof v.note !== 'string' || textProblem(v.note, 0, 300) !== null) return null
-  return v as unknown as Case
+  const dates = v.dates === undefined ? {} : v.dates // saved before appointments existed
+  if (!isObj(dates) || !Object.entries(dates).every(([k, x]) => (APPOINTMENTS as readonly string[]).includes(k) && isDay(x))) return null
+  return { ...(v as unknown as Case), dates: dates as Case['dates'] }
 }

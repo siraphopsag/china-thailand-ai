@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { LANGS, useI18n } from '../i18n'
-import { useTheme } from '../theme'
+import { ACCENTS, useTheme } from '../theme'
 import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { useAuth } from '../auth'
@@ -541,7 +541,8 @@ export function PreparePage() {
 }
 export function SettingsPage() {
   const { t, lang, setLang } = useI18n()
-  const { theme, toggle } = useTheme()
+  const { theme, toggle, accent, setAccent, weekStart, setWeekStart } = useTheme()
+  const [accentMsg, setAccentMsg] = useState('')
   const { reset, mode } = useMatch()
   const [done, setDone] = useState(false)
   const [motion, setMotion] = useState(() => !motionOff())
@@ -551,6 +552,14 @@ export function SettingsPage() {
       <section className="card space-y-4">
         <fieldset><legend className="label">{t('m.settings.lang')}</legend><div className="flex flex-wrap gap-2">{LANGS.map((l) => <button key={l.id} type="button" lang={l.html} aria-pressed={lang === l.id} onClick={() => setLang(l.id)} className={`min-h-[44px] px-4 rounded-lg border ${lang === l.id ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{l.label}</button>)}</div></fieldset>
         <fieldset><legend className="label">{t('m.settings.theme')}</legend><div className="flex gap-2">{(['light', 'dark'] as const).map((m) => <button key={m} type="button" aria-pressed={theme === m} onClick={() => theme !== m && toggle()} className={`min-h-[44px] px-4 rounded-lg border flex items-center gap-2 ${theme === m ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}><Icon name={m} size={16} />{t(m === 'light' ? 'm.settings.light' : 'm.settings.dark')}</button>)}</div></fieldset>
+        {/* accent colour (owner, Oct 2026): the swatch is decoration; the name is the label */}
+        <fieldset aria-describedby="accent-hint"><legend className="label">{t('m.settings.accent')}</legend><div className="flex flex-wrap gap-2">{ACCENTS.map((a) => (
+          <button key={a} type="button" aria-pressed={accent === a} onClick={() => { setAccent(a); setAccentMsg(t('m.settings.accentDone', { c: t(`m.accent.${a}` as never) })) }}
+            className={`min-h-[44px] pl-2 pr-4 rounded-lg border flex items-center gap-2 ${accent === a ? 'border-primary ring-2 ring-primary/40 font-semibold' : 'border-control hover:bg-surface3'}`}>
+            <span aria-hidden className={`w-7 h-7 rounded-md swatch-${a}`} />{t(`m.accent.${a}` as never)}</button>))}</div>
+          <p id="accent-hint" className="text-xs text-muted mt-1">{t('m.settings.accent.d')}</p>
+          <p role="status" className="text-sm font-medium text-primary mt-1">{accentMsg}</p></fieldset>
+        <fieldset><legend className="label">{t('m.settings.week')}</legend><div className="flex gap-2">{([0, 1] as const).map((w) => <button key={w} type="button" aria-pressed={weekStart === w} onClick={() => setWeekStart(w)} className={`min-h-[44px] px-4 rounded-lg border ${weekStart === w ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(w === 0 ? 'm.settings.week.sun' : 'm.settings.week.mon')}</button>)}</div></fieldset>
         {/* the home hero's moving lines (WCAG 2.2.2: a way to stop them; owner asked for no button on the hero itself) */}
         <fieldset aria-describedby="motion-hint"><legend className="label">{t('m.settings.motion')}</legend><div className="flex gap-2">{([true, false] as const).map((on) => <button key={String(on)} type="button" aria-pressed={motion === on} onClick={() => { setMotion(on); setMotionOff(!on) }} className={`min-h-[44px] px-4 rounded-lg border ${motion === on ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(on ? 'm.settings.on' : 'm.settings.off')}</button>)}</div>
           <p id="motion-hint" className="text-xs text-muted mt-1">{t('m.settings.motion.d')}</p></fieldset>
@@ -590,6 +599,7 @@ export function BackofficePage() {
   }
   return (
     <Page title={t('m.adm.title')} sub={t('m.adm.sub')}>
+      <NavLink to="analytics" className="glass-card p-4 flex items-center gap-3 hover:no-underline"><span className="w-10 h-10 rounded-xl bg-brand text-brandfg grid place-items-center"><Icon name="chart" size={20} /></span><span className="min-w-0"><span className="block font-semibold">{t('m.an.title')}</span><span className="block text-xs text-muted">{t('m.an.sub')}</span></span><Icon name="next" size={18} className="ml-auto text-muted" /></NavLink>
       <ClockControls />
       <p className="text-xs text-muted">{t('m.adm.ai')}</p>
       <Toast msg={msg} />

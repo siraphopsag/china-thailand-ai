@@ -18,14 +18,16 @@ export function sideItems(role: 'seeker' | 'employer' | null, admin: boolean): I
   const items: Item[] = [{ to: '', key: 'm.home', icon: 'home', match: [''] }]
   if (role === 'seeker') items.push({ to: 'seek', key: 'm.pins', icon: 'pin', match: ['seek'] })
   if (role === 'employer') items.push({ to: 'hire', key: 'm.posts', icon: 'posts', match: ['hire'] })
-  items.push({ to: 'board', key: 'm.board', icon: 'store', match: ['board', 'post'] }, { to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
+  items.push({ to: 'board', key: 'm.board', icon: 'store', match: ['board', 'post'] }, { to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'calendar', key: 'm.cal', icon: 'calendar', match: ['calendar'] }, { to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
   items.push({ to: 'member', key: 'm.member', icon: 'crown', match: ['member'] })
-  if (admin) items.push({ to: 'backoffice', key: 'm.admin', icon: 'shield', match: ['backoffice'] })
+  if (admin) items.push({ to: 'backoffice', key: 'm.admin', icon: 'shield', match: ['backoffice'] }, { to: 'analytics', key: 'm.an.nav', icon: 'chart', match: ['analytics'] })
   items.push({ to: 'me', key: 'm.profile', icon: 'profile', match: ['me'] })
   return items
 }
 /** on phones the bottom bar keeps 5 main places; these go under "More" so the bar does not cover the screen */
-export const MORE_KEYS = ['m.prepare', 'm.member', 'm.settings', 'm.help', 'm.admin']
+export const MORE_KEYS = ['m.cal', 'm.prepare', 'm.member', 'm.settings', 'm.help', 'm.admin', 'm.an.nav']
+/** the "general" group of the capsule, set apart by a thin line from the places people work in */
+const GENERAL = ['m.prepare', 'm.settings', 'm.help', 'm.member', 'm.admin', 'm.an.nav', 'm.profile']
 
 /**
  * Menu (owner, Oct 2026, after a reference he liked): a floating capsule of icons — on the left for computers and tablets
@@ -55,8 +57,10 @@ export function SideNav({ route }: { route: string }) {
     const on = n.match.includes(route)
     return (
       <NavLink to={n.to} aria-current={on ? 'page' : undefined} aria-label={name(n)}
-        className={`nav-item ${size === 'lg' ? 'w-12 h-12' : 'w-11 h-11'} ${on ? 'nav-on' : ''}`}>
+        className={`nav-item ${size === 'lg' ? 'w-12 h-12 group' : 'w-11 h-11'} ${on ? 'nav-on' : ''}`}>
         <Icon name={n.icon} size={size === 'lg' ? 22 : 21} />
+        {/* the name, shown beside the icon on hover or keyboard focus (the link already carries it for screen readers) */}
+        {size === 'lg' && <span className="nav-tip" aria-hidden>{t(n.key as never)}</span>}
         {n.key === 'm.notif' && unread > 0 && <span className="absolute top-1 right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-danger-fg text-page text-[10px] font-bold grid place-items-center" aria-hidden>{unread}</span>}
       </NavLink>)
   }
@@ -65,7 +69,8 @@ export function SideNav({ route }: { route: string }) {
     <>
       {/* computers and tablets: floating capsule on the left, vertically centred */}
       <nav aria-label={t('m.side')} className="nav-pill hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 z-30 flex-col items-center gap-1.5 p-2 rounded-full">
-        <ul className="flex flex-col gap-1.5">{items.map((n) => <li key={n.key}>{iconLink(n, 'lg')}</li>)}</ul>
+        <ul className="flex flex-col gap-1.5">{items.map((n, i) => (
+          <li key={n.key} className={GENERAL.includes(n.key) && !GENERAL.includes(items[i - 1]?.key ?? '') ? 'nav-split' : undefined}>{iconLink(n, 'lg')}</li>))}</ul>
       </nav>
       {/* phones: floating capsule at the bottom — 5 places + More */}
       <nav aria-label={t('m.side')} className="nav-pill md:hidden fixed inset-x-3 z-40 rounded-full px-2 py-1.5" style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>

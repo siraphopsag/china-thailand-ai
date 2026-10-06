@@ -4,6 +4,7 @@ import { LanguageProvider, useI18n } from './i18n'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
 import { AuthProvider, CONFIG_PROBLEM, useAuth } from './auth'
+import { trackVisit } from './visit'
 import { SideNav } from './components/sidenav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { BRAND } from './brand'
@@ -31,6 +32,8 @@ const SettingsPage = lazy(() => import('./pages/match').then((m) => ({ default: 
 const HelpPage = lazy(() => import('./pages/match').then((m) => ({ default: m.HelpPage })))
 const BackofficePage = lazy(() => import('./pages/match').then((m) => ({ default: m.BackofficePage })))
 const CasePage = lazy(() => import('./pages/case').then((m) => ({ default: m.CasePage })))
+const AnalyticsPage = lazy(() => import('./pages/analytics').then((m) => ({ default: m.AnalyticsPage })))
+const CalendarPage = lazy(() => import('./pages/calendar').then((m) => ({ default: m.CalendarPage })))
 const SafetyPage = lazy(() => import('./pages/safety').then((m) => ({ default: m.SafetyPage })))
 const TermsPage = lazy(() => import('./pages/terms').then((m) => ({ default: m.TermsPage })))
 const ChooseRolePage = lazy(() => import('./pages/choose').then((m) => ({ default: m.ChooseRolePage })))
@@ -91,11 +94,13 @@ function DemoNotice() {
 function Router() {
   const r = useRoute()
   const { t } = useI18n()
+  const { status } = useAuth()
+  useEffect(() => { if (status !== 'off' && status !== 'loading') trackVisit() }, [status]) // one anonymous visit per browser per day
   const pages: Record<string, ReactNode> = {
     '': <Landing />, language: <LanguagePage />, sources: <SourcesPage />, privacy: <PrivacyPage />,
     login: <LoginPage />, register: <RegisterPage />, forgot: <ForgotPage />, 'reset-password': <ResetPasswordPage />,
     'choose-role': <ChooseRolePage />,
-    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, case: <CasePage />, terms: <TermsPage />, safety: <SafetyPage />, // matching prototype
+    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, case: <CasePage />, terms: <TermsPage />, safety: <SafetyPage />, calendar: <CalendarPage />, analytics: <AnalyticsPage />, // matching prototype
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>
 }

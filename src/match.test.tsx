@@ -326,7 +326,7 @@ describe('the board (owner, Oct 2026)', () => {
     const page = html(<BoardPage />, st)
     expect(page).toContain('Front Office Manager'); expect(page).not.toContain('Warehouse Coordinator')
     expect(page).toContain(T('m.lv.reached', { l: T('m.lv.2') }))
-    expect(page).toContain(T('m.cnt.held', { n: 1, max: 2 }))
+    expect(page).toContain('<p class="text-lg font-bold">1/2</p>'); expect(page).toContain(T('m.bd.places')) // places taken on the card
     expect(page).toContain(T('m.qb.posts', { n: 1, max: 3 }))
   })
   it('the map shows counts only, also listed in text; menu has the board; posts link to their page', () => {
@@ -354,11 +354,11 @@ describe('reviewed shell and pages', () => {
     for (const k of ['nav.jobs', 'nav.employerArea', 'nav.bizPlanning'] as const) expect(h, k).not.toContain(T(k))
     expect(h).not.toMatch(/<a [^>]*href="\/"/) // the logo is no longer a link
   })
-  it('menu order: home, my pins / my posts by role, board, notifications, prepare, settings, help, back office (admin only), profile last', () => {
+  it('menu order: home, my pins / my posts by role, board, notifications, calendar, prepare, settings, help, back office (admin only), profile last', () => {
     const keys = (r: 'seeker' | 'employer' | null, a: boolean) => sideItems(r, a).map((i) => i.key)
-    expect(keys(null, false)).toEqual(['m.home', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
-    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
-    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.board', 'm.notif', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.admin', 'm.profile'])
+    expect(keys(null, false)).toEqual(['m.home', 'm.board', 'm.notif', 'm.cal', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
+    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.board', 'm.notif', 'm.cal', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
+    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.board', 'm.notif', 'm.cal', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.admin', 'm.an.nav', 'm.profile'])
     for (const r of [null, 'seeker', 'employer'] as const) for (const i of sideItems(r, true)) expect(ROUTES.has(i.to), i.to).toBe(true)
     expect(src('./components/sidenav.tsx')).not.toMatch(/to: '(start|interview|dashboard|plan|documents|jobs|employer|review)'/)
   })
@@ -623,7 +623,9 @@ describe('languages look alike (owner, Oct 2026)', () => {
     expect(src('./pages/match.tsx')).toContain('grid grid-cols-2 auto-rows-fr gap-2')
     expect(css).toMatch(/\.chip-check \{[^}]*height: 100%/)
     const nav = src('./components/sidenav.tsx'), cap = nav.slice(nav.indexOf('const iconLink'), nav.indexOf('const moreOn'))
-    expect(cap).not.toMatch(/\{t\(n\.key as never\)\}<\//) // no visible text label inside the capsule buttons
+    // no text label inside the capsule buttons — the only name is the hover/focus bubble, which floats outside the capsule (Oct 2026)
+    expect(cap.replace('<span className="nav-tip" aria-hidden>{t(n.key as never)}</span>', '')).not.toMatch(/\{t\(n\.key as never\)\}<\//)
+    expect(css).toMatch(/\.nav-tip \{ position: absolute; left: calc\(100% \+ \.75rem\)[^}]*white-space: nowrap/)
   })
 })
 

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { LANGS, useI18n } from '../i18n'
 import { useTheme } from '../theme'
-import { goBack } from '../store'
+import { go, goBack, NavLink } from '../store'
+import { useMatch } from '../matchData'
 import { BRAND } from '../brand'
 import { Icon, type IconName } from './icons'
 import { LoginButton } from './sidenav'
@@ -92,6 +93,34 @@ export function LanguageSwitcher() {
  * Header: the C.A.L.L. mark on the left (not a link — "home" is in the menu capsule), language, theme and log-in on the right.
  * No top navigation, no menu button and no simulated-role control.
  */
+/** search the board from anywhere (computers and tablets): Enter opens the board filtered; Ctrl/⌘ K jumps here */
+function HeaderSearch() {
+  const { t } = useI18n()
+  const [q, setQ] = useState('')
+  const input = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); input.current?.focus() } }
+    document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key)
+  }, [])
+  return (
+    <form role="search" aria-label={t('m.hd.search')} className="max-w-sm" onSubmit={(e) => { e.preventDefault(); go(`board${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`); setQ(''); input.current?.blur() }}>
+      <label className="relative block"><span className="sr-only">{t('m.hd.search')}</span>
+        <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+        <input ref={input} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('m.hd.searchHint')} className="h-10 w-full rounded-xl border border-control bg-surface pl-9 pr-16 text-sm text-ink placeholder:text-muted shadow-[var(--elev-hi),var(--elev-1)]" />
+        <kbd className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted border border-line rounded-md px-1.5 py-0.5" aria-hidden>Ctrl K</kbd></label>
+    </form>
+  )
+}
+/** which side you are on right now (opens the role choice) */
+function RoleChip() {
+  const { t } = useI18n()
+  const { st } = useMatch()
+  if (!st.role) return null
+  const r = t(st.role === 'seeker' ? 'm.role.seeker' : 'm.role.employer')
+  return <NavLink to="choose-role" className="hidden lg:inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-line text-xs font-medium text-onheader hover:bg-surface3" aria-label={t('m.hd.role', { r })}>
+    <Icon name={st.role === 'seeker' ? 'user' : 'business'} size={14} />{r}</NavLink>
+}
+
 export function Header(_: { route?: string }) {
   return (
     <header className="bg-header/75 backdrop-blur-xl backdrop-saturate-150 text-onheader sticky top-0 z-40 border-b border-line shadow-[0_1px_0_rgb(255_255_255/.04),0_8px_24px_-16px_rgb(0_0_0/.25)]">
@@ -100,8 +129,9 @@ export function Header(_: { route?: string }) {
         <div className="flex items-center gap-2 shrink-0" lang="en">
           <Logo /><span className="leading-tight"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
         </div>
+        <div className="hidden md:block md:pl-6 lg:pl-12 flex-1 min-w-0"><HeaderSearch /></div>
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          <LanguageSwitcher /><ThemeSwitcher /><LoginButton />
+          <RoleChip /><LanguageSwitcher /><ThemeSwitcher /><LoginButton />
         </div>
       </div>
     </header>
@@ -109,7 +139,7 @@ export function Header(_: { route?: string }) {
 }
 
 /** where "Back" leads when the page was opened directly (no earlier in-app page to return to) */
-const PARENT: Record<string, string> = { seek: 'choose-role', hire: 'choose-role', post: 'board', board: '', member: '', case: 'notifications', terms: '', safety: 'prepare', language: 'prepare', sources: 'prepare', privacy: '', register: 'login', forgot: 'login', 'reset-password': 'login' }
+const PARENT: Record<string, string> = { seek: 'choose-role', hire: 'choose-role', post: 'board', board: '', member: '', case: 'notifications', terms: '', safety: 'prepare', calendar: '', analytics: 'backoffice', language: 'prepare', sources: 'prepare', privacy: '', register: 'login', forgot: 'login', 'reset-password': 'login' }
 /** "Back" on every page except the Lobby, so nobody has to return to the Lobby to go one step back */
 export function BackButton({ route }: { route: string }) {
   const { t } = useI18n()

@@ -3,7 +3,7 @@
 import { isObj } from '../../profileSchema'
 import type { PostInput } from './logic'
 import type { PinLike } from './release'
-import { CASE_STEPS, DOCS, PERMITS, TESTS, type Case, type CaseStep } from './cases'
+import { APPOINTMENTS, CASE_STEPS, DOCS, PERMITS, TESTS, type Case, type CaseStep } from './cases'
 import { REPORT_REASONS, groupReports, type ReportGroup, type ReportReason } from './reports'
 export const isReason = (v: string): v is ReportReason => (REPORT_REASONS as readonly string[]).includes(v)
 /** the administrator's queue: open reports of everyone, grouped by post */
@@ -23,7 +23,7 @@ export interface PostRow {
   hidden?: boolean | null
 }
 export interface ReportRow { id: string; post_id: string; reporter_id: string; reason: string; note: string | null; status: string; created_at: string }
-export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string }
+export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string; dates?: unknown }
 export interface PinRow { id: string; seeker_id: string; country: string; province: string; industry: string; skills: string[]; created_at: string }
 export interface AcceptanceRow { id: string; post_id: string; seeker_id: string; seeker_name: string; status: string; created_at: string; forwarded_at: string | null
   intro?: string | null; available_from?: string | null; promoted_at?: string | null; decided_at?: string | null }
@@ -96,9 +96,10 @@ export const statsByProvince = (rows: PinStatRow[]) => rows.reduce<Record<string
 const flagsOf = <K extends string>(keys: readonly K[], v: unknown): Partial<Record<K, boolean>> => (isObj(v) ? Object.fromEntries(keys.filter((k) => typeof v[k] === 'boolean').map((k) => [k, v[k] as boolean])) as Partial<Record<K, boolean>> : {})
 export function rowToCase(r: CaseRow, uid: string): Case {
   const steps = (isObj(r.steps) ? Object.fromEntries(CASE_STEPS.filter((s) => typeof (r.steps as Record<string, unknown>)[s] === 'string').map((s) => [s, iso((r.steps as Record<string, string>)[s])])) : {}) as Partial<Record<CaseStep, string>>
-  const trainings = Array.isArray(r.trainings) ? r.trainings.flatMap((x) => (isObj(x) && typeof x.id === 'string' && typeof x.name === 'string' ? [{ id: x.id, name: x.name, done: x.done === true }] : [])) : []
+  const trainings = Array.isArray(r.trainings) ? r.trainings.flatMap((x) => (isObj(x) && typeof x.id === 'string' && typeof x.name === 'string' ? [{ id: x.id, name: x.name, done: x.done === true, ...(typeof x.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? { date: x.date } : {}) }] : [])) : []
   return { id: r.id, accId: r.acceptance_id, postId: r.post_id, seekerId: r.seeker_id === uid ? ME : r.seeker_id, steps, docs: flagsOf(DOCS, r.docs), tests: flagsOf(TESTS, r.tests), permit: flagsOf(PERMITS, r.permit),
-    trainings, departureDate: r.departure_date, note: r.note ?? '', createdAt: iso(r.created_at) }
+    trainings, departureDate: r.departure_date, note: r.note ?? '', createdAt: iso(r.created_at),
+    dates: isObj(r.dates) ? Object.fromEntries(APPOINTMENTS.flatMap((k) => { const v = (r.dates as Record<string, unknown>)[k]; return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? [[k, v]] : [] })) : {} }
 }
 /** the whole matching state for one signed-in person, as the pages expect it */
 export function buildState(input: { uid: string; name: string; profile: ProfileRow | null; posts: PostRow[]; pins: PinRow[]; acceptances: AcceptanceRow[]; clockHours: number; credits?: QuotaRow[]; people?: ProfileRow[]; allPins?: PinRow[]; cases?: CaseRow[]; reports?: ReportRow[] }): MatchState {

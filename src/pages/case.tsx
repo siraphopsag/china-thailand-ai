@@ -3,7 +3,7 @@ import { tk, useI18n } from '../i18n'
 import { NavLink, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
 import { localDay } from '../domain/match/logic'
-import { CASE_STEPS, DOCS, PERMITS, TESTS, currentStep, stepsDone, trainingsLeft, type Case, type CaseAction, type Training } from '../domain/match/cases'
+import { APPOINTMENTS, CASE_STEPS, DOCS, PERMITS, TESTS, currentStep, stepsDone, trainingsLeft, type Case, type CaseAction, type Training } from '../domain/match/cases'
 import { ME, MY_EMPLOYER, type Country } from '../domain/match/types'
 import { cleanRegNo, isRegNo } from '../domain/match/verify'
 import { Icon } from '../components/icons'
@@ -95,6 +95,7 @@ export function CasePage() {
             <Ticks title={t('m.cs.tests')} items={TESTS.map((k) => ({ k, label: t(`m.cs.test.${k}` as never), on: !!c.tests[k] }))} />
             <Ticks title={`${t('m.cs.trainings')} · ${t('m.cs.left', { n: trainingsLeft(c), t: c.trainings.length })}`} items={c.trainings.map((x) => ({ k: x.id, label: trainingName(x, t as never), on: x.done }))} />
             <Ticks title={t('m.cs.permit')} items={PERMITS.map((k) => ({ k, label: t(`m.cs.permit.${k}` as never), on: !!c.permit[k] }))} />
+            <Appointments c={c} />
           </section>
           {agency && <AgencyPanel c={c} run={run} busy={busy} />}
           <section className="glass-card p-5 space-y-3" aria-labelledby="cs-legal"><h2 id="cs-legal" className="h2">{t('m.cs.legal.h')}</h2>
@@ -109,6 +110,17 @@ export function CasePage() {
   )
 }
 
+/** the appointment days the agency set (both sides see them; they are also on the calendar) */
+function Appointments({ c }: { c: Case }) {
+  const { t } = useI18n()
+  const N = useNames()
+  const rows = [...APPOINTMENTS.map((k) => ({ k, label: t(`m.cs.appt.${k}` as never), day: c.dates[k] })),
+    ...c.trainings.filter((x) => !x.done).map((x) => ({ k: `t-${x.id}`, label: t('m.cs.appt.course', { c: trainingName(x, t as never) }), day: x.date ?? undefined }))]
+  return (
+    <div><h3 className="font-semibold text-sm mb-1 flex items-center justify-between gap-2">{t('m.cs.appt')}<NavLink to="calendar" className="text-xs font-medium text-primary underline underline-offset-4 inline-flex items-center gap-1 min-h-[24px]"><Icon name="calendar" size={13} />{t('m.cs.seeCal')}</NavLink></h3>
+      <ul className="text-sm space-y-1">{rows.map((r) => <li key={r.k} className="flex justify-between gap-3"><span className="text-muted">{r.label}</span><span className={r.day ? 'font-medium' : 'text-muted'}>{r.day ? N.day(r.day) : t('m.cs.appt.none')}</span></li>)}</ul></div>
+  )
+}
 function Ticks({ title, items }: { title: string; items: { k: string; label: string; on: boolean }[] }) {
   return (
     <div><h3 className="font-semibold text-sm mb-1">{title}</h3>
@@ -160,6 +172,19 @@ function AgencyPanel({ c, run, busy }: { c: Case; run: (a: CaseAction, done?: st
           <button type="button" className="btn-primary" disabled={busy || !c.departureDate} onClick={() => void run({ kind: 'departOk' }, t('m.cs.saved'))}><Icon name="plane" size={16} />{t('m.cs.ag.departOk')}</button>
         </div>)}
       {cur === null && <p className="text-sm text-ok-fg font-medium">{t('m.cs.ag.done')}</p>}
+      {!!c.steps.submitted && !c.steps.arrived && (
+        <div className="border-t border-line pt-3 space-y-2">
+          <h3 className="font-semibold text-sm">{t('m.cs.appt')}</h3>
+          <p className="text-xs text-muted">{t('m.cs.appt.d')}</p>
+          {[...APPOINTMENTS.map((k) => ({ id: k, label: t(`m.cs.appt.${k}` as never), value: c.dates[k] ?? '', set: (d: string | null) => run({ kind: 'date', key: k, date: d }, t('m.cs.saved')) })),
+            ...c.trainings.filter((x) => !x.done).map((x) => ({ id: `t-${x.id}`, label: t('m.cs.appt.course', { c: trainingName(x, t as never) }), value: x.date ?? '', set: (d: string | null) => run({ kind: 'trainDate', id: x.id, date: d }, t('m.cs.saved')) }))]
+            .map((row) => (
+              <div key={row.id} className="flex flex-wrap items-end gap-2">
+                <label className="block flex-1 min-w-[180px]"><span className="label">{row.label}</span>
+                  <input type="date" className="input" min={localDay(new Date(now).toISOString())} value={row.value} disabled={busy} onChange={(e) => { if (e.target.value) void row.set(e.target.value) }} /></label>
+                {row.value && <button type="button" className="btn-ghost text-xs" disabled={busy} onClick={() => void row.set(null)} aria-label={`${t('m.cs.appt.clear')}: ${row.label}`}>{t('m.cs.appt.clear')}</button>}
+              </div>))}
+        </div>)}
       <form className="border-t border-line pt-3 space-y-2" onSubmit={(e) => { e.preventDefault(); void run({ kind: 'note', text: note.trim() }, t('m.cs.saved')) }}>
         <label className="block"><span className="label">{t('m.cs.ag.note')}</span><textarea className="input min-h-[72px]" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} /></label>
         <button type="submit" className="btn-ghost text-sm" disabled={busy || note.trim() === c.note}>{t('m.cs.ag.saveNote')}</button>
