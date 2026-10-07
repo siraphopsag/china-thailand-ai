@@ -67,7 +67,7 @@ describe('2. menus over the page are solid', () => {
 describe('3–4. the board: a small allowance chip, the card/map switch before the main button, the map as a market view', () => {
   it('the top row: chip → switch → main button; the long allowance bar is gone', () => {
     const b = src('./pages/board.tsx')
-    const chip = b.indexOf('<QuotaChip q={q}'), sw = b.indexOf("aria-label={t('m.bd.viewAs')}"), main = b.indexOf("<NavLink to={seeker ? 'seek' : 'hire'} className=\"btn-primary !rounded-full\">")
+    const chip = b.indexOf('<QuotaChip q={q}'), sw = b.indexOf("aria-label={t('m.bd.viewAs')}"), main = b.indexOf("<NavLink to={seeker ? 'seek' : 'hire'} className=\"btn-primary !rounded-full\"")
     expect(chip).toBeGreaterThan(-1); expect(sw).toBeGreaterThan(chip); expect(main).toBeGreaterThan(sw)
     expect(b).not.toContain('<QuotaBar')
     const st = seedState(NOW); st.role = 'employer'

@@ -93,7 +93,7 @@ describe('B. the board as cards', () => {
   it('after the reference: main button by the title, pill filters with the count, centred cards with two actions and a fill bar, a card/map switch', () => {
     const h = html(<BoardPage />, seeker())
     expect(h).toMatch(/<h1 class="h1">[^<]*<\/h1>.*class="btn-primary !rounded-full"/s)
-    expect(h).toContain('bd-card relative p-2.5 sm:p-5 fit:p-3.5 flex flex-col items-center text-center'); // centred on phones (3 a row) and tablets; a row card on computers (owner, Oct 2026) expect(h).toContain('rar-avatar'); expect(h).toContain('class="fill-bar mt-1"')
+    expect(h).toContain('bd-card relative p-3 sm:p-5 fit:p-3.5 flex flex-row sm:flex-col items-center text-left sm:text-center'); // a row on phones (option ก), centred on tablets, a compact card on computers (owner, Oct 2026) expect(h).toContain('rar-avatar'); expect(h).toContain('class="fill-bar mt-1"')
     expect(h).toContain(`>${T('m.bd.details')}</button>`); expect(h).toContain(T('m.bd.apply'))
     expect(h).toContain(T('m.bd.view.cards')); expect(h).toContain(T('m.bd.view.map'))
     expect(h).not.toContain('id="bd-map"') // the map shows when you switch to it
@@ -264,7 +264,7 @@ describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, st
     expect(css).toContain('@media (max-width: 639px) { html { font-size: 15px }')
     expect(css).toMatch(/\.card \{ @apply border border-line rounded-2xl p-4 sm:p-5/)
     expect(css).toMatch(/\.btn \{ @apply [^}]*min-h-\[40px\]/)
-    expect(src('./pages/board.tsx')).toContain("const SEG_SCROLL = 'flex sm:inline-flex flex-nowrap")
+    expect(src('./pages/board.tsx')).toContain("const SEG_SCROLL = 'inline-flex flex-nowrap sm:flex-wrap") // the scope and rings share one swipeable line
   })
   it('nothing runs off a short screen: the capsule sits under the header and shrinks, dialogs scroll inside, board cards drop secondary lines', () => {
     expect(css).toContain('.nav-rail { max-height: calc(100dvh - 5.5rem) }')

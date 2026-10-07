@@ -100,15 +100,20 @@ describe('the yellow label', () => {
   })
 })
 
-describe('board layout (owner, Oct 2026): computers 4 × 2, phones 3 a row', () => {
-  it('computers: pages of 8 cards in 4 columns; phones: 3 columns that scroll on; the whole small card opens the details', () => {
+describe('board layout (owner, Oct 2026): computers 4 × 2, phones one row each (option ก)', () => {
+  it('computers: pages of 8 cards in 4 columns; phones: one row per post that scrolls on; the whole row opens the details', () => {
     const b = src('./pages/board.tsx')
     expect(b).toContain('const PAGE = { cols: 4, rows: 2 }')
     expect(b).toContain('const pg = usePaged(shown, fit ? PAGE.cols * PAGE.rows : Infinity)')
-    expect(b).toContain('<ul className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4')
+    expect(b).toContain('<ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4')
     expect(b).toContain("after:absolute after:inset-0 after:content-[''] sm:after:hidden")
     // the title is cut inside the button (a button is one box, so cutting the heading did nothing)
-    expect(b).toContain('<span className="line-clamp-2 fit:line-clamp-1">{post.position}</span></button>')
+    expect(b).toContain('<span className="line-clamp-1 sm:line-clamp-2 fit:line-clamp-1">{post.position}</span></button>')
+    // phones: the places on the right, the filters stay under the header, the sheet keeps its buttons at the bottom
+    expect(b).toContain('<p className="sm:hidden shrink-0 text-right leading-tight" aria-hidden>')
+    expect(b).toContain('className="sticky top-16 z-20 -mx-3 px-3 py-2 space-y-2 bg-page/95 border-b border-line sm:contents sm:space-y-0"')
+    expect(b).toContain('sticky bottom-0 z-10 -mx-5 px-5 py-3 bg-surface2 border-t border-line sm:static')
+    expect(b).not.toMatch(/max-(sm|md|lg):/) // not available with this Tailwind setup (a screen given as an object)
   })
 })
 

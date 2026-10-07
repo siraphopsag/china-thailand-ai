@@ -28,7 +28,8 @@ interface Filter { q: string; country: '' | 'TH' | 'CN'; province: string; skill
 const NO_FILTER: Filter = { q: '', country: '', province: '', skill: '', salary: '', currency: 'THB' }
 const pill = (on: boolean) => `min-h-[34px] px-3 sm:px-3.5 rounded-full text-sm inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors ${on ? 'bg-primary text-onprimary font-semibold shadow-sm' : 'text-ink hover:bg-surface3'}`
 const SEG = 'inline-flex flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1'
-const SEG_SCROLL = 'flex sm:inline-flex flex-nowrap sm:flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1 overflow-x-auto max-w-full no-scrollbar'
+// phones: the scope and the rings share one swipeable line (the line scrolls, not each group)
+const SEG_SCROLL = 'inline-flex flex-nowrap sm:flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1 shrink-0 sm:shrink'
 
 export function BoardPage() {
   const { t } = useI18n()
@@ -103,16 +104,18 @@ export function BoardPage() {
         <div className={SEG} role="group" aria-label={t('m.bd.viewAs')}>
           {(['cards', 'map'] as const).map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} className={pill(view === v)} aria-label={t(v === 'cards' ? 'm.bd.view.cards' : 'm.bd.view.map')}><Icon name={v === 'cards' ? 'overview' : 'globe'} size={15} /><span className="hidden sm:inline">{t(v === 'cards' ? 'm.bd.view.cards' : 'm.bd.view.map')}</span></button>)}
         </div>
-        <NavLink to={seeker ? 'seek' : 'hire'} className="btn-primary !rounded-full"><Icon name="plus" size={16} />{t(seeker ? 'm.pin.go' : 'm.emp.post')}</NavLink>
+        <NavLink to={seeker ? 'seek' : 'hire'} className="btn-primary !rounded-full" aria-label={t(seeker ? 'm.pin.go' : 'm.emp.post')}><Icon name="plus" size={16} /><span className="sm:hidden" aria-hidden>{t(seeker ? 'm.bd.pinShort' : 'm.bd.postShort')}</span><span className="hidden sm:inline">{t(seeker ? 'm.pin.go' : 'm.emp.post')}</span></NavLink>
       </>}>
       {seeker && pinsOpen && <section id="bd-pins" className="shrink-0 fit:max-h-[40%] fit:overflow-y-auto" aria-label={t('m.board.myPins')}><PinList /></section>}
 
       {cards && (<>
+        {/* phones: the rings and the search stay under the header while the list scrolls (owner, Oct 2026, option ก) */}
+        <div className="sticky top-16 z-20 -mx-3 px-3 py-2 space-y-2 bg-page/95 border-b border-line sm:contents sm:space-y-0">
         {/* one row of pill filters with the count (owner's reference) */}
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 min-w-0 max-w-full overflow-x-auto sm:overflow-visible no-scrollbar">
             {!seeker && (
-              <div className={SEG} role="group" aria-label={t('m.bd.scope')}>
+              <div className={`${SEG} shrink-0`} role="group" aria-label={t('m.bd.scope')}>
                 {(['all', 'mine'] as const).map((s) => <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)} className={pill(scope === s)}>{t(s === 'all' ? 'm.bd.scope.all' : 'm.bd.scope.mine')}</button>)}
               </div>)}
             <div className={SEG_SCROLL} role="group" aria-label={t('m.board.levels')}>
@@ -120,7 +123,7 @@ export function BoardPage() {
               {LEVELS.map((l) => <button key={l} type="button" aria-pressed={tab === l} onClick={() => setTab(l)} className={pill(tab === l)} title={t('m.lv.ring', { n: l })}><ReachRings level={l} />{t(`m.lv.${l}` as never)}<span className="text-xs opacity-75">{perLevel(l)}</span></button>)}
             </div>
           </div>
-          <p className="text-sm text-muted" role="status">{t('m.board.count', { n: shown.length })}</p>
+          <p className="text-sm text-muted sr-only sm:not-sr-only" role="status">{t('m.board.count', { n: shown.length })}</p>
         </div>
         {tab !== 'all' && <p className="shrink-0 text-xs text-muted -mt-2 fit:mt-0">{t(`m.lv.d${tab}` as never)}</p>}
 
@@ -130,6 +133,7 @@ export function BoardPage() {
           <button type="button" className="btn-ghost text-sm !rounded-full" aria-expanded={more} aria-controls="bd-more" onClick={() => setMore((x) => !x)}><Icon name="filter" size={15} /><span className="sr-only sm:not-sr-only">{t(more ? 'm.bd.fewer' : 'm.bd.more')}</span></button>
           <SortToggle order={order} onChange={setOrder} />
         </form>
+        </div>
         <div id="bd-more" className={`${more ? 'grid' : 'hidden'} shrink-0 card sm:grid-cols-2 lg:grid-cols-4 gap-3`}>
           <label className="block"><span className="label">{t('m.country')}</span><select className="input" value={f.country} onChange={(e) => set({ country: e.target.value as Filter['country'], province: '' })}><option value="">{t('m.board.any')}</option>{(['TH', 'CN'] as const).map((c) => <option key={c} value={c}>{N.country(c)}</option>)}</select></label>
           <label className="block"><span className="label">{t('m.province')}</span><select className="input" value={f.province} disabled={!f.country} onChange={(e) => set({ province: e.target.value })}><option value="">{t('m.board.any')}</option>{f.country && N.provList(f.country).map((p) => <option key={p} value={p}>{N.prov(p)}</option>)}</select></label>
@@ -186,7 +190,7 @@ function QuotaChip({ q, kind, open, onToggle }: { q: Quota; kind: 'pin' | 'post'
 }
 
 /**
- * The cards (owner, Oct 2026): computers 4 × 2 a page (rows of 4, then the next page); phones 3 small cards a row, scrolling on;
+ * The cards (owner, Oct 2026): computers 4 × 2 a page (rows of 4, then the next page); phones one row each, scrolling on;
  * tablets in between 2–4 a row.
  */
 const PAGE = { cols: 4, rows: 2 }
@@ -196,7 +200,7 @@ function CardGrid({ shown, fit, gridRef, label, card }: { shown: { post: Post; l
     <div className="fit:flex-1 fit:min-h-0 fit:flex fit:flex-col gap-2">
       <h2 id="bd-list" className="sr-only">{label}</h2>
       <div ref={gridRef} className="fit:flex-1 fit:min-h-0 fit:overflow-y-auto">
-        <ul className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 fit:gap-3 fit:items-start" style={fit ? { gridTemplateColumns: `repeat(${PAGE.cols}, minmax(0, 1fr))` } : undefined} aria-labelledby="bd-list">
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 fit:gap-3 fit:items-start" style={fit ? { gridTemplateColumns: `repeat(${PAGE.cols}, minmax(0, 1fr))` } : undefined} aria-labelledby="bd-list">
           {pg.items.map(card)}
         </ul>
       </div>
@@ -211,7 +215,8 @@ const actionKey = (post: Post, viewer: 'seeker' | 'employer', applied: boolean) 
 
 /**
  * One post on the board, in three shapes from the same markup:
- *  · phones — a small card, 3 a row: letter, title, company, the ring in short, the yellow label, places; a tap anywhere opens the details
+ *  · phones — one row each, like a job app (owner, Oct 2026, option ก): letter, title, company, the ring in short and the yellow
+ *    label, and the places on the right; a tap anywhere on the row opens the details sheet
  *  · tablets — centred like the reference cards, with the full ring label, places/queue, fill and two buttons
  *  · computers — a compact row card (letter beside the text) so 4 × 2 fit the screen
  */
@@ -225,26 +230,26 @@ function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Po
   const act = t(actionKey(post, viewer, applied))
   const ring = reached ? t('m.lv.reached', { l: t(`m.lv.to.${level}` as never) }) : t(`m.lv.${level}` as never)
   return (
-    <li data-fit-item className="bd-card relative p-2.5 sm:p-5 fit:p-3.5 flex flex-col items-center text-center gap-1.5 sm:gap-2 fit:grid fit:grid-cols-[3rem_minmax(0,1fr)] fit:items-start fit:text-left fit:gap-x-3 fit:gap-y-1 min-w-0">
+    <li data-fit-item className="bd-card relative p-3 sm:p-5 fit:p-3.5 flex flex-row sm:flex-col items-center text-left sm:text-center gap-3 sm:gap-2 fit:grid fit:grid-cols-[3rem_minmax(0,1fr)] fit:items-start fit:text-left fit:gap-x-3 fit:gap-y-1 min-w-0">
       <div className="relative shrink-0 fit:row-span-3">
-        <span aria-hidden className={`rar-${level} rar-avatar w-10 h-10 text-base sm:w-16 sm:h-16 sm:text-xl fit:w-12 fit:h-12 fit:text-lg rounded-full grid place-items-center font-bold`}>{post.company.trim().charAt(0).toUpperCase()}</span>
+        <span aria-hidden className={`rar-${level} rar-avatar w-11 h-11 text-base sm:w-16 sm:h-16 sm:text-xl fit:w-12 fit:h-12 fit:text-lg rounded-full grid place-items-center font-bold`}>{post.company.trim().charAt(0).toUpperCase()}</span>
         {/* not verified: a small warning on the letter (verified: the tick after the name) */}
         {!post.verified && <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full grid place-items-center ring-2 ring-[rgb(var(--surface))] bg-warn-bg text-warn-fg" title={t('m.vf.unverified')}>
           <Icon name="warn" size={12} /><span className="sr-only">{t('m.vf.unverified')}</span></span>}
       </div>
-      <div className="flex-1 min-w-0 w-full flex flex-col items-center gap-1 sm:gap-2 fit:contents">
-      {/* phones: the whole card opens the details (the title button stretches over it) */}
-      <h3 className="font-semibold leading-snug text-[13px] sm:text-base sm:mt-1 fit:mt-0 w-full fit:col-start-2 text-center fit:text-left"><button type="button" onClick={onOpen} className="block w-full text-center fit:text-left hover:underline underline-offset-4 after:absolute after:inset-0 after:content-[''] sm:after:hidden"><span className="line-clamp-2 fit:line-clamp-1">{post.position}</span></button></h3>
-      <p className="text-[11px] sm:text-sm text-muted -mt-0.5 sm:-mt-1 fit:mt-0 line-clamp-1 w-full fit:col-start-2">{post.company}<VerifyTick post={post} size={13} /></p>
-      <div className="flex flex-wrap justify-center fit:justify-start fit:flex-nowrap fit:min-w-0 gap-1 sm:gap-1.5 fit:col-start-2">
+      <div className="flex-1 min-w-0 w-full flex flex-col items-start sm:items-center gap-1 sm:gap-2 fit:contents">
+      {/* phones: the whole row opens the details (the title button stretches over it) */}
+      <h3 className="font-semibold leading-snug text-sm sm:text-base sm:mt-1 fit:mt-0 w-full fit:col-start-2 text-left sm:text-center fit:text-left"><button type="button" onClick={onOpen} className="block w-full text-left sm:text-center fit:text-left hover:underline underline-offset-4 after:absolute after:inset-0 after:content-[''] sm:after:hidden"><span className="line-clamp-1 sm:line-clamp-2 fit:line-clamp-1">{post.position}</span></button></h3>
+      <p className="text-xs sm:text-sm text-muted -mt-0.5 sm:-mt-1 fit:mt-0 line-clamp-1 w-full fit:col-start-2">{post.company}<VerifyTick post={post} size={13} /></p>
+      <div className="flex flex-nowrap sm:flex-wrap justify-start sm:justify-center fit:justify-start fit:flex-nowrap min-w-0 max-w-full gap-1 sm:gap-1.5 fit:col-start-2">
         {/* the ring: in short on phones and computers, in full on tablets (the full words are in the title and for screen readers) */}
-        <span className={`chip rar rar-${level} !px-1.5 sm:!px-2 text-[10px] sm:text-xs sm:hidden fit:inline-flex fit:min-w-0`} title={ring}><ReachRings level={level} size={11} /><span className="sr-only">{t('m.lv.ring', { n: level })} · {ring}</span><span aria-hidden className="truncate">{t(`m.lv.${level}` as never)}</span></span>
+        <span className={`chip rar rar-${level} !px-1.5 sm:!px-2 text-[11px] sm:text-xs sm:hidden fit:inline-flex min-w-0`} title={ring}><ReachRings level={level} size={11} /><span className="sr-only">{t('m.lv.ring', { n: level })} · {ring}</span><span aria-hidden className="truncate">{t(`m.lv.${level}` as never)}</span></span>
         <span className="hidden sm:contents fit:hidden"><LevelBadge level={level} reached={reached} /></span>
-        {post.sample && <SampleBadge className="!px-1.5 sm:!px-2 text-[10px] sm:text-xs shrink-0" />}
+        {post.sample && <SampleBadge className="!px-1.5 sm:!px-2 text-[11px] sm:text-xs shrink-0" />}
       </div>
       <p className="text-xs text-muted bd-opt hidden sm:block fit:col-span-2 fit:mt-1">{N.place(post.country, post.province)} · {ago(post.releasedAt)}</p>
-      {/* places: one short line on phones and computers, two figures on tablets */}
-      <p className="sm:hidden fit:block text-[11px] sm:text-sm text-muted fit:col-span-2"><span className="font-bold text-ink">{c.held}/{cap}</span> <span className="fit:hidden" aria-hidden>{t('m.bd.placesShort')}</span><span className="sr-only fit:not-sr-only">{t('m.bd.places')}</span><span className="hidden fit:inline"> · {t('m.bd.queue')} <span className="font-bold text-ink">{c.reserved}</span></span></p>
+      {/* places: on the right on phones, one line on computers, two figures on tablets */}
+      <p className="hidden fit:block text-sm text-muted fit:col-span-2"><span className="font-bold text-ink">{c.held}/{cap}</span> <span className="fit:hidden" aria-hidden>{t('m.bd.placesShort')}</span><span className="sr-only fit:not-sr-only">{t('m.bd.places')}</span><span className="hidden fit:inline"> · {t('m.bd.queue')} <span className="font-bold text-ink">{c.reserved}</span></span></p>
       <div className="hidden sm:grid fit:hidden grid-cols-2 w-full border-t border-line pt-3 mt-1 divide-x divide-line text-center">
         <div><p className="text-base sm:text-lg font-bold">{c.held}/{cap}</p><p className="text-xs text-muted">{t('m.bd.places')}</p></div>
         <div><p className="text-base sm:text-lg font-bold">{c.reserved}</p><p className="text-xs text-muted">{t('m.bd.queue')}</p></div>
@@ -258,6 +263,7 @@ function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Po
         <NavLink to={`post?id=${post.id}`} className="btn-primary text-sm justify-center !rounded-full fit:!min-h-[36px]" aria-label={`${act}: ${post.position}`}>{act}</NavLink>
       </div>
       </div>
+      <p className="sm:hidden shrink-0 text-right leading-tight" aria-hidden><span className="block text-base font-bold">{c.held}/{cap}</span><span className="text-[11px] text-muted inline-flex items-center">{t('m.bd.placesShort')}<Icon name="right" size={13} /></span></p>
     </li>
   )
 }
@@ -293,7 +299,7 @@ function PostPanel({ titleId, post, level, reached, applied, viewer }: { titleId
       <GeoMap className="h-[220px]" label={t('m.bd.where', { p: N.place(post.country, post.province) })} country={post.country} province={post.province}
         pins={[{ country: post.country, province: post.province, label: post.position, tone: 'post' }]} onPickCountry={() => {}} onPickProvince={() => {}} />
     </div>
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-2 sticky bottom-0 z-10 -mx-5 px-5 py-3 bg-surface2 border-t border-line sm:static sm:mx-0 sm:p-0 sm:bg-transparent sm:border-0">
       <NavLink to={`post?id=${post.id}`} className="btn-ghost text-sm justify-center !rounded-full">{t('m.bd.openFull')}</NavLink>
       <NavLink to={`post?id=${post.id}`} className="btn-primary text-sm justify-center !rounded-full">{t(actionKey(post, viewer, applied))}</NavLink>
     </div>
