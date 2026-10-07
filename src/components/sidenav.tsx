@@ -5,6 +5,7 @@ import { useMatch } from '../matchData'
 import { useAuth } from '../auth'
 import { inbox } from '../domain/match/logic'
 import { Icon, type IconName } from './icons'
+import { Meniscus, type Hue, type Slot } from './meniscus'
 
 /** Count for the bell: exactly what the notifications page lists (see inbox in domain/match/logic.ts) */
 export function useUnread(): number {
@@ -26,6 +27,26 @@ export function sideItems(role: 'seeker' | 'employer' | null, admin: boolean): I
 }
 /** on phones the bottom bar keeps 5 main places; these go under "More" so the bar does not cover the screen */
 export const MORE_KEYS = ['m.cal', 'm.prepare', 'm.member', 'm.settings', 'm.help', 'm.admin', 'm.an.nav']
+/**
+ * Each place has its own colour (owner, Oct 2026: as in the reference): a bright bead (its icon in near-black, ≥ 7:1) and a label
+ * colour that reads on the light (600–700 shades) and the dark (300–400 shades) plate.
+ */
+export const HUES: Record<string, Hue> = {
+  'm.home': { bead: '#c9f24a', light: '#4d7c0f', dark: '#d9f99d' },
+  'm.pins': { bead: '#fbbf24', light: '#b45309', dark: '#fcd34d' },
+  'm.posts': { bead: '#fbbf24', light: '#b45309', dark: '#fcd34d' },
+  'm.board': { bead: '#fb923c', light: '#c2410c', dark: '#fdba74' },
+  'm.notif': { bead: '#fb7185', light: '#be123c', dark: '#fda4af' },
+  'm.cal': { bead: '#38bdf8', light: '#0369a1', dark: '#7dd3fc' },
+  'm.prepare': { bead: '#2dd4bf', light: '#0f766e', dark: '#5eead4' },
+  'm.settings': { bead: '#a78bfa', light: '#6d28d9', dark: '#c4b5fd' },
+  'm.help': { bead: '#34d399', light: '#047857', dark: '#6ee7b7' },
+  'm.member': { bead: '#facc15', light: '#a16207', dark: '#fde047' },
+  'm.admin': { bead: '#818cf8', light: '#4338ca', dark: '#a5b4fc' },
+  'm.an.nav': { bead: '#22d3ee', light: '#0e7490', dark: '#67e8f9' },
+  'm.profile': { bead: '#e879f9', light: '#a21caf', dark: '#f0abfc' },
+  'm.more': { bead: '#cbd5e1', light: '#475569', dark: '#cbd5e1' },
+}
 /** the "general" group of the capsule, set apart by a thin line from the places people work in */
 const GENERAL = ['m.prepare', 'm.settings', 'm.help', 'm.member', 'm.admin', 'm.an.nav', 'm.profile']
 
@@ -53,39 +74,24 @@ export function SideNav({ route }: { route: string }) {
     return () => { document.removeEventListener('keydown', esc); document.removeEventListener('pointerdown', away) }
   }, [moreOpen])
   const name = (n: Item) => (n.key === 'm.notif' && unread > 0 ? `${t(n.key as never)} · ${t('m.unread', { n: unread })}` : t(n.key as never))
-  const iconLink = (n: Item, size: 'lg' | 'sm') => {
-    const on = n.match.includes(route)
-    return (
-      <NavLink to={n.to} aria-current={on ? 'page' : undefined} aria-label={name(n)}
-        className={`nav-item ${size === 'lg' ? 'w-12 h-12 group' : 'w-11 h-11'} ${on ? 'nav-on' : ''}`}>
-        <Icon name={n.icon} size={size === 'lg' ? 22 : 21} />
-        {/* the name, shown beside the icon on hover or keyboard focus (the link already carries it for screen readers) */}
-        {size === 'lg' && <span className="nav-tip" aria-hidden>{t(n.key as never)}</span>}
-        {n.key === 'm.notif' && unread > 0 && <span className="absolute top-1 right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-danger-fg text-page text-[10px] font-bold grid place-items-center" aria-hidden>{unread}</span>}
-      </NavLink>)
-  }
   const moreOn = more.some((n) => n.match.includes(route))
+  const slot = (n: Item, i: number, list: Item[]): Slot => ({ key: n.key, label: t(n.key as never), aria: name(n), icon: n.icon, hue: HUES[n.key] ?? HUES['m.more'], current: n.match.includes(route),
+    to: n.to, badge: n.key === 'm.notif' && unread > 0 ? unread : undefined, split: GENERAL.includes(n.key) && !GENERAL.includes(list[i - 1]?.key ?? '') })
+  const railSlots = items.map((n, i) => slot(n, i, items))
+  const barSlots: Slot[] = [...main.map((n, i) => ({ ...slot(n, i, main), split: false })),
+    { key: 'm.more', label: t('m.more'), aria: t('m.more'), icon: 'more', hue: HUES['m.more'], current: moreOpen || moreOn, onPress: () => setMoreOpen((o) => !o), expanded: moreOpen, controls: 'nav-more', btnRef: moreBtn }]
+  // dropping the bead on an item: go there (or open "More")
+  const select = (s: Slot) => { if (s.to !== undefined) go(s.to); else s.onPress?.() }
   return (
     <>
-      {/* computers and tablets: floating capsule on the left, vertically centred */}
-      <nav aria-label={t('m.side')} className="nav-pill nav-rail hidden md:flex fixed left-4 top-[calc(50%+2rem)] -translate-y-1/2 z-30 flex-col items-center gap-1.5 p-2 rounded-full">
-        <ul className="flex flex-col gap-1.5">{items.map((n, i) => (
-          <li key={n.key} className={GENERAL.includes(n.key) && !GENERAL.includes(items[i - 1]?.key ?? '') ? 'nav-split' : undefined}>{iconLink(n, 'lg')}</li>))}</ul>
-      </nav>
-      {/* phones: floating capsule at the bottom — 5 places + More */}
-      <nav aria-label={t('m.side')} className="nav-pill md:hidden fixed inset-x-3 z-40 rounded-full px-2 py-1.5" style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-        <ul className="flex items-center justify-around">
-          {main.map((n) => <li key={n.key}>{iconLink(n, 'sm')}</li>)}
-          <li>
-            <button ref={moreBtn} type="button" aria-label={t('m.more')} aria-expanded={moreOpen} aria-controls="nav-more" onClick={() => setMoreOpen((o) => !o)}
-              className={`nav-item w-11 h-11 ${moreOn ? 'nav-on' : ''}`}><Icon name="more" size={21} /></button>
-          </li>
-        </ul>
-      </nav>
+      {/* computers and tablets: the rail on the left, centred in the space under the header; the bead flows up and down */}
+      <Meniscus vertical slots={railSlots} label={t('m.side')} onSelect={select} className="nav-rail hidden md:block fixed left-4 top-[calc(50%+2rem)] -translate-y-1/2 z-30" />
+      {/* phones: the bar at the bottom — 5 places + More; the bead flows sideways */}
+      <Meniscus slots={barSlots} label={t('m.side')} onSelect={select} className="md:hidden fixed inset-x-3 z-40" style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))' }} />
       {/* the "More" list sits outside the capsule so its own glass can blur the page (a glass element cannot blur through
           another glass element); it comes right after the More button in the reading and Tab order */}
       <ul ref={moreList} id="nav-more" hidden={!moreOpen} className="glass-pop md:hidden fixed right-3 z-40 w-52 rounded-3xl p-1.5"
-        style={{ bottom: 'calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.5rem)' }}>
+        style={{ bottom: 'calc(max(0.75rem, env(safe-area-inset-bottom)) + 6rem)' }}>
         {more.map((n) => { const on = n.match.includes(route); return (
           <li key={n.key}><NavLink to={n.to} aria-current={on ? 'page' : undefined}
             className={`nav-item !flex !justify-start gap-3 !rounded-2xl px-3 min-h-[44px] text-sm ${on ? 'nav-on font-semibold' : ''}`}><Icon name={n.icon} size={18} />{t(n.key as never)}</NavLink></li>) })}

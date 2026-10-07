@@ -410,7 +410,7 @@ describe('accessibility audit, round 1 (#1, #2, #7)', () => {
     expect(nav).toContain("document.addEventListener('pointerdown', away)")
     expect(nav).toContain('useEffect(() => { setMoreOpen(false) }, [route])')
     // nothing hides under the bottom capsule on phones
-    expect(src('./App.tsx')).toContain('pb-24 md:pb-10') // room for the phone menu capsule (the interface is a step smaller on phones)
+    expect(src('./App.tsx')).toContain('pb-28 md:pb-10') // room for the phone menu capsule (the interface is a step smaller on phones)
     expect(css).toMatch(/@media \(max-width: 767px\) \{ html \{ scroll-padding-bottom: 6rem \} \}/)
   })
   it('#7 focused controls scroll clear of the 64px sticky header', () => {
@@ -421,21 +421,22 @@ describe('accessibility audit, round 1 (#1, #2, #7)', () => {
 describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
   const css = src('./index.css')
   const seekerState = () => { const st = seedState(NOW); st.role = 'seeker'; st.me = seeker([]); return st }
-  it('#3 #9 (menu capsule, Oct 2026) the current page sits on a solid indigo pill; icons only (owner), each with a name for screen readers', () => {
+  it('#3 #9 (menu, Oct 2026: the "meniscus" bar) the current page is marked (aria-current + a coloured bead); icons only, each with a name for screen readers', () => {
     const page = html(<SideNav route="seek" />, seekerState())
     const current = [...page.matchAll(/<a [^>]*aria-current="page"[^>]*>/g)].map((m) => m[0])
-    expect(current.length).toBe(2) // the side capsule and the phone bar
-    for (const a of current) { expect(a).toContain('href="/seek"'); expect(a).toContain('nav-on') }
-    expect(css).toMatch(/\.nav-on, \.nav-on:hover \{ color: rgb\(var\(--onprimary\)\);[\s\S]*?linear-gradient\(180deg, rgb\(var\(--primary-hi\)\), rgb\(var\(--primary\)\)\)/)
+    expect(current.length).toBe(2) // the side rail and the phone bar
+    for (const a of current) { expect(a).toContain('href="/seek"'); expect(a).toContain('mn-on') }
+    expect(page.match(/class="mn-bead"/g)?.length).toBe(2) // the bead is decoration (aria-hidden); the link carries the meaning
+    expect(page).toMatch(/class="mn-bead" aria-hidden="true"/)
     for (const k of ['m.home', 'm.notif', 'm.pins', 'm.board', 'm.prepare', 'm.settings', 'm.help', 'm.profile'] as const) expect(page, k).toContain(`aria-label="${T(k)}`) // the bell may add its count
     expect(page).not.toMatch(/<a [^>]*title=/)
-    // computers and tablets: left capsule; phones: bottom capsule with 5 places + More
-    expect(page).toContain('class="nav-pill nav-rail hidden md:flex fixed left-4 top-[calc(50%+2rem)]') // centred in the space under the header (Oct 2026: it went under the header on short screens)
-    expect(page).toMatch(/class="nav-pill md:hidden fixed inset-x-3/)
-    const bar = page.slice(page.indexOf('nav-pill md:hidden'))
+    // computers and tablets: the rail on the left, under the header; phones: the bar at the bottom with 5 places + More
+    expect(page).toContain('class="mn mn-v nav-rail hidden md:block fixed left-4 top-[calc(50%+2rem)]')
+    expect(page).toMatch(/class="mn mn-h md:hidden fixed inset-x-3/)
+    const bar = page.slice(page.indexOf('mn mn-h md:hidden'))
     expect(bar.slice(0, bar.indexOf('aria-controls="nav-more"')).match(/<a /g)?.length).toBe(5)
     expect(bar).toContain(`aria-label="${T('m.more')}" aria-expanded="false" aria-controls="nav-more"`)
-    expect(src('./App.tsx')).toContain('md:pl-24')
+    expect(src('./App.tsx')).toContain('md:pl-28') // room for the bead beside the rail
   })
   it('#4 (revised with the owner) the view moves with single taps: tapping a country or province frames it; zoom and back-to-view buttons; no arrow pad', () => {
     const geo = src('./components/geomap.tsx')
@@ -525,7 +526,7 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
     expect(m).toContain(`<section className="card space-y-4" aria-label={t('m.settings.look')}>`) // settings (two cards side by side)
     const app = src('./App.tsx')
     expect(app.indexOf('<footer')).toBeGreaterThan(app.indexOf('</main>'))
-    expect(app).toMatch(/<\/div>\s*\{\/\* the footer band runs to both screen edges[\s\S]*?<footer className={`[^`]*md:pl-28/)
+    expect(app).toMatch(/<\/div>\s*\{\/\* the footer band runs to both screen edges[\s\S]*?<footer className={`[^`]*md:pl-32/)
   })
   it('text on the glass cards stays ≥ 4.5:1 even over the strongest coloured light, and on the drops, in both themes', () => {
     const num = (th: 'light' | 'dark', name: string) => {

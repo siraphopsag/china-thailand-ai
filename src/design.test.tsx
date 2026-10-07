@@ -268,7 +268,7 @@ describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, st
   })
   it('nothing runs off a short screen: the capsule sits under the header and shrinks, dialogs scroll inside, board cards drop secondary lines', () => {
     expect(css).toContain('.nav-rail { max-height: calc(100dvh - 5.5rem) }')
-    expect(css).toMatch(/@media \(max-height: 760px\) \{ \.nav-rail \.nav-item\.w-12 \{ width: 2\.5rem; height: 2\.5rem \}/)
+    expect(css).toMatch(/@media \(max-height: 760px\) \{ \.nav-rail \.mn-item\.w-12 \{ width: 2\.5rem; height: 2\.5rem \}/)
     expect(css).toContain('.modal-panel { max-height: calc(100dvh - 2rem); overflow-y: auto }')
     expect(css).toContain('@media (min-width: 1024px) and (max-height: 760px) { .bd-card .bd-opt { display: none }')
     // where a part cannot fit it scrolls inside instead of being cut off

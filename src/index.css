@@ -506,10 +506,36 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
    top went under the header): it is centred in the space below the header and its buttons get smaller on shorter screens
    (no scrolling inside it, which would also cut off the name bubbles) */
 .nav-rail { max-height: calc(100dvh - 5.5rem) }
-@media (max-height: 880px) { .nav-rail .nav-item.w-12 { width: 2.75rem; height: 2.75rem } .nav-rail > ul { gap: .3rem } }
-@media (max-height: 760px) { .nav-rail .nav-item.w-12 { width: 2.5rem; height: 2.5rem } .nav-rail > ul { gap: .2rem } .nav-rail .nav-split { margin-top: .2rem; padding-top: .3rem } }
-@media (max-height: 640px) { .nav-rail .nav-item.w-12 { width: 2.25rem; height: 2.25rem } .nav-rail .nav-item svg { width: 18px; height: 18px } .nav-rail { padding: .35rem } }
+@media (max-height: 880px) { .nav-rail .mn-item.w-12 { width: 2.75rem; height: 2.75rem } .nav-rail ul { gap: .3rem } }
+@media (max-height: 760px) { .nav-rail .mn-item.w-12 { width: 2.5rem; height: 2.5rem } .nav-rail ul { gap: .2rem } .nav-rail .nav-split { margin-top: .2rem; padding-top: .3rem } }
+@media (max-height: 640px) { .nav-rail .mn-item.w-12 { width: 2.25rem; height: 2.25rem } .nav-rail .mn-item svg { width: 18px; height: 18px } .nav-rail { padding: .35rem } }
 /* dialogs never grow past the screen; long ones scroll inside */
 .modal-panel { max-height: calc(100dvh - 2rem); overflow-y: auto }
 /* short computer screens: board cards drop their secondary lines (place, age, fill bar) so a whole row still fits */
 @media (min-width: 1024px) and (max-height: 760px) { .bd-card .bd-opt { display: none } .bd-card { padding: .75rem !important; gap: .3rem !important } .bd-card .rar-avatar { width: 3rem !important; height: 3rem !important; font-size: 1.1rem } }
+/* ── "meniscus" menu (owner, Oct 2026): a glass plate drawn as one path with a socket, a coloured bead that flows between items ── */
+.mn { --hue: #818cf8 }
+/* nearly solid so the socket (empty space around the bead) reads clearly, with a lit rim like the reference */
+.mn-plate { fill: rgb(var(--surface) / .94); stroke: rgb(var(--line)); stroke-width: 1.25 }
+:root[data-theme='dark'] .mn-plate { fill: rgb(var(--surface2) / .95); stroke: rgb(255 255 255 / .14) }
+.mn-svg { filter: drop-shadow(0 18px 28px rgb(0 0 0 / calc(var(--glass-shadow) * .8))) drop-shadow(0 0 0.5px rgb(var(--glass-ring))) }
+.mn-blur { backdrop-filter: blur(18px) saturate(1.7); -webkit-backdrop-filter: blur(18px) saturate(1.7) }
+.mn-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 9999px; color: rgb(var(--muted)); transition: color .18s ease }
+.mn-item:hover { color: rgb(var(--ink)) }
+.mn-item:focus-visible { outline: 2px solid rgb(var(--primary)); outline-offset: 2px }
+.mn-icon { position: relative; display: grid; place-items: center; transition: opacity .18s ease }
+.mn-h .mn-icon { margin-top: 2px }
+.mn-label { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-weight: 700; color: var(--hue-l); transition: opacity .2s ease }
+:root[data-theme='dark'] .mn-label { color: var(--hue-d) }
+.mn-bead { position: absolute; left: 0; top: 0; width: 46px; height: 46px; border-radius: 9999px; display: grid; place-items: center; color: #111318;
+  background: radial-gradient(70% 60% at 35% 25%, rgb(255 255 255 / .45), transparent 60%), var(--hue);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .6), inset 0 -3px 6px rgb(0 0 0 / .18), 0 10px 24px -8px var(--hue), 0 0 0 1px rgb(0 0 0 / .08);
+  transition: background-color .25s ease, box-shadow .25s ease, opacity .2s ease; cursor: grab; touch-action: none; will-change: transform; z-index: 2 }
+.mn-bead:active { cursor: grabbing }
+/* a soft light in the item's colour under the bar */
+.mn-glow { position: absolute; pointer-events: none; z-index: -1; border-radius: 9999px; background: radial-gradient(closest-side, var(--hue), transparent); opacity: .28; filter: blur(18px); transition: background .3s ease }
+.mn-h .mn-glow { left: 15%; right: 15%; bottom: -18px; height: 70px }
+.mn-v .mn-glow { top: 20%; bottom: 20%; left: -10px; width: 90px }
+.mn-v .nav-tip { left: calc(100% + 2.4rem) }
+@media (prefers-reduced-motion: reduce) { .mn-bead, .mn-label, .mn-icon { transition: none } }
+@media (prefers-reduced-transparency: reduce) { .mn-blur { backdrop-filter: none; -webkit-backdrop-filter: none } .mn-plate { fill: rgb(var(--surface)) } }
