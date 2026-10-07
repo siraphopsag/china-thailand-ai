@@ -50,7 +50,7 @@ export const rowToPost = (r: PostRow, uid: string): Post => ({
   headcount: r.headcount, employment: one(EMPLOYMENT, r.employment),
   salary: r.salary_min !== null && r.salary_max !== null && (r.salary_currency === 'THB' || r.salary_currency === 'CNY') ? { min: r.salary_min, max: r.salary_max, currency: r.salary_currency } : null,
   startDate: r.start_date, languages: toLanguages(r.languages), education: one(EDU, r.education) ?? 'none', benefits: many(BENEFITS, r.benefits),
-  country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, ...(r.hidden ? { hidden: true } : {}), synthetic: true,
+  country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, ...(r.hidden ? { hidden: true } : {}), ...(r.is_sample ? { sample: true } : {}), synthetic: true,
 })
 export function toLanguages(v: unknown): LanguageSkill[] {
   if (!Array.isArray(v)) return []

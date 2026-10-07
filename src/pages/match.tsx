@@ -84,8 +84,13 @@ export function PostFacts({ post, compact }: { post: Post; compact?: boolean }) 
       <div key={k} className="flex items-start gap-2.5"><Icon name={icon} size={16} className="text-primary mt-0.5 shrink-0" /><div><dt className="text-muted text-xs">{k}</dt><dd className="font-medium">{v}</dd></div></div>))}</dl>
   )
 }
-export function Page({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) {
-  return <div className="space-y-5"><div><h1 className="h1">{title}</h1>{sub && <p className="text-muted mt-1 max-w-3xl">{sub}</p>}</div>{children}</div>
+export function Page({ title, sub, actions, children }: { title: string; sub?: string; actions?: ReactNode; children: ReactNode }) {
+  return <div className="space-y-5"><div className="flex flex-wrap items-end justify-between gap-3"><div className="min-w-0"><h1 className="h1">{title}</h1>{sub && <p className="text-muted mt-1 max-w-3xl">{sub}</p>}</div>{actions && <div className="flex flex-wrap gap-2">{actions}</div>}</div>{children}</div>
+}
+/** a sample post made for the prototype (not a real employer) */
+export function SampleBadge() {
+  const { t } = useI18n()
+  return <span className="chip bg-surface3 text-muted border-line" title={t('m.sample.d')}><Icon name="info" size={12} />{t('m.sample.badge')}</span>
 }
 /** a short message in a live region (pin added, posted, accepted …) */
 export function Toast({ msg }: { msg: { tone: 'info' | 'danger'; text: string } | null }) {
@@ -324,6 +329,7 @@ export function PostCard({ post, level, reached, children }: { post: Post; level
         {state !== 'open' && <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(state === 'waiting' ? 'm.state.waiting' : 'm.state.closed')}</span>}
         {post.verified ? <span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name="shield" size={12} />{t('m.vf.badge')}</span>
           : <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="warn" size={12} />{t('m.vf.unverified')}</span>}
+        {post.sample && <SampleBadge />}
       </p>
       {children}
     </li>
@@ -578,16 +584,24 @@ export function HelpPage() {
 }
 
 /* ================= admin back office ================= */
+/* The back office in tabs (owner, Oct 2026: one long page was hard to read): an overview of what needs attention, then one tab each
+   for verification requests, reports, cases and posts — compact rows, smaller type. Arrow keys move between the tabs. */
+type AdminTab = 'overview' | 'verify' | 'reports' | 'cases' | 'posts'
+const ADMIN_TABS: { k: AdminTab; icon: IconName }[] = [{ k: 'overview', icon: 'overview' }, { k: 'verify', icon: 'shield' }, { k: 'reports', icon: 'alert' }, { k: 'cases', icon: 'plane' }, { k: 'posts', icon: 'posts' }]
+const ROW = 'rounded-xl border border-line bg-surface px-4 py-3 text-sm'
 export function BackofficePage() {
   const { t } = useI18n()
   const N = useNames()
   const { st, now, pool, deletePost, stats, mode, pendingVerifications, decideVerification, reports, moderate } = useMatch()
   const { isAdmin } = useAuth()
   const nameOf = useApplicantName()
+  const [tab, setTab] = useState<AdminTab>('overview')
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   const [ask, askDialog] = useConfirm()
   if (!isAdmin) return <Page title={t('m.adm.title')}><Warn>{t('m.adm.gate')}</Warn></Page>
   const people = [{ ...st.me, name: t('m.adm.you') }, ...st.seekers]
+  const openCases = st.cases.filter((c) => currentStep(c) !== null)
+  const count: Record<AdminTab, number> = { overview: 0, verify: pendingVerifications.length, reports: reports.length, cases: openCases.length, posts: st.posts.length }
   const decideR = async (postId: string, action: 'dismiss' | 'remove' | 'suspend') => {
     if (action !== 'dismiss' && !(await ask(t(action === 'remove' ? 'm.adm.remove.confirm' : 'm.adm.suspend.confirm'), { yes: t(action === 'remove' ? 'm.adm.remove' : 'm.adm.suspend'), danger: true }))) return
     const r = await moderate(postId, action)
@@ -597,91 +611,120 @@ export function BackofficePage() {
     if (!ok && !(await ask(t('m.adm.reject.confirm'), { yes: t('m.adm.reject'), danger: true }))) return
     setMsg((await decideVerification(id, ok)) ? { tone: 'info', text: t('m.adm.verifyDone') } : { tone: 'danger', text: t('m.err.network') })
   }
+  const go = (k: AdminTab) => { setTab(k); requestAnimationFrame(() => document.getElementById(`adm-tab-${k}`)?.focus()) }
+  const keys = (e: React.KeyboardEvent) => {
+    const i = ADMIN_TABS.findIndex((x) => x.k === tab)
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(ADMIN_TABS[(i + 1) % ADMIN_TABS.length].k) }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(ADMIN_TABS[(i - 1 + ADMIN_TABS.length) % ADMIN_TABS.length].k) }
+    if (e.key === 'Home') { e.preventDefault(); go(ADMIN_TABS[0].k) }
+    if (e.key === 'End') { e.preventDefault(); go(ADMIN_TABS[ADMIN_TABS.length - 1].k) }
+  }
+  const empty = (text: string) => <p className={`${ROW} text-muted`}>{text}</p>
+
   return (
-    <Page title={t('m.adm.title')} sub={t('m.adm.sub')}>
-      <NavLink to="analytics" className="glass-card p-4 flex items-center gap-3 hover:no-underline"><span className="w-10 h-10 rounded-xl bg-brand text-brandfg grid place-items-center"><Icon name="chart" size={20} /></span><span className="min-w-0"><span className="block font-semibold">{t('m.an.title')}</span><span className="block text-xs text-muted">{t('m.an.sub')}</span></span><Icon name="next" size={18} className="ml-auto text-muted" /></NavLink>
-      <ClockControls />
-      <p className="text-xs text-muted">{t('m.adm.ai')}</p>
+    <Page title={t('m.adm.title')} sub={t('m.adm.sub2')}
+      actions={<NavLink to="analytics" className="btn-ghost text-sm !rounded-full"><Icon name="chart" size={15} />{t('m.an.title')}</NavLink>}>
       <Toast msg={msg} />
       {askDialog}
-      {mode === 'remote' && stats && (
-        <section aria-labelledby="adm-stats" className="space-y-2">
-          <h2 id="adm-stats" className="h2">{t('m.adm.stats')}</h2>
-          <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">{([['m.adm.st.users', stats.users], ['m.adm.st.employers', stats.employers], ['m.adm.st.seekers', stats.seekers], ['m.adm.st.posts', stats.posts], ['m.adm.st.posts7', stats.posts_7d], ['m.adm.st.acc', stats.acceptances]] as const).map(([k, v]) => (
-            <div key={k} className="glass-card glass-lite p-3"><dt className="text-xs text-muted">{t(k)}</dt><dd className="text-2xl font-bold">{v}</dd></div>))}</dl>
-        </section>)}
-      <section className="space-y-2" aria-labelledby="adm-rp">
-        <h2 id="adm-rp" className="h2">{t('m.adm.reports', { n: reports.length })}</h2>
-        {!reports.length ? <p className="text-sm text-muted">{t('m.adm.reportsNone')}</p> : (
+      <div role="tablist" aria-label={t('m.adm.tabs')} onKeyDown={keys} className="flex flex-wrap gap-1 rounded-2xl border border-line bg-surface p-1">
+        {ADMIN_TABS.map(({ k, icon }) => (
+          <button key={k} id={`adm-tab-${k}`} type="button" role="tab" aria-selected={tab === k} aria-controls="adm-panel" tabIndex={tab === k ? 0 : -1} onClick={() => setTab(k)}
+            className={`min-h-[40px] px-3.5 rounded-xl text-sm inline-flex items-center gap-2 ${tab === k ? 'bg-primary text-onprimary font-semibold' : 'hover:bg-surface3'}`}>
+            <Icon name={icon} size={15} />{t(`m.adm.tab.${k}` as never)}
+            {count[k] > 0 && k !== 'overview' && <span className={`min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold grid place-items-center ${tab === k ? 'bg-onprimary text-primary' : (k === 'verify' || k === 'reports') ? 'bg-danger-fg text-page' : 'bg-surface3 text-muted'}`}>{count[k]}</span>}
+          </button>))}
+      </div>
+
+      <section id="adm-panel" role="tabpanel" aria-labelledby={`adm-tab-${tab}`} className="space-y-3">
+        {tab === 'overview' && (<>
+          <h2 className="text-base font-semibold">{t('m.adm.attn')}</h2>
+          <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">{(['verify', 'reports', 'cases', 'posts'] as const).map((k) => (
+            <li key={k}><button type="button" onClick={() => go(k)} className="w-full text-left glass-card p-4 space-y-1">
+              <span className="text-xs text-muted flex items-center justify-between gap-2">{t(`m.adm.tab.${k}` as never)}<Icon name={ADMIN_TABS.find((x) => x.k === k)!.icon} size={15} /></span>
+              <span className="block text-3xl font-bold">{count[k]}</span>
+              <span className="block text-xs text-muted">{t(`m.adm.attn.${k}` as never)}</span>
+            </button></li>))}</ul>
+          {mode === 'remote' && stats && (
+            <div className="space-y-2"><h2 className="text-base font-semibold">{t('m.adm.stats')}</h2>
+              <dl className="grid grid-cols-3 lg:grid-cols-6 gap-2">{([['m.adm.st.users', stats.users], ['m.adm.st.employers', stats.employers], ['m.adm.st.seekers', stats.seekers], ['m.adm.st.posts', stats.posts], ['m.adm.st.posts7', stats.posts_7d], ['m.adm.st.acc', stats.acceptances]] as const).map(([k, v]) => (
+                <div key={k} className={ROW}><dt className="text-xs text-muted">{t(k)}</dt><dd className="text-xl font-bold">{v}</dd></div>))}</dl></div>)}
+          <details className={ROW}><summary className="cursor-pointer font-medium">{t('m.adm.demoClock')}</summary><div className="pt-3"><ClockControls /></div></details>
+          <p className="text-xs text-muted">{t('m.adm.ai')}</p>
+        </>)}
+
+        {tab === 'verify' && (<>
+          <p className="text-xs text-muted">{t('m.adm.verifyCheck')}</p>
+          {!pendingVerifications.length ? empty(t('m.adm.verifyNone')) : (
+            <ul className="space-y-2">{pendingVerifications.map((v) => (
+              <li key={v.id ?? 'me'} className={`${ROW} flex flex-wrap items-center justify-between gap-3`}>
+                <div className="min-w-0"><p className="font-semibold">{v.company || '—'} <span className="font-normal text-muted">· {v.name}</span></p>
+                  <p className="text-xs text-muted">{t(`geo.c.${v.country}` as never)} · <span className="font-mono">{v.regNo}</span>{v.at ? ` · ${N.dayTime(Date.parse(v.at))}` : ''}</p></div>
+                <div className="flex gap-2"><button type="button" className="btn-primary text-sm" onClick={() => void decideV(v.id, true)}><Icon name="ok" size={15} />{t('m.adm.approve')}</button>
+                  <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideV(v.id, false)}>{t('m.adm.reject')}</button></div>
+              </li>))}</ul>)}
+        </>)}
+
+        {tab === 'reports' && (!reports.length ? empty(t('m.adm.reportsNone')) : (
           <ul className="space-y-2">{reports.map((g) => {
             const p = st.posts.find((x) => x.id === g.postId)
             return (
-              <li key={g.postId} className="glass-card glass-lite p-4 space-y-2 text-sm">
+              <li key={g.postId} className={`${ROW} space-y-2`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold">{p ? <NavLink to={`post?id=${p.id}`} className="hover:underline underline-offset-4">{p.position} · {p.company}</NavLink> : t('m.adm.reportsGone')}</p>
+                  <p className="font-semibold min-w-0">{p ? <NavLink to={`post?id=${p.id}`} className="hover:underline underline-offset-4">{p.position} · {p.company}</NavLink> : t('m.adm.reportsGone')}</p>
                   <p className="flex flex-wrap gap-1.5"><span className="chip bg-danger-bg text-danger-fg border-danger-line"><Icon name="alert" size={12} />{t('m.adm.reportsBy', { n: g.count })}</span>
                     {p?.hidden && <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="eyeOff" size={12} />{t('m.adm.hidden')}</span>}</p>
                 </div>
                 <p className="flex flex-wrap gap-1.5">{Object.entries(g.reasons).map(([k, n]) => <span key={k} className="chip bg-surface3 border-line">{t(`m.rpt.r.${k}` as never)} × {n}</span>)}</p>
-                {g.notes.length > 0 && <ul className="text-muted space-y-0.5">{g.notes.map((n, i) => <li key={i}>“{n}”</li>)}</ul>}
-                {p && <div className="flex flex-wrap gap-2 pt-1">
+                {g.notes.length > 0 && <ul className="text-xs text-muted space-y-0.5">{g.notes.map((n, i) => <li key={i}>“{n}”</li>)}</ul>}
+                {p && <div className="flex flex-wrap gap-2">
                   <button type="button" className="btn-ghost text-sm" onClick={() => void decideR(g.postId, 'dismiss')}><Icon name="ok" size={15} />{t('m.adm.dismiss')}</button>
                   <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideR(g.postId, 'remove')}><Icon name="trash" size={15} />{t('m.adm.remove')}</button>
                   {!p.employerId.startsWith('sample:') && <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideR(g.postId, 'suspend')}><Icon name="lock" size={15} />{t('m.adm.suspend')}</button>}
                 </div>}
               </li>)
-          })}</ul>)}
-      </section>
-      <section className="space-y-2" aria-labelledby="adm-vf">
-        <h2 id="adm-vf" className="h2">{t('m.adm.verify', { n: pendingVerifications.length })}</h2>
-        <p className="text-xs text-muted">{t('m.adm.verifyCheck')}</p>
-        {!pendingVerifications.length ? <p className="text-sm text-muted">{t('m.adm.verifyNone')}</p> : (
-          <ul className="space-y-2">{pendingVerifications.map((v) => (
-            <li key={v.id ?? 'me'} className="glass-card glass-lite p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-              <div><p className="font-semibold">{v.company || '—'} <span className="font-normal text-muted">· {v.name}</span></p>
-                <p className="text-muted">{t(`geo.c.${v.country}` as never)} · <span className="font-mono">{v.regNo}</span>{v.at ? ` · ${N.dayTime(Date.parse(v.at))}` : ''}</p></div>
-              <div className="flex gap-2"><button type="button" className="btn-primary text-sm" onClick={() => void decideV(v.id, true)}><Icon name="ok" size={15} />{t('m.adm.approve')}</button>
-                <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideV(v.id, false)}>{t('m.adm.reject')}</button></div>
-            </li>))}</ul>)}
-      </section>
-      <section className="space-y-2" aria-labelledby="adm-cs">
-        <h2 id="adm-cs" className="h2">{t('m.adm.cases', { n: st.cases.length })}</h2>
-        {!st.cases.length ? <p className="text-sm text-muted">{t('m.adm.casesNone')}</p> : (
-          <ul className="space-y-2">{st.cases.map((c) => {
+          })}</ul>))}
+
+        {tab === 'cases' && (!st.cases.length ? empty(t('m.adm.casesNone')) : (
+          <ul className="space-y-2">{[...st.cases].sort((a, b) => Number(currentStep(a) === null) - Number(currentStep(b) === null)).map((c) => {
             const p = st.posts.find((x) => x.id === c.postId), a = st.acceptances.find((x) => x.id === c.accId), cur = currentStep(c)
             return (
-              <li key={c.id} className="glass-card glass-lite p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                <div><p className="font-semibold">{p ? `${p.position} · ${p.company}` : '—'}</p>
-                  <p className="text-muted">{a ? nameOf(a) : '—'} · {cur ? t(`m.cs.s.${cur}` as never) : t('m.cs.n.closed')} · {t('m.cs.progress', { n: stepsDone(c) })}</p></div>
+              <li key={c.id} className={`${ROW} flex flex-wrap items-center justify-between gap-3`}>
+                <div className="min-w-0"><p className="font-semibold">{p ? `${p.position} · ${p.company}` : '—'}</p>
+                  <p className="text-xs text-muted">{a ? nameOf(a) : '—'} · {cur ? t(`m.cs.s.${cur}` as never) : t('m.cs.n.closed')} · {t('m.cs.progress', { n: stepsDone(c) })}</p></div>
                 <NavLink to={`case?id=${c.id}`} className="btn-ghost text-sm"><Icon name="plane" size={15} />{t('m.cs.open')}</NavLink>
               </li>)
+          })}</ul>))}
+
+        {tab === 'posts' && (
+          <ul className="space-y-2">{st.posts.map((p) => {
+            const stage = capStage(stageAt(scheduleOf(p, pool, now), now), p)
+            const reach = people.map((s) => ({ s, r: reachFor(p, s.pins, pool, now) }))
+            const reached = reach.filter((x) => x.r.visible), waiting = reach.filter((x) => !x.r.visible && x.r.level < 5)
+            const acc = st.acceptances.filter((a) => a.postId === p.id).sort((a, b) => a.at.localeCompare(b.at))
+            return (
+              <li key={p.id} className={ROW}>
+                <details>
+                  <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-2">
+                    <span className="min-w-0"><h3 className="font-semibold">{p.position} · {p.company} {p.sample && <SampleBadge />}</h3>
+                      <span className="block text-xs text-muted">{N.place(p.country, p.province)} · {N.industry(p.industry)} · {t('m.adm.applicants', { n: acc.length })} · {t('m.adm.reachedN', { n: reached.length })}</span></span>
+                    <span className="flex items-center gap-2">{stage !== 'expired' && <LevelBadge level={stage} reached />}<Icon name="down" size={15} className="text-muted" /></span>
+                  </summary>
+                  <div className="pt-3 mt-3 border-t border-line space-y-3">
+                    <PostFacts post={p} compact />
+                    <div className="grid sm:grid-cols-2 gap-3 text-xs">
+                      <div><p className="font-medium">{t('m.adm.reached')} ({reached.length})</p><p className="text-muted">{reached.map((x) => x.s.name).join(', ') || t('m.adm.none')}</p></div>
+                      <div><p className="font-medium">{t('m.adm.waiting')}</p><p className="text-muted">{waiting.map((x) => `${x.s.name} (${t('m.lv.short', { n: x.r.level })})`).join(', ') || t('m.adm.none')}</p></div>
+                    </div>
+                    {acc.map((a) => (
+                      <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span><Icon name="ok" size={14} className="inline text-ok-fg" /> {nameOf(a)} · {t(`m.as.${a.status}` as never)}</span>
+                        {(() => { const c = st.cases.find((x) => x.accId === a.id); return c ? <NavLink to={`case?id=${c.id}`} className="text-primary underline underline-offset-4 min-h-[24px] inline-flex items-center">{t('m.adm.forwarded')}</NavLink> : null })()}
+                      </div>))}
+                    <div className="flex justify-end"><button type="button" className="btn-ghost text-sm text-danger-fg" onClick={async () => { if (await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true })) setMsg((await deletePost(p.id)) ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') }) }}><Icon name="trash" size={15} />{t('m.post.delete')}</button></div>
+                  </div>
+                </details>
+              </li>)
           })}</ul>)}
-      </section>
-      <section className="space-y-3" aria-labelledby="adm-posts">
-        <h2 id="adm-posts" className="h2">{t('m.adm.posts')}</h2>
-        <ul className="space-y-3">{st.posts.map((p) => {
-          const stage = capStage(stageAt(scheduleOf(p, pool, now), now), p)
-          const reach = people.map((s) => ({ s, r: reachFor(p, s.pins, pool, now) }))
-          const reached = reach.filter((x) => x.r.visible), waiting = reach.filter((x) => !x.r.visible && x.r.level < 5)
-          const acc = st.acceptances.filter((a) => a.postId === p.id).sort((a, b) => a.at.localeCompare(b.at))
-          return (
-            <li key={p.id} className="glass-card glass-lite p-4 space-y-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div><h3 className="font-semibold">{p.position} · {p.company} {p.employerId !== MY_EMPLOYER && <span className="chip bg-surface3 text-muted border-line ml-1">{t('m.adm.sample')}</span>}</h3><p className="text-sm text-muted">{N.place(p.country, p.province)} · {N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p><PostFacts post={p} compact /></div>
-                {stage !== 'expired' && <LevelBadge level={stage} reached />}
-              </div>
-              <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                <div><p className="font-medium">{t('m.adm.reached')} ({reached.length})</p><p className="text-muted">{reached.map((x) => x.s.name).join(', ') || t('m.adm.none')}</p></div>
-                <div><p className="font-medium">{t('m.adm.waiting')}</p><p className="text-muted">{waiting.map((x) => `${x.s.name} (${t('m.lv.short', { n: x.r.level })})`).join(', ') || t('m.adm.none')}</p></div>
-              </div>
-              <div className="flex justify-end"><button type="button" className="btn-ghost text-sm text-danger-fg" onClick={async () => { if (await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true })) setMsg((await deletePost(p.id)) ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') }) }}><Icon name="trash" size={15} />{t('m.post.delete')}</button></div>
-              {acc.map((a) => (
-                <div key={a.id} className="border-t border-line pt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span><Icon name="ok" size={15} className="inline text-ok-fg" /> {nameOf(a)} · {t(`m.as.${a.status}` as never)}</span>
-                  {(() => { const c = st.cases.find((x) => x.accId === a.id); return c ? <NavLink to={`case?id=${c.id}`} className="text-sm text-primary underline underline-offset-4 min-h-[24px] inline-flex items-center">{t('m.adm.forwarded')}</NavLink> : null })()}
-                </div>))}
-            </li>)
-        })}</ul>
       </section>
     </Page>
   )

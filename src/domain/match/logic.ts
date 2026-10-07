@@ -247,7 +247,7 @@ export function parseState(input: unknown): MatchState | null {
     .filter((s, i, all) => all.findIndex((x) => x.id === s.id) === i)
   // data saved before Oct 2026: posts without the new details
   // posts saved before verification existed: samples count as verified, my own as not yet
-  const posts = (Array.isArray(raw.posts) ? raw.posts.map((p) => (isObj(p) ? { ...withLegacy(p), verified: typeof p.verified === 'boolean' ? p.verified : p.employerId !== MY_EMPLOYER } : p)) : []).filter(isPost)
+  const posts = (Array.isArray(raw.posts) ? raw.posts.map((p) => (isObj(p) ? { ...withLegacy(p), verified: typeof p.verified === 'boolean' ? p.verified : p.employerId !== MY_EMPLOYER, sample: p.employerId !== MY_EMPLOYER } : p)) : []).filter(isPost)
     .filter((p, i, all) => all.findIndex((x) => x.id === p.id) === i)
   const postIds = new Set(posts.map((p) => p.id)), people = new Set([ME, ...seekers.map((s) => s.id)])
   const seen = new Set<string>()

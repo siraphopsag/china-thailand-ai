@@ -87,14 +87,17 @@ describe('B. the board as cards', () => {
     st.me = { id: ME, name: 'you', origin: { country: 'TH', province: 'TH-10' }, pins: [{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(-5) }], synthetic: true }
     return st
   }
-  it('key numbers, level chips, cards with two actions and a fill bar, and the map in the side panel', () => {
+  it('after the reference: main button by the title, pill filters with the count, centred cards with two actions and a fill bar, a card/map switch', () => {
     const h = html(<BoardPage />, seeker())
-    for (const k of ['m.bd.kpi.open', 'm.bd.kpi.l1', 'm.bd.kpi.applied', 'm.bd.kpi.pinsLeft'] as const) expect(h).toContain(T(k))
-    expect(h).toContain('rar-avatar'); expect(h).toContain('class="fill-bar mt-1"')
+    expect(h).toMatch(/<h1 class="h1">[^<]*<\/h1>.*class="btn-primary !rounded-full"/s)
+    expect(h).toContain('bd-card p-5 flex flex-col items-center text-center'); expect(h).toContain('rar-avatar'); expect(h).toContain('class="fill-bar mt-1"')
     expect(h).toContain(`>${T('m.bd.details')}</button>`); expect(h).toContain(T('m.bd.apply'))
-    expect(h).toContain('id="bd-map"') // wide screens: the map is in the side panel
-    expect(h.match(/id="bd-map"/g)?.length).toBe(1) // built once
+    expect(h).toContain(T('m.bd.view.cards')); expect(h).toContain(T('m.bd.view.map'))
+    expect(h).not.toContain('id="bd-map"') // the map shows when you switch to it
     expect(h).toContain(`aria-controls="bd-more"`) // more filters fold away
+    expect(h).toContain(T('m.sample.badge')) // sample posts say so
+    const emp = seedState(NOW); emp.role = 'employer'
+    expect(html(<BoardPage />, emp)).toContain(T('m.bd.scope.mine')) // employers: all posts, or only mine
   })
   it('the details panel is a native modal dialog that slides in (and is a bottom sheet on phones); the header search fills the board search', () => {
     const d = src('./components/drawer.tsx')
@@ -195,6 +198,24 @@ describe('D. admin analytics', () => {
     expect(sql).not.toMatch(/ip_address|user_agent|visitor_id/)
     const v = src('./visit.ts')
     expect(v).toContain("sb.rpc('track_visit')"); expect(v).toContain("localStorage.getItem(KEY) === day")
+  })
+})
+
+describe('round 2 (owner, Oct 2026)', () => {
+  it('the back office is in tabs (arrow keys move between them) with compact rows; job titles stay headings', () => {
+    const m = src('./pages/match.tsx')
+    expect(m).toContain(`role="tablist" aria-label={t('m.adm.tabs')} onKeyDown={keys}`)
+    expect(m).toContain(`[{ k: 'overview', icon: 'overview' }, { k: 'verify', icon: 'shield' }, { k: 'reports', icon: 'alert' }, { k: 'cases', icon: 'plane' }, { k: 'posts', icon: 'posts' }]`)
+    expect(m).toContain('role="tabpanel"'); expect(m).toContain("tabIndex={tab === k ? 0 : -1}")
+  })
+  it('the activity grid keeps a small fixed size instead of stretching across the page', () => {
+    const c = src('./components/charts.tsx')
+    expect(c).toContain('<svg width={width} height={height}'); expect(c).toContain('const s = 12, g = 3, lw = 34')
+    expect(css).toContain('.viz-tick-sm { font-size: 10px }')
+  })
+  it('after signing up with e-mail confirmation on, the message says to open your own inbox and press the link', () => {
+    expect(tr('m.rg.checkMail', { email: 'a@b.co' }, 'th')).toContain('เปิดกล่องอีเมลส่วนตัวของคุณ')
+    expect(tr('m.rg.checkMail', { email: 'a@b.co' }, 'th')).not.toContain('สร้างบัญชีแล้ว')
   })
 })
 

@@ -11,7 +11,7 @@ import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { CaseLink } from './case'
 import { ReportButton, ScamNote } from './safety'
-import { AgencyLinks, Empty, LevelBadge, Page, PostFacts, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
+import { AgencyLinks, SampleBadge, Empty, LevelBadge, Page, PostFacts, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 
 /**
  * One post (owner, Oct 2026): details, the five release levels with their times, who else is looking at it right now, and —
@@ -81,6 +81,7 @@ export function PostPage() {
         {state !== 'open' && <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(state === 'waiting' ? 'm.state.waiting' : 'm.state.closed')}</span>}
         {p.verified ? <span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name="shield" size={12} />{t('m.vf.badge')}</span>
           : <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="warn" size={12} />{t('m.vf.unverified')}</span>}
+        {p.sample && <SampleBadge />}
       </div>
       {/* real people only: others who have this post open now, and how many are filling in the form (database mode) */}
       <div role="status" aria-live="polite" className="space-y-1">
@@ -179,7 +180,7 @@ export function PostPage() {
           <p className="text-sm">{t('jb.minYearsShort', { n: p.minYears })} · {p.skills.map(N.skill).join(', ')}</p>
           <PostFacts post={p} />
           {p.details && <p className="text-sm text-muted border-t border-line pt-3">{p.details}</p>}
-          {!mine && <div className="border-t border-line pt-3"><ReportButton postId={p.id} /></div>}
+          {!mine && st.role !== 'employer' && <div className="border-t border-line pt-3"><ReportButton postId={p.id} /></div>}
         </section>
       </div>
     </Page>

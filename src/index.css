@@ -467,3 +467,8 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .group:hover .nav-tip, .group:focus-visible .nav-tip { opacity: 1; transform: translate(0, -50%) }
 @media (prefers-reduced-motion: reduce) { .nav-tip { transition: none } }
 .nav-split { margin-top: .35rem; padding-top: .55rem; border-top: 1px solid rgb(var(--ink) / .12) }
+.viz-tick-sm { font-size: 10px }
+/* board cards after the owner's reference: a clean solid card, centred content, a soft lift on hover */
+.bd-card { background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 1.5rem; box-shadow: var(--elev-hi), var(--elev-1); transition: transform .18s ease, box-shadow .18s ease }
+.bd-card:hover { transform: translateY(-2px); box-shadow: var(--elev-hi), var(--elev-2) }
+@media (prefers-reduced-motion: reduce) { .bd-card, .bd-card:hover { transition: none; transform: none } }

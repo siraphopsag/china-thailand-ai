@@ -91,13 +91,17 @@ export function Donut({ parts, total, totalLabel }: { parts: { key: string; n: n
 
 /** daily activity as a grid of squares (one hue, light → dark); each square names its day and count */
 export function Heatmap({ weeks, max, cellLabel, weekdayLabels }: { weeks: { day: string; n: number }[][]; max: number; cellLabel: (day: string, n: number) => string; weekdayLabels: string[] }) {
-  const s = 13, g = 3
+  // a fixed small size (stretched to the full width the squares and labels grew huge — owner, Oct 2026); narrow screens scroll
+  const s = 12, g = 3, lw = 34
   const level = (n: number) => (n < 0 ? -1 : n === 0 || max === 0 ? 0 : Math.min(4, Math.ceil((n / max) * 4)))
+  const width = lw + weeks.length * (s + g), height = 7 * (s + g)
   return (
-    <svg viewBox={`0 0 ${30 + weeks.length * (s + g)} ${7 * (s + g)}`} className="w-full h-auto" role="img" aria-label={weekdayLabels.join(' ')}>
-      {weekdayLabels.map((w, i) => (i % 2 === 0 ? <text key={w} x={0} y={i * (s + g) + s - 2} className="viz-tick">{w}</text> : null))}
-      {weeks.map((wk, x) => wk.map((d, y) => { const l = level(d.n); return l < 0 ? null : (
-        <rect key={d.day} x={30 + x * (s + g)} y={y * (s + g)} width={s} height={s} rx={3} className={`viz-heat viz-h${l}`}><title>{cellLabel(d.day, d.n)}</title></rect>) }))}
-    </svg>
+    <div className="overflow-x-auto">
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="block" role="img" aria-label={weekdayLabels.join(' ')}>
+        {weekdayLabels.map((w, i) => (i % 2 === 0 ? <text key={w} x={0} y={i * (s + g) + s - 2} className="viz-tick viz-tick-sm">{w}</text> : null))}
+        {weeks.map((wk, x) => wk.map((d, y) => { const l = level(d.n); return l < 0 ? null : (
+          <rect key={d.day} x={lw + x * (s + g)} y={y * (s + g)} width={s} height={s} rx={2.5} className={`viz-heat viz-h${l}`}><title>{cellLabel(d.day, d.n)}</title></rect>) }))}
+      </svg>
+    </div>
   )
 }

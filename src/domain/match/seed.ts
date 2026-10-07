@@ -9,7 +9,7 @@ const iso = (t: number) => new Date(t).toISOString()
 const day = (t: number) => iso(t).slice(0, 10)
 const pin = (id: string, country: 'TH' | 'CN', province: string, industry: Pin['industry'], skills: Pin['skills'], at: number): Pin => ({ id, country, province, industry, skills, at: iso(at) })
 const seeker = (id: string, name: string, origin: Seeker['origin'], pins: Pin[]): Seeker => ({ id, name, origin, pins, synthetic: true })
-const post = (p: Omit<Post, 'synthetic' | 'releasedAt' | 'verified'>, verified = true): Post => ({ ...p, releasedAt: p.createdAt, verified, synthetic: true })
+const post = (p: Omit<Post, 'synthetic' | 'releasedAt' | 'verified'>, verified = true): Post => ({ ...p, releasedAt: p.createdAt, verified, sample: true, synthetic: true })
 
 /** a fresh seed relative to `now` (post ages decide which release level they are in) */
 export function seedState(now = Date.now()): MatchState {

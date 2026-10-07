@@ -257,7 +257,7 @@ describe('board bug hunt (Oct 2026)', () => {
     expect(src('./pages/match.tsx')).toContain("{mode === 'remote' && <p className=\"text-xs text-muted\">{t('m.clock.noteRemote')}</p>}")
   })
   it('a job seeker\'s map counts only the posts their list can show', () => {
-    expect(src('./pages/board.tsx')).toContain('(seeker ? items.map((x) => x.post) : st.posts).reduce')
+    expect(src('./pages/board.tsx')).toContain('const postsByProvince = items.map((x) => x.post).reduce')
   })
 })
 
@@ -324,7 +324,8 @@ describe('the board (owner, Oct 2026)', () => {
     st.posts = st.posts.map((p) => (p.id === 'post-s1' ? { ...p, employerId: MY_EMPLOYER } : p))
     st.credits = [{ kind: 'post', at: real(-1.2) }]
     const page = html(<BoardPage />, st)
-    expect(page).toContain('Front Office Manager'); expect(page).not.toContain('Warehouse Coordinator')
+    expect(page).toContain('Front Office Manager'); expect(page).toContain('Warehouse Coordinator') // other employers' posts too (owner, Oct 2026)
+    expect(page).toContain(`>${T('m.bd.manage')}</a>`); expect(page).toContain(`>${T('m.bd.view')}</a>`) // mine → manage · others' → view
     expect(page).toContain(T('m.lv.reached', { l: T('m.lv.2') }))
     expect(page).toContain('<p class="text-lg font-bold">1/2</p>'); expect(page).toContain(T('m.bd.places')) // places taken on the card
     expect(page).toContain(T('m.qb.posts', { n: 1, max: 3 }))
@@ -519,7 +520,7 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
   it('glass on the other short-reading cards (roles, prepare, notifications, lists, profile, help, empty states); settings stays solid; footer band reaches both edges', () => {
     expect(html(<ChooseRolePage />).match(/<li class="glass-card role-card/g)?.length).toBe(2)
     const m = src('./pages/match.tsx')
-    for (const s of ['className="glass-card p-5 flex gap-4 items-start h-full"', '<li key={a.id} className="glass-card p-4 space-y-2">', '<li key={p.id} className="glass-card glass-lite p-4 space-y-3">', '<section className="glass-card p-5 space-y-3 text-sm">', '<div className="glass-card p-5 flex flex-col items-center'])
+    for (const s of ['className="glass-card p-5 flex gap-4 items-start h-full"', '<li key={a.id} className="glass-card p-4 space-y-2">', '<section className="glass-card p-5 space-y-3 text-sm">', '<div className="glass-card p-5 flex flex-col items-center'])
       expect(m, s).toContain(s)
     expect(m).toContain('<section className="card space-y-4">') // settings
     const app = src('./App.tsx')

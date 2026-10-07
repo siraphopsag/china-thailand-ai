@@ -95,6 +95,8 @@ export interface Post extends Place {
   verified: boolean
   /** hidden while an administrator checks reports (database only; its employer and administrators still see it) */
   hidden?: boolean
+  /** a sample post made for the prototype, not a real employer (shown with a "Sample" badge) */
+  sample?: boolean
   synthetic: true
 }
 /**
