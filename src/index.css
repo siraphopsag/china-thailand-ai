@@ -331,7 +331,8 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .chip-check:has(input:checked) .chip-box { background: rgb(var(--primary)); border-color: rgb(var(--primary)); color: rgb(var(--onprimary)) }
 .chip-check:has(input:checked) .chip-box svg { opacity: 1 }
 
-/* ── board (owner, Oct 2026): release levels shown as game-like rarity — stars + name + colour (never colour alone) ──
+/* ── rarity colours (Oct 2026): first used for the board's levels — posts now use the reach colours below (option ก);
+   these stay for the membership card and the calendar ──
    level 1 legendary gold · 2 epic purple · 3 rare blue · 4 uncommon green · 5 common grey; text ≥ 4.5:1 on its tint in both themes */
 :root, :root[data-theme='light'] {
   --rar1-bg: 254 243 199; --rar1-fg: 146 64 14; --rar1-line: 245 158 11;
@@ -347,18 +348,14 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
   --rar4-bg: 14 56 33; --rar4-fg: 187 247 208; --rar4-line: 21 128 61;
   --rar5-bg: 39 44 54; --rar5-fg: 226 232 240; --rar5-line: 100 116 139;
 }
-.rar-1 { --rar-bg: var(--rar1-bg); --rar-fg: var(--rar1-fg); --rar-line: var(--rar1-line) }
-.rar-2 { --rar-bg: var(--rar2-bg); --rar-fg: var(--rar2-fg); --rar-line: var(--rar2-line) }
-.rar-3 { --rar-bg: var(--rar3-bg); --rar-fg: var(--rar3-fg); --rar-line: var(--rar3-line) }
-.rar-4 { --rar-bg: var(--rar4-bg); --rar-fg: var(--rar4-fg); --rar-line: var(--rar4-line) }
-.rar-5 { --rar-bg: var(--rar5-bg); --rar-fg: var(--rar5-fg); --rar-line: var(--rar5-line) }
+/* option ก (owner, Oct 2026): posts show reach rings instead of rarity — ONE colour for every ring (gold → grey read as a
+   quality grade that could hurt an employer's name); the ring icon and the words carry the step. sky-800 on sky-100 ≈ 6.9:1 */
+:root, :root[data-theme='light'] { --reach-bg: 224 242 254; --reach-fg: 7 89 133; --reach-line: 14 165 233 }
+:root[data-theme='dark'] { --reach-bg: 12 45 72; --reach-fg: 186 230 253; --reach-line: 56 189 248 }
+.rar-1, .rar-2, .rar-3, .rar-4, .rar-5 { --rar-bg: var(--reach-bg); --rar-fg: var(--reach-fg); --rar-line: var(--reach-line) }
 .rar { background: rgb(var(--rar-bg)); color: rgb(var(--rar-fg)); border-color: rgb(var(--rar-line)) }
 /* the card carries its level as a coloured edge; level 1 also glows a little, like a legendary item */
-.rar-edge-1 { border-left: 4px solid rgb(var(--rar1-line)); box-shadow: 0 0 0 1px rgb(var(--rar1-line) / .35), 0 6px 22px -10px rgb(var(--rar1-line) / .7) }
-.rar-edge-2 { border-left: 4px solid rgb(var(--rar2-line)) }
-.rar-edge-3 { border-left: 4px solid rgb(var(--rar3-line)) }
-.rar-edge-4 { border-left: 4px solid rgb(var(--rar4-line)) }
-.rar-edge-5 { border-left: 4px solid rgb(var(--rar5-line)) }
+.rar-edge-1, .rar-edge-2, .rar-edge-3, .rar-edge-4, .rar-edge-5 { border-left: 4px solid rgb(var(--reach-line)) }
 .rar-tab { border-color: rgb(var(--rar-line)); color: rgb(var(--ink)) }
 .rar-tab:hover { background: rgb(var(--rar-bg)) }
 .rar-tab.is-on { background: rgb(var(--rar-bg)); color: rgb(var(--rar-fg)); box-shadow: inset 0 0 0 1px rgb(var(--rar-line)) }

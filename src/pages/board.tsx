@@ -12,7 +12,7 @@ import { GeoMap } from '../components/geomap'
 import { Icon } from '../components/icons'
 import { Drawer } from '../components/drawer'
 import { Pager, useFit, useFitGrid, usePaged } from '../components/pager'
-import { Empty, LevelBadge, MAP_SIZE, MapLayout, Page, PinList, PostFacts, SampleBadge, SortToggle, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
+import { Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SortToggle, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
 import { ReportButton } from './safety'
 import { MarketPanel } from './market'
 
@@ -117,7 +117,7 @@ export function BoardPage() {
               </div>)}
             <div className={SEG_SCROLL} role="group" aria-label={t('m.board.levels')}>
               <button type="button" aria-pressed={tab === 'all'} onClick={() => setTab('all')} className={pill(tab === 'all')}>{t('m.bd.all')}</button>
-              {LEVELS.map((l) => <button key={l} type="button" aria-pressed={tab === l} onClick={() => setTab(l)} className={pill(tab === l)}>{t('m.lv.short', { n: l })}<span className="text-xs opacity-75">{perLevel(l)}</span></button>)}
+              {LEVELS.map((l) => <button key={l} type="button" aria-pressed={tab === l} onClick={() => setTab(l)} className={pill(tab === l)} title={t('m.lv.ring', { n: l })}><ReachRings level={l} />{t(`m.lv.${l}` as never)}<span className="text-xs opacity-75">{perLevel(l)}</span></button>)}
             </div>
           </div>
           <p className="text-sm text-muted" role="status">{t('m.board.count', { n: shown.length })}</p>

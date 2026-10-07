@@ -75,11 +75,15 @@ describe('colours and behaviour', () => {
   it('the bead can be dragged and drops on the nearest item; reduced motion and hidden pages jump instead of flowing', () => {
     const m = src('./components/meniscus.tsx')
     expect(m).toContain('onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}')
-    expect(m).toContain('if (!slots[i].current) onSelect(slots[i])')
+    expect(m).toContain('if (i !== active) onSelect(slots[i])')
     expect(m).toContain('if (s.u < 0 || reduced() || document.hidden || last.current === active)')
     const css = src('./index.css')
     expect(css).toContain('@media (prefers-reduced-motion: reduce) { .mn-bead, .mn-label, .mn-icon { transition: none } }')
     expect(css).toMatch(/\.mn-bead \{[^}]*touch-action: none/)
+  })
+  it('the bead goes to "More" as soon as its list opens, and back when it closes (owner, Oct 2026)', () => {
+    expect(src('./components/meniscus.tsx')).toContain('const active = focused >= 0 ? focused : slots.findIndex((s) => s.current)')
+    expect(src('./components/sidenav.tsx')).toContain('focus: moreOpen, onPress: () => setMoreOpen((o) => !o)')
   })
   it('tapping the bead again on the phone "More" opens and closes the list (owner, Oct 2026: the bead covers that button)', () => {
     expect(src('./components/meniscus.tsx')).toContain('else if (press.current.moved < 6) slots[i].onPress?.()')

@@ -13,6 +13,8 @@ export interface Hue { bead: string; light: string; dark: string }
 export interface Slot {
   key: string; label: string; aria: string; icon: IconName; hue: Hue; current: boolean
   badge?: number; split?: boolean
+  /** the bead goes here even though another item is the current page (the phone "More" while its list is open) */
+  focus?: boolean
   /** a link … */
   to?: string
   /** … or a button (the phone "More") */
@@ -94,7 +96,9 @@ export function Meniscus({ slots, vertical, label, className = '', style, onSele
   const [ver, setVer] = useState(0)
   const last = useRef(-2)
   const centers = useRef<number[]>([])
-  const active = slots.findIndex((s) => s.current)
+  // owner, Oct 2026: the bead flows to "More" the moment its list opens, not only after a page in it is chosen
+  const focused = slots.findIndex((s) => s.focus)
+  const active = focused >= 0 ? focused : slots.findIndex((s) => s.current)
   const [shown, setShown] = useState(active)
   const sim = useRef({ u: -1, v: 0, target: -1, dragging: false, raf: 0 })
   const press = useRef({ from: 0, moved: 0 }) // a tap on the bead (moved < 6 px) presses the item under it
@@ -171,7 +175,7 @@ export function Meniscus({ slots, vertical, label, className = '', style, onSele
     const s = sim.current; if (!s.dragging) return
     s.dragging = false
     const i = nearest(s.u); s.target = centers.current[i]; kick()
-    if (!slots[i].current) onSelect(slots[i])
+    if (i !== active) onSelect(slots[i])
     // tapping the bead again on a button item (the phone "More") opens or closes it (owner, Oct 2026: people tap the same
     // place again and nothing happened, because the bead covers that button)
     else if (press.current.moved < 6) slots[i].onPress?.()

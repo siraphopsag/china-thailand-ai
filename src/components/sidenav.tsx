@@ -80,9 +80,9 @@ export function SideNav({ route }: { route: string }) {
     to: n.to, badge: n.key === 'm.notif' && unread > 0 ? unread : undefined, split: GENERAL.includes(n.key) && !GENERAL.includes(list[i - 1]?.key ?? '') })
   const railSlots = items.map((n, i) => slot(n, i, items))
   const barSlots: Slot[] = [...main.map((n, i) => ({ ...slot(n, i, main), split: false })),
-    { key: 'm.more', label: t('m.more'), aria: t('m.more'), icon: 'more', hue: HUES['m.more'], current: moreOpen || moreOn, onPress: () => setMoreOpen((o) => !o), expanded: moreOpen, controls: 'nav-more', btnRef: moreBtn }]
+    { key: 'm.more', label: t('m.more'), aria: t('m.more'), icon: 'more', hue: HUES['m.more'], current: moreOpen || moreOn, focus: moreOpen, onPress: () => setMoreOpen((o) => !o), expanded: moreOpen, controls: 'nav-more', btnRef: moreBtn }]
   // dropping the bead on an item: go there (or open "More")
-  const select = (s: Slot) => { if (s.to !== undefined) go(s.to); else s.onPress?.() }
+  const select = (s: Slot) => { if (s.to !== undefined) { setMoreOpen(false); go(s.to) } else s.onPress?.() }
   return (
     <>
       {/* computers and tablets: the rail on the left, centred in the space under the header; the bead flows up and down */}

@@ -3,7 +3,7 @@ import type { Msg } from './common.js'
 export const design = {
   // ---------- A. accent colour
   'm.settings.accent': ['สีหลักของเว็บ', '主题色', 'Accent colour'],
-  'm.settings.accent.d': ['เปลี่ยนสีปุ่ม สิ่งที่เลือก และแผนที่ทั้งเว็บ จำไว้ในเครื่องนี้ · สีแจ้งเตือนและสีระดับประกาศไม่เปลี่ยน', '更改整个网站的按钮、选中项和地图颜色，并保存在此设备上 · 提示颜色和等级颜色不变', 'Re-tints buttons, selection and the map across the site, remembered on this device · alert and level colours stay the same'],
+  'm.settings.accent.d': ['เปลี่ยนสีปุ่ม สิ่งที่เลือก และแผนที่ทั้งเว็บ จำไว้ในเครื่องนี้ · สีแจ้งเตือนและสีวงประกาศไม่เปลี่ยน', '更改整个网站的按钮、选中项和地图颜色，并保存在此设备上 · 提示颜色和圈层颜色不变', 'Re-tints buttons, selection and the map across the site, remembered on this device · alert and ring colours stay the same'],
   'm.settings.accentDone': ['เปลี่ยนสีเป็น{c}แล้ว', '已切换为{c}', 'Accent set to {c}'],
   'm.accent.indigo': ['คราม', '靛蓝', 'Indigo'],
   'm.accent.forest': ['เขียวป่า', '森林绿', 'Forest'],
@@ -15,7 +15,7 @@ export const design = {
   'm.settings.week.mon': ['จันทร์', '星期一', 'Monday'],
   // ---------- B. the board as cards
   'm.bd.kpi.open': ['เปิดให้คุณ', '向您开放', 'Open to you'],
-  'm.bd.kpi.l1': ['ตรงทุกข้อ (ระดับ 1)', '完全匹配（第 1 级）', 'Best match (level 1)'],
+  'm.bd.kpi.l1': ['ตรงทุกข้อ (วงที่ 1)', '完全匹配（第 1 圈）', 'Best match (ring 1)'],
   'm.bd.kpi.applied': ['สมัครแล้ว', '已申请', 'Applied'],
   'm.bd.kpi.pinsLeft': ['หมุดเหลือรอบนี้', '本轮剩余标记', 'Pins left this cycle'],
   'm.bd.kpi.posts': ['ประกาศที่เปิดอยู่', '进行中的信息', 'Open posts'],
@@ -121,7 +121,7 @@ export const design = {
   // ---------- round 2 (owner, Oct 2026)
   'm.sample.badge': ['ตัวอย่าง', '示例', 'Sample'],
   'm.sample.d': ['ประกาศตัวอย่างที่ทำไว้สาธิตต้นแบบ ไม่ใช่นายจ้างจริง', '为演示原型而制作的示例信息，并非真实雇主', 'A sample post made to demonstrate the prototype — not a real employer'],
-  'm.board.subEmployer2': ['ประกาศทั้งหมดที่เปิดอยู่ — ของคุณและของนายจ้างคนอื่น — พร้อมระดับที่แต่ละประกาศไปถึง', '所有进行中的招聘信息——您的和其他雇主的——以及各自达到的等级', 'Every live post — yours and other employers’ — with the level each has reached'],
+  'm.board.subEmployer2': ['ประกาศทั้งหมดที่เปิดอยู่ — ของคุณและของนายจ้างคนอื่น — พร้อมวงที่แต่ละประกาศไปถึง', '所有进行中的招聘信息——您的和其他雇主的——以及各自达到的圈层', 'Every live post — yours and other employers’ — with the ring each has reached'],
   'm.bd.myPinsN': ['หมุดของฉัน ({n})', '我的标记（{n}）', 'My pins ({n})'],
   'm.bd.waitingN': ['ผู้สมัครรอคุณตอบ {n} คน', '{n} 位申请人待您回复', '{n} applicants waiting for you'],
   'm.bd.scope': ['แสดงประกาศของ', '显示谁的信息', 'Whose posts'],
@@ -145,7 +145,7 @@ export const design = {
   'm.adm.attn.reports': ['ประกาศที่มีคนรายงาน', '被举报的信息', 'Posts people reported'],
   'm.adm.attn.cases': ['เคสที่ยังไม่ปิด', '未结束的案例', 'Cases still open'],
   'm.adm.attn.posts': ['ประกาศทั้งหมดในระบบ', '系统中的全部信息', 'Posts in the system'],
-  'm.adm.demoClock': ['นาฬิกาสาธิต (เลื่อนเวลาเพื่อดูการปล่อยระดับ)', '演示时钟（快进以查看等级发布）', 'Demo clock (move time to watch the levels release)'],
+  'm.adm.demoClock': ['นาฬิกาสาธิต (เลื่อนเวลาเพื่อดูการปล่อยแต่ละวง)', '演示时钟（快进以查看圈层发布）', 'Demo clock (move time to watch the rings release)'],
   'm.adm.applicants': ['ผู้สมัคร {n}', '申请 {n}', '{n} applicants'],
   'm.adm.reachedN': ['ถึงแล้ว {n} คน', '已送达 {n} 人', 'reached {n}'],
   // ---------- pages that fit the screen

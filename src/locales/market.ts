@@ -9,13 +9,21 @@ export const market = {
   'm.vf.tick.company': ['บริษัทนี้ยืนยันตัวตนกับระบบแล้ว', '该公司已通过平台认证', 'This company is verified'],
   'm.vf.tick.person': ['นายจ้างบุคคลธรรมดา ยืนยันตัวตนด้วยเบอร์มือถือแล้ว', '个人雇主，已通过手机号认证', 'A private employer, verified by mobile number'],
 
+  // ---------- option ก: the release levels shown as reach rings — who can see a post, never how good it is
+  'm.lv.ring': ['วงที่ {n} จาก 5', '第 {n} 圈（共 5 圈）', 'Ring {n} of 5'],
+  'm.lv.to.1': ['คนที่ตรงทุกข้อ', '完全匹配的人', 'perfect matches'],
+  'm.lv.to.2': ['คนที่ตรงสายงาน', '专业对口的人', 'the same field'],
+  'm.lv.to.3': ['คนในจังหวัดเดียวกัน', '同一府/省的人', 'the same province'],
+  'm.lv.to.4': ['ทั้งประเทศ', '全国', 'the whole country'],
+  'm.lv.to.5': ['ทุกประเทศ', '所有国家', 'every country'],
+
   // ---------- 6. verifying an employer: a company or a private person
   'm.vf.kind': ['คุณเป็นนายจ้างแบบไหน', '您是哪类雇主', 'What kind of employer are you?'],
   'm.vf.kind.company': ['บริษัท / นิติบุคคล', '公司 / 法人', 'A company'],
   'm.vf.kind.person': ['บุคคลธรรมดา', '个人', 'A private person'],
-  'm.vf.lead.person': ['ไม่มีเลขทะเบียนบริษัทก็ยืนยันได้: ยืนยันเบอร์มือถือด้วยรหัสครั้งเดียว แล้วผู้ดูแลระบบ (ทำหน้าที่แทนหน่วยงานในต้นแบบ) จะตรวจและอนุมัติ ประกาศของนายจ้างบุคคลธรรมดาที่ยืนยันแล้วเผยแพร่ได้ถึงระดับ 3',
-    '没有企业注册号也能认证：用一次性验证码确认手机号码，再由管理员（在原型中代为扮演机构）审核批准。已认证的个人雇主，招聘信息最多发布到第 3 级。',
-    'No company number? Confirm a mobile number with a one-time code; an administrator (playing the agency in the prototype) then checks and approves it. A verified private employer’s posts reach level 3 at most.'],
+  'm.vf.lead.person': ['ไม่มีเลขทะเบียนบริษัทก็ยืนยันได้: ยืนยันเบอร์มือถือด้วยรหัสครั้งเดียว แล้วผู้ดูแลระบบ (ทำหน้าที่แทนหน่วยงานในต้นแบบ) จะตรวจและอนุมัติ ประกาศของนายจ้างบุคคลธรรมดาที่ยืนยันแล้วเผยแพร่ได้ถึงวงที่ 3',
+    '没有企业注册号也能认证：用一次性验证码确认手机号码，再由管理员（在原型中代为扮演机构）审核批准。已认证的个人雇主，招聘信息最多发布到第 3 圈。',
+    'No company number? Confirm a mobile number with a one-time code; an administrator (playing the agency in the prototype) then checks and approves it. A verified private employer’s posts reach ring 3 at most.'],
   'm.vf.country.person': ['ประเทศของเบอร์มือถือ', '手机号所属国家', 'Country of the mobile number'],
   'm.vf.phone': ['เบอร์มือถือ', '手机号码', 'Mobile number'],
   'm.vf.phone.hint.TH': ['เบอร์มือถือไทย 10 หลัก เช่น 08x-xxx-xxxx', '泰国手机号 10 位，例如 08x-xxx-xxxx', 'Thai mobile, 10 digits, e.g. 08x-xxx-xxxx'],
@@ -32,8 +40,8 @@ export const market = {
   'm.vf.verified.person': ['ยืนยันตัวบุคคลแล้ว', '已完成个人认证', 'Verified as a private person'],
   'm.vf.asPerson': ['บุคคลธรรมดา · มือถือ ••••{d}', '个人 · 手机 ••••{d}', 'Private person · mobile ••••{d}'],
   'm.vf.toCompanyBtn': ['เปลี่ยนวิธียืนยัน', '更改认证方式', 'Change how I am verified'],
-  'm.vf.toCompany': ['มีบริษัทแล้ว? ยืนยันด้วยเลขทะเบียนเพื่อเปิดระดับ 4–5', '已有公司？用注册号认证即可开放第 4–5 级', 'Have a company? Verify its number to open levels 4–5'],
-  'm.vf.capNote.person': ['คุณยืนยันแบบบุคคลธรรมดา ประกาศจึงเผยแพร่ได้ถึงระดับ 3 — ยืนยันด้วยเลขทะเบียนบริษัทเพื่อเปิดระดับ 4–5', '您以个人身份认证，招聘信息最多发布到第 3 级——用企业注册号认证可开放第 4–5 级', 'You are verified as a private person, so the post reaches level 3 at most — verify a company number to open levels 4–5'],
+  'm.vf.toCompany': ['มีบริษัทแล้ว? ยืนยันด้วยเลขทะเบียนเพื่อเปิดวงที่ 4–5', '已有公司？用注册号认证即可开放第 4–5 圈', 'Have a company? Verify its number to open rings 4–5'],
+  'm.vf.capNote.person': ['คุณยืนยันแบบบุคคลธรรมดา ประกาศจึงเผยแพร่ได้ถึงวงที่ 3 — ยืนยันด้วยเลขทะเบียนบริษัทเพื่อเปิดวงที่ 4–5', '您以个人身份认证，招聘信息最多发布到第 3 圈——用企业注册号认证可开放第 4–5 圈', 'You are verified as a private person, so the post reaches ring 3 at most — verify a company number to open rings 4–5'],
   'm.adm.kind.person': ['บุคคลธรรมดา', '个人', 'Private person'],
   'm.adm.verifyPerson': ['บุคคลธรรมดา: ในต้นแบบเบอร์มือถือยืนยันด้วยรหัสแล้ว — ถ้าใช้งานจริงควรโทรกลับหรือตรวจผ่าน ThaID ก่อนอนุมัติ', '个人：原型中手机号已通过验证码确认——正式使用时应回电或通过 ThaID 核实后再批准', 'Private persons: in the prototype the mobile number was confirmed with a code — in real use, call back or check through ThaID before approving'],
 

@@ -11,7 +11,7 @@ import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { CaseLink } from './case'
 import { ReportButton, ScamNote } from './safety'
-import { AgencyLinks, SampleBadge, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
+import { AgencyLinks, SampleBadge, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 
 /**
  * One post (owner, Oct 2026): details, the five release levels with their times, who else is looking at it right now, and —
@@ -168,7 +168,7 @@ export function PostPage() {
                 <li key={l} aria-current={current ? 'step' : undefined} className="flex items-start gap-3">
                   <span className={`w-7 h-7 shrink-0 rounded-full grid place-items-center text-xs font-bold ${done ? 'bg-ok-fg text-ok-bg' : current ? 'bg-primary text-onprimary' : 'bg-surface3 text-muted'}`}>{done ? <Icon name="check" size={14} /> : l}</span>
                   <div className={`text-sm ${current ? 'font-semibold' : done ? '' : 'text-muted'}`}>
-                    <p>{t(`m.lv.${l}` as never)}</p>
+                    <p className="inline-flex items-center gap-1.5"><ReachRings level={l} />{t('m.lv.short', { n: l })} · {t(`m.lv.${l}` as never)}</p>
                     <p className="text-xs font-normal text-muted">{l === 1 ? (s.groups.length ? t('m.pp.groups', { n: s.groups.length }) : t('m.pp.noGroups')) + ' · ' : ''}{t(i === 4 ? 'm.pp.until.expiry' : 'm.pp.until', { d: N.dayTime(levelEnds[i]) })}</p>
                   </div>
                 </li>)

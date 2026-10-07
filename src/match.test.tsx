@@ -310,16 +310,18 @@ describe('renew and delete on the board (owner, Oct 2026: they seemed to do noth
 
 describe('the board (owner, Oct 2026)', () => {
   const real = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString()
-  it('job seeker: the shop shelves (levels with stars, colour and name), search and filters, newest first, and my pins', () => {
+  it('job seeker: the shop shelves (reach rings with names — no stars, owner Oct 2026), search and filters, newest first, and my pins', () => {
     const st = seedState(); st.role = 'seeker'
     st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: real(-5) }])
     const page = html(<BoardPage />, st)
-    for (const l of [1, 2, 3, 4, 5] as const) expect(page, `level ${l}`).toContain(T('m.lv.short', { n: l }))
+    for (const l of [1, 2, 3, 4, 5] as const) { expect(page, `ring ${l}`).toContain(T('m.lv.ring', { n: l })); expect(page, `name ${l}`).toContain(T(`m.lv.${l}` as never)) }
     expect(page).toContain('role="search"'); expect(page).toContain(T('m.board.searchHint'))
     expect(page).toContain('Quality Control Engineer') // level 1 for my pin
     expect(page).toContain('Warehouse Coordinator') // level 5: over a month old, open to everyone
     expect(page).not.toContain('Front Office Manager') // Shanghai: not for me yet
-    expect(page).toMatch(/class="chip rar rar-1"><span class="inline-flex" aria-hidden="true">(<svg[^>]*class="lucide[^"]*fill-current[^"]*"[^]*?<\/svg>){5}<\/span>/)
+    // ring 1: the centre of the rings only (the other four faint), then the ring in words for screen readers
+    expect(page).toMatch(/class="chip rar rar-1"><svg[^>]*><circle[^>]*><\/circle>(<circle[^>]*opacity="0.22"><\/circle>){4}<\/svg><span class="sr-only">/)
+    expect(page).not.toMatch(/fill-current/) // no stars anywhere on the board
     expect(page).toContain(T('m.sort.new'))
     // the allowance is a small chip (owner, Oct 2026) that opens my pins
     expect(page).toContain(T('m.qb.chip.pin', { n: 0, max: 5 })); expect(page).toContain('aria-expanded="false" aria-controls="bd-pins"')
@@ -331,7 +333,7 @@ describe('the board (owner, Oct 2026)', () => {
     const page = html(<BoardPage />, st)
     expect(page).toContain('Front Office Manager'); expect(page).toContain('Warehouse Coordinator') // other employers' posts too (owner, Oct 2026)
     expect(page).toContain(`>${T('m.bd.manage')}</a>`); expect(page).toContain(`>${T('m.bd.view')}</a>`) // mine → manage · others' → view
-    expect(page).toContain(T('m.lv.reached', { l: T('m.lv.2') }))
+    expect(page).toContain(T('m.lv.reached', { l: T('m.lv.to.2' as never) })) // "Reaches: the same field"
     expect(page).toContain('<p class="text-base sm:text-lg font-bold">1/2</p>'); expect(page).toContain(T('m.bd.places')) // places taken on the card
     expect(page).toContain(T('m.qb.chip.post', { n: 1, max: 3 }))
   })

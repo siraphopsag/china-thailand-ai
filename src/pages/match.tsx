@@ -326,14 +326,26 @@ export function SeekPage() {
 }
 
 /* ================= shared pieces of the board (owner, Oct 2026) ================= */
-/** release level as a game-like rarity: stars (5 for level 1 … 1 for level 5), a colour and the name — never colour alone */
+/**
+ * How far a post's release has spread, as reach rings (owner, Oct 2026, option ก — replaces stars, which read as a quality
+ * grade: a well-known company whose post simply had no takers for a while showed "1 star"). The rings say who can see it:
+ * the centre = the closest matches, all five = every country. Seekers see how it relates to them ("Same field"), employers
+ * how far it reaches ("Reaches: the whole country"). One colour for every ring; the ring count is also said in words.
+ */
+export function ReachRings({ level, size = 14 }: { level: Level; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden="true" className="shrink-0">
+      <circle cx="10" cy="10" r="1.9" fill="currentColor" />
+      {[4, 6, 8, 9.4].map((r, i) => <circle key={r} cx="10" cy="10" r={r} fill="none" stroke="currentColor" strokeWidth="1.3" opacity={i + 2 <= level ? 1 : 0.22} />)}
+    </svg>
+  )
+}
 export function LevelBadge({ level, reached }: { level: Level; reached?: boolean }) {
   const { t } = useI18n()
-  const name = t(`m.lv.${level}` as never)
   return (
     <span className={`chip rar rar-${level}`}>
-      <span className="inline-flex" aria-hidden>{Array.from({ length: 6 - level }, (_, i) => <Icon key={i} name="star" size={11} className="fill-current" />)}</span>
-      {reached ? t('m.lv.reached', { l: name }) : name}
+      <ReachRings level={level} /><span className="sr-only">{t('m.lv.ring', { n: level })} · </span>
+      {reached ? t('m.lv.reached', { l: t(`m.lv.to.${level}` as never) }) : t(`m.lv.${level}` as never)}
     </span>
   )
 }

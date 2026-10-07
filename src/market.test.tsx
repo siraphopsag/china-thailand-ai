@@ -176,6 +176,16 @@ describe('6. an employer who is a private person (option ก)', () => {
   })
 })
 
+describe('option ก: reach rings instead of stars (owner, Oct 2026)', () => {
+  it('one colour for every ring, no "level" or "nobody has taken it" in the release wording', () => {
+    expect(css).toContain('.rar-1, .rar-2, .rar-3, .rar-4, .rar-5 { --rar-bg: var(--reach-bg); --rar-fg: var(--reach-fg); --rar-line: var(--reach-line) }')
+    expect(css).toContain('.rar-edge-1, .rar-edge-2, .rar-edge-3, .rar-edge-4, .rar-edge-5 { border-left: 4px solid rgb(var(--reach-line)) }')
+    const release = Object.entries(messages).filter(([k]) => /^m\.(lv|board|how|em|pp|vf|clock|adm\.(sub|demoClock))\./.test(k) || k === 'm.board.levels').map(([, v]) => v.join(' ')).join('\n')
+    expect(release).not.toContain('ระดับ'); expect(release).not.toContain('ยังไม่มีใครรับ'); expect(release).not.toMatch(/\blevels? \d/i)
+    expect(tr('m.lv.reached', { l: tr('m.lv.to.4' as MsgKey, undefined, 'th') }, 'th')).toBe('เผยแพร่ถึง: ทั้งประเทศ')
+  })
+})
+
 describe('messages', () => {
   it('every new message has Thai, Simplified Chinese and English, and none overrides an older one', () => {
     for (const [k, [th, zh, en]] of Object.entries(market)) {
