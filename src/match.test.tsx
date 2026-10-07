@@ -430,7 +430,7 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
     for (const k of ['m.home', 'm.notif', 'm.pins', 'm.board', 'm.prepare', 'm.settings', 'm.help', 'm.profile'] as const) expect(page, k).toContain(`aria-label="${T(k)}`) // the bell may add its count
     expect(page).not.toMatch(/<a [^>]*title=/)
     // computers and tablets: left capsule; phones: bottom capsule with 5 places + More
-    expect(page).toMatch(/class="nav-pill hidden md:flex fixed left-4 top-1\/2/)
+    expect(page).toContain('class="nav-pill nav-rail hidden md:flex fixed left-4 top-[calc(50%+2rem)]') // centred in the space under the header (Oct 2026: it went under the header on short screens)
     expect(page).toMatch(/class="nav-pill md:hidden fixed inset-x-3/)
     const bar = page.slice(page.indexOf('nav-pill md:hidden'))
     expect(bar.slice(0, bar.indexOf('aria-controls="nav-more"')).match(/<a /g)?.length).toBe(5)

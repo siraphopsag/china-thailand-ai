@@ -47,10 +47,10 @@ export function CasePage() {
 
   const col = 'space-y-3 min-w-0 fit:min-h-0 fit:overflow-y-auto fit:pr-1'
   return (
-    <Page title={t('m.cs.title')} sub={`${p.position} · ${p.company}`} fit>
+    <Page title={t('m.cs.title')} sub={`${p.position} · ${p.company}`} fit body="flex flex-col gap-3">
       <Toast msg={msg} />
       {askDialog}
-      <div className={`grid gap-4 items-start fit:h-full fit:items-stretch ${agency ? 'lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)]' : 'lg:grid-cols-2'}`}>
+      <div className={`grid gap-4 items-start fit:flex-1 fit:min-h-0 fit:items-stretch ${agency ? 'lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)]' : 'lg:grid-cols-2'}`}>
         <div className={col}>
           {/* ---------- where it stands: the nine steps in one card, the current one explained in place ---------- */}
           <section className="card !p-4 space-y-2.5" aria-labelledby="cs-now">
@@ -85,8 +85,11 @@ export function CasePage() {
           </section>
         </div>
 
-        <div className={col}><CaseInfo c={c} /></div>
-        {agency && <div className={`${col} lg:col-span-2 xl:col-span-1`}><AgencyPanel c={c} run={run} busy={busy} /></div>}
+        {/* 1024–1279 px: the case details and the agency share the second column; from 1280 px they get a column each */}
+        <div className={`${col} xl:contents`}>
+          <div className="space-y-3 min-w-0 xl:min-h-0 xl:overflow-y-auto xl:pr-1"><CaseInfo c={c} /></div>
+          {agency && <div className="space-y-3 min-w-0 xl:min-h-0 xl:overflow-y-auto xl:pr-1"><AgencyPanel c={c} run={run} busy={busy} /></div>}
+        </div>
       </div>
     </Page>
   )

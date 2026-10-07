@@ -214,7 +214,7 @@ describe('round 2 (owner, Oct 2026)', () => {
   })
   it('the activity grid keeps a small fixed size instead of stretching across the page', () => {
     const c = src('./components/charts.tsx')
-    expect(c).toContain('<svg width={width} height={height}'); expect(c).toContain('const s = 12, g = 3, lw = 34')
+    expect(c).toContain('<svg width={width} height={height}'); expect(c).toContain('const s = 11, g = 3, lw = 34')
     expect(css).toContain('.viz-tick-sm { font-size: 10px }')
   })
   it('after signing up with e-mail confirmation on, the message says to open your own inbox and press the link', () => {
@@ -247,7 +247,7 @@ describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, st
     expect(css).toContain(':root { --app-h: calc(100dvh - 6rem - 1px) }')
     const m = src('./pages/match.tsx')
     expect(m).toContain('fit:flex fit:flex-col fit:gap-3 fit:h-[var(--app-h)]')
-    for (const [file, mark] of [['./pages/board.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/calendar.tsx', ' fit>'], ['./pages/case.tsx', ' fit>'], ['./pages/analytics.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/hire.tsx', ' fit>'], ['./pages/post.tsx', 'fit body="flex flex-col gap-3"']] as const)
+    for (const [file, mark] of [['./pages/board.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/calendar.tsx', ' fit>'], ['./pages/case.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/analytics.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/hire.tsx', ' fit>'], ['./pages/post.tsx', 'fit body="flex flex-col gap-3"']] as const)
       expect(src(file), file).toContain(mark)
     expect(m).toContain('fit body="flex flex-col gap-3"') // the back office
     const p = src('./components/pager.tsx')
@@ -265,6 +265,15 @@ describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, st
     expect(css).toMatch(/\.card \{ @apply border border-line rounded-2xl p-4 sm:p-5/)
     expect(css).toMatch(/\.btn \{ @apply [^}]*min-h-\[40px\]/)
     expect(src('./pages/board.tsx')).toContain("const SEG_SCROLL = 'flex sm:inline-flex flex-nowrap")
+  })
+  it('nothing runs off a short screen: the capsule sits under the header and shrinks, dialogs scroll inside, board cards drop secondary lines', () => {
+    expect(css).toContain('.nav-rail { max-height: calc(100dvh - 5.5rem) }')
+    expect(css).toMatch(/@media \(max-height: 760px\) \{ \.nav-rail \.nav-item\.w-12 \{ width: 2\.5rem; height: 2\.5rem \}/)
+    expect(css).toContain('.modal-panel { max-height: calc(100dvh - 2rem); overflow-y: auto }')
+    expect(css).toContain('@media (min-width: 1024px) and (max-height: 760px) { .bd-card .bd-opt { display: none }')
+    // where a part cannot fit it scrolls inside instead of being cut off
+    expect(src('./pages/match.tsx')).toContain("body ?? 'space-y-4 fit:space-y-3 fit:overflow-y-auto'")
+    expect(src('./components/pager.tsx')).toContain('fit:flex-1 fit:min-h-0 fit:overflow-y-auto')
   })
   it('a paged list shows everything when the screen does not fit (phones, tests)', () => {
     const h = html(<PagedList items={[1, 2, 3]} rowH={60} keyOf={(n) => String(n)} render={(n) => <span>item {n}</span>} />, seedState(NOW))

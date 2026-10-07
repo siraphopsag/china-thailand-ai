@@ -61,7 +61,8 @@ export function MemberPage() {
     [t('m.plan.perkBadge'), t('m.plan.perkBadge.d')],
   ]
   return (
-    <Page title={t('m.plan.title')} sub={t('m.plan.sub')}>
+    <Page title={t('m.plan.title')} sub={t('m.plan.sub')} fit>
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 items-stretch">
       <section className="glass-card p-4 flex flex-wrap items-center gap-3" aria-labelledby="mb-now">
         <span className="glass-drop w-10 h-10 shrink-0"><Icon name="crown" size={20} /></span>
         <div className="min-w-0">
@@ -69,13 +70,14 @@ export function MemberPage() {
           <p className="text-sm">{active ? (st.memberUntil ? t('m.plan.until', { d: N.day(st.memberUntil) }) : t('m.plan.member')) : t('m.plan.free.status')}</p>
         </div>
       </section>
+      <section className="glass-card p-4 space-y-2" aria-labelledby="mb-perks">
+        <h2 id="mb-perks" className="h2">{t('m.plan.perks')}</h2>
+        <ul className="grid sm:grid-cols-3 gap-2">{perks.map(([k, d]) => (
+          <li key={k} className="flex items-start gap-2 text-xs"><Icon name="check" size={15} className="text-ok-fg mt-0.5 shrink-0" /><span><b>{k}</b> — {d}</span></li>))}</ul>
+      </section>
+      </div>
       <Toast msg={msg} />
       <PlanGrid onJoined={(until) => setMsg({ tone: 'info', text: t('m.plan.done', { d: N.day(until) }) })} />
-      <section className="glass-card p-5 space-y-3" aria-labelledby="mb-perks">
-        <h2 id="mb-perks" className="h2">{t('m.plan.perks')}</h2>
-        <ul className="space-y-2">{perks.map(([k, d]) => (
-          <li key={k} className="flex items-start gap-2.5 text-sm"><Icon name="check" size={16} className="text-ok-fg mt-0.5 shrink-0" /><span><b>{k}</b> — {d}</span></li>))}</ul>
-      </section>
       <p className="text-xs text-muted">{t('m.pk.note')}</p>
     </Page>
   )

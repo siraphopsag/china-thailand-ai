@@ -70,7 +70,7 @@ export function PagedList<T>({ items, rowH, gap = 8, render, keyOf, empty, class
   if (!items.length) return <>{empty}</>
   return (
     <div className={`fit:h-full fit:flex fit:flex-col gap-2 ${className}`}>
-      <div ref={ref} className="fit:flex-1 fit:min-h-0 fit:overflow-hidden">
+      <div ref={ref} className="fit:flex-1 fit:min-h-0 fit:overflow-y-auto">
         <ul className="flex flex-col" style={{ gap }}>{pg.items.map((x) => <li key={keyOf(x)}>{render(x)}</li>)}</ul>
       </div>
       <Pager page={pg.page} pages={pg.pages} onPage={pg.setPage} className="shrink-0" />

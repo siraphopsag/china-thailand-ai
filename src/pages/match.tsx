@@ -89,7 +89,7 @@ export function PostFacts({ post, compact }: { post: Post; compact?: boolean }) 
 export function Page({ title, sub, actions, fit, body, children }: { title: string; sub?: string; actions?: ReactNode; fit?: boolean; body?: string; children: ReactNode }) {
   const head = <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 shrink-0"><div className="min-w-0"><h1 className="h1">{title}</h1>{sub && <p className="text-muted text-sm sm:text-base mt-0.5 sm:mt-1 max-w-3xl line-clamp-2 sm:line-clamp-none">{sub}</p>}</div>{actions && <div className="flex flex-wrap gap-2">{actions}</div>}</div>
   if (!fit) return <div className="space-y-4 sm:space-y-5">{head}{children}</div>
-  return <div className="space-y-4 sm:space-y-5 fit:space-y-0 fit:flex fit:flex-col fit:gap-3 fit:h-[var(--app-h)]">{head}<div className={`fit:flex-1 fit:min-h-0 ${body ?? 'space-y-4 fit:space-y-3 fit:overflow-hidden'}`}>{children}</div></div>
+  return <div className="space-y-4 sm:space-y-5 fit:space-y-0 fit:flex fit:flex-col fit:gap-3 fit:h-[var(--app-h)]">{head}<div className={`fit:flex-1 fit:min-h-0 ${body ?? 'space-y-4 fit:space-y-3 fit:overflow-y-auto'}`}>{children}</div></div>
 }
 /** a sample post made for the prototype (not a real employer) */
 export function SampleBadge() {

@@ -165,7 +165,7 @@ function CardGrid({ shown, fit, dim, gridRef, label, card }: { shown: { post: Po
   return (
     <div className="fit:flex-1 fit:min-h-0 fit:flex fit:flex-col gap-2">
       <h2 id="bd-list" className="sr-only">{label}</h2>
-      <div ref={gridRef} className="fit:flex-1 fit:min-h-0 fit:overflow-hidden">
+      <div ref={gridRef} className="fit:flex-1 fit:min-h-0 fit:overflow-y-auto">
         <ul className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 fit:items-start" style={fit ? { gridTemplateColumns: `repeat(${dim.cols}, minmax(0, 1fr))` } : undefined} aria-labelledby="bd-list">
           {pg.items.map(card)}
         </ul>
@@ -199,12 +199,12 @@ function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Po
       <h3 className="font-semibold leading-snug sm:mt-1 line-clamp-2"><button type="button" onClick={onOpen} className="text-left sm:text-center hover:underline underline-offset-4">{post.position}</button></h3>
       <p className="text-sm text-muted -mt-1 line-clamp-1">{post.company}</p>
       <div className="flex flex-wrap sm:justify-center gap-1.5"><LevelBadge level={level} reached={reached} />{post.sample && <SampleBadge />}</div>
-      <p className="text-xs text-muted">{N.place(post.country, post.province)} · {ago(post.releasedAt)}</p>
+      <p className="text-xs text-muted bd-opt">{N.place(post.country, post.province)} · {ago(post.releasedAt)}</p>
       <div className="grid grid-cols-2 w-full border-t border-line pt-2 sm:pt-3 sm:mt-1 divide-x divide-line text-center">
         <div><p className="text-base sm:text-lg font-bold">{c.held}/{cap}</p><p className="text-xs text-muted">{t('m.bd.places')}</p></div>
         <div><p className="text-base sm:text-lg font-bold">{c.reserved}</p><p className="text-xs text-muted">{t('m.bd.queue')}</p></div>
       </div>
-      <div className="w-full text-left">
+      <div className="w-full text-left bd-opt">
         <p className="flex justify-between text-xs text-muted"><span>{t('m.bd.fill')}</span><span>{pct}%</span></p>
         <div className="fill-bar mt-1" role="img" aria-label={`${t('m.bd.fill')} ${pct}%`}><span style={{ width: `${pct}%` }} /></div>
       </div>

@@ -68,7 +68,7 @@ export function SideNav({ route }: { route: string }) {
   return (
     <>
       {/* computers and tablets: floating capsule on the left, vertically centred */}
-      <nav aria-label={t('m.side')} className="nav-pill hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 z-30 flex-col items-center gap-1.5 p-2 rounded-full">
+      <nav aria-label={t('m.side')} className="nav-pill nav-rail hidden md:flex fixed left-4 top-[calc(50%+2rem)] -translate-y-1/2 z-30 flex-col items-center gap-1.5 p-2 rounded-full">
         <ul className="flex flex-col gap-1.5">{items.map((n, i) => (
           <li key={n.key} className={GENERAL.includes(n.key) && !GENERAL.includes(items[i - 1]?.key ?? '') ? 'nav-split' : undefined}>{iconLink(n, 'lg')}</li>))}</ul>
       </nav>

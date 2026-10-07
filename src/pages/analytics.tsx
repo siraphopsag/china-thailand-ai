@@ -124,7 +124,7 @@ export function AnalyticsPage() {
               </>)}</Modal>
             </section>
 
-            <div className="space-y-3 fit:min-h-0 fit:flex fit:flex-col">
+            <div className="space-y-3 fit:min-h-0 fit:overflow-y-auto">
               <section className="card !p-4 space-y-2 shrink-0" aria-labelledby="an-cases">
                 <h2 id="an-cases" className="h2">{t('m.an.cases')}</h2>
                 <div className="flex items-center gap-3">
@@ -133,7 +133,7 @@ export function AnalyticsPage() {
                     <li key={s} className="flex items-center justify-between gap-2"><span className="inline-flex items-center gap-2 min-w-0"><span className={`viz-key viz-c${i + 1} shrink-0`} aria-hidden /><span className="truncate">{t(`m.an.st.${s}` as never)}</span></span><b>{stages[s]}</b></li>))}</ul>
                 </div>
               </section>
-              <section className="card !p-4 space-y-2 fit:flex-1 fit:min-h-0 fit:overflow-hidden" aria-labelledby="an-heat">
+              <section className="card !p-4 space-y-2 shrink-0" aria-labelledby="an-heat">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 id="an-heat" className="h2">{t('m.an.activity')}</h2>
                   <p className="text-xs text-muted flex items-center gap-1" aria-hidden>{t('m.an.less')}{[0, 1, 2, 3, 4].map((l) => <svg key={l} width="11" height="11"><rect width="11" height="11" rx="2.5" className={`viz-h${l}`} /></svg>)}{t('m.an.more')}</p>
