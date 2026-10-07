@@ -25,32 +25,44 @@ const f = (n: number) => Math.round(n * 100) / 100
 /** how far along the edge a shoulder of radius s reaches from the bowl centre: the shoulder circle (inside the plate, touching the
  *  edge) and the bowl (outside the plate) touch, so |C1C2| = s + rb */
 export const reach = (s: number, rb: number, dc: number) => Math.sqrt(Math.max(0, (s + rb) ** 2 - (dc - s) ** 2))
-/** keep the socket inside the straight part of the edge (between the rounded ends) */
-export function clampNotch(n: Notch, from: number, to: number): Notch {
-  const lo = from + reach(n.sL, n.rb, n.dc) + 2, hi = to - reach(n.sR, n.rb, n.dc) - 2
-  return { ...n, u: Math.min(hi, Math.max(lo, n.u)) }
+/** the bead may go right to the ends (the first and last items sit there); only keep each shoulder on its own side of it */
+export function clampNotch(n: Notch, len: number): Notch {
+  const m = Math.max(n.sL, n.sR) + 2
+  return { ...n, u: Math.min(len - m, Math.max(m, n.u)) }
 }
-/** the edge with its socket, in (u along the edge, d into the plate) mapped to x/y by `p` */
-function notchPath(n: Notch, p: (u: number, d: number) => string): string {
-  const uL = n.u - reach(n.sL, n.rb, n.dc), uR = n.u + reach(n.sR, n.rb, n.dc)
-  const kL = n.sL / (n.sL + n.rb), kR = n.sR / (n.sR + n.rb)
-  const PL = { u: uL + (n.u - uL) * kL, d: n.sL + (n.dc - n.sL) * kL }
-  const PR = { u: uR + (n.u - uR) * kR, d: n.sR + (n.dc - n.sR) * kR }
-  const large = (PL.d + PR.d) / 2 < n.dc ? 1 : 0
-  return `L ${p(uL, 0)} A ${f(n.sL)} ${f(n.sL)} 0 0 1 ${p(PL.u, PL.d)} A ${f(n.rb)} ${f(n.rb)} 0 ${large} 0 ${p(PR.u, PR.d)} A ${f(n.sR)} ${f(n.sR)} 0 0 1 ${p(uR, 0)} `
+/**
+ * One shoulder, measured from its own end of the bar (x = distance from that end to the bowl centre).
+ * Away from the end it touches the edge (and the end's corner on that side shrinks to make room); close to the end — the first
+ * or last item — it slides into the plate and becomes the corner itself, touching the end instead of the edge. Both cases meet
+ * when the shoulder touches edge and end at once, so the outline changes smoothly as the bead moves.
+ */
+function shoulder(s: number, x: number, n: Notch, W: number, r: number) {
+  const a = x - reach(s, n.rb, n.dc)
+  const atEdge = a >= s
+  const c = atEdge ? { a, d: s } : { a: s, d: n.dc + Math.sqrt(Math.max(0, (s + n.rb) ** 2 - (x - s) ** 2)) }
+  const k = s / (s + n.rb)
+  return { atEdge, c, corner: Math.min(r, a), far: atEdge ? r : Math.max(0, Math.min(r, W - c.d)), P: { a: c.a + (x - c.a) * k, d: c.d + (n.dc - c.d) * k } }
 }
 /** the whole plate: a rounded bar (horizontal: edge on top; vertical: edge on the right) with a socket where the bead is */
 export function platePath(vertical: boolean, w: number, h: number, head: number, r: number, notch: Notch | null): string {
-  if (!vertical) {
-    const T = head, B = h
-    const p = (u: number, d: number) => `${f(u)} ${f(T + d)}`
-    const n = notch ? notchPath(clampNotch(notch, r, w - r), p) : ''
-    return `M 0 ${f(T + r)} A ${r} ${r} 0 0 1 ${r} ${T} ${n}L ${f(w - r)} ${T} A ${r} ${r} 0 0 1 ${f(w)} ${f(T + r)} L ${f(w)} ${f(B - r)} A ${r} ${r} 0 0 1 ${f(w - r)} ${f(B)} L ${r} ${f(B)} A ${r} ${r} 0 0 1 0 ${f(B - r)} Z`
+  // in (u along the edge, d into the plate); the vertical bar is the horizontal one turned a quarter, so the arc flags hold
+  const W = (vertical ? w : h) - head, L = vertical ? h : w
+  const p = (u: number, d: number) => (vertical ? `${f(w - head - d)} ${f(u)}` : `${f(u)} ${f(head + d)}`)
+  const arc = (rad: number, large: number, sweep: number, u: number, d: number) => (rad > 0.01 ? `A ${f(rad)} ${f(rad)} 0 ${large} ${sweep} ${p(u, d)} ` : `L ${p(u, d)} `)
+  let fL = r, fR = r, edge: string
+  if (!notch) edge = `L ${p(0, r)} ${arc(r, 0, 1, r, 0)}L ${p(L - r, 0)} ${arc(r, 0, 1, L, r)}`
+  else {
+    const n = clampNotch(notch, L)
+    const l = shoulder(n.sL, n.u, n, W, r), q = shoulder(n.sR, L - n.u, n, W, r)
+    fL = l.far; fR = q.far
+    const PL = { u: l.P.a, d: l.P.d }, PR = { u: L - q.P.a, d: q.P.d }
+    // the bowl turns the other way (concave) from PL to PR; more than half a circle only if the shoulders ride high
+    const span = (Math.atan2(PL.d - n.dc, PL.u - n.u) - Math.atan2(PR.d - n.dc, PR.u - n.u) + 4 * Math.PI) % (2 * Math.PI)
+    edge = (l.atEdge ? `L ${p(0, l.corner)} ${arc(l.corner, 0, 1, l.corner, 0)}L ${p(l.c.a, 0)} ` : `L ${p(0, l.c.d)} `)
+      + arc(n.sL, 0, 1, PL.u, PL.d) + arc(n.rb, span > Math.PI ? 1 : 0, 0, PR.u, PR.d)
+      + (q.atEdge ? `${arc(n.sR, 0, 1, L - q.c.a, 0)}L ${p(L - q.corner, 0)} ${arc(q.corner, 0, 1, L, q.corner)}` : arc(n.sR, 0, 1, L, q.c.d))
   }
-  const E = w - head
-  const p = (u: number, d: number) => `${f(E - d)} ${f(u)}`
-  const n = notch ? notchPath(clampNotch(notch, r, h - r), p) : ''
-  return `M ${f(E - r)} 0 A ${r} ${r} 0 0 1 ${f(E)} ${r} ${n}L ${f(E)} ${f(h - r)} A ${r} ${r} 0 0 1 ${f(E - r)} ${f(h)} L ${r} ${f(h)} A ${r} ${r} 0 0 1 0 ${f(h - r)} L 0 ${r} A ${r} ${r} 0 0 1 ${r} 0 Z`
+  return `M ${p(0, W - fL)} ${edge}L ${p(L, W - fR)} ${arc(fR, 0, 1, L - fR, W)}L ${p(fL, W)} ${arc(fL, 0, 1, 0, W - fL)}Z`
 }
 /** the shoulders lean with the speed: trailing one longer, leading one shorter (v in px per frame along the edge) */
 export function shoulders(base: number, v: number): [number, number] {
@@ -96,8 +108,8 @@ export function Meniscus({ slots, vertical, label, className = '', style, onSele
     svgPath.current?.setAttribute('d', d)
     if (blur.current) blur.current.style.clipPath = `path('${d}')`
     if (bead.current) {
-      const len = vertical ? h : w
-      const c = notch ? clampNotch(notch, radius, len - radius).u : s.u
+      // the bead stays on its item (the socket follows it, not the other way round)
+      const c = notch ? clampNotch(notch, vertical ? h : w).u : s.u
       const x = vertical ? w - head - DC : c, y = vertical ? c : head + DC
       bead.current.style.transform = `translate(${f(x - BEAD / 2)}px, ${f(y - BEAD / 2)}px)`
       bead.current.style.opacity = has ? '1' : '0'
@@ -168,7 +180,8 @@ export function Meniscus({ slots, vertical, label, className = '', style, onSele
         <div ref={blur} className="mn-blur absolute inset-0" aria-hidden />
         <svg className="mn-svg absolute inset-0 w-full h-full overflow-visible pointer-events-none" aria-hidden><path ref={svgPath} className="mn-plate" /></svg>
         <span className="mn-glow" aria-hidden />
-        <ul className={`relative flex ${vertical ? 'flex-col items-center gap-1.5 py-2' : 'items-stretch justify-around px-1'}`} style={vertical ? { width: plate } : { height: plate }}>
+        {/* room at the ends, so the first and last items' socket curls round the end of the bar instead of cutting it off */}
+        <ul className={`relative flex ${vertical ? 'flex-col items-center gap-1.5 py-5' : 'items-stretch justify-around px-[22px]'}`} style={vertical ? { width: plate } : { height: plate }}>
           {slots.map((s, i) => {
             const under = i === shown && (active >= 0 || sim.current.dragging)
             const inner = (<>

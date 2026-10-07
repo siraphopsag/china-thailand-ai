@@ -1,5 +1,6 @@
 // The "meniscus" menu (owner, Oct 2026, from a reference video): one plate with a socket under a coloured bead that flows between
 // items on a spring; the trailing shoulder draws out. Geometry and colours are checked here; the motion was checked in a browser.
+// sizes: a shoulder radius of 16 and a bowl of 31 (bead 46 + 8 gap); the rail is 64 wide, the phone bar 60 high.
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { clampNotch, platePath, reach, shoulders, springStep } from './components/meniscus'
@@ -23,14 +24,24 @@ describe('the socket', () => {
     expect(dipped.match(/ A /g)?.length).toBe(7) // + two shoulders and the bowl
     expect(dipped).toContain(' A 31 31 0 0 0 ') // the bowl is concave (it bends the other way)
     const rail = platePath(true, 88, 500, 24, 32, { u: 200, dc: -1, rb: 31, sL: 16, sR: 16 })
-    expect(rail.startsWith('M 32 0 A 32 32 0 0 1 64 32 L 64 ')).toBe(true) // down the right edge of a 64 px rail
+    expect(rail.startsWith('M 32 0 L 32 0 A 32 32 0 0 1 64 32 L 64 ')).toBe(true) // down the right edge of a 64 px rail
     expect(rail.match(/ A /g)?.length).toBe(7)
   })
-  it('the socket never runs into the rounded ends', () => {
-    const n = clampNotch({ u: 5, dc: -1, rb: 31, sL: 16, sR: 16 }, 30, 330)
-    expect(n.u - reach(16, 31, -1)).toBeGreaterThanOrEqual(30)
-    const m = clampNotch({ u: 400, dc: -1, rb: 31, sL: 16, sR: 16 }, 30, 330)
-    expect(m.u + reach(16, 31, -1)).toBeLessThanOrEqual(330)
+  it('the first and last items: the bead stays on the item and the socket curls round the end of the bar (owner, Oct 2026)', () => {
+    // bug: the socket was pushed off the rounded ends and the bead went with it, onto the next item
+    const n = { dc: -1, rb: 31, sL: 16, sR: 16 }
+    expect(clampNotch({ ...n, u: 42 }, 514).u).toBe(42)
+    expect(clampNotch({ ...n, u: 472 }, 514).u).toBe(472)
+    for (const [vertical, w, h, u] of [[true, 88, 514, 42], [true, 88, 514, 472], [false, 351, 84, 48], [false, 351, 84, 303], [false, 351, 84, 20]] as const) {
+      const d = platePath(vertical, w, h, 24, vertical ? 32 : 30, { ...n, u })
+      expect(d).not.toMatch(/NaN|Infinity/)
+      expect(d.match(/ A /g)?.length).toBe(6) // that end's shoulder is now its corner
+    }
+    // a shoulder that only just reaches the edge looks the same as one that turns the corner: no jump as the bead moves
+    const u0 = 16 + reach(16, 31, -1)
+    const at = (u: number) => platePath(false, 351, 84, 24, 30, { ...n, u }).split(' A 31 31 ')[0].split(' ').slice(-2).map(Number) // where the left shoulder meets the bowl
+    const [x1, y1] = at(u0 - 0.01), [x2, y2] = at(u0 + 0.01)
+    expect(Math.hypot(x1 - x2, y1 - y2)).toBeLessThan(0.2)
   })
   it('moving, the trailing shoulder draws out and the leading one tightens; at rest they match', () => {
     expect(shoulders(16, 0)).toEqual([16, 16])

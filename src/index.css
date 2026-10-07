@@ -507,8 +507,8 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
    (no scrolling inside it, which would also cut off the name bubbles) */
 .nav-rail { max-height: calc(100dvh - 5.5rem) }
 @media (max-height: 880px) { .nav-rail .mn-item.w-12 { width: 2.75rem; height: 2.75rem } .nav-rail ul { gap: .3rem } }
-@media (max-height: 760px) { .nav-rail .mn-item.w-12 { width: 2.5rem; height: 2.5rem } .nav-rail ul { gap: .2rem } .nav-rail .nav-split { margin-top: .2rem; padding-top: .3rem } }
-@media (max-height: 640px) { .nav-rail .mn-item.w-12 { width: 2.25rem; height: 2.25rem } .nav-rail .mn-item svg { width: 18px; height: 18px } .nav-rail { padding: .35rem } }
+@media (max-height: 760px) { .nav-rail .mn-item.w-12 { width: 2.5rem; height: 2.5rem } .nav-rail ul { gap: .2rem; padding-block: 1rem } .nav-rail .nav-split { margin-top: .2rem; padding-top: .3rem } }
+@media (max-height: 640px) { .nav-rail .mn-item.w-12 { width: 2.25rem; height: 2.25rem } .nav-rail .mn-item svg { width: 18px; height: 18px } .nav-rail ul { padding-block: .75rem } }
 /* dialogs never grow past the screen; long ones scroll inside */
 .modal-panel { max-height: calc(100dvh - 2rem); overflow-y: auto }
 /* short computer screens: board cards drop their secondary lines (place, age, fill bar) so a whole row still fits */
