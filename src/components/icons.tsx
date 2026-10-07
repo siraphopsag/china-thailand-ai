@@ -2,7 +2,7 @@ import {
   ArrowLeft, ArrowRight, BookOpen, Building2, BriefcaseBusiness, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, CircleAlert, CircleCheck, CircleDot, CircleHelp, ExternalLink, FileText,
   House, Info, Landmark, Languages, ListChecks, Menu, Minus, Moon, Network, PieChart, Radar, Scale, Search, Settings, ShieldAlert, SlidersHorizontal, Sparkles, Square, SquareCheck,
   Sun, TrendingUp, TriangleAlert, UserCog, Wallet, X, Link2, LayoutDashboard, Globe2, Plus, LocateFixed, Plane, User, Bell, MapPin, ClipboardList, LogIn, LogOut, ShieldCheck, FastForward, Send, Ellipsis, CircleUserRound, Clock, Mail, Lock, Eye, EyeOff, Trash2, Pencil,
-  BadgeCheck, UserCheck, Smartphone, TrendingDown, Gauge,
+  BadgeCheck, UserCheck, Smartphone, TrendingDown, Gauge, FlaskConical, Eraser, Wand2,
   Store, ArrowDownWideNarrow, ArrowUpNarrowWide, Star, Users, RefreshCw, Hourglass, Funnel, Ticket, Crown, CalendarDays, ChartNoAxesColumn, Download,
 } from 'lucide-react'
 
@@ -16,7 +16,7 @@ const ICONS = {
   user: User, bell: Bell, pin: MapPin, posts: ClipboardList, login: LogIn, logout: LogOut, shield: ShieldCheck, fastForward: FastForward, send: Send, more: Ellipsis, profile: CircleUserRound, clock: Clock, mail: Mail, lock: Lock, eye: Eye, eyeOff: EyeOff, trash: Trash2, edit: Pencil,
   store: Store, sortNew: ArrowDownWideNarrow, sortOld: ArrowUpNarrowWide, star: Star, users: Users, renew: RefreshCw, hourglass: Hourglass, filter: Funnel, ticket: Ticket, crown: Crown,
   calendar: CalendarDays, chart: ChartNoAxesColumn, download: Download,
-  verified: BadgeCheck, personCheck: UserCheck, phone: Smartphone, trendUp: TrendingUp, trendDown: TrendingDown, gauge: Gauge,
+  verified: BadgeCheck, personCheck: UserCheck, phone: Smartphone, trendUp: TrendingUp, trendDown: TrendingDown, gauge: Gauge, sim: FlaskConical, eraser: Eraser, wand: Wand2,
 } as const
 export type IconName = keyof typeof ICONS
 

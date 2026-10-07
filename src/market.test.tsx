@@ -105,7 +105,7 @@ describe('3–4. the board: a small allowance chip, the card/map switch before t
   })
   it('the database counts arrive as groups with their number; nothing about who', () => {
     expect(statsToGroups([{ country: 'TH', province: 'TH-10', industry: 'hospitality', skills: [], hour: at(-1), n: 3 }, { country: 'XX', province: 'X', industry: 'hospitality', skills: [], hour: at(-1), n: 9 }]))
-      .toEqual([{ country: 'TH', province: 'TH-10', industry: 'hospitality', at: at(-1), n: 3 }])
+      .toEqual([{ country: 'TH', province: 'TH-10', industry: 'hospitality', at: at(-1), n: 3, sample: 0 }])
     expect(src('./pages/market.tsx')).toContain("t('m.mk.privacy')")
   })
 })

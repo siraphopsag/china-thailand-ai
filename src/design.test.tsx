@@ -209,7 +209,7 @@ describe('round 2 (owner, Oct 2026)', () => {
   it('the back office is in tabs (arrow keys move between them) with compact rows; job titles stay headings', () => {
     const m = src('./pages/match.tsx')
     expect(m).toContain(`role="tablist" aria-label={t('m.adm.tabs')} onKeyDown={keys}`)
-    expect(m).toContain(`[{ k: 'overview', icon: 'overview' }, { k: 'verify', icon: 'shield' }, { k: 'reports', icon: 'alert' }, { k: 'cases', icon: 'plane' }, { k: 'posts', icon: 'posts' }]`)
+    expect(m).toContain(`[{ k: 'overview', icon: 'overview' }, { k: 'verify', icon: 'shield' }, { k: 'reports', icon: 'alert' }, { k: 'cases', icon: 'plane' }, { k: 'posts', icon: 'posts' }, { k: 'sim', icon: 'sim' }]`) // + simulated data (owner, Oct 2026)
     expect(m).toContain('role="tabpanel"'); expect(m).toContain("tabIndex={tab === k ? 0 : -1}")
   })
   it('the activity grid keeps a small fixed size instead of stretching across the page', () => {

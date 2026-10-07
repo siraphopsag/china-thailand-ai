@@ -515,10 +515,10 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
     }
     expect(css).toMatch(/@media \(prefers-reduced-transparency: reduce\) \{\s*\.nav-pill, \.glass-pop, \.glass-card \{ background: rgb\(var\(--surface\)\); backdrop-filter: none/)
   })
-  it('Lobby: the 8 short-reading cards are glass over still coloured light; letters and numbers sit on indigo drops; forms stay solid', () => {
+  it('Lobby: the 14 short-reading cards (4 letters, 4 steps, 6 systems — owner, Oct 2026) are glass over still coloured light; letters and numbers sit on indigo drops; forms stay solid', () => {
     const page = html(<Landing />)
-    expect(page.match(/<li class="glass-card/g)?.length).toBe(8)
-    expect(page.match(/class="glass-drop w-/g)?.length).toBe(8)
+    expect(page.match(/<li class="glass-card/g)?.length).toBe(14)
+    expect(page.match(/class="glass-drop w-/g)?.length).toBe(14)
     expect(page).not.toContain('glass-orbs') // the box of light showed hard edges; the light now lives in the page background
     expect(css).toMatch(/radial-gradient\(42vw 38vh at 8% 55%, rgb\(var\(--glow-a\) \/ calc\(var\(--orb-a\) \* \.8\)\), transparent 72%\)/)
     // forms keep solid cards; their lists and empty states are glass

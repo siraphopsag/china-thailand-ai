@@ -54,10 +54,10 @@ const text = (v: unknown, min: number, max: number, field: Problem): Problem | n
 /* ---------- weekly allowances (owner, Oct 2026): a cycle starts with its first use; after 7 days the full allowance is back ---------- */
 /** a membership counts until its end date (memberships from before the plans have none) */
 export const memberActive = (st: MatchState, now: number) => st.member && (!st.memberUntil || Date.parse(st.memberUntil) > now)
-export const postLimit = (st: MatchState, now: number) => (memberActive(st, now) ? MEMBER_POSTS_PER_WEEK : FREE_POSTS_PER_WEEK)
+export const postLimit = (st: MatchState, now: number) => (st.unlimited ? Infinity : memberActive(st, now) ? MEMBER_POSTS_PER_WEEK : FREE_POSTS_PER_WEEK)
 /** new posts and renewals share one allowance */
 export const postQuota = (st: MatchState, now: number) => cycleQuota(st.credits.filter((c) => c.kind !== 'pin').map((c) => c.at), now, postLimit(st, now))
-export const pinQuota = (st: MatchState, now: number) => cycleQuota(st.credits.filter((c) => c.kind === 'pin').map((c) => c.at), now, memberActive(st, now) ? MEMBER_PINS_PER_WEEK : PINS_PER_WEEK)
+export const pinQuota = (st: MatchState, now: number) => cycleQuota(st.credits.filter((c) => c.kind === 'pin').map((c) => c.at), now, st.unlimited ? Infinity : memberActive(st, now) ? MEMBER_PINS_PER_WEEK : PINS_PER_WEEK)
 /** taking a plan: it runs from now, or adds on to a membership that is still running */
 export function planUntil(st: MatchState, plan: PlanId, now: number): string {
   const months = PLANS.find((p) => p.id === plan)!.months
@@ -76,7 +76,7 @@ export function addPin(st: MatchState, input: { place: Place; industry: Industry
   if (!isSkills(input.skills)) return fail('skills')
   const now = Date.parse(at)
   if (pinQuota(st, now).left <= 0) return fail('limit')
-  if (activePins(st.me, now).some((p) => p.country === input.place.country && p.province === input.place.province && p.industry === input.industry)) return fail('duplicate')
+  if (!st.unlimited && activePins(st.me, now).some((p) => p.country === input.place.country && p.province === input.place.province && p.industry === input.industry)) return fail('duplicate')
   const pin: Pin = { id, country: input.place.country, province: input.place.province, industry: input.industry, skills: [...input.skills], at }
   return { ok: true, value: { ...st.me, pins: [...activePins(st.me, now), pin] } }
 }

@@ -11,7 +11,7 @@ import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { CaseLink } from './case'
 import { ReportButton, ScamNote } from './safety'
-import { AgencyLinks, SampleBadge, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
+import { AgencyLinks, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 
 /**
  * One post (owner, Oct 2026): details, the five release levels with their times, who else is looking at it right now, and —
@@ -87,6 +87,7 @@ export function PostPage() {
         {presence && presence.viewing > 0 && <p className="text-sm font-medium text-primary flex items-center gap-1.5"><Icon name="eye" size={16} />{t('m.live.viewing', { n: presence.viewing })}</p>}
         {presence && presence.filling > 0 && <p className="text-sm font-medium text-warn-fg flex items-center gap-1.5"><Icon name="edit" size={16} />{t('m.live.filling', { n: presence.filling })}</p>}
       </div>
+      {p.sample && <div className="shrink-0"><SampleNote /></div>}
       {!p.verified && !mine && <div className="shrink-0"><Warn>{t('m.vf.warnSeeker')}</Warn></div>}
       {mine && p.hidden && <div className="shrink-0"><Warn tone="danger">{t('m.rpt.hiddenOwner')}</Warn></div>}
       <Toast msg={msg} />
@@ -108,6 +109,7 @@ export function PostPage() {
               </>) : canApply ? (
                 <form className="space-y-3" onSubmit={submit} noValidate onFocus={() => setFocused(true)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false) }}>
                   <h2 id="ap-h" className="h2">{t(full ? 'm.ap.reserveTitle' : 'm.ap.title')}</h2>
+                  {p.sample && <SampleNote apply />}
                   <p className="text-sm text-muted">{t(full ? 'm.ap.reserveLead' : 'm.ap.lead', { n: c.reserved })}</p>
                   <div><label className="block"><span className="label">{t('m.ap.intro')} <span className="font-normal text-muted">({t('m.opt')})</span></span>
                     <textarea id="ap-intro" className="input min-h-[96px]" maxLength={300} value={intro} aria-invalid={fe.invalid('ap-intro')} aria-describedby={fe.describe('ap-intro', 'ap-intro-hint')} onChange={(e) => { setIntro(e.target.value); fe.clear() }} /></label>

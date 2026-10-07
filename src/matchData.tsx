@@ -6,6 +6,7 @@ import { reportPost, type ReportGroup, type ReportReason } from './domain/match/
 import { HOUR_MS, pinActive, type PinLike } from './domain/match/release'
 import { seedState } from './domain/match/seed'
 import type { PinGroup } from './domain/match/market'
+import { simPinRow, simPostRow, type SimPin, type SimPost } from './domain/match/simulate'
 import { HOLDS_PLACE, MAX_CLOCK_HOURS, ME, MY_EMPLOYER, type Acceptance, type Country, type Industry, type MatchState, type PlanId, type Place, type Post, type Role, type Skill, type VerifyKind } from './domain/match/types'
 import { buildState, dbProblem, postToRow, rowToAcceptance, rowToPost, statsByProvince, statsToGroups, statsToPool, verifyOf, type AcceptanceRow, type AdminStats, type CaseRow, type PinStatRow, type PostRow, type ProfileRow, type ReportRow, reportQueue } from './domain/match/remote'
 import { getClient, takeNext, useAuth } from './auth'
@@ -101,6 +102,10 @@ interface Ctx {
   report: (postId: string, reason: ReportReason, note: string) => Promise<Outcome<unknown>>
   /** administrator: open reports grouped by post */
   reports: ReportGroup[]
+  /** administrator: add simulated posts and/or pins (the generator, 0008) — everything is labelled "simulated data" */
+  addSamples: (posts: SimPost[], pins: SimPin[]) => Promise<Outcome<{ posts: number; pins: number }>>
+  /** administrator: remove simulated posts and/or pins */
+  clearSamples: (posts: boolean, pins: boolean) => Promise<Outcome<{ posts: number; pins: number }>>
   /** administrator: not a problem (shown again) · remove the post · suspend its employer */
   moderate: (postId: string, action: 'dismiss' | 'remove' | 'suspend') => Promise<Outcome<unknown>>
   advanceClock: (hours: number) => void
@@ -156,7 +161,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         sb.from('reports').select('*').order('created_at'), // mine (everyone's for administrators); missing before 0005 → none
       ])
       if (seq !== loadSeq.current) return // a newer load started meanwhile
-      setRemote(buildState({ uid: userId, name: userName, profile: prof.data ?? null, posts: (posts.data ?? []) as PostRow[], pins: pins.data ?? [], acceptances: accs.data ?? [],
+      setRemote(buildState({ admin, uid: userId, name: userName, profile: prof.data ?? null, posts: (posts.data ?? []) as PostRow[], pins: pins.data ?? [], acceptances: accs.data ?? [],
         clockHours: 0, credits: uses.data ?? [], people: people.data ?? [], allPins: allPins.data ?? [], cases: (cases.data ?? []) as CaseRow[], reports: (reps.data ?? []) as ReportRow[] }))
       setPeople((people.data ?? []) as ProfileRow[])
       setReportRows(admin ? (reps.data ?? []) as ReportRow[] : [])
@@ -198,7 +203,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
   }, [mode, remotePool, pool, now])
   const pinGroups = useMemo<PinGroup[]>(() => {
     if (mode === 'remote') return statsToGroups(remotePool.filter((r) => Date.parse(r.hour) > now - 30 * 24 * HOUR_MS))
-    return pool.filter((p) => pinActive(p, now)).map((p) => ({ country: p.country, province: p.province, industry: p.industry, at: p.at, n: 1 }))
+    return pool.filter((p) => pinActive(p, now)).map((p) => ({ country: p.country, province: p.province, industry: p.industry, at: p.at, n: 1, sample: (p as { sample?: boolean }).sample ? 1 : 0 }))
   }, [mode, remotePool, pool, now])
   const counts = useMemo(() => (mode === 'remote' && remoteCounts ? remoteCounts : countsFrom(st.acceptances)), [mode, remoteCounts, st.acceptances])
   const at = useCallback(() => new Date(nowWith(raw.clockHours)).toISOString(), [raw.clockHours])
@@ -327,6 +332,29 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         }
         if (!userId) return false
         return (await write((sb) => sb.rpc('verify_employer', { p_user: userId, p_ok: ok }), () => null)).ok
+      },
+      addSamples: async (posts, pins) => {
+        if (local) {
+          // the demo: simulated employers and one simulated crowd of job seekers
+          const made = posts.flatMap((p, i) => { const r = makePost(p, uid('post'), `employer:sim-${i % 9}`, p.createdAt); return r.ok ? [{ ...r.value, verified: p.verified, ...(p.verified ? { verifiedAs: p.verifiedAs ?? 'company' as const } : {}), sample: true }] : [] })
+          const crowd = pins.map((p) => ({ id: uid('pin'), country: p.country, province: p.province, industry: p.industry, skills: [...p.skills], at: p.at, sample: true }))
+          setLocal((s) => {
+            const old = s.seekers.find((x) => x.id === 'seeker:sim')
+            const sim = { id: 'seeker:sim', name: '—', origin: null, pins: [...(old?.pins ?? []), ...crowd], synthetic: true as const }
+            return { ...s, posts: [...made, ...s.posts], seekers: crowd.length ? [...s.seekers.filter((x) => x.id !== 'seeker:sim'), sim] : s.seekers }
+          })
+          return { ok: true, value: { posts: made.length, pins: crowd.length } }
+        }
+        return write((sb) => sb.rpc('admin_add_samples', { p_posts: posts.map(simPostRow), p_pins: pins.map(simPinRow) }), (d) => d as { posts: number; pins: number })
+      },
+      clearSamples: async (posts, pins) => {
+        if (local) {
+          const gone = new Set(st.posts.filter((p) => posts && p.sample).map((p) => p.id)), np = gone.size, nn = pins ? st.seekers.find((x) => x.id === 'seeker:sim')?.pins.length ?? 0 : 0
+          setLocal((s) => ({ ...s, posts: s.posts.filter((p) => !gone.has(p.id)), acceptances: s.acceptances.filter((a) => !gone.has(a.postId)), cases: s.cases.filter((c) => !gone.has(c.postId)),
+            seekers: pins ? s.seekers.filter((x) => x.id !== 'seeker:sim') : s.seekers }))
+          return { ok: true, value: { posts: np, pins: nn } }
+        }
+        return write((sb) => sb.rpc('admin_clear_samples', { p_posts: posts, p_pins: pins }), (d) => d as { posts: number; pins: number })
       },
       caseAct: async (caseId, action) => {
         const c = st.cases.find((x) => x.id === caseId); if (!c) return fail('unknown')

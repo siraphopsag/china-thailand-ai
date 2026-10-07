@@ -31,6 +31,7 @@ export function MarketPanel({ m, scope, province, onScope, onAll }: { m: Market;
           <button type="button" className="btn-ghost text-sm !min-h-[34px] !rounded-full" onClick={onAll}><Icon name="close" size={14} />{t('m.mk.showAll')}</button>
         </p>)}
 
+      {(m.simulated.posts > 0 || m.simulated.pins > 0) && <p className="text-xs text-warn-fg inline-flex items-center gap-1.5 -mb-2"><Icon name="sim" size={13} />{t('m.mk.simulated', { p: m.simulated.posts, n: m.simulated.pins })}</p>}
       <dl className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-2">
         {tiles.map(([k, v, icon]) => (
           <div key={k} className="rounded-xl border border-line bg-surface px-3 py-2">

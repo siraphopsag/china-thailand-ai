@@ -27,12 +27,12 @@ export interface PostRow {
 }
 export interface ReportRow { id: string; post_id: string; reporter_id: string; reason: string; note: string | null; status: string; created_at: string }
 export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string; dates?: unknown }
-export interface PinRow { id: string; seeker_id: string; country: string; province: string; industry: string; skills: string[]; created_at: string }
+export interface PinRow { id: string; seeker_id: string | null; country: string; province: string; industry: string; skills: string[]; created_at: string; is_sample?: boolean | null }
 export interface AcceptanceRow { id: string; post_id: string; seeker_id: string; seeker_name: string; status: string; created_at: string; forwarded_at: string | null
   intro?: string | null; available_from?: string | null; promoted_at?: string | null; decided_at?: string | null }
 export interface QuotaRow { kind: string; created_at: string }
 /** anonymous counts of active pins (public.pin_stats): place, field and the hour they were made — no owner */
-export interface PinStatRow { country: string; province: string; industry: string; skills: string[]; hour: string; n: number }
+export interface PinStatRow { country: string; province: string; industry: string; skills: string[]; hour: string; n: number; /** simulated among n (0008) */ sample?: number | null }
 export interface ProfileRow { id?: string; full_name?: string | null; user_type: string | null; company: string | null; origin_country: string | null; origin_province: string | null; member: boolean | null; member_until?: string | null
   verify_country?: string | null; verify_reg?: string | null; verify_status?: string | null; verify_at?: string | null; verify_decided_at?: string | null; suspended?: boolean | null
   /** 0007: 'company' (registration number) or 'person' (a private person: only the last 4 digits of a confirmed phone) */
@@ -76,7 +76,7 @@ export const postToInput = (p: Post): PostInput => ({
   startDate: p.startDate ?? '', languages: p.languages.map((l) => ({ ...l })), education: p.education as Edu, benefits: [...p.benefits] as Benefit[],
 })
 
-export const rowToPin = (r: PinRow): Pin => ({ id: r.id, country: country(r.country) ?? 'TH', province: r.province, industry: (one(INDUSTRIES, r.industry) ?? 'manufacturing') as Industry, skills: many(SKILLS, r.skills) as Skill[], at: iso(r.created_at) })
+export const rowToPin = (r: PinRow): Pin => ({ id: r.id, country: country(r.country) ?? 'TH', province: r.province, industry: (one(INDUSTRIES, r.industry) ?? 'manufacturing') as Industry, skills: many(SKILLS, r.skills) as Skill[], at: iso(r.created_at), ...(r.is_sample ? { sample: true } : {}) })
 const STATUSES: readonly AppStatus[] = ['accepted', 'reserved', 'confirmed', 'rejected', 'forwarded']
 const opt = (v: string | null | undefined) => (v ? { v: iso(v) } : null)
 export const rowToAcceptance = (r: AcceptanceRow, uid: string): Acceptance => {
@@ -98,7 +98,7 @@ export const statsToPool = (rows: PinStatRow[]): PinLike[] => rows.flatMap((r) =
 /** the same counts as groups with their number (the market view) */
 export const statsToGroups = (rows: PinStatRow[]): PinGroup[] => rows.flatMap((r) => {
   const c = country(r.country), ind = one(INDUSTRIES, r.industry)
-  return c && ind ? [{ country: c, province: r.province, industry: ind, at: iso(r.hour), n: Math.max(0, Number(r.n) || 0) }] : []
+  return c && ind ? [{ country: c, province: r.province, industry: ind, at: iso(r.hour), n: Math.max(0, Number(r.n) || 0), sample: Math.max(0, Number(r.sample) || 0) }] : []
 })
 /** pins per province, for the board map */
 export const statsByProvince = (rows: PinStatRow[]) => rows.reduce<Record<string, number>>((m, r) => ({ ...m, [r.province]: (m[r.province] ?? 0) + Number(r.n) }), {})
@@ -112,7 +112,7 @@ export function rowToCase(r: CaseRow, uid: string): Case {
     dates: isObj(r.dates) ? Object.fromEntries(APPOINTMENTS.flatMap((k) => { const v = (r.dates as Record<string, unknown>)[k]; return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? [[k, v]] : [] })) : {} }
 }
 /** the whole matching state for one signed-in person, as the pages expect it */
-export function buildState(input: { uid: string; name: string; profile: ProfileRow | null; posts: PostRow[]; pins: PinRow[]; acceptances: AcceptanceRow[]; clockHours: number; credits?: QuotaRow[]; people?: ProfileRow[]; allPins?: PinRow[]; cases?: CaseRow[]; reports?: ReportRow[] }): MatchState {
+export function buildState(input: { admin?: boolean; uid: string; name: string; profile: ProfileRow | null; posts: PostRow[]; pins: PinRow[]; acceptances: AcceptanceRow[]; clockHours: number; credits?: QuotaRow[]; people?: ProfileRow[]; allPins?: PinRow[]; cases?: CaseRow[]; reports?: ReportRow[] }): MatchState {
   const p = input.profile
   const origin = p && country(p.origin_country) && p.origin_province ? { country: country(p.origin_country)!, province: p.origin_province } : null
   // administrators also see the other job seekers (names and pins) to follow the step-by-step release
@@ -131,6 +131,7 @@ export function buildState(input: { uid: string; name: string; profile: ProfileR
     cases: (input.cases ?? []).map((r) => rowToCase(r, input.uid)),
     reports: (input.reports ?? []).filter((r) => r.reporter_id === input.uid).flatMap((r) => (isReason(r.reason) ? [{ id: r.id, postId: r.post_id, reason: r.reason, note: r.note ?? '', at: iso(r.created_at) }] : [])),
     ...(p?.suspended ? { suspended: true } : {}),
+    ...(input.admin ? { unlimited: true } : {}),
     employerVerify: verifyOf(p),
   }
 }

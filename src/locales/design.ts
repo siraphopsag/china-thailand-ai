@@ -119,8 +119,8 @@ export const design = {
   'm.hd.searchHint': ['ค้นหาตำแหน่ง บริษัท จังหวัด…', '搜索职位、公司、省份…', 'Search jobs, companies, places…'],
   'm.hd.role': ['บทบาทตอนนี้: {r} (เปลี่ยนได้)', '当前角色：{r}（可更改）', 'Current role: {r} (change)'],
   // ---------- round 2 (owner, Oct 2026)
-  'm.sample.badge': ['ตัวอย่าง', '示例', 'Sample'],
-  'm.sample.d': ['ประกาศตัวอย่างที่ทำไว้สาธิตต้นแบบ ไม่ใช่นายจ้างจริง', '为演示原型而制作的示例信息，并非真实雇主', 'A sample post made to demonstrate the prototype — not a real employer'],
+  'm.sample.badge': ['ข้อมูลจำลอง', '模拟数据', 'Simulated'],
+  'm.sample.d': ['สร้างขึ้นเพื่อทดลองระบบ ไม่มีบริษัทหรืองานจริง', '为测试系统而创建，并无真实公司或职位', 'Made to try the system — there is no real company or job'],
   'm.board.subEmployer2': ['ประกาศทั้งหมดที่เปิดอยู่ — ของคุณและของนายจ้างคนอื่น — พร้อมวงที่แต่ละประกาศไปถึง', '所有进行中的招聘信息——您的和其他雇主的——以及各自达到的圈层', 'Every live post — yours and other employers’ — with the ring each has reached'],
   'm.bd.myPinsN': ['หมุดของฉัน ({n})', '我的标记（{n}）', 'My pins ({n})'],
   'm.bd.waitingN': ['ผู้สมัครรอคุณตอบ {n} คน', '{n} 位申请人待您回复', '{n} applicants waiting for you'],

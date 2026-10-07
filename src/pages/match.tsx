@@ -21,6 +21,7 @@ import { motionOff, setMotionOff } from '../components/ui/background-paths'
 import { NeedLogin } from './auth'
 import { VerifyCard } from './case'
 import { currentStep, stepsDone } from '../domain/match/cases'
+import { SimTools } from './simtools'
 
 /**
  * Pages of the matching prototype. Data stay in this browser or the project's database (see matchData.tsx); after a match the
@@ -107,10 +108,19 @@ export function UnverifiedChip({ post }: { post: Pick<Post, 'verified'> }) {
   const { t } = useI18n()
   return post.verified ? null : <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="warn" size={12} />{t('m.vf.unverified')}</span>
 }
-/** a sample post made for the prototype (not a real employer) */
+/**
+ * Simulated data (owner, Oct 2026: the generated posts looked so real that outsiders might take them for real jobs): a yellow
+ * "ข้อมูลจำลอง" label on every simulated post — the samples, the administrator's generator and anything an administrator posts.
+ * Posts without it come from real users.
+ */
 export function SampleBadge() {
   const { t } = useI18n()
-  return <span className="chip bg-surface3 text-muted border-line" title={t('m.sample.d')}><Icon name="info" size={12} />{t('m.sample.badge')}</span>
+  return <span className="chip bg-warn-bg text-warn-fg border-warn-line font-semibold" title={t('m.sample.d')}><Icon name="sim" size={12} />{t('m.sample.badge')}</span>
+}
+/** …and the same in words where a post is read in full */
+export function SampleNote({ apply }: { apply?: boolean }) {
+  const { t } = useI18n()
+  return <p role="note" className="rounded-lg border border-warn-line bg-warn-bg text-warn-fg px-3 py-2 text-sm flex items-start gap-2"><Icon name="sim" size={16} className="mt-0.5" /><span>{t(apply ? 'm.sample.apply' : 'm.sample.note')}</span></p>
 }
 /** a short message in a live region (pin added, posted, accepted …) */
 export function Toast({ msg }: { msg: { tone: 'info' | 'danger'; text: string } | null }) {
@@ -396,7 +406,7 @@ export function QuotaBar({ q, kind }: { q: Quota; kind: 'pin' | 'post' }) {
   return (
     <div className="space-y-1">
       <p className="text-sm flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <span className="font-medium">{t(kind === 'pin' ? 'm.qb.pins' : 'm.qb.posts', { n: q.used, max: q.limit })}</span>
+        <span className="font-medium">{Number.isFinite(q.limit) ? t(kind === 'pin' ? 'm.qb.pins' : 'm.qb.posts', { n: q.used, max: q.limit }) : t(kind === 'pin' ? 'm.qb.chip.pinU' : 'm.qb.chip.postU', { n: q.used })}</span>
         <span className="text-xs text-muted">{q.resetAt ? t('m.qb.reset', { d: N.dayTime(q.resetAt) }) : t('m.qb.fresh')}</span>
       </p>
       <div className="h-1.5 rounded-full bg-surface3 overflow-hidden" aria-hidden><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${Math.min(100, (q.used / q.limit) * 100)}%` }} /></div>
@@ -421,7 +431,7 @@ export function PinList({ onRemove }: { onRemove?: (id: string) => void }) {
           <li key={p.id} className="glass-card p-3 flex items-start gap-3">
             <Icon name="pin" size={20} className="text-danger-fg mt-0.5" />
             <div className="min-w-0 flex-1 space-y-0.5">
-              <h3 className="font-semibold flex flex-wrap items-center gap-2">{N.place(p.country, p.province)}<span className={`chip ${fresh ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface3 text-muted border-line'}`}>{t(fresh ? 'm.pin.new' : 'm.pin.old')}</span></h3>
+              <h3 className="font-semibold flex flex-wrap items-center gap-2">{N.place(p.country, p.province)}<span className={`chip ${fresh ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface3 text-muted border-line'}`}>{t(fresh ? 'm.pin.new' : 'm.pin.old')}</span>{p.sample && <span className="chip bg-warn-bg text-warn-fg border-warn-line font-semibold"><Icon name="sim" size={12} />{t('m.sample.pin')}</span>}</h3>
               <p className="text-sm text-muted">{N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p>
               <p className="text-xs text-muted">{t('m.pin.when', { t: ago(p.at) })} · {t('m.pin.ends', { t: until(Date.parse(p.at) + PIN_LIFE_DAYS * DAY_MS) })}</p>
             </div>
@@ -651,8 +661,8 @@ export function HelpPage() {
    needs attention, then one tab each for verification requests, reports, cases and posts — compact rows, smaller type. On a
    computer the page takes exactly the screen and long lists turn into pages; a post's details open in a side panel. Arrow keys
    move between the tabs. */
-type AdminTab = 'overview' | 'verify' | 'reports' | 'cases' | 'posts'
-const ADMIN_TABS: { k: AdminTab; icon: IconName }[] = [{ k: 'overview', icon: 'overview' }, { k: 'verify', icon: 'shield' }, { k: 'reports', icon: 'alert' }, { k: 'cases', icon: 'plane' }, { k: 'posts', icon: 'posts' }]
+type AdminTab = 'overview' | 'verify' | 'reports' | 'cases' | 'posts' | 'sim'
+const ADMIN_TABS: { k: AdminTab; icon: IconName }[] = [{ k: 'overview', icon: 'overview' }, { k: 'verify', icon: 'shield' }, { k: 'reports', icon: 'alert' }, { k: 'cases', icon: 'plane' }, { k: 'posts', icon: 'posts' }, { k: 'sim', icon: 'sim' }]
 const ROW = 'rounded-xl border border-line bg-surface px-4 py-3 text-sm'
 export function BackofficePage() {
   const { t } = useI18n()
@@ -667,7 +677,7 @@ export function BackofficePage() {
   if (!isAdmin) return <Page title={t('m.adm.title')}><Warn>{t('m.adm.gate')}</Warn></Page>
   const people = [{ ...st.me, name: t('m.adm.you') }, ...st.seekers]
   const openCases = st.cases.filter((c) => currentStep(c) !== null)
-  const count: Record<AdminTab, number> = { overview: 0, verify: pendingVerifications.length, reports: reports.length, cases: openCases.length, posts: st.posts.length }
+  const count: Record<AdminTab, number> = { overview: 0, verify: pendingVerifications.length, reports: reports.length, cases: openCases.length, posts: st.posts.length, sim: 0 }
   const decideR = async (postId: string, action: 'dismiss' | 'remove' | 'suspend') => {
     if (action !== 'dismiss' && !(await ask(t(action === 'remove' ? 'm.adm.remove.confirm' : 'm.adm.suspend.confirm'), { yes: t(action === 'remove' ? 'm.adm.remove' : 'm.adm.suspend'), danger: true }))) return
     const r = await moderate(postId, action)
@@ -703,6 +713,8 @@ export function BackofficePage() {
       </div>
 
       <section id="adm-panel" role="tabpanel" aria-labelledby={`adm-tab-${tab}`} className="space-y-3 fit:flex-1 fit:min-h-0 fit:flex fit:flex-col fit:overflow-hidden">
+        {/* simulated data: the generator and clearing (owner, Oct 2026) */}
+        {tab === 'sim' && <SimTools />}
         {tab === 'overview' && (<>
           <h2 className="text-base font-semibold">{t('m.adm.attn')}</h2>
           <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">{(['verify', 'reports', 'cases', 'posts'] as const).map((k) => (

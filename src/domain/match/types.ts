@@ -60,7 +60,7 @@ export type Role = 'seeker' | 'employer'
 
 export interface Place { country: Country; province: string }
 /** a pinned destination: "I want this kind of work here" */
-export interface Pin extends Place { id: string; industry: Industry; skills: Skill[]; at: string }
+export interface Pin extends Place { id: string; industry: Industry; skills: Skill[]; at: string; /** simulated data (an administrator's pin, 0008) */ sample?: boolean }
 
 export interface Seeker {
   id: string
@@ -144,6 +144,8 @@ export interface MatchState {
   reports: Report[]
   /** an administrator suspended me as an employer after reports: no new posts or renewals (database only) */
   suspended?: boolean
+  /** an administrator: posts and pins without limits (owner, Oct 2026; database only) */
+  unlimited?: boolean
 }
 /**
  * Employer verification; an administrator (the agency in the prototype) approves it. A company gives its registration number

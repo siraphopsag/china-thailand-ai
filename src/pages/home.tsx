@@ -1,10 +1,13 @@
 import { NavLink } from '../store'
 import { Disclaimer } from '../components/ui'
-import { Icon } from '../components/icons'
+import { Icon, type IconName } from '../components/icons'
 import { BRAND, BRAND_CONCEPTS } from '../brand'
 import { Glow } from '../components/backdrop'
 import { BackgroundPaths } from '../components/ui/background-paths'
 import { useI18n } from '../i18n'
+
+/** the main parts of the system and the problem each one answers (lobby) */
+const SYSTEMS: [number, IconName][] = [[1, 'pin'], [2, 'target'], [3, 'verified'], [4, 'shield'], [5, 'plane'], [6, 'chart']]
 
 export function Landing() {
   const { t } = useI18n()
@@ -40,6 +43,19 @@ export function Landing() {
           <ol className="grid sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-3">{[1, 2, 3, 4].map((n) => (
             <li key={n} className="glass-card !p-4 flex gap-3 items-start"><span className="glass-drop w-8 h-8 shrink-0">{n}</span>
               <span className="pt-1 min-w-0"><span className="block font-semibold leading-snug">{t(`m.how.${n}.t` as never)}</span><span className="block text-sm text-muted mt-1">{t(`m.how.${n}` as never)}</span></span></li>))}</ol>
+        </section>
+        {/* owner, Oct 2026: say in the lobby how each part works and which problem it answers */}
+        <section aria-labelledby="sys-h" className="space-y-4">
+          <h2 id="sys-h" className="text-2xl font-bold">{t('m.sys.h')}</h2>
+          <ul className="grid sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr gap-3">{SYSTEMS.map(([n, icon]) => (
+            <li key={n} className="glass-card !p-4 space-y-2">
+              <p className="text-sm text-muted flex items-start gap-2"><Icon name="alert" size={15} className="mt-0.5 shrink-0" /><span>{t(`m.sys.${n}.p` as never)}</span></p>
+              <p className="flex items-start gap-2.5"><span className="glass-drop w-8 h-8 shrink-0"><Icon name={icon} size={16} /></span><span className="text-sm pt-1">{t(`m.sys.${n}` as never)}</span></p>
+            </li>))}</ul>
+        </section>
+        <section aria-labelledby="simwhat-h" className="rounded-2xl border border-warn-line bg-warn-bg text-warn-fg p-4 sm:p-5 space-y-1.5">
+          <h2 id="simwhat-h" className="text-lg font-bold flex items-center gap-2"><Icon name="sim" size={18} />{t('m.simwhat.h')}</h2>
+          <p className="text-sm">{t('m.simwhat')}</p>
         </section>
       </div>
       <Disclaimer />

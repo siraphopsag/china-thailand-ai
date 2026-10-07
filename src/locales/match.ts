@@ -104,7 +104,7 @@ export const match = {
   'm.hero.h1a': ['เชื่อมนายจ้างกับผู้หางาน', '连接雇主与求职者', 'Connecting employers and job seekers'],
   'm.hero.h1b': ['ข้ามภาษา วัฒนธรรม และกฎหมาย', '跨越语言、文化与法律', 'across language, culture and law'],
   'm.hero.sub': ['C.A.L.L. ช่วยให้นายจ้างบอกได้ว่าต้องการคนแบบไหน และช่วยให้ผู้หางานรู้ว่ามีงานตรงกับพื้นที่และความสามารถของตัวเอง พร้อมข้อมูลเตรียมตัวก่อนไปทำงาน', 'C.A.L.L. 帮助雇主说明需要什么样的人才，也帮助求职者及时得知与自己地区和能力相符的工作，并提供上岗前的准备信息。', 'C.A.L.L. lets employers say what kind of people they need, tells job seekers about work that fits their area and skills, and helps them prepare before they go.'],
-  'm.proto': ['ต้นแบบสำหรับสาธิต ข้อมูลทั้งหมดเป็นตัวอย่าง และยังไม่มีการส่งข้อมูลถึงหน่วยงานจริง', '演示用原型：所有数据均为示例，尚未向真实机构发送任何信息。', 'A demonstration prototype: all data are samples and nothing is sent to real agencies yet.'],
+  'm.proto': ['ต้นแบบสำหรับสาธิต — รายการที่มีป้าย "ข้อมูลจำลอง" ไม่ใช่ของจริง และยังไม่มีการส่งข้อมูลถึงหน่วยงานจริง', '演示用原型——带有“模拟数据”标签的内容并非真实，且尚未向真实机构发送任何信息。', 'A demonstration prototype — anything labelled “Simulated” is not real, and nothing is sent to real agencies yet.'],
   'm.problems.h': ['ปัญหาที่ C.A.L.L. ช่วยแก้', 'C.A.L.L. 帮助解决的问题', 'Problems C.A.L.L. helps with'],
   'm.how.h': ['C.A.L.L. ทำงานอย่างไร', 'C.A.L.L. 如何运作', 'How C.A.L.L. works'],
   // each step = a short title + one short sentence, about the same length in every language (owner, Oct 2026)
@@ -472,7 +472,7 @@ export const match = {
   'm.err.available': ['เลือกวันที่เริ่มงานได้ ตั้งแต่วันนี้ และไม่เกิน 2 ปี', '请选择可入职日期：从今天起，两年内', 'Choose the day you can start: from today, within two years'],
   'm.err.state': ['ทำรายการนี้ไม่ได้แล้ว ลองรีเฟรชหน้า', '此操作已无法进行，请刷新页面', 'This can no longer be done — refresh the page'],
   'm.err.belowHeld': ['มีคนได้ที่แล้วมากกว่าจำนวนนี้ — ลดจำนวนคนต่ำกว่าคนที่ได้ที่แล้วไม่ได้', '已占名额的人数多于此数——不能少于已占名额的人数', 'More people already hold a place — the number cannot go below them'],
-  'm.err.dbOld': ['ฐานข้อมูลยังไม่ได้อัปเดต — เจ้าของระบบต้องรันไฟล์ 0003_board.sql ถึง 0007_person_verify.sql ใน Supabase ก่อน (คู่มือข้อ 12–16)', '数据库尚未更新——系统所有者需先在 Supabase 中运行 0003_board.sql 至 0007_person_verify.sql（指南第 12–16 步）', 'The database has not been updated yet — the site owner needs to run 0003_board.sql to 0007_person_verify.sql in Supabase first (guide steps 12–16)'],
+  'm.err.dbOld': ['ฐานข้อมูลยังไม่ได้อัปเดต — เจ้าของระบบต้องรันไฟล์ 0003_board.sql ถึง 0008_simulated_data.sql ใน Supabase ก่อน (คู่มือข้อ 12–17)', '数据库尚未更新——系统所有者需先在 Supabase 中运行 0003_board.sql 至 0008_simulated_data.sql（指南第 12–17 步）', 'The database has not been updated yet — the site owner needs to run 0003_board.sql to 0008_simulated_data.sql in Supabase first (guide steps 12–17)'],
   // ---------- membership plans (owner, Oct 2026)
   'm.member': ['สมาชิก', '会员', 'Membership'],
   'm.plan.title': ['สมัครสมาชิก', '开通会员', 'Membership'],

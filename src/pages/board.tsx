@@ -12,7 +12,7 @@ import { GeoMap } from '../components/geomap'
 import { Icon } from '../components/icons'
 import { Drawer } from '../components/drawer'
 import { Pager, useFit, useFitGrid, usePaged } from '../components/pager'
-import { Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SortToggle, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
+import { Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
 import { ReportButton } from './safety'
 import { MarketPanel } from './market'
 
@@ -176,8 +176,8 @@ function QuotaChip({ q, kind, open, onToggle }: { q: Quota; kind: 'pin' | 'post'
   const N = useNames()
   const note = t('m.qb.chip.d', { r: q.resetAt ? t('m.qb.reset', { d: N.dayTime(q.resetAt) }) : t('m.qb.fresh') })
   const inner = (<>
-    <span aria-hidden className="quota-ring" style={{ '--p': `${Math.min(100, (q.used / q.limit) * 100)}%` } as React.CSSProperties} />
-    <span>{t(kind === 'pin' ? 'm.qb.chip.pin' : 'm.qb.chip.post', { n: q.used, max: q.limit })}</span><span className="sr-only"> · {note}</span>
+    <span aria-hidden className="quota-ring" style={{ '--p': `${Number.isFinite(q.limit) ? Math.min(100, (q.used / q.limit) * 100) : 0}%` } as React.CSSProperties} />
+    <span>{Number.isFinite(q.limit) ? t(kind === 'pin' ? 'm.qb.chip.pin' : 'm.qb.chip.post', { n: q.used, max: q.limit }) : t(kind === 'pin' ? 'm.qb.chip.pinU' : 'm.qb.chip.postU', { n: q.used })}</span><span className="sr-only"> · {note}</span>
   </>)
   const cls = 'inline-flex items-center gap-2 min-h-[40px] px-3 rounded-full border border-line bg-surface text-sm font-medium whitespace-nowrap'
   return onToggle
@@ -266,7 +266,7 @@ function PostPanel({ titleId, post, level, reached, applied, viewer }: { titleId
       {([[`${c.held}/${cap}`, 'm.bd.places'], [c.reserved, 'm.bd.queue'], [`${post.minYears}+`, 'm.bd.years']] as const).map(([v, k]) => (
         <div key={k} className="card-i !p-3"><dd className="text-lg font-bold">{v}</dd><dt className="text-xs text-muted">{t(k)}</dt></div>))}
     </dl>
-    {post.sample && <p className="text-xs text-muted">{t('m.sample.d')}</p>}
+    {post.sample && <SampleNote />}
     {!post.verified && !mine && viewer === 'seeker' && <p className="text-xs text-warn-fg">{t('m.vf.warnSeeker')}</p>}
     <PostFacts post={post} />
     <p className="text-sm">{post.skills.map(N.skill).join(' · ')}</p>
