@@ -1,0 +1,26 @@
+{
+  "name": "C.A.L.L. — Cross ASEAN Language Legal",
+  "short_name": "C.A.L.L.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141233",
+  "theme_color": "#312E81",
+  "lang": "th",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

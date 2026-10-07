@@ -6,17 +6,7 @@ import { useMatch } from '../matchData'
 import { BRAND } from '../brand'
 import { Icon, type IconName } from './icons'
 import { LoginButton } from './sidenav'
-
-/** C.A.L.L. mark: two linked rings (two sides of a border, two languages) joined by one line. Follows the theme. */
-export function Logo({ size = 32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden className="shrink-0">
-      <rect width="32" height="32" rx="8" className="fill-primary" />
-      <circle cx="12.5" cy="16" r="6" fill="none" strokeWidth="2.2" className="stroke-onprimary" />
-      <circle cx="19.5" cy="16" r="6" fill="none" strokeWidth="2.2" className="stroke-onprimary" opacity="0.75" />
-    </svg>
-  )
-}
+import { Wordmark } from './logo'
 
 function useOutside(open: boolean, close: () => void) {
   const ref = useRef<HTMLDivElement>(null)
@@ -127,7 +117,8 @@ export function Header(_: { route?: string }) {
       <div className="px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
         {/* no menu button: the menu capsule is always visible (left on computers and tablets, bottom on phones) */}
         <div className="flex items-center gap-2 shrink-0" lang="en">
-          <Logo /><span className="leading-tight"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
+          {/* the logo (owner, Oct 2026): the name itself, its C a speech bubble */}
+          <span className="leading-tight"><Wordmark title={BRAND.name} className="h-7 w-auto block" /><span className="hidden sm:block text-[11px] opacity-70 tracking-wide mt-0.5">{BRAND.full}</span></span>
         </div>
         {/* computers and tablets: "Back" sits in the header, so pages keep their height for content */}
         {_.route ? <div className="hidden md:block md:pl-3"><BackButton route={_.route} compact /></div> : null}
