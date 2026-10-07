@@ -68,9 +68,9 @@ export function CalendarPage() {
     </NavLink></li>) }
 
   return (
-    <Page title={t('m.cal.title')} sub={t(agency && mode !== 'local' ? 'm.cal.subAgency' : st.role === 'employer' ? 'm.cal.subEmployer' : 'm.cal.subSeeker')}>
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
-        <section className="card space-y-3" aria-labelledby="cal-month">
+    <Page title={t('m.cal.title')} sub={t(agency && mode !== 'local' ? 'm.cal.subAgency' : st.role === 'employer' ? 'm.cal.subEmployer' : 'm.cal.subSeeker')} fit>
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start fit:h-full fit:items-stretch">
+        <section className="card !p-4 space-y-3 fit:flex fit:flex-col fit:min-h-0" aria-labelledby="cal-month">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="cal-month" className="h2" aria-live="polite">{monthName}</h2>
             <div className="flex items-center gap-1.5">
@@ -79,15 +79,15 @@ export function CalendarPage() {
               <button type="button" className="w-10 h-10 grid place-items-center rounded-full border border-control hover:bg-surface3" onClick={() => move(1)} aria-label={t('m.cal.next')}><Icon name="right" size={18} /></button>
             </div>
           </div>
-          <div role="grid" aria-labelledby="cal-month" className="space-y-1.5">
+          <div role="grid" aria-labelledby="cal-month" className="space-y-1.5 fit:space-y-0 fit:flex-1 fit:min-h-0 fit:flex fit:flex-col fit:gap-1.5">
             <div role="row" className="grid grid-cols-7 gap-1.5">{weekdays.map((w) => <div key={w.long} role="columnheader" aria-label={w.long} className="text-center text-xs font-semibold text-muted uppercase">{w.short}</div>)}</div>
             {weeks.map((wk) => (
-              <div key={wk[0]} role="row" className="grid grid-cols-7 gap-1.5">{wk.map((d) => {
+              <div key={wk[0]} role="row" className="grid grid-cols-7 gap-1.5 fit:flex-1 fit:min-h-0">{wk.map((d) => {
                 const evs = byDay[d] ?? [], inMonth = ymOf(d).m === ym.m, isToday = d === today, isSel = d === sel
                 return (
-                  <div key={d} role="gridcell" aria-selected={isSel}>
+                  <div key={d} role="gridcell" aria-selected={isSel} className="fit:min-h-0">
                     <button type="button" onClick={() => setSel(d)} aria-label={`${fmt({ dateStyle: 'full' }).format(dayDate(d))}${evs.length ? ` · ${t('m.cal.count', { n: evs.length })}` : ''}`}
-                      className={`w-full min-h-[52px] sm:min-h-[84px] rounded-xl p-1.5 text-left flex flex-col gap-1 border transition-colors ${isSel ? 'border-primary ring-2 ring-primary/30' : 'border-transparent'} ${inMonth ? 'bg-surface2 hover:bg-surface3' : 'opacity-45 hover:opacity-80'}`}>
+                      className={`w-full min-h-[48px] sm:min-h-[84px] fit:min-h-0 fit:h-full fit:overflow-hidden rounded-xl p-1.5 text-left flex flex-col gap-1 border transition-colors ${isSel ? 'border-primary ring-2 ring-primary/30' : 'border-transparent'} ${inMonth ? 'bg-surface2 hover:bg-surface3' : 'opacity-45 hover:opacity-80'}`}>
                       <span className={`text-xs font-semibold w-6 h-6 grid place-items-center rounded-full ${isToday ? 'bg-primary text-onprimary' : ''}`}>{Number(d.slice(8, 10))}</span>
                       {/* phones: dots · wider screens: labels */}
                       {evs.length > 0 && <span className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>{evs.slice(0, 4).map((e) => <span key={e.id} className={`cal-dot cal-${e.kind}`} />)}</span>}
@@ -97,11 +97,11 @@ export function CalendarPage() {
                   </div>)
               })}</div>))}
           </div>
-          <ul className="flex flex-wrap gap-x-4 gap-y-1.5 pt-2 border-t border-line text-xs" aria-label={t('m.cal.legend')}>{EVENT_KINDS.filter((k) => k !== 'expiry' || st.role === 'employer').map((k) => (
+          <ul className="shrink-0 flex flex-wrap gap-x-4 gap-y-1.5 pt-2 border-t border-line text-xs" aria-label={t('m.cal.legend')}>{EVENT_KINDS.filter((k) => k !== 'expiry' || st.role === 'employer').map((k) => (
             <li key={k} className="inline-flex items-center gap-1.5"><span className={`cal-dot cal-${k}`} aria-hidden /><Icon name={ICON[k]} size={13} />{t(`m.cal.k.${k}` as never)}</li>))}</ul>
         </section>
 
-        <aside className="space-y-4 min-w-0" aria-label={t('m.cal.side')}>
+        <aside className="space-y-3 min-w-0 fit:min-h-0 fit:overflow-y-auto" aria-label={t('m.cal.side')}>
           <section className="glass-card p-4 space-y-2" aria-labelledby="cal-day">
             <p className="text-xs font-semibold text-primary uppercase">{sel === today ? t('m.cal.todayIs', { d: fmt({ weekday: 'long' }).format(dayDate(sel)) }) : fmt({ weekday: 'long' }).format(dayDate(sel))}</p>
             <h2 id="cal-day" className="h2">{fmt({ day: 'numeric', month: 'long' }).format(dayDate(sel))}</h2>

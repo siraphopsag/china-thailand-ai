@@ -15,6 +15,8 @@ import { ListSelect } from '../components/listselect'
 import { Warn } from '../components/ui'
 import { Icon, type IconName } from '../components/icons'
 import { useConfirm } from '../components/confirm'
+import { PagedList } from '../components/pager'
+import { Drawer } from '../components/drawer'
 import { motionOff, setMotionOff } from '../components/ui/background-paths'
 import { NeedLogin } from './auth'
 import { VerifyCard } from './case'
@@ -84,8 +86,10 @@ export function PostFacts({ post, compact }: { post: Post; compact?: boolean }) 
       <div key={k} className="flex items-start gap-2.5"><Icon name={icon} size={16} className="text-primary mt-0.5 shrink-0" /><div><dt className="text-muted text-xs">{k}</dt><dd className="font-medium">{v}</dd></div></div>))}</dl>
   )
 }
-export function Page({ title, sub, actions, children }: { title: string; sub?: string; actions?: ReactNode; children: ReactNode }) {
-  return <div className="space-y-5"><div className="flex flex-wrap items-end justify-between gap-3"><div className="min-w-0"><h1 className="h1">{title}</h1>{sub && <p className="text-muted mt-1 max-w-3xl">{sub}</p>}</div>{actions && <div className="flex flex-wrap gap-2">{actions}</div>}</div>{children}</div>
+export function Page({ title, sub, actions, fit, body, children }: { title: string; sub?: string; actions?: ReactNode; fit?: boolean; body?: string; children: ReactNode }) {
+  const head = <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 shrink-0"><div className="min-w-0"><h1 className="h1">{title}</h1>{sub && <p className="text-muted text-sm sm:text-base mt-0.5 sm:mt-1 max-w-3xl line-clamp-2 sm:line-clamp-none">{sub}</p>}</div>{actions && <div className="flex flex-wrap gap-2">{actions}</div>}</div>
+  if (!fit) return <div className="space-y-4 sm:space-y-5">{head}{children}</div>
+  return <div className="space-y-4 sm:space-y-5 fit:space-y-0 fit:flex fit:flex-col fit:gap-3 fit:h-[var(--app-h)]">{head}<div className={`fit:flex-1 fit:min-h-0 ${body ?? 'space-y-4 fit:space-y-3 fit:overflow-hidden'}`}>{children}</div></div>
 }
 /** a sample post made for the prototype (not a real employer) */
 export function SampleBadge() {
@@ -208,12 +212,21 @@ export const Steps = ({ items, at }: { items: string[]; at: number }) => (
     </li>))}</ol>
 )
 /** two columns on large screens: the map stays in view on the left while the steps scroll on the right */
-export const MAP_SIZE = 'h-[300px] sm:h-[380px] lg:h-[calc(100vh-11rem)] lg:min-h-[420px] lg:max-h-[640px]'
-export function MapLayout({ map, children }: { map: ReactNode; children: ReactNode }) {
+export const MAP_SIZE = 'h-[260px] sm:h-[360px] lg:h-[calc(100vh-11rem)] lg:min-h-[420px] lg:max-h-[640px] fit:h-auto fit:flex-1 fit:min-h-0 fit:max-h-none'
+export function MapLayout({ map, children, hideMap }: { map: ReactNode; children: ReactNode; hideMap?: boolean }) {
   return (
-    <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-5 items-start">
-      <div className="lg:sticky lg:top-20 space-y-2">{map}</div>
-      <div className="space-y-4 min-w-0">{children}</div>
+    <div className={`grid ${hideMap ? '' : 'lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]'} gap-5 items-start fit:h-full fit:items-stretch`}>
+      {!hideMap && <div className="lg:sticky lg:top-20 space-y-2 fit:static fit:flex fit:flex-col fit:min-h-0">{map}</div>}
+      <div className="space-y-4 min-w-0 fit:min-h-0 fit:overflow-y-auto fit:pr-1">{children}</div>
+    </div>
+  )
+}
+/** tabs above a panel (owner, Oct 2026: split long pages instead of scrolling) */
+export function PanelTabs<K extends string>({ tabs, value, onChange, label }: { tabs: { k: K; text: string; n?: number }[]; value: K; onChange: (k: K) => void; label: string }) {
+  return (
+    <div role="tablist" aria-label={label} className="flex flex-wrap gap-1 rounded-2xl border border-line bg-surface p-1 shrink-0">
+      {tabs.map((x) => <button key={x.k} type="button" role="tab" aria-selected={value === x.k} onClick={() => onChange(x.k)}
+        className={`min-h-[38px] px-3.5 rounded-xl text-sm inline-flex items-center gap-1.5 ${value === x.k ? 'bg-primary text-onprimary font-semibold' : 'hover:bg-surface3'}`}>{x.text}{x.n !== undefined && <span className="text-xs opacity-75">{x.n}</span>}</button>)}
     </div>
   )
 }
@@ -221,6 +234,7 @@ export function MapLayout({ map, children }: { map: ReactNode; children: ReactNo
 /* ================= job seeker: origin → destination → pin (up to 5) ================= */
 export function SeekPage() {
   const { t } = useI18n()
+  const [seekTab, setSeekTab] = useState<'new' | 'mine'>('new')
   const N = useNames()
   const { st, limitNow, setOrigin, pin, unpin } = useMatch()
   const [editOrigin, setEditOrigin] = useState(false)
@@ -251,13 +265,15 @@ export function SeekPage() {
     else { fe.clear(); setMsg({ tone: 'danger', text: N.problem(r.problem) }) }
   }
   return (
-    <Page title={t('m.seek.title')}>
+    <Page title={t('m.seek.title')} fit>
       <MapLayout map={<>
         <GeoMap className={MAP_SIZE} label={t('m.mapLabel')} country={originStep ? oc : dc} province={originStep ? op : dp} pins={pins}
           onPickCountry={(c) => { if (originStep) { setOc(c); setOp(null) } else { setDc(c); setDp(null) } fe.clear() }} onPickProvince={(p) => { if (originStep) setOp(p); else setDp(p); fe.clear() }} />
         <p className="text-xs text-muted">{t('m.mapHint')}</p></>}>
-      <Steps items={[t('m.seek.s1'), t('m.seek.s2'), t('m.seek.s3')]} at={originStep ? 0 : dp ? 2 : 1} />
+      <PanelTabs label={t('m.seek.title')} value={seekTab} onChange={setSeekTab} tabs={[{ k: 'new', text: t('m.pin.tab.new') }, { k: 'mine', text: t('m.pins'), n: activePins(st.me, limitNow).length }]} />
       <Toast msg={msg} />
+      {seekTab === 'new' && (<>
+      <Steps items={[t('m.seek.s1'), t('m.seek.s2'), t('m.seek.s3')]} at={originStep ? 0 : dp ? 2 : 1} />
       {originStep ? (
         <section className="card space-y-3" aria-labelledby="s1h">
           <h2 id="s1h" className="h2">{t('m.seek.s1')}</h2>
@@ -280,12 +296,14 @@ export function SeekPage() {
           <button type="submit" className="btn-primary" disabled={pq.left <= 0 || (!!dc && !isCountry(dc))}><Icon name="pin" size={16} />{t('m.pin.go')}</button>
         </form>
       )}
+      </>)}
+      {seekTab === 'mine' && (
       <section className="space-y-2" aria-labelledby="pins-h">
         <h2 id="pins-h" className="h2">{t('m.pin.active', { n: activePins(st.me, limitNow).length })}</h2>
         <QuotaBar q={pq} kind="pin" />
         <p className="text-xs text-muted">{t('m.pin.why')}</p>
         <PinList onRemove={async (id) => { await unpin(id); setMsg({ tone: 'info', text: t('m.pin.removed') }) }} />
-      </section>
+      </section>)}
       </MapLayout>
     </Page>
   )
@@ -339,8 +357,8 @@ export function PostCard({ post, level, reached, children }: { post: Post; level
 export function SortToggle({ order, onChange }: { order: 'new' | 'old'; onChange: (o: 'new' | 'old') => void }) {
   const { t } = useI18n()
   return (
-    <button type="button" className="btn-ghost text-sm" onClick={() => onChange(order === 'new' ? 'old' : 'new')} title={t('m.sort.switch')}>
-      <Icon name={order === 'new' ? 'sortNew' : 'sortOld'} size={16} />{t(order === 'new' ? 'm.sort.new' : 'm.sort.old')}
+    <button type="button" className="btn-ghost text-sm !px-3 sm:!px-4" onClick={() => onChange(order === 'new' ? 'old' : 'new')} title={t('m.sort.switch')}>
+      <Icon name={order === 'new' ? 'sortNew' : 'sortOld'} size={16} /><span className="sr-only sm:not-sr-only">{t(order === 'new' ? 'm.sort.new' : 'm.sort.old')}</span>
     </button>
   )
 }
@@ -500,7 +518,9 @@ export function MePage() {
   const gate = useGate('me')
   if (gate) return <Page title={t('m.profile.title')}>{gate}</Page>
   return (
-    <Page title={t('m.profile.title')}>
+    <Page title={t('m.profile.title')} fit>
+      <div className="grid lg:grid-cols-2 gap-4 items-start">
+      <div className="space-y-4">
       <section className="glass-card p-5 space-y-2">
         <p><span className="text-muted">{t('m.profile.role')}:</span> <b>{st.role ? t(st.role === 'seeker' ? 'm.role.seeker' : 'm.role.employer') : t('m.profile.none')}</b></p>
         {st.role === 'seeker' && st.me.origin && <p className="text-sm">{t('m.seek.from', { p: N.place(st.me.origin.country, st.me.origin.province) })} · {t('m.pin.active', { n: activePins(st.me, limitNow).length })}</p>}
@@ -509,8 +529,10 @@ export function MePage() {
         <NavLink to="choose-role" className="btn-ghost inline-flex">{t('m.profile.change')}</NavLink>
         <p className="text-xs text-muted">{t('m.profile.note')}</p>
       </section>
-      {st.role === 'employer' && <VerifyCard />}
       <AccountSection />
+      </div>
+      {st.role === 'employer' && <VerifyCard />}
+      </div>
     </Page>
   )
 }
@@ -554,18 +576,27 @@ export function SettingsPage() {
   const [motion, setMotion] = useState(() => !motionOff())
   const [ask, askDialog] = useConfirm()
   return (
-    <Page title={t('m.settings.title')}>
-      <section className="card space-y-4">
+    <Page title={t('m.settings.title')} fit>
+      <div className="grid lg:grid-cols-2 gap-4 items-start">
+      <section className="card space-y-4" aria-label={t('m.settings.look')}>
         <fieldset><legend className="label">{t('m.settings.lang')}</legend><div className="flex flex-wrap gap-2">{LANGS.map((l) => <button key={l.id} type="button" lang={l.html} aria-pressed={lang === l.id} onClick={() => setLang(l.id)} className={`min-h-[44px] px-4 rounded-lg border ${lang === l.id ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{l.label}</button>)}</div></fieldset>
         <fieldset><legend className="label">{t('m.settings.theme')}</legend><div className="flex gap-2">{(['light', 'dark'] as const).map((m) => <button key={m} type="button" aria-pressed={theme === m} onClick={() => theme !== m && toggle()} className={`min-h-[44px] px-4 rounded-lg border flex items-center gap-2 ${theme === m ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}><Icon name={m} size={16} />{t(m === 'light' ? 'm.settings.light' : 'm.settings.dark')}</button>)}</div></fieldset>
         {/* accent colour (owner, Oct 2026): the swatch is decoration; the name is the label */}
         <fieldset aria-describedby="accent-hint"><legend className="label">{t('m.settings.accent')}</legend><div className="flex flex-wrap gap-2">{ACCENTS.map((a) => (
           <button key={a} type="button" aria-pressed={accent === a} onClick={() => { setAccent(a); setAccentMsg(t('m.settings.accentDone', { c: t(`m.accent.${a}` as never) })) }}
-            className={`min-h-[44px] pl-2 pr-4 rounded-lg border flex items-center gap-2 ${accent === a ? 'border-primary ring-2 ring-primary/40 font-semibold' : 'border-control hover:bg-surface3'}`}>
+            className={`min-h-[40px] pl-2 pr-3.5 rounded-lg border flex items-center gap-2 ${accent === a ? 'border-primary ring-2 ring-primary/40 font-semibold' : 'border-control hover:bg-surface3'}`}>
             <span aria-hidden className={`w-7 h-7 rounded-md swatch-${a}`} />{t(`m.accent.${a}` as never)}</button>))}</div>
           <p id="accent-hint" className="text-xs text-muted mt-1">{t('m.settings.accent.d')}</p>
-          <p role="status" className="text-sm font-medium text-primary mt-1">{accentMsg}</p></fieldset>
+          <p role="status" className="text-sm font-medium text-primary mt-1">{accentMsg}</p>
+          {/* a small preview in the chosen colour (decoration; the whole site changes with it) */}
+          <div aria-hidden className="mt-2 rounded-xl border border-line p-3 flex flex-wrap items-center gap-3" style={{ background: 'rgb(var(--page))' }}>
+            <span className="btn-primary text-sm pointer-events-none">{t('m.settings.preview.btn')}</span>
+            <span className="chip bg-brand text-brandfg border-primary/40">{t('m.settings.preview.chip')}</span>
+            <span className="flex-1 min-w-[80px] h-2 rounded-full bg-surface3 overflow-hidden"><span className="block h-full w-2/3 bg-primary rounded-full" /></span>
+          </div></fieldset>
         <fieldset><legend className="label">{t('m.settings.week')}</legend><div className="flex gap-2">{([0, 1] as const).map((w) => <button key={w} type="button" aria-pressed={weekStart === w} onClick={() => setWeekStart(w)} className={`min-h-[44px] px-4 rounded-lg border ${weekStart === w ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(w === 0 ? 'm.settings.week.sun' : 'm.settings.week.mon')}</button>)}</div></fieldset>
+      </section>
+      <section className="card space-y-4" aria-label={t('m.settings.other')}>
         {/* the home hero's moving lines (WCAG 2.2.2: a way to stop them; owner asked for no button on the hero itself) */}
         <fieldset aria-describedby="motion-hint"><legend className="label">{t('m.settings.motion')}</legend><div className="flex gap-2">{([true, false] as const).map((on) => <button key={String(on)} type="button" aria-pressed={motion === on} onClick={() => { setMotion(on); setMotionOff(!on) }} className={`min-h-[44px] px-4 rounded-lg border ${motion === on ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(on ? 'm.settings.on' : 'm.settings.off')}</button>)}</div>
           <p id="motion-hint" className="text-xs text-muted mt-1">{t('m.settings.motion.d')}</p></fieldset>
@@ -575,6 +606,7 @@ export function SettingsPage() {
           <p role="status" className="text-sm">{done && t('m.settings.resetDone')}</p></div>}
         {askDialog}
       </section>
+      </div>
     </Page>
   )
 }
@@ -584,8 +616,10 @@ export function HelpPage() {
 }
 
 /* ================= admin back office ================= */
-/* The back office in tabs (owner, Oct 2026: one long page was hard to read): an overview of what needs attention, then one tab each
-   for verification requests, reports, cases and posts — compact rows, smaller type. Arrow keys move between the tabs. */
+/* The back office in tabs (owner, Oct 2026: one long page was hard to read; on a computer it must not scroll): an overview of what
+   needs attention, then one tab each for verification requests, reports, cases and posts — compact rows, smaller type. On a
+   computer the page takes exactly the screen and long lists turn into pages; a post's details open in a side panel. Arrow keys
+   move between the tabs. */
 type AdminTab = 'overview' | 'verify' | 'reports' | 'cases' | 'posts'
 const ADMIN_TABS: { k: AdminTab; icon: IconName }[] = [{ k: 'overview', icon: 'overview' }, { k: 'verify', icon: 'shield' }, { k: 'reports', icon: 'alert' }, { k: 'cases', icon: 'plane' }, { k: 'posts', icon: 'posts' }]
 const ROW = 'rounded-xl border border-line bg-surface px-4 py-3 text-sm'
@@ -596,6 +630,7 @@ export function BackofficePage() {
   const { isAdmin } = useAuth()
   const nameOf = useApplicantName()
   const [tab, setTab] = useState<AdminTab>('overview')
+  const [postOpen, setPostOpen] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   const [ask, askDialog] = useConfirm()
   if (!isAdmin) return <Page title={t('m.adm.title')}><Warn>{t('m.adm.gate')}</Warn></Page>
@@ -620,13 +655,14 @@ export function BackofficePage() {
     if (e.key === 'End') { e.preventDefault(); go(ADMIN_TABS[ADMIN_TABS.length - 1].k) }
   }
   const empty = (text: string) => <p className={`${ROW} text-muted`}>{text}</p>
+  const detail = postOpen ? st.posts.find((p) => p.id === postOpen) : undefined
 
   return (
-    <Page title={t('m.adm.title')} sub={t('m.adm.sub2')}
+    <Page title={t('m.adm.title')} sub={t('m.adm.sub2')} fit body="flex flex-col gap-3"
       actions={<NavLink to="analytics" className="btn-ghost text-sm !rounded-full"><Icon name="chart" size={15} />{t('m.an.title')}</NavLink>}>
       <Toast msg={msg} />
       {askDialog}
-      <div role="tablist" aria-label={t('m.adm.tabs')} onKeyDown={keys} className="flex flex-wrap gap-1 rounded-2xl border border-line bg-surface p-1">
+      <div role="tablist" aria-label={t('m.adm.tabs')} onKeyDown={keys} className="shrink-0 flex flex-wrap gap-1 rounded-2xl border border-line bg-surface p-1">
         {ADMIN_TABS.map(({ k, icon }) => (
           <button key={k} id={`adm-tab-${k}`} type="button" role="tab" aria-selected={tab === k} aria-controls="adm-panel" tabIndex={tab === k ? 0 : -1} onClick={() => setTab(k)}
             className={`min-h-[40px] px-3.5 rounded-xl text-sm inline-flex items-center gap-2 ${tab === k ? 'bg-primary text-onprimary font-semibold' : 'hover:bg-surface3'}`}>
@@ -635,7 +671,7 @@ export function BackofficePage() {
           </button>))}
       </div>
 
-      <section id="adm-panel" role="tabpanel" aria-labelledby={`adm-tab-${tab}`} className="space-y-3">
+      <section id="adm-panel" role="tabpanel" aria-labelledby={`adm-tab-${tab}`} className="space-y-3 fit:flex-1 fit:min-h-0 fit:flex fit:flex-col fit:overflow-hidden">
         {tab === 'overview' && (<>
           <h2 className="text-base font-semibold">{t('m.adm.attn')}</h2>
           <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">{(['verify', 'reports', 'cases', 'posts'] as const).map((k) => (
@@ -648,84 +684,91 @@ export function BackofficePage() {
             <div className="space-y-2"><h2 className="text-base font-semibold">{t('m.adm.stats')}</h2>
               <dl className="grid grid-cols-3 lg:grid-cols-6 gap-2">{([['m.adm.st.users', stats.users], ['m.adm.st.employers', stats.employers], ['m.adm.st.seekers', stats.seekers], ['m.adm.st.posts', stats.posts], ['m.adm.st.posts7', stats.posts_7d], ['m.adm.st.acc', stats.acceptances]] as const).map(([k, v]) => (
                 <div key={k} className={ROW}><dt className="text-xs text-muted">{t(k)}</dt><dd className="text-xl font-bold">{v}</dd></div>))}</dl></div>)}
-          <details className={ROW}><summary className="cursor-pointer font-medium">{t('m.adm.demoClock')}</summary><div className="pt-3"><ClockControls /></div></details>
+          <div className={`${ROW} space-y-2`}><p className="font-medium">{t('m.adm.demoClock')}</p><ClockControls /></div>
           <p className="text-xs text-muted">{t('m.adm.ai')}</p>
         </>)}
 
         {tab === 'verify' && (<>
-          <p className="text-xs text-muted">{t('m.adm.verifyCheck')}</p>
-          {!pendingVerifications.length ? empty(t('m.adm.verifyNone')) : (
-            <ul className="space-y-2">{pendingVerifications.map((v) => (
-              <li key={v.id ?? 'me'} className={`${ROW} flex flex-wrap items-center justify-between gap-3`}>
-                <div className="min-w-0"><p className="font-semibold">{v.company || '—'} <span className="font-normal text-muted">· {v.name}</span></p>
-                  <p className="text-xs text-muted">{t(`geo.c.${v.country}` as never)} · <span className="font-mono">{v.regNo}</span>{v.at ? ` · ${N.dayTime(Date.parse(v.at))}` : ''}</p></div>
-                <div className="flex gap-2"><button type="button" className="btn-primary text-sm" onClick={() => void decideV(v.id, true)}><Icon name="ok" size={15} />{t('m.adm.approve')}</button>
-                  <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideV(v.id, false)}>{t('m.adm.reject')}</button></div>
-              </li>))}</ul>)}
+          <p className="text-xs text-muted shrink-0">{t('m.adm.verifyCheck')}</p>
+          <div className="fit:flex-1 fit:min-h-0"><PagedList items={pendingVerifications} rowH={66} keyOf={(v) => v.id ?? 'me'} empty={empty(t('m.adm.verifyNone'))} render={(v) => (
+            <div className={`${ROW} flex flex-wrap items-center justify-between gap-3`}>
+              <div className="min-w-0"><p className="font-semibold">{v.company || '—'} <span className="font-normal text-muted">· {v.name}</span></p>
+                <p className="text-xs text-muted">{t(`geo.c.${v.country}` as never)} · <span className="font-mono">{v.regNo}</span>{v.at ? ` · ${N.dayTime(Date.parse(v.at))}` : ''}</p></div>
+              <div className="flex gap-2"><button type="button" className="btn-primary text-sm" onClick={() => void decideV(v.id, true)}><Icon name="ok" size={15} />{t('m.adm.approve')}</button>
+                <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideV(v.id, false)}>{t('m.adm.reject')}</button></div>
+            </div>)} /></div>
         </>)}
 
-        {tab === 'reports' && (!reports.length ? empty(t('m.adm.reportsNone')) : (
-          <ul className="space-y-2">{reports.map((g) => {
+        {tab === 'reports' && (
+          <div className="fit:flex-1 fit:min-h-0"><PagedList items={reports} rowH={150} keyOf={(g) => g.postId} empty={empty(t('m.adm.reportsNone'))} render={(g) => {
             const p = st.posts.find((x) => x.id === g.postId)
             return (
-              <li key={g.postId} className={`${ROW} space-y-2`}>
+              <div className={`${ROW} space-y-2`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-semibold min-w-0">{p ? <NavLink to={`post?id=${p.id}`} className="hover:underline underline-offset-4">{p.position} · {p.company}</NavLink> : t('m.adm.reportsGone')}</p>
                   <p className="flex flex-wrap gap-1.5"><span className="chip bg-danger-bg text-danger-fg border-danger-line"><Icon name="alert" size={12} />{t('m.adm.reportsBy', { n: g.count })}</span>
                     {p?.hidden && <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="eyeOff" size={12} />{t('m.adm.hidden')}</span>}</p>
                 </div>
                 <p className="flex flex-wrap gap-1.5">{Object.entries(g.reasons).map(([k, n]) => <span key={k} className="chip bg-surface3 border-line">{t(`m.rpt.r.${k}` as never)} × {n}</span>)}</p>
-                {g.notes.length > 0 && <ul className="text-xs text-muted space-y-0.5">{g.notes.map((n, i) => <li key={i}>“{n}”</li>)}</ul>}
+                {g.notes.length > 0 && <p className="text-xs text-muted line-clamp-1">{g.notes.map((n) => `“${n}”`).join(' · ')}</p>}
                 {p && <div className="flex flex-wrap gap-2">
                   <button type="button" className="btn-ghost text-sm" onClick={() => void decideR(g.postId, 'dismiss')}><Icon name="ok" size={15} />{t('m.adm.dismiss')}</button>
                   <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideR(g.postId, 'remove')}><Icon name="trash" size={15} />{t('m.adm.remove')}</button>
                   {!p.employerId.startsWith('sample:') && <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideR(g.postId, 'suspend')}><Icon name="lock" size={15} />{t('m.adm.suspend')}</button>}
                 </div>}
-              </li>)
-          })}</ul>))}
+              </div>)
+          }} /></div>)}
 
-        {tab === 'cases' && (!st.cases.length ? empty(t('m.adm.casesNone')) : (
-          <ul className="space-y-2">{[...st.cases].sort((a, b) => Number(currentStep(a) === null) - Number(currentStep(b) === null)).map((c) => {
+        {tab === 'cases' && (
+          <div className="fit:flex-1 fit:min-h-0"><PagedList items={[...st.cases].sort((a, b) => Number(currentStep(a) === null) - Number(currentStep(b) === null))} rowH={62} keyOf={(c) => c.id} empty={empty(t('m.adm.casesNone'))} render={(c) => {
             const p = st.posts.find((x) => x.id === c.postId), a = st.acceptances.find((x) => x.id === c.accId), cur = currentStep(c)
             return (
-              <li key={c.id} className={`${ROW} flex flex-wrap items-center justify-between gap-3`}>
-                <div className="min-w-0"><p className="font-semibold">{p ? `${p.position} · ${p.company}` : '—'}</p>
-                  <p className="text-xs text-muted">{a ? nameOf(a) : '—'} · {cur ? t(`m.cs.s.${cur}` as never) : t('m.cs.n.closed')} · {t('m.cs.progress', { n: stepsDone(c) })}</p></div>
+              <div className={`${ROW} flex flex-wrap items-center justify-between gap-3`}>
+                <div className="min-w-0"><p className="font-semibold truncate">{p ? `${p.position} · ${p.company}` : '—'}</p>
+                  <p className="text-xs text-muted truncate">{a ? nameOf(a) : '—'} · {cur ? t(`m.cs.s.${cur}` as never) : t('m.cs.n.closed')} · {t('m.cs.progress', { n: stepsDone(c) })}</p></div>
                 <NavLink to={`case?id=${c.id}`} className="btn-ghost text-sm"><Icon name="plane" size={15} />{t('m.cs.open')}</NavLink>
-              </li>)
-          })}</ul>))}
+              </div>)
+          }} /></div>)}
 
         {tab === 'posts' && (
-          <ul className="space-y-2">{st.posts.map((p) => {
+          <div className="fit:flex-1 fit:min-h-0"><PagedList items={st.posts} rowH={62} keyOf={(p) => p.id} render={(p) => {
             const stage = capStage(stageAt(scheduleOf(p, pool, now), now), p)
-            const reach = people.map((s) => ({ s, r: reachFor(p, s.pins, pool, now) }))
-            const reached = reach.filter((x) => x.r.visible), waiting = reach.filter((x) => !x.r.visible && x.r.level < 5)
-            const acc = st.acceptances.filter((a) => a.postId === p.id).sort((a, b) => a.at.localeCompare(b.at))
+            const acc = st.acceptances.filter((a) => a.postId === p.id)
+            const reached = people.filter((s) => reachFor(p, s.pins, pool, now).visible).length
             return (
-              <li key={p.id} className={ROW}>
-                <details>
-                  <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-2">
-                    <span className="min-w-0"><h3 className="font-semibold">{p.position} · {p.company} {p.sample && <SampleBadge />}</h3>
-                      <span className="block text-xs text-muted">{N.place(p.country, p.province)} · {N.industry(p.industry)} · {t('m.adm.applicants', { n: acc.length })} · {t('m.adm.reachedN', { n: reached.length })}</span></span>
-                    <span className="flex items-center gap-2">{stage !== 'expired' && <LevelBadge level={stage} reached />}<Icon name="down" size={15} className="text-muted" /></span>
-                  </summary>
-                  <div className="pt-3 mt-3 border-t border-line space-y-3">
-                    <PostFacts post={p} compact />
-                    <div className="grid sm:grid-cols-2 gap-3 text-xs">
-                      <div><p className="font-medium">{t('m.adm.reached')} ({reached.length})</p><p className="text-muted">{reached.map((x) => x.s.name).join(', ') || t('m.adm.none')}</p></div>
-                      <div><p className="font-medium">{t('m.adm.waiting')}</p><p className="text-muted">{waiting.map((x) => `${x.s.name} (${t('m.lv.short', { n: x.r.level })})`).join(', ') || t('m.adm.none')}</p></div>
-                    </div>
-                    {acc.map((a) => (
-                      <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <span><Icon name="ok" size={14} className="inline text-ok-fg" /> {nameOf(a)} · {t(`m.as.${a.status}` as never)}</span>
-                        {(() => { const c = st.cases.find((x) => x.accId === a.id); return c ? <NavLink to={`case?id=${c.id}`} className="text-primary underline underline-offset-4 min-h-[24px] inline-flex items-center">{t('m.adm.forwarded')}</NavLink> : null })()}
-                      </div>))}
-                    <div className="flex justify-end"><button type="button" className="btn-ghost text-sm text-danger-fg" onClick={async () => { if (await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true })) setMsg((await deletePost(p.id)) ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') }) }}><Icon name="trash" size={15} />{t('m.post.delete')}</button></div>
-                  </div>
-                </details>
-              </li>)
-          })}</ul>)}
+              <button type="button" onClick={() => setPostOpen(p.id)} className={`${ROW} w-full text-left flex flex-wrap items-center justify-between gap-2 hover:bg-surface3`}>
+                <span className="min-w-0"><h3 className="font-semibold">{p.position} · {p.company} {p.sample && <SampleBadge />}</h3>
+                  <span className="block text-xs text-muted truncate">{N.place(p.country, p.province)} · {N.industry(p.industry)} · {t('m.adm.applicants', { n: acc.length })} · {t('m.adm.reachedN', { n: reached })}</span></span>
+                <span className="flex items-center gap-2">{stage !== 'expired' && <LevelBadge level={stage} reached />}<Icon name="next" size={15} className="text-muted" /></span>
+              </button>)
+          }} /></div>)}
       </section>
+
+      <Drawer open={!!detail} onClose={() => setPostOpen(null)}>{(titleId) => {
+        if (!detail) return null
+        const p = detail
+        const reach = people.map((s) => ({ s, r: reachFor(p, s.pins, pool, now) }))
+        const reached = reach.filter((x) => x.r.visible), waiting = reach.filter((x) => !x.r.visible && x.r.level < 5)
+        const acc = st.acceptances.filter((a) => a.postId === p.id).sort((a, b) => a.at.localeCompare(b.at))
+        return (<>
+          <h2 id={titleId} className="h2 pr-10">{p.position} · {p.company}</h2>
+          <p className="text-sm text-muted">{N.place(p.country, p.province)} · {N.industry(p.industry)} {p.sample && <SampleBadge />}</p>
+          <PostFacts post={p} compact />
+          <div className="grid gap-3 text-sm">
+            <div><p className="font-medium">{t('m.adm.reached')} ({reached.length})</p><p className="text-muted">{reached.map((x) => x.s.name).join(', ') || t('m.adm.none')}</p></div>
+            <div><p className="font-medium">{t('m.adm.waiting')}</p><p className="text-muted">{waiting.map((x) => `${x.s.name} (${t('m.lv.short', { n: x.r.level })})`).join(', ') || t('m.adm.none')}</p></div>
+          </div>
+          {acc.length > 0 && <ul className="space-y-1 text-sm border-t border-line pt-3">{acc.map((a) => (
+            <li key={a.id} className="flex flex-wrap items-center justify-between gap-2">
+              <span><Icon name="ok" size={14} className="inline text-ok-fg" /> {nameOf(a)} · {t(`m.as.${a.status}` as never)}</span>
+              {(() => { const c = st.cases.find((x) => x.accId === a.id); return c ? <NavLink to={`case?id=${c.id}`} className="text-primary underline underline-offset-4 min-h-[24px] inline-flex items-center">{t('m.adm.forwarded')}</NavLink> : null })()}
+            </li>))}</ul>}
+          <div className="flex flex-wrap justify-between gap-2 border-t border-line pt-3">
+            <NavLink to={`post?id=${p.id}`} className="btn-ghost text-sm">{t('m.bd.openFull')}</NavLink>
+            <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={async () => { if (await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true })) { const ok = await deletePost(p.id); setMsg(ok ? { tone: 'info', text: t('m.post.deleted') } : { tone: 'danger', text: t('m.post.delete.fail') }); if (ok) setPostOpen(null) } }}><Icon name="trash" size={15} />{t('m.post.delete')}</button>
+          </div>
+        </>)
+      }}</Drawer>
     </Page>
   )
 }

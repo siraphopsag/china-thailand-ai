@@ -190,7 +190,8 @@ describe('pages', () => {
     expect(h).toContain(T('m.cs.progress', { n: 5 }))
     expect(h).toContain(T('m.cs.left', { n: 2, t: 4 }))
     expect(h).toContain(T('m.cs.ag.demo'))
-    expect(h).toContain(T('m.cs.legal'))
+    expect(h).toContain(T('m.cs.legal.h')) // "who really handles it" is one of the case tabs
+    expect(src('./pages/case.tsx')).toContain("{tab === 'legal' && (<>")
     expect(h).toContain(T('m.cs.noFee'))
     expect(h).toContain('aria-current="step"')
     expect(html(<CasePage />, st, '?id=nope')).toContain(T('m.cs.notFound'))

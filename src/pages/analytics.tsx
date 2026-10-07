@@ -10,6 +10,8 @@ import { METRICS, RANGES, STAGES, caseStages, change, heatWeeks, parseDaily, per
 import { AreaChart, Donut, Heatmap, Sparkline } from '../components/charts'
 import { Icon, type IconName } from '../components/icons'
 import { Warn } from '../components/ui'
+import { Modal } from '../components/modal'
+import { useFit } from '../components/pager'
 import { Page } from './match'
 
 /**
@@ -40,6 +42,8 @@ export function AnalyticsPage() {
   const [metric, setMetric] = useState<Metric>('visits')
   const [rows, setRows] = useState<DayRow[] | null>(null)
   const [problem, setProblem] = useState<'dbOld' | 'network' | null>(null)
+  const [table, setTable] = useState(false)
+  const fit = useFit()
   const today = localDay(new Date(now).toISOString())
   const real = mode === 'remote' && isAdmin
   const need = Math.max(range * 2, 140)
@@ -71,17 +75,15 @@ export function AnalyticsPage() {
   }
 
   return (
-    <Page title={t('m.an.title')} sub={t('m.an.sub')}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1.5 rounded-full border border-line p-1 bg-surface" role="group" aria-label={t('m.an.range')}>
-          {RANGES.map((r) => <button key={r} type="button" aria-pressed={range === r} onClick={() => setRange(r)} className={`min-h-[36px] px-3.5 rounded-full text-sm ${range === r ? 'bg-primary text-onprimary font-semibold' : 'hover:bg-surface3'}`}>{t('m.an.days', { n: r })}</button>)}
+    <Page title={t('m.an.title')} sub={t('m.an.sub')} fit body="flex flex-col gap-3"
+      actions={<>
+        <div className="flex gap-1 rounded-full border border-line p-1 bg-surface" role="group" aria-label={t('m.an.range')}>
+          {RANGES.map((r) => <button key={r} type="button" aria-pressed={range === r} onClick={() => setRange(r)} className={`min-h-[34px] px-3 rounded-full text-sm ${range === r ? 'bg-primary text-onprimary font-semibold' : 'hover:bg-surface3'}`}>{t('m.an.days', { n: r })}</button>)}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <NavLink to="backoffice" className="btn-ghost text-sm"><Icon name="shield" size={15} />{t('m.admin')}</NavLink>
-          <button type="button" className="btn-ghost text-sm" onClick={csv} disabled={!data}><Icon name="download" size={15} />{t('m.an.csv')}</button>
-        </div>
-      </div>
-      {sample && <Warn tone="info">{t(problem === 'dbOld' ? 'm.an.sampleDb' : problem === 'network' ? 'm.an.sampleNet' : 'm.an.sample')}</Warn>}
+        <button type="button" className="btn-ghost text-sm !rounded-full" onClick={csv} disabled={!data}><Icon name="download" size={15} />{t('m.an.csv')}</button>
+        <NavLink to="backoffice" className="btn-ghost text-sm !rounded-full"><Icon name="shield" size={15} />{t('m.admin')}</NavLink>
+      </>}>
+      {sample && <p role="note" className="shrink-0 text-xs text-info-fg bg-info-bg border border-info-line rounded-lg px-3 py-1.5 flex items-center gap-1.5"><Icon name="info" size={14} />{t(problem === 'dbOld' ? 'm.an.sampleDb' : problem === 'network' ? 'm.an.sampleNet' : 'm.an.sample')}</p>}
       {!data ? <p className="text-muted py-10 text-center" role="status">{t('c.loading')}</p> : (() => {
         const { cur, prev } = periods(data, range)
         const points = cur.map((r) => ({ day: r.day, n: r[metric] }))
@@ -93,50 +95,54 @@ export function AnalyticsPage() {
         const wd = weeks[0].map((x) => new Intl.DateTimeFormat(locale(lang), { weekday: 'short' }).format(new Date(Number(x.day.slice(0, 4)), Number(x.day.slice(5, 7)) - 1, Number(x.day.slice(8, 10)))))
         return (<>
           {/* key numbers against the period before */}
-          <dl className="grid grid-cols-2 lg:grid-cols-4 gap-3">{KPI.map(({ m, icon }) => {
+          <dl className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3">{KPI.map(({ m, icon }) => {
             const a = total(cur, m), b = total(prev, m), c = change(a, b)
             return (
-              <div key={m} className="glass-card p-4 space-y-1">
+              <div key={m} className="glass-card p-3 sm:p-4 fit:p-3">
                 <dt className="text-xs text-muted flex items-center justify-between gap-2">{name(m)}<Icon name={icon} size={15} /></dt>
-                <dd className="text-3xl font-bold">{fmtN(a)}</dd>
+                <dd className="flex items-end justify-between gap-2"><span className="text-2xl sm:text-3xl fit:text-2xl font-bold">{fmtN(a)}</span><span className="w-24 shrink-0"><Sparkline values={cur.map((r) => r[m])} /></span></dd>
                 <dd className="text-xs text-muted flex items-center gap-1">{c === null ? t('m.an.new') : <><Icon name={c >= 0 ? 'up' : 'down'} size={13} />{t('m.an.vs', { p: `${c > 0 ? '+' : ''}${c}%`, n: range })}</>}</dd>
-                <dd><Sparkline values={cur.map((r) => r[m])} /></dd>
               </div>)
           })}</dl>
 
-          <div className="grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-4 items-start">
-            <section className="card space-y-3" aria-labelledby="an-trend">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div><h2 id="an-trend" className="h2">{t('m.an.trend', { m: name(metric) })}</h2><p className="text-xs text-muted">{t('m.an.trendSub', { n: range })}</p></div>
+          <div className="grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-3 fit:flex-1 fit:min-h-0">
+            <section className="card !p-4 space-y-2 fit:flex fit:flex-col fit:min-h-0" aria-labelledby="an-trend">
+              <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
+                <h2 id="an-trend" className="h2">{t('m.an.trend', { m: name(metric) })} <span className="text-xs font-normal text-muted">· {t('m.an.trendSub', { n: range })}</span></h2>
                 <p className="text-xs text-muted flex gap-3"><span className="inline-flex items-center gap-1.5"><span className="inline-block w-5 border-t-2 border-primary" />{t('m.an.thisPeriod')}</span><span className="inline-flex items-center gap-1.5"><span className="inline-block w-5 border-t-2 border-dashed border-muted" />{t('m.an.prevPeriod')}</span></p>
               </div>
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('m.an.metric')}>{METRICS.map((m) => <button key={m} type="button" aria-pressed={metric === m} onClick={() => setMetric(m)} className={`min-h-[34px] px-3 rounded-full border text-xs ${metric === m ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{name(m)}</button>)}</div>
-              <AreaChart points={points} prev={prevVals} label={t('m.an.chartLabel', { m: name(metric), n: range, total: fmtN(total(cur, metric)) })} dayLabel={dayLabel}
-                valueLabel={(n) => `${fmtN(n)} ${name(metric)}`} prevLabel={(n) => t('m.an.prevValue', { n: fmtN(n) })} />
-              <details className="text-sm"><summary className="cursor-pointer text-primary underline underline-offset-4 min-h-[24px]">{t('m.an.table')}</summary>
-                <div className="max-h-64 overflow-auto mt-2"><table className="w-full text-left text-xs"><thead><tr className="text-muted"><th className="py-1 pr-2">{t('m.an.day')}</th><th className="py-1 pr-2">{name(metric)}</th>{prevVals && <th className="py-1">{t('m.an.prevPeriod')}</th>}</tr></thead>
-                  <tbody>{points.map((p, i) => <tr key={p.day} className="border-t border-line"><td className="py-1 pr-2">{dayLabel(p.day)}</td><td className="py-1 pr-2">{fmtN(p.n)}</td>{prevVals && <td className="py-1">{fmtN(prevVals[i])}</td>}</tr>)}</tbody></table></div></details>
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0" role="group" aria-label={t('m.an.metric')}>{METRICS.map((m) => <button key={m} type="button" aria-pressed={metric === m} onClick={() => setMetric(m)} className={`min-h-[32px] px-3 rounded-full border text-xs ${metric === m ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{name(m)}</button>)}
+                <button type="button" className="ml-auto text-xs text-primary underline underline-offset-4 min-h-[32px]" onClick={() => setTable(true)}>{t('m.an.table')}</button></div>
+              <div className="fit:flex-1 fit:min-h-0"><AreaChart fill={fit} points={points} prev={prevVals} label={t('m.an.chartLabel', { m: name(metric), n: range, total: fmtN(total(cur, metric)) })} dayLabel={dayLabel}
+                valueLabel={(n) => `${fmtN(n)} ${name(metric)}`} prevLabel={(n) => t('m.an.prevValue', { n: fmtN(n) })} /></div>
+              <p className="text-[11px] text-muted flex items-start gap-1.5 shrink-0"><Icon name="lock" size={12} className="mt-0.5" />{t('m.an.privacy')}</p>
+              <Modal open={table} onClose={() => setTable(false)} wide>{(titleId) => (<>
+                <h2 id={titleId} className="h2">{t('m.an.trend', { m: name(metric) })}</h2>
+                <div className="max-h-[60vh] overflow-auto"><table className="w-full text-left text-sm"><thead><tr className="text-muted text-xs"><th className="py-1 pr-2">{t('m.an.day')}</th><th className="py-1 pr-2">{name(metric)}</th>{prevVals && <th className="py-1">{t('m.an.prevPeriod')}</th>}</tr></thead>
+                  <tbody>{points.map((p, i) => <tr key={p.day} className="border-t border-line"><td className="py-1 pr-2">{dayLabel(p.day)}</td><td className="py-1 pr-2">{fmtN(p.n)}</td>{prevVals && <td className="py-1">{fmtN(prevVals[i])}</td>}</tr>)}</tbody></table></div>
+                <div className="flex justify-end"><button type="button" className="btn-ghost" onClick={() => setTable(false)}>{t('m.bd.close')}</button></div>
+              </>)}</Modal>
             </section>
 
-            <section className="card space-y-3" aria-labelledby="an-cases">
-              <h2 id="an-cases" className="h2">{t('m.an.cases')}</h2>
-              <div className="flex flex-wrap items-center gap-4">
-                <Donut parts={STAGES.map((s) => ({ key: s, n: stages[s] }))} total={allCases} totalLabel={t('m.an.casesTotal')} />
-                <ul className="space-y-1.5 text-sm flex-1 min-w-[150px]">{STAGES.map((s, i) => (
-                  <li key={s} className="flex items-center justify-between gap-2"><span className="inline-flex items-center gap-2"><span className={`viz-key viz-c${i + 1}`} aria-hidden />{t(`m.an.st.${s}` as never)}</span><b>{stages[s]}</b></li>))}</ul>
-              </div>
-              <p className="text-xs text-muted">{t('m.an.casesNote')}</p>
-            </section>
-          </div>
-
-          <section className="card space-y-2" aria-labelledby="an-heat">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div><h2 id="an-heat" className="h2">{t('m.an.activity')}</h2><p className="text-xs text-muted">{t('m.an.activitySub')}</p></div>
-              <p className="text-xs text-muted flex items-center gap-1" aria-hidden>{t('m.an.less')}{[0, 1, 2, 3, 4].map((l) => <svg key={l} width="12" height="12"><rect width="12" height="12" rx="3" className={`viz-h${l}`} /></svg>)}{t('m.an.more')}</p>
+            <div className="space-y-3 fit:min-h-0 fit:flex fit:flex-col">
+              <section className="card !p-4 space-y-2 shrink-0" aria-labelledby="an-cases">
+                <h2 id="an-cases" className="h2">{t('m.an.cases')}</h2>
+                <div className="flex items-center gap-3">
+                  <div className="w-28 shrink-0 [&>svg]:w-28 [&>svg]:h-28"><Donut parts={STAGES.map((s) => ({ key: s, n: stages[s] }))} total={allCases} totalLabel={t('m.an.casesTotal')} /></div>
+                  <ul className="space-y-1 text-xs flex-1 min-w-0">{STAGES.map((s, i) => (
+                    <li key={s} className="flex items-center justify-between gap-2"><span className="inline-flex items-center gap-2 min-w-0"><span className={`viz-key viz-c${i + 1} shrink-0`} aria-hidden /><span className="truncate">{t(`m.an.st.${s}` as never)}</span></span><b>{stages[s]}</b></li>))}</ul>
+                </div>
+              </section>
+              <section className="card !p-4 space-y-2 fit:flex-1 fit:min-h-0 fit:overflow-hidden" aria-labelledby="an-heat">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 id="an-heat" className="h2">{t('m.an.activity')}</h2>
+                  <p className="text-xs text-muted flex items-center gap-1" aria-hidden>{t('m.an.less')}{[0, 1, 2, 3, 4].map((l) => <svg key={l} width="11" height="11"><rect width="11" height="11" rx="2.5" className={`viz-h${l}`} /></svg>)}{t('m.an.more')}</p>
+                </div>
+                <p className="text-xs text-muted fit:line-clamp-1" title={t('m.an.activitySub')}>{t('m.an.activitySub')}</p>
+                <Heatmap weeks={weeks} max={max} weekdayLabels={wd} cellLabel={(d, n) => `${dayLabel(d)}: ${fmtN(n)}`} />
+              </section>
             </div>
-            <Heatmap weeks={weeks} max={max} weekdayLabels={wd} cellLabel={(d, n) => `${dayLabel(d)}: ${fmtN(n)}`} />
-          </section>
-          <p className="text-xs text-muted flex items-start gap-1.5"><Icon name="lock" size={13} className="mt-0.5" />{t('m.an.privacy')}</p>
+          </div>
         </>)
       })()}
     </Page>

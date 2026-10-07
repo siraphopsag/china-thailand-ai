@@ -73,8 +73,8 @@ export function PostPage() {
   const statusLine = (a: Acceptance) => a.status === 'reserved' ? t('m.ap.inQueue', { n: c.reserved }) : t(`m.as.${a.status}` as never)
 
   return (
-    <Page title={p.position} sub={`${p.company} · ${N.place(p.country, p.province)} · ${N.industry(p.industry)}`}>
-      <div className="flex flex-wrap items-center gap-2">
+    <Page title={p.position} sub={`${p.company} · ${N.place(p.country, p.province)} · ${N.industry(p.industry)}`} fit body="flex flex-col gap-3">
+      <div className="shrink-0 flex flex-wrap items-center gap-2">
         {stage !== 'expired' && <LevelBadge level={mine || !reach ? stage : reach.level} reached={mine || !reach} />}
         <span className="chip bg-surface3 border-line"><Icon name="users" size={12} />{t('m.cnt.held', { n: c.held, max: cap })}</span>
         {c.reserved > 0 && <span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ticket" size={12} />{t('m.cnt.reserved', { n: c.reserved })}</span>}
@@ -84,20 +84,20 @@ export function PostPage() {
         {p.sample && <SampleBadge />}
       </div>
       {/* real people only: others who have this post open now, and how many are filling in the form (database mode) */}
-      <div role="status" aria-live="polite" className="space-y-1">
+      <div role="status" aria-live="polite" className="space-y-1 shrink-0 empty:hidden">
         {presence && presence.viewing > 0 && <p className="text-sm font-medium text-primary flex items-center gap-1.5"><Icon name="eye" size={16} />{t('m.live.viewing', { n: presence.viewing })}</p>}
         {presence && presence.filling > 0 && <p className="text-sm font-medium text-warn-fg flex items-center gap-1.5"><Icon name="edit" size={16} />{t('m.live.filling', { n: presence.filling })}</p>}
       </div>
-      {!p.verified && !mine && <Warn>{t('m.vf.warnSeeker')}</Warn>}
-      {mine && p.hidden && <Warn tone="danger">{t('m.rpt.hiddenOwner')}</Warn>}
+      {!p.verified && !mine && <div className="shrink-0"><Warn>{t('m.vf.warnSeeker')}</Warn></div>}
+      {mine && p.hidden && <div className="shrink-0"><Warn tone="danger">{t('m.rpt.hiddenOwner')}</Warn></div>}
       <Toast msg={msg} />
       {askDialog}
 
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-5 items-start">
-        <div className="space-y-5 min-w-0">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] xl:grid-cols-3 gap-4 items-start fit:flex-1 fit:min-h-0 fit:items-stretch">
+        <div className="space-y-4 min-w-0 xl:contents fit:min-h-0 fit:overflow-y-auto">
           {/* ---------- job seeker: apply / reserve / my application ---------- */}
           {!mine && st.role === 'seeker' && (
-            <section className="card space-y-3" aria-labelledby="ap-h">
+            <section className="card space-y-3 xl:self-start fit:min-h-0 fit:overflow-y-auto" aria-labelledby="ap-h">
               {myApp ? (<>
                 <h2 id="ap-h" className="h2">{t('m.ap.mine')}</h2>
                 <p className="font-medium flex items-center gap-2"><Icon name={myApp.status === 'rejected' ? 'info' : 'ok'} size={18} className={myApp.status === 'rejected' ? 'text-muted' : 'text-ok-fg'} />{statusLine(myApp)}</p>
@@ -126,7 +126,7 @@ export function PostPage() {
 
           {/* ---------- employer: applicants, queue, renew ---------- */}
           {mine && (
-            <section className="card space-y-3" aria-labelledby="em-h">
+            <section className="card space-y-3 xl:self-start fit:min-h-0 fit:overflow-y-auto" aria-labelledby="em-h">
               <h2 id="em-h" className="h2">{t('m.em.title')}</h2>
               {now >= s.warnAt && <Warn>{t('m.em.expiring', { t: until(s.expiresAt) })}</Warn>}
               <p className="text-sm text-muted">{t('m.em.life', { d: N.dayTime(s.expiresAt) })}</p>
@@ -160,7 +160,7 @@ export function PostPage() {
             </section>)}
 
           {/* ---------- the release, level by level ---------- */}
-          <section className="glass-card p-5 space-y-3" aria-labelledby="pp-tl"><h2 id="pp-tl" className="h2">{t('m.pp.timeline')}</h2>
+          <section className="glass-card p-4 sm:p-5 space-y-3 xl:self-start fit:min-h-0 fit:overflow-y-auto" aria-labelledby="pp-tl"><h2 id="pp-tl" className="h2">{t('m.pp.timeline')}</h2>
             <p className="text-sm text-muted">{t(p.releasedAt !== p.createdAt ? 'm.pp.renewedOn' : 'm.pp.posted', { d: N.dayTime(Date.parse(p.releasedAt)) })}</p>
             {!p.verified && mine && <Warn>{t('m.vf.capNote')} <NavLink to="me" className="underline underline-offset-4 font-medium">{t('m.cs.goVerify')}</NavLink></Warn>}
             <ol className="space-y-3">{LEVELS.map((l, i) => {
@@ -176,7 +176,7 @@ export function PostPage() {
             })}</ol>
           </section>
         </div>
-        <section className="glass-card p-5 space-y-4" aria-labelledby="pp-dt"><h2 id="pp-dt" className="h2">{t('m.pp.details')}</h2>
+        <section className="glass-card p-4 sm:p-5 space-y-4 xl:self-start fit:min-h-0 fit:overflow-y-auto" aria-labelledby="pp-dt"><h2 id="pp-dt" className="h2">{t('m.pp.details')}</h2>
           <p className="text-sm">{t('jb.minYearsShort', { n: p.minYears })} · {p.skills.map(N.skill).join(', ')}</p>
           <PostFacts post={p} />
           {p.details && <p className="text-sm text-muted border-t border-line pt-3">{p.details}</p>}

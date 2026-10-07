@@ -19,11 +19,13 @@ export function SafetyPage() {
   return (
     <Page title={t('m.sc.title')} sub={t('m.sc.sub')}>
       <Warn tone="danger">{t('m.sc.key')}</Warn>
+      <div className="grid lg:grid-cols-2 gap-4 items-start">
       <section className="card space-y-3" aria-labelledby="sc-flags">
         <h2 id="sc-flags" className="h2">{t('m.sc.flags')}</h2>
         <ul className="space-y-2 text-sm">{FLAGS.map((k) => (
           <li key={k} className="flex items-start gap-2"><Icon name="warn" size={16} className="text-warn-fg mt-0.5 shrink-0" /><span><b>{t(`m.sc.f${k}.h` as never)}</b> — {t(`m.sc.f${k}.t` as never)}</span></li>))}</ul>
       </section>
+      <div className="space-y-4">
       <section className="card space-y-3" aria-labelledby="sc-do">
         <h2 id="sc-do" className="h2">{t('m.sc.do')}</h2>
         <ol className="space-y-2 text-sm list-decimal pl-5">{STEPS.map((k) => <li key={k}>{t(`m.sc.d${k}` as never)}</li>)}</ol>
@@ -37,6 +39,8 @@ export function SafetyPage() {
         <p className="text-muted">{t('m.sc.emp.t')}</p>
         <NavLink to="terms" className="text-primary underline underline-offset-4 inline-flex items-center min-h-[24px]">{t('m.tm.title')}</NavLink>
       </section>
+      </div>
+      </div>
     </Page>
   )
 }

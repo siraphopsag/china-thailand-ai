@@ -6,6 +6,8 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      // app pages fit the screen on computers (owner, Oct 2026) — see components/pager.tsx
+      screens: { fit: { raw: '(min-width: 1024px) and (min-height: 600px)' } },
       fontFamily: { sans: ['"Noto Sans Thai"', '"Sarabun"', '"Microsoft YaHei"', '"PingFang SC"', '"Noto Sans SC"', 'system-ui', 'sans-serif'] },
       colors: {
         page: v('page'), surface: v('surface'), surface2: v('surface2'), surface3: v('surface3'), line: v('line'), control: v('control-line'),

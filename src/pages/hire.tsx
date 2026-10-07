@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { canPost, caseBlocksDelete, employerVerified, isCountry, localDay, memberActive, postQuota, type PostInput, type Problem } from '../domain/match/logic'
+import { canPost, caseBlocksDelete, isCountry, localDay, memberActive, postQuota, type PostInput, type Problem } from '../domain/match/logic'
 import { scheduleOf, stageAt, capStage } from '../domain/match/release'
 import { precheck, type Precheck } from '../domain/match/precheck'
 import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MY_EMPLOYER, type Benefit, type Currency, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Skill } from '../domain/match/types'
@@ -12,8 +12,9 @@ import { Modal } from '../components/modal'
 import { useConfirm } from '../components/confirm'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
-import { IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
+import { IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PanelTabs, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
 import { VerifyCard } from './case'
+import { useFit } from '../components/pager'
 import { postToInput } from '../domain/match/remote'
 import { PlanGrid } from './member'
 
@@ -45,6 +46,8 @@ export function HirePage() {
   const [saving, setSaving] = useState(false)
   const [c, setC] = useState<GeoCode | null>(null), [p, setP] = useState<string | null>(null)
   const [form, setForm] = useState(false)
+  const [side, setSide] = useState<'new' | 'mine' | 'verify'>('new')
+  const fit = useFit()
   const [company, setCompany] = useState(st.myCompany), [position, setPosition] = useState('')
   const [industry, setIndustry] = useState<Industry>('manufacturing'), [skills, setSkills] = useState<Skill[]>([])
   const [years, setYears] = useState('0'), [details, setDetails] = useState('')
@@ -61,6 +64,7 @@ export function HirePage() {
   const [deleting, setDeleting] = useState<string | null>(null), [renewing, setRenewing] = useState<string | null>(null)
   const gate = useGate('hire')
   const startEdit = (x: Post) => {
+    setSide('new')
     const i = postToInput(x)
     setEditing(x); setC(i.place.country); setP(i.place.province); setCompany(i.company); setPosition(i.position); setIndustry(i.industry); setSkills(i.skills)
     setYears(String(i.minYears)); setDetails(i.details); setHeadcount(String(i.headcount)); setEmployment(i.employment)
@@ -141,14 +145,16 @@ export function HirePage() {
   const setLevel = (l: LanguageSkill['lang'], level: LanguageSkill['level']) => setLangs((xs) => xs.map((x) => (x.lang === l ? { ...x, level } : x)))
 
   return (
-    <Page title={t('m.emp.title')}>
-      <MapLayout map={<>
+    <Page title={t('m.emp.title')} fit>
+      <MapLayout hideMap={form && fit && side === 'new'} map={<>
         <GeoMap className={MAP_SIZE} label={t('m.mapLabel')} country={c} province={p} pins={mine.map((x) => ({ country: x.country, province: x.province, label: `${x.position} · ${N.place(x.country, x.province)}`, tone: 'post' }))}
           onPickCountry={(x) => { setC(x); setP(null); setForm(false) }} onPickProvince={(x) => { setP(x); setForm(false) }} />
         <p className="text-xs text-muted">{t('m.mapHint')}</p></>}>
       {st.suspended && <Warn tone="danger">{t('m.rpt.suspended')}</Warn>}
-      <Steps items={[t('m.emp.s1'), t('m.emp.s2')]} at={form ? 1 : 0} />
+      <PanelTabs label={t('m.emp.title')} value={side} onChange={setSide} tabs={[{ k: 'new', text: t(editing ? 'm.edit.title' : 'm.emp.tab.new') }, { k: 'mine', text: t('m.posts'), n: mine.length }, { k: 'verify', text: t('m.vf.title') }]} />
       <Toast msg={msg} />
+      {side === 'new' && (<>
+      <Steps items={[t('m.emp.s1'), t('m.emp.s2')]} at={form ? 1 : 0} />
       {!form ? (
         <section className="card space-y-3" aria-labelledby="e1h">
           <h2 id="e1h" className="h2">{t('m.emp.s1')}</h2>
@@ -159,6 +165,8 @@ export function HirePage() {
         <form className="card space-y-5" onSubmit={submit} aria-labelledby="e2h" noValidate>
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="e2h" tabIndex={-1} className="h2 outline-none">{t(editing ? 'm.edit.title' : 'm.emp.s2')}</h2><p className="text-sm text-muted">{c && p && N.place(c, p)} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => setForm(false)}>{t('m.edit')}</button></p></div>
 
+          <div className="space-y-5 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-5 lg:items-start">
+          <div className="space-y-5">
           <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="business" size={16} />{t('m.emp.sec.company')}</legend>
             <div className="grid sm:grid-cols-2 gap-3">
               <div><label className="block"><span className="label">{t('m.emp.company')}<Req /></span><input id="emp-company" className="input" maxLength={80} aria-required="true" aria-invalid={fe.invalid('emp-company')} aria-describedby={fe.describe('emp-company', 'emp-company-hint')} value={company} onChange={(e) => { setCompany(e.target.value); clear() }} /></label>
@@ -178,6 +186,8 @@ export function HirePage() {
             <SkillPicker idp="emp-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); clear() }} />
           </fieldset>
 
+          </div>
+          <div className="space-y-5">
           <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="documents" size={16} />{t('m.emp.sec.terms')}</legend>
             <fieldset aria-describedby={fe.describe('emp-salary', 'emp-salary-hint')}><legend className="label">{t('m.f.salary')} <span className="font-normal text-muted">({t('m.opt')})</span></legend>
               <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
@@ -210,13 +220,17 @@ export function HirePage() {
               <span id="det-hint" className="block text-xs text-muted mt-1">{t('m.emp.detailsHint')}</span>{fe.msg('emp-details')}</div>
           </fieldset>
 
+          </div>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <button type="submit" className="btn-primary"><Icon name="ai" size={16} />{t(editing ? 'm.edit.save' : 'm.emp.post')}</button>
             {editing ? <button type="button" className="btn-ghost" onClick={another}>{t('m.edit.cancel')}</button> : <QuotaNote used={used} limit={limit} member={memberActive(st, limitNow)} />}
           </div>
         </form>
       )}
-      {!employerVerified(st) && <VerifyCard />}
+      </>)}
+      {side === 'verify' && <VerifyCard />}
+      {side === 'mine' && (
       <section className="space-y-2" aria-labelledby="myposts-h">
         <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="myposts-h" className="h2">{t('m.posts')}</h2><NavLink to="board" className="text-sm font-medium text-primary inline-flex items-center gap-1 min-h-[24px]">{t('m.board')}<Icon name="next" size={14} /></NavLink></div>
         <QuotaBar q={q} kind="post" />
@@ -231,7 +245,7 @@ export function HirePage() {
                 <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-danger-fg min-h-[24px] hover:underline underline-offset-4" onClick={() => remove(x)} disabled={deleting === x.id} aria-label={`${t('m.post.delete')}: ${x.position}`}><Icon name="trash" size={14} />{deleting === x.id ? t('m.ask.busy') : t('m.post.delete')}</button>
               </div>
             </PostCard>) })}</ul>)}
-      </section>
+      </section>)}
       </MapLayout>
 
       {askDialog}

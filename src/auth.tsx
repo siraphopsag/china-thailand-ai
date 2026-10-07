@@ -178,7 +178,7 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
     status, user, isAdmin, online, recovery,
     signInGoogle: () => guard(async (sb) => {
       if (!(await reachable())) return 'unavailable'
-      const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname } })
+      const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname, queryParams: { prompt: 'select_account' } } }) // always let people pick the Google account (owner, Oct 2026)
       return authResult(error)
     }),
     signInEmail: (email, password) => guard(async (sb) => authResult((await sb.auth.signInWithPassword({ email: email.trim(), password })).error)),

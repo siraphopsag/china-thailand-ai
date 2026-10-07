@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { niceMax } from '../domain/match/analytics'
 
 /**
@@ -7,7 +7,7 @@ import { niceMax } from '../domain/match/analytics'
  * works with the arrow keys, and a table view next to each chart. Colours come from the theme tokens, so they follow the
  * light/dark theme and the chosen accent.
  */
-const W = 640, H = 220, PAD = { l: 36, r: 12, t: 12, b: 26 }
+const W = 640, PAD = { l: 36, r: 12, t: 12, b: 26 }
 
 /** a tiny trend line for a key-number card (decoration: the number beside it carries the meaning) */
 export function Sparkline({ values }: { values: number[] }) {
@@ -24,11 +24,20 @@ export function Sparkline({ values }: { values: number[] }) {
 }
 
 /** one series over time, with the period before dashed behind it */
-export function AreaChart({ points, prev, label, dayLabel, valueLabel, prevLabel }: {
+export function AreaChart({ points, prev, label, dayLabel, valueLabel, prevLabel, fill }: {
   points: { day: string; n: number }[]; prev?: number[]; label: string
   dayLabel: (day: string) => string; valueLabel: (n: number) => string; prevLabel: (n: number) => string
+  /** take the height of the box (computers that fit the page to the screen) */
+  fill?: boolean
 }) {
   const [hover, setHover] = useState<number | null>(null)
+  const box = useRef<HTMLDivElement>(null)
+  const [H, setH] = useState(220)
+  useEffect(() => {
+    const el = box.current; if (!fill || !el || typeof ResizeObserver === 'undefined') { setH(220); return }
+    const measure = () => { const r = el.getBoundingClientRect(); if (r.width > 0 && r.height > 0) setH(Math.round(Math.min(380, Math.max(150, (W * r.height) / r.width)))) }
+    measure(); const ro = new ResizeObserver(measure); ro.observe(el); return () => ro.disconnect()
+  }, [fill])
   const n = points.length
   if (!n) return null
   const max = niceMax(Math.max(1, ...points.map((p) => p.n), ...(prev ?? [0])))
@@ -49,7 +58,7 @@ export function AreaChart({ points, prev, label, dayLabel, valueLabel, prevLabel
   }
   const h = hover
   return (
-    <div className="relative">
+    <div ref={box} className={`relative ${fill ? 'h-full min-h-0' : ''}`}>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg" role="img" aria-label={label} tabIndex={0} onKeyDown={keys} onBlur={() => setHover(null)}>
         <defs><linearGradient id="viz-fade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" className="viz-stop-top" /><stop offset="1" className="viz-stop-bottom" /></linearGradient></defs>
         {ticks.map((v) => <g key={v}><line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} className="viz-grid" /><text x={PAD.l - 6} y={y(v) + 4} textAnchor="end" className="viz-tick">{v}</text></g>)}

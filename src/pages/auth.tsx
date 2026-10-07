@@ -19,17 +19,21 @@ function useNext() {
   return /^[a-z-]*(\?[\w=&-]*)?$/.test(next) ? next : ''
 }
 
-function AuthShell({ title, sub, children }: { title: string; sub: string; children: ReactNode }) {
+function AuthShell({ title, sub, wide, children }: { title: string; sub: string; wide?: boolean; children: ReactNode }) {
+  const { t } = useI18n()
   return (
-    <div className="max-w-md mx-auto">
-      <div className="auth-card rounded-3xl overflow-hidden border border-line">
-        <div className="auth-hero relative px-6 pt-9 pb-14">
+    <div className={`max-w-md mx-auto lg:max-w-none ${wide ? 'lg:w-[min(100%,1080px)]' : 'lg:w-[min(100%,920px)]'} fit:min-h-[var(--app-h)] fit:flex fit:items-center`}>
+      <div className="auth-card w-full rounded-3xl overflow-hidden border border-line lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <div className="auth-hero relative px-6 pt-8 pb-12 lg:p-10 lg:flex lg:flex-col lg:justify-between">
           <span className="auth-ring" aria-hidden />
-          <h1 className="text-3xl font-bold leading-tight">{title}</h1>
-          <p className="mt-1.5 opacity-90">{sub}</p>
-          <svg className="auth-wave absolute -bottom-px left-0 w-full h-8" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden><path d="M0 18 C110 46 230 -6 400 20 L400 40 L0 40 Z" /></svg>
+          <div><h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">{title}</h1>
+            <p className="mt-1.5 opacity-90">{sub}</p></div>
+          {/* computers: what the account is for, beside the form */}
+          <ul className="hidden lg:block space-y-3 text-sm mt-10" aria-label={t('m.auth.why')}>{(['1', '2', '3'] as const).map((k) => (
+            <li key={k} className="flex items-start gap-2.5"><span className="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-white/20 grid place-items-center"><Icon name="check" size={14} /></span><span className="opacity-95">{t(`m.auth.why${k}` as never)}</span></li>))}</ul>
+          <svg className="auth-wave absolute -bottom-px left-0 w-full h-8 lg:hidden" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden><path d="M0 18 C110 46 230 -6 400 20 L400 40 L0 40 Z" /></svg>
         </div>
-        <div className="px-6 pb-7 pt-2 space-y-4">{children}</div>
+        <div className="px-6 pb-7 pt-2 lg:p-10 space-y-4 lg:self-center">{children}</div>
       </div>
     </div>
   )
@@ -151,7 +155,7 @@ export function RegisterPage() {
     else if (r !== 'ok') setErr(r)
   }
   return (
-    <AuthShell title={t('m.rg.title')} sub={t('m.rg.sub')}>
+    <AuthShell title={t('m.rg.title')} sub={t('m.rg.sub')} wide>
       {status === 'off' || online === false ? <Unavailable /> : sentTo ? (<>
         <Warn tone="info"><span>{t('m.rg.checkMail', { email: sentTo })}</span></Warn>
         <div className="flex flex-wrap gap-2">
@@ -160,10 +164,12 @@ export function RegisterPage() {
         </div>
       </>) : (<>
         <form className="space-y-4" onSubmit={submit} noValidate>
+          <div className="grid lg:grid-cols-2 gap-4">
           <Field id="rg-name" label={t('m.rg.name')} icon="user" autoComplete="name" value={name} onChange={setName} fe={fe} hint={t('m.rg.nameHint')} />
           <Field id="rg-email" label={t('m.lg.email')} icon="mail" type="email" autoComplete="email" value={email} onChange={setEmail} fe={fe} />
           <Field id="rg-pw" label={t('m.lg.password')} icon="lock" type="password" autoComplete="new-password" value={pw} onChange={setPw} fe={fe} hint={t('m.rg.pwHint')} reveal />
           <Field id="rg-pw2" label={t('m.rg.password2')} icon="lock" type="password" autoComplete="new-password" value={pw2} onChange={setPw2} fe={fe} reveal />
+          </div>
           <p className="text-xs text-muted">{t('m.auth.d')}</p>
           <div>
             <label className="flex items-start gap-2.5 text-sm cursor-pointer min-h-[24px]">

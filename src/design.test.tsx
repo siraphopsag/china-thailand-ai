@@ -40,6 +40,7 @@ import { CasePage } from './pages/case'
 import { AnalyticsPage, sampleDaily } from './pages/analytics'
 import { Header } from './components/shell'
 import { SideNav } from './components/sidenav'
+import { PagedList } from './components/pager'
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
 const css = src('./index.css')
@@ -58,6 +59,8 @@ function html(node: ReactNode, st: MatchState, search = ''): string {
 }
 const lum = ([r, g, b]: number[]) => { const f = (c: number) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
 const cr = (a: number[], b: number[]) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
+/** every block with this selector, merged in order (later ones win, as in the browser) */
+const blocks = (sel: string) => { let out: Record<string, number[]> = {}, at = css.indexOf(sel); expect(at, sel).toBeGreaterThan(-1); while (at >= 0) { const b = css.slice(at, css.indexOf('}', at)); out = { ...out, ...Object.fromEntries([...b.matchAll(/--([\w-]+):\s*(\d+) (\d+) (\d+)/g)].map((m) => [m[1], [+m[2], +m[3], +m[4]]])) }; at = css.indexOf(sel, at + sel.length) } return out }
 const block = (sel: string) => { const i = css.indexOf(sel); expect(i, sel).toBeGreaterThan(-1); const b = css.slice(i, css.indexOf('}', i)); return Object.fromEntries([...b.matchAll(/--([\w-]+):\s*(\d+) (\d+) (\d+)/g)].map((m) => [m[1], [+m[2], +m[3], +m[4]]])) as Record<string, number[]> }
 
 describe('A. accent colours', () => {
@@ -90,7 +93,7 @@ describe('B. the board as cards', () => {
   it('after the reference: main button by the title, pill filters with the count, centred cards with two actions and a fill bar, a card/map switch', () => {
     const h = html(<BoardPage />, seeker())
     expect(h).toMatch(/<h1 class="h1">[^<]*<\/h1>.*class="btn-primary !rounded-full"/s)
-    expect(h).toContain('bd-card p-5 flex flex-col items-center text-center'); expect(h).toContain('rar-avatar'); expect(h).toContain('class="fill-bar mt-1"')
+    expect(h).toContain('bd-card p-3.5 sm:p-5 fit:p-4 flex flex-row sm:flex-col items-start sm:items-center'); // on its side on phones, centred from 640 px expect(h).toContain('rar-avatar'); expect(h).toContain('class="fill-bar mt-1"')
     expect(h).toContain(`>${T('m.bd.details')}</button>`); expect(h).toContain(T('m.bd.apply'))
     expect(h).toContain(T('m.bd.view.cards')); expect(h).toContain(T('m.bd.view.map'))
     expect(h).not.toContain('id="bd-map"') // the map shows when you switch to it
@@ -158,8 +161,9 @@ describe('C. the calendar', () => {
     const cal = html(<CalendarPage />, st)
     expect(cal).toContain('role="grid"'); expect(cal).toContain(T('m.cal.upcoming')); expect(cal).toContain('cal-training'); expect(cal).toContain(T('m.cal.ics'))
     const cs = html(<CasePage />, st, '?id=case-s1')
-    expect(cs).toContain(T('m.cs.appt')); expect(cs).toContain(T('m.cs.appt.start')); expect(cs).toContain('href="/calendar"')
-    expect(cs).toContain(T('m.cs.appt.d')) // the agency part (local demo) has the date fields
+    expect(cs).toContain(T('m.cs.appt')) // a tab beside the checklists
+    expect(src('./pages/case.tsx')).toContain("{tab === 'appt' && <Appointments c={c} />}")
+    expect(cs).toContain(T('m.cs.ag.tab.dates')) // the agency part (local demo) has an appointments tab with the date fields
     expect(src('./App.tsx')).toContain('calendar: <CalendarPage />')
   })
 })
@@ -216,6 +220,55 @@ describe('round 2 (owner, Oct 2026)', () => {
   it('after signing up with e-mail confirmation on, the message says to open your own inbox and press the link', () => {
     expect(tr('m.rg.checkMail', { email: 'a@b.co' }, 'th')).toContain('เปิดกล่องอีเมลส่วนตัวของคุณ')
     expect(tr('m.rg.checkMail', { email: 'a@b.co' }, 'th')).not.toContain('สร้างบัญชีแล้ว')
+  })
+})
+
+describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, stronger colours, pick the Google account', () => {
+  it('Google sign-in always shows the account chooser', () => {
+    expect(src('./auth.tsx')).toContain("queryParams: { prompt: 'select_account' }")
+  })
+  it('the accent tints the page, cards, lines and glass too — muted text and control borders stay readable on every tinted surface', () => {
+    for (const a of ACCENTS) {
+      const l = blocks(a === 'indigo' ? `:root:not([data-theme='dark']):not([data-accent])` : `:root:not([data-theme='dark'])[data-accent='${a}']`)
+      const d = blocks(a === 'indigo' ? `:root[data-theme='dark']:not([data-accent])` : `:root[data-theme='dark'][data-accent='${a}']`)
+      for (const k of ['page', 'surface3', 'line', 'glass-tint', 'control-line', 'glow-a', 'glow-b']) { expect(l[k], `${a} light ${k}`).toBeDefined(); expect(d[k], `${a} dark ${k}`).toBeDefined() }
+      for (const s of ['page', 'surface2', 'surface3'] as const) {
+        expect(cr([84, 90, 104], l[s]), `${a} light muted/${s}`).toBeGreaterThanOrEqual(4.5)
+        expect(cr(l['control-line'], l[s]), `${a} light control/${s}`).toBeGreaterThanOrEqual(3)
+      }
+      for (const s of ['page', 'surface', 'surface2', 'surface3'] as const) {
+        expect(cr([160, 164, 178], d[s]), `${a} dark muted/${s}`).toBeGreaterThanOrEqual(4.5)
+        expect(cr(d['control-line'], d[s]), `${a} dark control/${s}`).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+  it('app pages take exactly the screen on computers (1024 px wide, 600 px tall); long lists page instead of scrolling', () => {
+    expect(src('../tailwind.config.js')).toContain(`screens: { fit: { raw: '(min-width: 1024px) and (min-height: 600px)' } }`)
+    expect(css).toContain(':root { --app-h: calc(100dvh - 6rem - 1px) }')
+    const m = src('./pages/match.tsx')
+    expect(m).toContain('fit:flex fit:flex-col fit:gap-3 fit:h-[var(--app-h)]')
+    for (const [file, mark] of [['./pages/board.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/calendar.tsx', ' fit>'], ['./pages/case.tsx', ' fit>'], ['./pages/analytics.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/hire.tsx', ' fit>'], ['./pages/post.tsx', 'fit body="flex flex-col gap-3"']] as const)
+      expect(src(file), file).toContain(mark)
+    expect(m).toContain('fit body="flex flex-col gap-3"') // the back office
+    const p = src('./components/pager.tsx')
+    expect(p).toContain("export const FIT_QUERY = '(min-width: 1024px) and (min-height: 600px)'"); expect(p).toContain('export function PagedList')
+    // the footer only on the Lobby and reading pages; "Back" moves into the header on computers
+    expect(src('./App.tsx')).toContain(`const READING = ['', 'privacy', 'terms', 'sources', 'language', 'safety', 'help']`)
+    expect(src('./components/shell.tsx')).toContain('<BackButton route={_.route} compact />')
+  })
+  it('sign-in pages are wide on computers (brand panel + form, register fields in two columns)', () => {
+    const a = src('./pages/auth.tsx')
+    expect(a).toContain('lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]'); expect(a).toContain('<div className="grid lg:grid-cols-2 gap-4">')
+  })
+  it('phones: one step smaller (15 px body), smaller cards and buttons, board cards on their side, pills that scroll sideways', () => {
+    expect(css).toContain('@media (max-width: 639px) { html { font-size: 15px }')
+    expect(css).toMatch(/\.card \{ @apply border border-line rounded-2xl p-4 sm:p-5/)
+    expect(css).toMatch(/\.btn \{ @apply [^}]*min-h-\[40px\]/)
+    expect(src('./pages/board.tsx')).toContain("const SEG_SCROLL = 'flex sm:inline-flex flex-nowrap")
+  })
+  it('a paged list shows everything when the screen does not fit (phones, tests)', () => {
+    const h = html(<PagedList items={[1, 2, 3]} rowH={60} keyOf={(n) => String(n)} render={(n) => <span>item {n}</span>} />, seedState(NOW))
+    expect(h.match(/item \d/g)?.length).toBe(3); expect(h).not.toContain(T('m.pg.prev'))
   })
 })
 

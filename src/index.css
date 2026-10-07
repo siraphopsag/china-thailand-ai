@@ -82,22 +82,22 @@ h1[tabindex="-1"]:focus { outline: none }
 
 @layer components {
   /* raised panel: a lighter top edge, a slight vertical gradient and a two-step shadow */
-  .card { @apply border border-line rounded-2xl p-5 transition-[border-color,box-shadow,transform] duration-200;
+  .card { @apply border border-line rounded-2xl p-4 sm:p-5 transition-[border-color,box-shadow,transform] duration-200;
     background: linear-gradient(180deg, rgb(var(--surface)), rgb(var(--surface2))); box-shadow: var(--elev-hi), var(--elev-2) }
   .card-hover { @apply hover:border-primary/50 hover:-translate-y-0.5; }
   .card-hover:hover { box-shadow: var(--elev-hi), var(--elev-3) }
   /* inset well for secondary content inside a card */
   .card-i { @apply border border-line rounded-xl p-3; background: rgb(var(--surface3) / .5); box-shadow: inset 0 1px 2px rgb(0 0 0 / .05) }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-medium min-h-[44px] md:min-h-[40px] transition duration-150 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 sm:px-4 py-2 font-medium min-h-[40px] transition duration-150 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 }
   .btn-primary { @apply btn text-onprimary hover:-translate-y-px; background: linear-gradient(180deg, rgb(255 255 255 / .14), transparent 60%), rgb(var(--primary));
     box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 1px 2px rgb(0 0 0 / .2), 0 8px 20px -10px rgb(var(--primary) / .8) }
   .btn-accent { @apply btn bg-accent text-onaccent hover:opacity-90 font-semibold }
   .btn-ghost { @apply btn border border-control text-ink hover:bg-surface3; background: rgb(var(--surface)); box-shadow: var(--elev-hi), var(--elev-1) }
-  .input { @apply w-full rounded-xl border border-control px-3 py-2 min-h-[44px] md:min-h-[40px] text-ink placeholder:text-muted focus:border-primary transition-colors;
+  .input { @apply w-full rounded-xl border border-control px-3 py-2 min-h-[40px] text-ink placeholder:text-muted focus:border-primary transition-colors;
     background: rgb(var(--surface)); box-shadow: inset 0 1px 2px rgb(0 0 0 / .06) }
   .label { @apply block text-sm font-medium text-muted mb-1 }
-  .h1 { @apply text-2xl md:text-3xl font-bold text-ink tracking-tight }
-  .h2 { @apply text-lg font-semibold text-ink }
+  .h1 { @apply text-xl sm:text-2xl lg:text-[1.75rem] font-bold text-ink tracking-tight }
+  .h2 { @apply text-base sm:text-lg font-semibold text-ink }
   /* small all-caps-like section label above a heading */
   .eyebrow { @apply text-xs font-semibold uppercase tracking-wider text-primary }
   .chip { @apply inline-flex items-center gap-1 border rounded-full px-2.5 py-0.5 text-xs font-semibold max-w-full }
@@ -407,6 +407,30 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
   --globe-active: 154 52 18; --globe-route: 154 52 18; --globe-prov: 234 88 12; --globe-side: 124 45 18; --globe-pside: 124 45 18; --glow-a: 234 88 12; --grad-a: 154 52 18; --cta-a: 154 52 18; --cta-b: 124 45 18; --paths-c: 124 45 18; --paths-sheen: 154 52 18 }
 :root[data-theme='dark'][data-accent='ember'] { --primary: 251 146 60; --onprimary: 10 10 20; --primary-hi: 253 186 116; --brand: 70 40 18; --brandfg: 254 215 170;
   --globe-active: 251 146 60; --globe-route: 253 186 116; --globe-prov: 253 186 116; --globe-side: 154 52 18; --globe-pside: 234 88 12; --glow-a: 234 88 12; --grad-a: 253 186 116; --cta-a: 154 52 18; --cta-b: 124 45 18; --paths-sheen: 254 215 170 }
+/* ── accent colour, stronger (owner, Oct 2026: "only a few letters changed") ──
+   Besides actions and selection, the chosen accent now tints the page, the cards' second surfaces, lines, the glass, the header,
+   the hero and the soft light, so the whole site takes on the colour. Generated: neutrals mixed toward each accent; every text
+   pair is checked (muted text ≥ 4.5:1 on every surface, control borders ≥ 3:1). Status and level colours never change. */
+:root:not([data-theme='dark']):not([data-accent]) { --page: 230 231 246; --surface2: 242 243 251; --surface3: 220 222 242; --line: 202 205 235; --header: 249 249 254; --hero: 216 217 249; --heroline: 177 179 237; --glass-tint: 247 247 254; --control-line: 104 109 136;
+  --glow-a: 99 102 241; --glow-b: 14 165 233; --glow-k: .22; --grad-b: 55 48 163; --hero-base: 242 243 252 }
+:root[data-theme='dark']:not([data-accent]) { --page: 17 18 27; --surface: 27 28 39; --surface2: 35 37 50; --surface3: 48 51 69; --line: 59 62 86; --header: 21 22 32; --hero: 32 33 56; --heroline: 73 75 116; --glass-tint: 46 49 68; --control-line: 135 139 167;
+  --glow-a: 99 102 241; --glow-b: 14 165 233; --glow-k: .3; --grad-b: 172 184 255; --hero-base: 19 19 32 }
+:root:not([data-theme='dark'])[data-accent='forest'] { --page: 224 240 233; --surface2: 238 247 243; --surface3: 212 233 224; --line: 191 222 209; --header: 246 253 249; --hero: 205 232 225; --heroline: 157 208 193; --glass-tint: 244 252 247; --control-line: 97 119 121;
+  --glow-a: 22 163 74; --glow-b: 20 184 166; --glow-k: .22; --grad-b: 20 83 45; --hero-base: 239 247 245 }
+:root[data-theme='dark'][data-accent='forest'] { --page: 13 23 20; --surface: 24 32 33; --surface2: 30 42 42; --surface3: 42 58 57; --line: 50 72 69; --header: 17 26 25; --hero: 25 40 43; --heroline: 61 88 94; --glass-tint: 40 56 56; --control-line: 127 148 153;
+  --glow-a: 22 163 74; --glow-b: 20 184 166; --glow-k: .3; --grad-b: 134 239 172; --hero-base: 15 24 25 }
+:root:not([data-theme='dark'])[data-accent='ocean'] { --page: 226 234 247; --surface2: 240 244 251; --surface3: 215 225 242; --line: 195 210 236; --header: 247 250 255; --hero: 209 222 249; --heroline: 165 187 238; --glass-tint: 245 249 255; --control-line: 100 112 136;
+  --glow-a: 59 130 246; --glow-b: 6 182 212; --glow-k: .22; --grad-b: 30 58 138; --hero-base: 240 244 253 }
+:root[data-theme='dark'][data-accent='ocean'] { --page: 14 19 27; --surface: 25 29 39; --surface2: 32 38 50; --surface3: 44 53 69; --line: 53 64 86; --header: 18 23 32; --hero: 28 35 56; --heroline: 65 77 116; --glass-tint: 42 51 68; --control-line: 129 141 167;
+  --glow-a: 59 130 246; --glow-b: 6 182 212; --glow-k: .3; --grad-b: 147 197 253; --hero-base: 16 20 32 }
+:root:not([data-theme='dark'])[data-accent='plum'] { --page: 236 230 247; --surface2: 245 242 251; --surface3: 228 220 243; --line: 215 202 236; --header: 252 248 255; --hero: 227 214 250; --heroline: 197 174 239; --glass-tint: 251 247 255; --control-line: 110 108 136;
+  --glow-a: 168 85 247; --glow-b: 236 72 153; --glow-k: .22; --grad-b: 88 28 135; --hero-base: 246 242 253 }
+:root[data-theme='dark'][data-accent='plum'] { --page: 20 17 27; --surface: 30 28 39; --surface2: 39 35 50; --surface3: 53 49 69; --line: 66 60 86; --header: 24 21 32; --hero: 37 31 56; --heroline: 82 71 116; --glass-tint: 52 47 68; --control-line: 141 137 168;
+  --glow-a: 168 85 247; --glow-b: 236 72 153; --glow-k: .3; --grad-b: 216 180 254; --hero-base: 22 18 32 }
+:root:not([data-theme='dark'])[data-accent='ember'] { --page: 244 232 227; --surface2: 249 243 240; --surface3: 238 223 216; --line: 229 208 196; --header: 255 249 246; --hero: 240 219 214; --heroline: 222 183 171; --glass-tint: 255 248 243; --control-line: 119 111 114;
+  --glow-a: 234 88 12; --glow-b: 234 179 8; --glow-k: .22; --grad-b: 124 45 18; --hero-base: 250 243 241 }
+:root[data-theme='dark'][data-accent='ember'] { --page: 24 18 16; --surface: 33 28 30; --surface2: 43 36 37; --surface3: 59 51 50; --line: 75 62 59; --header: 27 22 21; --hero: 43 33 37; --heroline: 93 74 81; --glass-tint: 58 49 49; --control-line: 148 139 144;
+  --glow-a: 234 88 12; --glow-b: 234 179 8; --glow-k: .3; --grad-b: 253 186 116; --hero-base: 25 19 21 }
 /* the accent swatches in Settings (decoration: the name next to each one is the label) */
 .swatch-indigo { background: linear-gradient(135deg, rgb(99 102 241), rgb(67 56 202)) }
 .swatch-forest { background: linear-gradient(135deg, rgb(22 163 74), rgb(21 101 52)) }
@@ -472,3 +496,9 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .bd-card { background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 1.5rem; box-shadow: var(--elev-hi), var(--elev-1); transition: transform .18s ease, box-shadow .18s ease }
 .bd-card:hover { transform: translateY(-2px); box-shadow: var(--elev-hi), var(--elev-2) }
 @media (prefers-reduced-motion: reduce) { .bd-card, .bd-card:hover { transition: none; transform: none } }
+/* the height an app page gets on a "fit" screen: the screen minus the header (4rem) and the page padding (2rem) */
+:root { --app-h: calc(100dvh - 6rem - 1px) }
+/* phones: the whole interface one step smaller (rem-based sizes follow) — body text 15 px, small text never under 12 px */
+@media (max-width: 639px) { html { font-size: 15px } .glass-card.p-5, .card-i.p-5 { padding: 1rem } }
+/* a sideways-scrolling row without a visible bar (the pills keep their focus ring and can be reached with Tab) */
+.no-scrollbar { scrollbar-width: none } .no-scrollbar::-webkit-scrollbar { display: none }

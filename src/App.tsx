@@ -38,6 +38,8 @@ const SafetyPage = lazy(() => import('./pages/safety').then((m) => ({ default: m
 const TermsPage = lazy(() => import('./pages/terms').then((m) => ({ default: m.TermsPage })))
 const ChooseRolePage = lazy(() => import('./pages/choose').then((m) => ({ default: m.ChooseRolePage })))
 
+/** pages read top to bottom keep the footer on computers; app pages fit the screen and leave it out (its links are also in Help) */
+const READING = ['', 'privacy', 'terms', 'sources', 'language', 'safety', 'help']
 /** footer targets are at least 24 px high (WCAG 2.5.8) */
 const FOOT = 'underline inline-flex items-center min-h-[24px]'
 function Shell({ route, children }: { route: string; children: ReactNode }) {
@@ -68,10 +70,10 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <SideNav route={route} />
       {/* room for the menu capsule: on the left from 768 px, below the content on phones */}
       <div id="page-body" className="flex-1 flex flex-col md:pl-24">
-      <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 md:pb-10"><DemoNotice /><BackButton route={route} /><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
+      <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl fit:max-w-[1400px] w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-24 md:pb-10 fit:py-4"><DemoNotice /><div className="md:hidden"><BackButton route={route} /></div><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
       </div>
       {/* the footer band runs to both screen edges; its text keeps clear of the menu capsule */}
-      <footer className="bg-surface border-t border-line text-xs text-muted px-4 md:pl-28 py-6 mb-20 md:mb-0">
+      <footer className={`bg-surface border-t border-line text-xs text-muted px-4 md:pl-28 py-6 mb-20 md:mb-0 ${READING.includes(route) ? '' : 'fit:hidden'}`}>
         <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-2 items-center">
           <span className="font-semibold text-ink" lang="en">{BRAND.title}</span><span>{t('foot.note')}</span>
           <NavLink to="terms" className={FOOT}>{t('m.tm.title')}</NavLink>

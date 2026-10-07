@@ -129,7 +129,9 @@ export function Header(_: { route?: string }) {
         <div className="flex items-center gap-2 shrink-0" lang="en">
           <Logo /><span className="leading-tight"><span className="block text-base font-bold tracking-[0.12em]">{BRAND.name}</span><span className="hidden min-[420px]:block text-[11px] opacity-70 tracking-wide">{BRAND.full}</span></span>
         </div>
-        <div className="hidden md:block md:pl-6 lg:pl-12 flex-1 min-w-0"><HeaderSearch /></div>
+        {/* computers and tablets: "Back" sits in the header, so pages keep their height for content */}
+        {_.route ? <div className="hidden md:block md:pl-3"><BackButton route={_.route} compact /></div> : null}
+        <div className="hidden md:block md:pl-3 lg:pl-6 flex-1 min-w-0"><HeaderSearch /></div>
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <RoleChip /><LanguageSwitcher /><ThemeSwitcher /><LoginButton />
         </div>
@@ -141,12 +143,12 @@ export function Header(_: { route?: string }) {
 /** where "Back" leads when the page was opened directly (no earlier in-app page to return to) */
 const PARENT: Record<string, string> = { seek: 'choose-role', hire: 'choose-role', post: 'board', board: '', member: '', case: 'notifications', terms: '', safety: 'prepare', calendar: '', analytics: 'backoffice', language: 'prepare', sources: 'prepare', privacy: '', register: 'login', forgot: 'login', 'reset-password': 'login' }
 /** "Back" on every page except the Lobby, so nobody has to return to the Lobby to go one step back */
-export function BackButton({ route }: { route: string }) {
+export function BackButton({ route, compact }: { route: string; compact?: boolean }) {
   const { t } = useI18n()
   if (!route) return null
   return (
     <button type="button" onClick={() => goBack(PARENT[route] ?? '')}
-      className="mb-3 -ml-1 inline-flex items-center gap-1.5 rounded-lg px-2 min-h-[40px] text-sm font-medium text-muted hover:text-ink hover:bg-surface3 transition-colors">
+      className={`${compact ? 'h-10 px-3 rounded-xl border border-control bg-surface' : 'mb-2 -ml-1 px-2 min-h-[36px] rounded-lg'} inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink hover:bg-surface3 transition-colors`}>
       <Icon name="back" size={16} />{t('m.back')}
     </button>
   )

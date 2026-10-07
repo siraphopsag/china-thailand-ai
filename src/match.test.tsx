@@ -327,7 +327,7 @@ describe('the board (owner, Oct 2026)', () => {
     expect(page).toContain('Front Office Manager'); expect(page).toContain('Warehouse Coordinator') // other employers' posts too (owner, Oct 2026)
     expect(page).toContain(`>${T('m.bd.manage')}</a>`); expect(page).toContain(`>${T('m.bd.view')}</a>`) // mine → manage · others' → view
     expect(page).toContain(T('m.lv.reached', { l: T('m.lv.2') }))
-    expect(page).toContain('<p class="text-lg font-bold">1/2</p>'); expect(page).toContain(T('m.bd.places')) // places taken on the card
+    expect(page).toContain('<p class="text-base sm:text-lg font-bold">1/2</p>'); expect(page).toContain(T('m.bd.places')) // places taken on the card
     expect(page).toContain(T('m.qb.posts', { n: 1, max: 3 }))
   })
   it('the map shows counts only, also listed in text; menu has the board; posts link to their page', () => {
@@ -410,7 +410,7 @@ describe('accessibility audit, round 1 (#1, #2, #7)', () => {
     expect(nav).toContain("document.addEventListener('pointerdown', away)")
     expect(nav).toContain('useEffect(() => { setMoreOpen(false) }, [route])')
     // nothing hides under the bottom capsule on phones
-    expect(src('./App.tsx')).toContain('pb-28 md:pb-10')
+    expect(src('./App.tsx')).toContain('pb-24 md:pb-10') // room for the phone menu capsule (the interface is a step smaller on phones)
     expect(css).toMatch(/@media \(max-width: 767px\) \{ html \{ scroll-padding-bottom: 6rem \} \}/)
   })
   it('#7 focused controls scroll clear of the 64px sticky header', () => {
@@ -515,17 +515,17 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
     expect(css).toMatch(/radial-gradient\(42vw 38vh at 8% 55%, rgb\(var\(--glow-a\) \/ calc\(var\(--orb-a\) \* \.8\)\), transparent 72%\)/)
     // forms keep solid cards; their lists and empty states are glass
     const seek = html(<SeekPage />, { ...seedState(NOW), role: 'seeker', me: seeker([]) })
-    expect(seek).toMatch(/<form class="card space-y-4"/); expect(seek).toContain('<div class="glass-card p-5 text-muted">')
+    expect(seek).toMatch(/<form class="card space-y-4"/); expect(src('./pages/match.tsx')).toContain('<div className="glass-card p-5 text-muted">') // the pin list (its own tab now)
   })
   it('glass on the other short-reading cards (roles, prepare, notifications, lists, profile, help, empty states); settings stays solid; footer band reaches both edges', () => {
     expect(html(<ChooseRolePage />).match(/<li class="glass-card role-card/g)?.length).toBe(2)
     const m = src('./pages/match.tsx')
     for (const s of ['className="glass-card p-5 flex gap-4 items-start h-full"', '<li key={a.id} className="glass-card p-4 space-y-2">', '<section className="glass-card p-5 space-y-3 text-sm">', '<div className="glass-card p-5 flex flex-col items-center'])
       expect(m, s).toContain(s)
-    expect(m).toContain('<section className="card space-y-4">') // settings
+    expect(m).toContain(`<section className="card space-y-4" aria-label={t('m.settings.look')}>`) // settings (two cards side by side)
     const app = src('./App.tsx')
     expect(app.indexOf('<footer')).toBeGreaterThan(app.indexOf('</main>'))
-    expect(app).toMatch(/<\/div>\s*\{\/\* the footer band runs to both screen edges[\s\S]*?<footer className="[^"]*md:pl-28/)
+    expect(app).toMatch(/<\/div>\s*\{\/\* the footer band runs to both screen edges[\s\S]*?<footer className={`[^`]*md:pl-28/)
   })
   it('text on the glass cards stays ≥ 4.5:1 even over the strongest coloured light, and on the drops, in both themes', () => {
     const num = (th: 'light' | 'dark', name: string) => {

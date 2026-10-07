@@ -10,6 +10,7 @@ import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
 import { Icon } from '../components/icons'
 import { Drawer } from '../components/drawer'
+import { Pager, useFit, useFitGrid, usePaged } from '../components/pager'
 import { Empty, LevelBadge, Page, PinList, PostFacts, QuotaBar, SampleBadge, SortToggle, useGate, useNames, useRel } from './match'
 import { ReportButton } from './safety'
 
@@ -23,8 +24,9 @@ import { ReportButton } from './safety'
  */
 interface Filter { q: string; country: '' | 'TH' | 'CN'; province: string; skill: '' | Skill; salary: string; currency: Currency }
 const NO_FILTER: Filter = { q: '', country: '', province: '', skill: '', salary: '', currency: 'THB' }
-const pill = (on: boolean) => `min-h-[36px] px-3.5 rounded-full text-sm inline-flex items-center gap-1.5 transition-colors ${on ? 'bg-primary text-onprimary font-semibold shadow-sm' : 'text-ink hover:bg-surface3'}`
+const pill = (on: boolean) => `min-h-[34px] px-3 sm:px-3.5 rounded-full text-sm inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors ${on ? 'bg-primary text-onprimary font-semibold shadow-sm' : 'text-ink hover:bg-surface3'}`
 const SEG = 'inline-flex flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1'
+const SEG_SCROLL = 'flex sm:inline-flex flex-nowrap sm:flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1 overflow-x-auto max-w-full no-scrollbar'
 
 export function BoardPage() {
   const { t } = useI18n()
@@ -41,6 +43,8 @@ export function BoardPage() {
   const [mapOf, setMapOf] = useState<'posts' | 'pins' | null>(null)
   const [pinsOpen, setPinsOpen] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
+  const fit = useFit()
+  const [gridRef, dim] = useFitGrid(250, 16, 4, `${tab}|${scope}|${view}|${more}|${pinsOpen}`)
   const gate = useGate('board')
   if (gate) return <Page title={t('m.board.title')}>{gate}</Page>
   if (!st.role) return <Page title={t('m.board.title')} sub={t('m.board.sub')}><Empty icon="posts" text={t('m.profile.none')} to="choose-role" action={t('hero.cta')} /></Page>
@@ -83,43 +87,43 @@ export function BoardPage() {
   const current = open ? items.find((x) => x.post.id === open) : undefined
 
   return (
-    <Page title={t('m.board.title')} sub={t(seeker ? 'm.board.subSeeker' : 'm.board.subEmployer2')}
+    <Page title={t('m.board.title')} sub={t(seeker ? 'm.board.subSeeker' : 'm.board.subEmployer2')} fit body="flex flex-col gap-3"
       actions={<NavLink to={seeker ? 'seek' : 'hire'} className="btn-primary !rounded-full"><Icon name="plus" size={16} />{t(seeker ? 'm.pin.go' : 'm.emp.post')}</NavLink>}>
       {/* my allowance and what I have running, in one line */}
-      <section className="glass-card p-3 sm:px-4 flex flex-wrap items-center gap-x-6 gap-y-2" aria-label={t(seeker ? 'm.board.mePins' : 'm.board.mePosts')}>
+      <section className="shrink-0 glass-card px-3 py-2 sm:p-3 sm:px-4 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-sm" aria-label={t(seeker ? 'm.board.mePins' : 'm.board.mePosts')}>
         <div className="flex-1 min-w-[220px]"><QuotaBar q={q} kind={seeker ? 'pin' : 'post'} /></div>
         {seeker
           ? <button type="button" className="btn-ghost text-sm !rounded-full" aria-expanded={pinsOpen} aria-controls="bd-pins" onClick={() => setPinsOpen((x) => !x)}><Icon name="pin" size={15} />{t('m.bd.myPinsN', { n: activePins(st.me, limitNow).length })}<Icon name={pinsOpen ? 'up' : 'down'} size={14} /></button>
           : <p className="text-sm flex flex-wrap gap-x-4 gap-y-1"><span>{t('m.board.open', { n: myOpen.length })}</span><span className="text-muted">{t('m.bd.waitingN', { n: waiting })}</span></p>}
       </section>
-      {seeker && pinsOpen && <section id="bd-pins" aria-label={t('m.board.myPins')}><PinList /></section>}
+      {seeker && pinsOpen && <section id="bd-pins" className="shrink-0 fit:max-h-[40%] fit:overflow-y-auto" aria-label={t('m.board.myPins')}><PinList /></section>}
 
       {/* one row of pill filters with the count (owner's reference) */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
           {!seeker && (
             <div className={SEG} role="group" aria-label={t('m.bd.scope')}>
               {(['all', 'mine'] as const).map((s) => <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)} className={pill(scope === s)}>{t(s === 'all' ? 'm.bd.scope.all' : 'm.bd.scope.mine')}</button>)}
             </div>)}
-          <div className={SEG} role="group" aria-label={t('m.board.levels')}>
+          <div className={SEG_SCROLL} role="group" aria-label={t('m.board.levels')}>
             <button type="button" aria-pressed={tab === 'all'} onClick={() => setTab('all')} className={pill(tab === 'all')}>{t('m.bd.all')}</button>
             {LEVELS.map((l) => <button key={l} type="button" aria-pressed={tab === l} onClick={() => setTab(l)} className={pill(tab === l)}>{t('m.lv.short', { n: l })}<span className="text-xs opacity-75">{perLevel(l)}</span></button>)}
           </div>
         </div>
         <p className="text-sm text-muted" role="status">{t('m.board.count', { n: shown.length })}</p>
       </div>
-      {tab !== 'all' && <p className="text-xs text-muted -mt-2">{t(`m.lv.d${tab}` as never)}</p>}
+      {tab !== 'all' && <p className="shrink-0 text-xs text-muted -mt-2 fit:mt-0">{t(`m.lv.d${tab}` as never)}</p>}
 
-      <form role="search" className="flex flex-wrap items-center gap-2" onSubmit={(e) => e.preventDefault()} aria-label={t('m.board.search')}>
-        <label className="block flex-1 min-w-[220px]"><span className="sr-only">{t('m.board.search')}</span>
+      <form role="search" className="shrink-0 flex flex-wrap items-center gap-2" onSubmit={(e) => e.preventDefault()} aria-label={t('m.board.search')}>
+        <label className="block flex-1 min-w-[160px]"><span className="sr-only">{t('m.board.search')}</span>
           <span className="relative block"><Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><input type="search" className="input pl-9 !rounded-full" value={f.q} onChange={(e) => set({ q: e.target.value })} placeholder={t('m.board.searchHint')} /></span></label>
-        <button type="button" className="btn-ghost text-sm !rounded-full" aria-expanded={more} aria-controls="bd-more" onClick={() => setMore((x) => !x)}><Icon name="filter" size={15} />{t(more ? 'm.bd.fewer' : 'm.bd.more')}</button>
+        <button type="button" className="btn-ghost text-sm !rounded-full" aria-expanded={more} aria-controls="bd-more" onClick={() => setMore((x) => !x)}><Icon name="filter" size={15} /><span className="sr-only sm:not-sr-only">{t(more ? 'm.bd.fewer' : 'm.bd.more')}</span></button>
         <SortToggle order={order} onChange={setOrder} />
         <div className={SEG} role="group" aria-label={t('m.bd.viewAs')}>
-          {(['cards', 'map'] as const).map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} className={pill(view === v)}><Icon name={v === 'cards' ? 'overview' : 'globe'} size={15} />{t(v === 'cards' ? 'm.bd.view.cards' : 'm.bd.view.map')}</button>)}
+          {(['cards', 'map'] as const).map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} className={pill(view === v)} aria-label={t(v === 'cards' ? 'm.bd.view.cards' : 'm.bd.view.map')}><Icon name={v === 'cards' ? 'overview' : 'globe'} size={15} /><span className="hidden sm:inline">{t(v === 'cards' ? 'm.bd.view.cards' : 'm.bd.view.map')}</span></button>)}
         </div>
       </form>
-      <div id="bd-more" className={`${more ? 'grid' : 'hidden'} card sm:grid-cols-2 lg:grid-cols-4 gap-3`}>
+      <div id="bd-more" className={`${more ? 'grid' : 'hidden'} shrink-0 card sm:grid-cols-2 lg:grid-cols-4 gap-3`}>
         <label className="block"><span className="label">{t('m.country')}</span><select className="input" value={f.country} onChange={(e) => set({ country: e.target.value as Filter['country'], province: '' })}><option value="">{t('m.board.any')}</option>{(['TH', 'CN'] as const).map((c) => <option key={c} value={c}>{N.country(c)}</option>)}</select></label>
         <label className="block"><span className="label">{t('m.province')}</span><select className="input" value={f.province} disabled={!f.country} onChange={(e) => set({ province: e.target.value })}><option value="">{t('m.board.any')}</option>{f.country && N.provList(f.country).map((p) => <option key={p} value={p}>{N.prov(p)}</option>)}</select></label>
         <label className="block"><span className="label">{t('m.board.skill')}</span><select className="input" value={f.skill} onChange={(e) => set({ skill: e.target.value as Filter['skill'] })}><option value="">{t('m.board.any')}</option>{SKILLS.map((s) => <option key={s} value={s}>{N.skill(s)}</option>)}</select></label>
@@ -132,28 +136,42 @@ export function BoardPage() {
       </div>
 
       {view === 'map' && (
-        <section className="glass-card p-4 space-y-2" aria-labelledby="bd-map">
+        <section className="glass-card p-4 space-y-2 fit:flex-1 fit:min-h-0 fit:flex fit:flex-col" aria-labelledby="bd-map">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="bd-map" className="h2 flex items-center gap-2"><Icon name="globe" size={18} className="text-primary" />{t('m.bd.map')}</h2>
             <div className={SEG} role="group" aria-label={t('m.board.mapShow')}>
               {(['posts', 'pins'] as const).map((k) => <button key={k} type="button" aria-pressed={showMap === k} onClick={() => setMapOf(k)} className={pill(showMap === k)}><Icon name={k === 'posts' ? 'posts' : 'pin'} size={14} />{t(k === 'posts' ? 'm.board.mapPosts' : 'm.board.mapPins')}</button>)}
             </div>
           </div>
-          <GeoMap className="h-[340px] lg:h-[440px]" label={t('m.board.mapLabel')} country={f.country || null} province={f.province || null} counts={mapCounts}
+          <GeoMap className="h-[300px] sm:h-[340px] fit:h-auto fit:flex-1 fit:min-h-0" label={t('m.board.mapLabel')} country={f.country || null} province={f.province || null} counts={mapCounts}
             onPickCountry={(c: GeoCode) => set({ country: isCountry(c) ? c : '', province: '' })} onPickProvince={(p) => set({ province: p ?? '' })} />
           <p className="text-xs text-muted">{top.length ? t('m.board.top', { list: top.map(([p, n]) => `${N.prov(p)} ${n}`).join(' · ') }) : t('m.board.topNone')}</p>
           <p className="text-xs text-muted">{t('m.board.mapHint')}</p>
         </section>)}
 
-      {!shown.length ? <Empty icon={seeker ? 'pin' : 'posts'} text={t(items.length ? 'm.board.noneFound' : seeker ? 'm.board.noneSeeker' : 'm.board.noneEmployer')} to={items.length ? undefined : seeker ? 'seek' : 'hire'} action={items.length ? undefined : t(seeker ? 'm.pin.go' : 'm.emp.post')} /> : (
-        <><h2 id="bd-list" className="sr-only">{t(seeker ? 'm.board.shop' : 'm.bd.listEmployer')}</h2>
-        <ul className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" aria-labelledby="bd-list">
-          {shown.map(({ post, level }) => <BoardCard key={post.id} post={post} level={level} reached={!seeker} applied={mineApplied.has(post.id)} viewer={st.role!} onOpen={() => setOpen(post.id)} />)}
-        </ul></>)}
-      {!seeker && <p className="text-xs text-muted flex flex-wrap items-center gap-1.5"><LevelBadge level={1} /> → <LevelBadge level={5} /> {t('m.board.levelsNote')}</p>}
+      {view === 'cards' && (!shown.length ? <Empty icon={seeker ? 'pin' : 'posts'} text={t(items.length ? 'm.board.noneFound' : seeker ? 'm.board.noneSeeker' : 'm.board.noneEmployer')} to={items.length ? undefined : seeker ? 'seek' : 'hire'} action={items.length ? undefined : t(seeker ? 'm.pin.go' : 'm.emp.post')} /> : (
+        <CardGrid shown={shown} fit={fit} dim={dim} gridRef={gridRef} label={t(seeker ? 'm.board.shop' : 'm.bd.listEmployer')}
+          card={({ post, level }) => <BoardCard key={post.id} post={post} level={level} reached={!seeker} applied={mineApplied.has(post.id)} viewer={st.role!} onOpen={() => setOpen(post.id)} />} />))}
+      {view === 'map' && shown.length > 0 && <p className="shrink-0 text-xs text-muted">{t('m.board.count', { n: shown.length })} — {t('m.bd.mapCards')}</p>}
 
       <Drawer open={!!current} onClose={() => setOpen(null)}>{(titleId) => current && <PostPanel titleId={titleId} post={current.post} level={current.level} reached={!seeker} applied={mineApplied.has(current.post.id)} viewer={st.role!} />}</Drawer>
     </Page>
+  )
+}
+
+/** the cards: on a computer exactly as many as fit the space (whole rows), then pages; elsewhere all of them */
+function CardGrid({ shown, fit, dim, gridRef, label, card }: { shown: { post: Post; level: Level }[]; fit: boolean; dim: { cols: number; rows: number }; gridRef: React.RefObject<HTMLDivElement | null>; label: string; card: (x: { post: Post; level: Level }) => React.ReactNode }) {
+  const pg = usePaged(shown, fit ? dim.cols * dim.rows : Infinity)
+  return (
+    <div className="fit:flex-1 fit:min-h-0 fit:flex fit:flex-col gap-2">
+      <h2 id="bd-list" className="sr-only">{label}</h2>
+      <div ref={gridRef} className="fit:flex-1 fit:min-h-0 fit:overflow-hidden">
+        <ul className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 fit:items-start" style={fit ? { gridTemplateColumns: `repeat(${dim.cols}, minmax(0, 1fr))` } : undefined} aria-labelledby="bd-list">
+          {pg.items.map(card)}
+        </ul>
+      </div>
+      <Pager page={pg.page} pages={pg.pages} onPage={pg.setPage} className="shrink-0" />
+    </div>
   )
 }
 
@@ -171,27 +189,29 @@ function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Po
   const pct = Math.min(100, Math.round((c.held / cap) * 100))
   const act = t(actionKey(post, viewer, applied))
   return (
-    <li className="bd-card p-5 flex flex-col items-center text-center gap-2">
-      <div className="relative">
-        <span aria-hidden className={`rar-${level} rar-avatar w-16 h-16 rounded-full grid place-items-center text-xl font-bold`}>{post.company.trim().charAt(0).toUpperCase()}</span>
+    <li data-fit-item className="bd-card p-3.5 sm:p-5 fit:p-4 flex flex-row sm:flex-col items-start sm:items-center text-left sm:text-center gap-3 sm:gap-2 fit:gap-1.5">
+      <div className="relative shrink-0">
+        <span aria-hidden className={`rar-${level} rar-avatar w-14 h-14 sm:w-16 sm:h-16 fit:w-14 fit:h-14 rounded-full grid place-items-center text-xl font-bold`}>{post.company.trim().charAt(0).toUpperCase()}</span>
         <span className={`absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full grid place-items-center ring-2 ring-[rgb(var(--surface))] ${post.verified ? 'bg-ok-bg text-ok-fg' : 'bg-warn-bg text-warn-fg'}`} title={t(post.verified ? 'm.vf.badge' : 'm.vf.unverified')}>
           <Icon name={post.verified ? 'shield' : 'warn'} size={13} /><span className="sr-only">{t(post.verified ? 'm.vf.badge' : 'm.vf.unverified')}</span></span>
       </div>
-      <h3 className="font-semibold leading-snug mt-1"><button type="button" onClick={onOpen} className="hover:underline underline-offset-4">{post.position}</button></h3>
+      <div className="flex-1 min-w-0 w-full flex flex-col sm:items-center gap-1.5 sm:gap-2 fit:gap-1.5">
+      <h3 className="font-semibold leading-snug sm:mt-1 line-clamp-2"><button type="button" onClick={onOpen} className="text-left sm:text-center hover:underline underline-offset-4">{post.position}</button></h3>
       <p className="text-sm text-muted -mt-1 line-clamp-1">{post.company}</p>
-      <div className="flex flex-wrap justify-center gap-1.5"><LevelBadge level={level} reached={reached} />{post.sample && <SampleBadge />}</div>
+      <div className="flex flex-wrap sm:justify-center gap-1.5"><LevelBadge level={level} reached={reached} />{post.sample && <SampleBadge />}</div>
       <p className="text-xs text-muted">{N.place(post.country, post.province)} · {ago(post.releasedAt)}</p>
-      <div className="grid grid-cols-2 w-full border-t border-line pt-3 mt-1 divide-x divide-line">
-        <div><p className="text-lg font-bold">{c.held}/{cap}</p><p className="text-xs text-muted">{t('m.bd.places')}</p></div>
-        <div><p className="text-lg font-bold">{c.reserved}</p><p className="text-xs text-muted">{t('m.bd.queue')}</p></div>
+      <div className="grid grid-cols-2 w-full border-t border-line pt-2 sm:pt-3 sm:mt-1 divide-x divide-line text-center">
+        <div><p className="text-base sm:text-lg font-bold">{c.held}/{cap}</p><p className="text-xs text-muted">{t('m.bd.places')}</p></div>
+        <div><p className="text-base sm:text-lg font-bold">{c.reserved}</p><p className="text-xs text-muted">{t('m.bd.queue')}</p></div>
       </div>
       <div className="w-full text-left">
         <p className="flex justify-between text-xs text-muted"><span>{t('m.bd.fill')}</span><span>{pct}%</span></p>
         <div className="fill-bar mt-1" role="img" aria-label={`${t('m.bd.fill')} ${pct}%`}><span style={{ width: `${pct}%` }} /></div>
       </div>
-      <div className="grid grid-cols-2 gap-2 w-full mt-auto pt-1">
+      <div className="grid grid-cols-2 gap-2 w-full mt-auto sm:pt-1">
         <button type="button" className="btn-ghost text-sm justify-center !rounded-full" onClick={onOpen} aria-label={`${t('m.bd.details')}: ${post.position}`}>{t('m.bd.details')}</button>
         <NavLink to={`post?id=${post.id}`} className="btn-primary text-sm justify-center !rounded-full" aria-label={`${act}: ${post.position}`}>{act}</NavLink>
+      </div>
       </div>
     </li>
   )
