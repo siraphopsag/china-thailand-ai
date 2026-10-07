@@ -21,6 +21,7 @@ import { MY_EMPLOYER, type MatchState, type Post } from './domain/match/types'
 import { messages, type MsgKey } from './locales'
 import { market } from './locales/market'
 import { MePage, SettingsPage } from './pages/match'
+import { slowFrames, weakGpu } from './lite'
 import { BoardPage } from './pages/board'
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
@@ -112,7 +113,7 @@ describe('3–4. the board: a small allowance chip, the card/map switch before t
 describe('5. fewer effects for older phones', () => {
   it('on by itself for a low-end device (before the first paint), or chosen in Settings; the map turns flat', () => {
     const init = src('../public/theme-init.js')
-    expect(init).toContain("if (lite === 'on' || (lite !== 'off' && ((n && n <= 4) || (m && m <= 4)))) document.documentElement.setAttribute('data-lite', '')")
+    expect(init).toContain("if (lite === 'on' || (lite !== 'off' && ((n && n <= 4) || (m && m <= 4) || localStorage.getItem('cnth-lite-auto') === 'on'))) document.documentElement.setAttribute('data-lite', '')")
     expect(src('./components/geomap.tsx')).toContain('const tilt = useTween(lite ? 0 :')
     expect(css).toContain('[data-lite] *, [data-lite] *::before, [data-lite] *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important }')
     expect(css).toContain('[data-lite] .mn-glow, [data-lite] .cta-ring::before { display: none }')
@@ -120,6 +121,16 @@ describe('5. fewer effects for older phones', () => {
     const page = html(<SettingsPage />, st)
     expect(page).toContain(T('m.settings.lite')); expect(page).toContain(T('m.settings.lite.auto'))
     expect(page).toContain(T('m.settings.lite.now', { s: T('m.settings.lite.isOff') })) // a test machine counts as a full device
+  })
+  it('a friend\'s Redmi 13C (Helio G85, Mali-G52 MC2, 8 cores) is caught by its graphics chip or by measured stutter', () => {
+    expect(weakGpu('Mali-G52 MC2')).toBe(true) // Redmi 13C, 9A/10A, many budget phones
+    for (const g of ['Mali-G57 MC2', 'Mali-G51', 'PowerVR Rogue GE8320', 'Adreno (TM) 610', 'Adreno (TM) 506', 'Mali-T830']) expect(weakGpu(g), g).toBe(true)
+    for (const g of ['Mali-G610 MC6', 'Mali-G77 MC9', 'Adreno (TM) 730', 'Apple GPU', 'ANGLE (NVIDIA GeForce RTX 3060)', '']) expect(weakGpu(g), g).toBe(false)
+    expect(slowFrames(Array(60).fill(16.7))).toBe(false) // 60 frames a second
+    expect(slowFrames(Array(40).fill(11.1))).toBe(false) // a 90 Hz screen
+    expect(slowFrames([...Array(30).fill(16.7), ...Array(30).fill(45)])).toBe(true) // half the frames drop
+    expect(slowFrames(Array(5).fill(100))).toBeNull() // too few frames (tab in the background): judge later
+    expect(src('./theme.tsx')).toContain("if (liteMode !== 'auto' || lowEndDevice() || verdict !== null) return")
   })
 })
 

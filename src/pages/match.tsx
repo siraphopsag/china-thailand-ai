@@ -596,7 +596,7 @@ export function PreparePage() {
 }
 export function SettingsPage() {
   const { t, lang, setLang } = useI18n()
-  const { theme, toggle, accent, setAccent, weekStart, setWeekStart, liteMode, setLiteMode, lite } = useTheme()
+  const { theme, toggle, accent, setAccent, weekStart, setWeekStart, liteMode, setLiteMode, lite, liteByAuto } = useTheme()
   const [accentMsg, setAccentMsg] = useState('')
   const { reset, mode } = useMatch()
   const [done, setDone] = useState(false)
@@ -630,7 +630,7 @@ export function SettingsPage() {
         {/* fewer effects for older phones (owner, Oct 2026) */}
         <fieldset aria-describedby="lite-hint"><legend className="label">{t('m.settings.lite')}</legend><div className="flex flex-wrap gap-2">{(['auto', 'on', 'off'] as const).map((m) => <button key={m} type="button" aria-pressed={liteMode === m} onClick={() => setLiteMode(m)} className={`min-h-[44px] px-4 rounded-lg border ${liteMode === m ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(m === 'auto' ? 'm.settings.lite.auto' : m === 'on' ? 'm.settings.on' : 'm.settings.off')}</button>)}</div>
           <p id="lite-hint" className="text-xs text-muted mt-1">{t('m.settings.lite.d')}</p>
-          <p role="status" className="text-sm mt-1 inline-flex items-center gap-1.5"><Icon name="gauge" size={15} className="text-primary" />{t('m.settings.lite.now', { s: t(lite ? 'm.settings.lite.isOn' : 'm.settings.lite.isOff') })}</p></fieldset>
+          <p role="status" className="text-sm mt-1 inline-flex items-center gap-1.5"><Icon name="gauge" size={15} className="text-primary" />{t('m.settings.lite.now', { s: t(lite ? 'm.settings.lite.isOn' : 'm.settings.lite.isOff') })}{liteByAuto && ` · ${t('m.settings.lite.byAuto')}`}</p></fieldset>
         <fieldset className="border-t border-line pt-3"><legend className="label">{t('m.clock.title')}</legend><ClockControls /></fieldset>
         {mode === 'local' && <div className="border-t border-line pt-3 space-y-2"><p className="text-sm text-muted">{t('m.settings.reset.d')}</p>
           <button type="button" className="btn-ghost" onClick={async () => { if (await ask(t('m.settings.reset.d'), { yes: t('m.settings.reset'), danger: true })) { reset(); setDone(true) } }}>{t('m.settings.reset')}</button>

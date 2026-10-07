@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { judgeDevice, readVerdict, type Verdict } from './lite'
 
 export type Theme = 'light' | 'dark'
 /** accent colour (owner, Oct 2026): indigo is the default; each one re-tints actions, selection and the map (index.css) */
@@ -25,7 +26,7 @@ const readAccent = (): Accent => {
 }
 const readWeek = (): WeekStart => { try { return localStorage.getItem(WEEK_KEY) === '1' ? 1 : 0 } catch { return 0 } }
 interface Ctx { theme: Theme; toggle: () => void; accent: Accent; setAccent: (a: Accent) => void; weekStart: WeekStart; setWeekStart: (w: WeekStart) => void
-  liteMode: LiteMode; setLiteMode: (m: LiteMode) => void; /** fewer effects right now */ lite: boolean }
+  liteMode: LiteMode; setLiteMode: (m: LiteMode) => void; /** fewer effects right now */ lite: boolean; /** …and chosen by the site, not by hand */ liteByAuto: boolean }
 const C = createContext<Ctx | null>(null)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -33,7 +34,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<Accent>(readAccent)
   const [weekStart, setWeekStart] = useState<WeekStart>(readWeek)
   const [liteMode, setLiteMode] = useState<LiteMode>(readLite)
-  const lite = liteMode === 'on' || (liteMode === 'auto' && lowEndDevice())
+  const [verdict, setVerdict] = useState<Verdict | null>(readVerdict)
+  const liteByAuto = liteMode === 'auto' && (lowEndDevice() || verdict === 'on')
+  const lite = liteMode === 'on' || liteByAuto
+  // once per device: the graphics chip and the frame rate (src/lite.ts) — a Redmi 13C passes the core/memory check
+  useEffect(() => {
+    if (liteMode !== 'auto' || lowEndDevice() || verdict !== null) return
+    let alive = true
+    void judgeDevice().then(() => { if (alive) setVerdict(readVerdict()) })
+    return () => { alive = false }
+  }, [liteMode, verdict])
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     try { localStorage.setItem(KEY, theme) } catch { /* ignore */ }
@@ -47,7 +57,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (lite) document.documentElement.setAttribute('data-lite', ''); else document.documentElement.removeAttribute('data-lite')
     try { if (liteMode === 'auto') localStorage.removeItem(LITE_KEY); else localStorage.setItem(LITE_KEY, liteMode) } catch { /* ignore */ }
   }, [lite, liteMode])
-  const value = useMemo(() => ({ theme, toggle: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), accent, setAccent, weekStart, setWeekStart, liteMode, setLiteMode, lite }), [theme, accent, weekStart, liteMode, lite])
+  const value = useMemo(() => ({ theme, toggle: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), accent, setAccent, weekStart, setWeekStart, liteMode, setLiteMode, lite, liteByAuto }), [theme, accent, weekStart, liteMode, lite, liteByAuto])
   return <C.Provider value={value}>{children}</C.Provider>
 }
 export function useTheme() { const c = useContext(C); if (!c) throw new Error('theme'); return c }

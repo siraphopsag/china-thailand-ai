@@ -84,10 +84,11 @@ export const market = {
   // ---------- 5. smoother on older phones
   'm.settings.lite': ['ลดเอฟเฟกต์เพื่อความลื่น', '减少特效以提升流畅度', 'Fewer effects, smoother'],
   'm.settings.lite.auto': ['อัตโนมัติ', '自动', 'Automatic'],
-  'm.settings.lite.d': ['ปิดกระจกเบลอ แสงฟุ้ง แผนที่เอียง 3 มิติ และเส้นเคลื่อนไหว ให้มือถือรุ่นเก่าลื่นขึ้น · อัตโนมัติ = เปิดเองเมื่อเครื่องสเปกต่ำ (CPU ไม่เกิน 4 คอร์ หรือ RAM ไม่เกิน 4 GB)',
-    '关闭毛玻璃、光晕、3D 倾斜地图和动态线条，让旧手机更流畅 · 自动 = 在低配设备上自动开启（CPU 不超过 4 核或内存不超过 4 GB）',
-    'Turns off frosted glass, glows, the 3D tilted map and moving lines so older phones run smoother · Automatic = on for low-end devices (4 CPU cores or fewer, or 4 GB of memory or less)'],
+  'm.settings.lite.d': ['ปิดกระจกเบลอ แสงฟุ้ง แผนที่เอียง 3 มิติ และเส้นเคลื่อนไหว ให้มือถือรุ่นเก่าลื่นขึ้น · อัตโนมัติ = เปิดเองเมื่อเครื่องสเปกต่ำ (CPU ไม่เกิน 4 คอร์ หรือ RAM ไม่เกิน 4 GB) การ์ดจอรุ่นประหยัด หรือวัดแล้วหน้าเว็บกระตุก',
+    '关闭毛玻璃、光晕、3D 倾斜地图和动态线条，让旧手机更流畅 · 自动 = 在低配设备（CPU 不超过 4 核或内存不超过 4 GB）、入门级显卡或测得卡顿时自动开启',
+    'Turns off frosted glass, glows, the 3D tilted map and moving lines so older phones run smoother · Automatic = on for low-end devices (4 CPU cores or fewer, or 4 GB of memory or less), budget graphics chips or measured stutter'],
   'm.settings.lite.now': ['เครื่องนี้: {s}', '此设备：{s}', 'This device: {s}'],
   'm.settings.lite.isOn': ['ลดเอฟเฟกต์อยู่', '已减少特效', 'fewer effects'],
+  'm.settings.lite.byAuto': ['เว็บเปิดให้เอง เพราะเครื่องนี้สเปกต่ำ การ์ดจอรุ่นประหยัด หรือวัดแล้วหน้าเว็บกระตุก', '网站自动开启：此设备配置较低、显卡入门级或测得页面卡顿', 'turned on by the site: a low-end device, a budget graphics chip or measured stutter'],
   'm.settings.lite.isOff': ['เอฟเฟกต์เต็ม', '完整特效', 'full effects'],
 } as const satisfies Record<string, Msg>
