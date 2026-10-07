@@ -382,7 +382,7 @@ export const match = {
   'm.lv.d5': ['ทุกประเทศเห็นได้ — ประกาศที่ยังไม่มีใครรับ ประกาศใหม่อยู่ด้านบน', '所有国家都能看到——尚无人接受的招聘，新的在上面', 'Every country can see these — posts nobody has taken, newer ones on top'],
   'm.ago.posted': ['โพสต์เมื่อ {t}', '{t}发布', 'Posted {t}'],
   'm.ago.renewed': ['ต่ออายุเมื่อ {t}', '{t}续期', 'Renewed {t}'],
-  'm.cnt.held': ['รับแล้ว {n}/{max} คน', '已申请 {n}/{max} 人', '{n}/{max} places taken'],
+  'm.cnt.held': ['ต้องการ {max} คน · รับแล้ว {n}', '招 {max} 人 · 已申请 {n}', '{max} wanted · {n} taken'],
   'm.cnt.reserved': ['จองคิว {n} คน', '排队预约 {n} 人', '{n} reserved'],
   'm.state.waiting': ['ครบแล้ว · รอนายจ้างยืนยัน', '已满 · 等待雇主确认', 'Full · waiting for the employer'],
   'm.state.closed': ['ครบแล้ว · ยังจองคิวได้', '已满 · 仍可预约排队', 'Full · you can still reserve'],
@@ -472,7 +472,7 @@ export const match = {
   'm.err.available': ['เลือกวันที่เริ่มงานได้ ตั้งแต่วันนี้ และไม่เกิน 2 ปี', '请选择可入职日期：从今天起，两年内', 'Choose the day you can start: from today, within two years'],
   'm.err.state': ['ทำรายการนี้ไม่ได้แล้ว ลองรีเฟรชหน้า', '此操作已无法进行，请刷新页面', 'This can no longer be done — refresh the page'],
   'm.err.belowHeld': ['มีคนได้ที่แล้วมากกว่าจำนวนนี้ — ลดจำนวนคนต่ำกว่าคนที่ได้ที่แล้วไม่ได้', '已占名额的人数多于此数——不能少于已占名额的人数', 'More people already hold a place — the number cannot go below them'],
-  'm.err.dbOld': ['ฐานข้อมูลยังไม่ได้อัปเดต — เจ้าของระบบต้องรันไฟล์ 0003_board.sql และ 0004_cases.sql ใน Supabase ก่อน (คู่มือข้อ 12–13)', '数据库尚未更新——系统所有者需先在 Supabase 中运行 0003_board.sql 和 0004_cases.sql（指南第 12–13 步）', 'The database has not been updated yet — the site owner needs to run 0003_board.sql and 0004_cases.sql in Supabase first (guide steps 12–13)'],
+  'm.err.dbOld': ['ฐานข้อมูลยังไม่ได้อัปเดต — เจ้าของระบบต้องรันไฟล์ 0003_board.sql ถึง 0007_person_verify.sql ใน Supabase ก่อน (คู่มือข้อ 12–16)', '数据库尚未更新——系统所有者需先在 Supabase 中运行 0003_board.sql 至 0007_person_verify.sql（指南第 12–16 步）', 'The database has not been updated yet — the site owner needs to run 0003_board.sql to 0007_person_verify.sql in Supabase first (guide steps 12–16)'],
   // ---------- membership plans (owner, Oct 2026)
   'm.member': ['สมาชิก', '会员', 'Membership'],
   'm.plan.title': ['สมัครสมาชิก', '开通会员', 'Membership'],

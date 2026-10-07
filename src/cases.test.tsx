@@ -119,7 +119,7 @@ describe('cases in the app state', () => {
   const mine = (verified: boolean): MatchState => {
     const st = seedState(NOW)
     st.role = 'employer'
-    st.employerVerify = verified ? { country: 'TH', regNo: withThaiCheck('010555612345'), status: 'verified', at: at(-1) } : null
+    st.employerVerify = verified ? { kind: 'company', country: 'TH', regNo: withThaiCheck('010555612345'), status: 'verified', at: at(-1) } : null
     st.posts = st.posts.map((p) => (p.id === 'post-s1' ? { ...p, employerId: MY_EMPLOYER, verified } : p))
     return st
   }
@@ -172,7 +172,7 @@ describe('cases in the app state', () => {
     expect(bad((s) => { s.cases[0].note = 'line id: abc, mail x@y.com' }).cases).toEqual([])
     expect(bad((s) => { s.cases[0].trainings = [] }).cases).toEqual([])
     expect(bad((s) => { (s as unknown as Record<string, unknown>).employerVerify = { country: 'TH', regNo: '1', status: 'verified', at: at(0) } }).employerVerify).toBeNull()
-    expect(bad((s) => { s.employerVerify = { country: 'TH', regNo: withThaiCheck('010555612345'), status: 'pending', at: at(0) } }).employerVerify?.status).toBe('pending')
+    expect(bad((s) => { s.employerVerify = { kind: 'company', country: 'TH', regNo: withThaiCheck('010555612345'), status: 'pending', at: at(0) } }).employerVerify?.status).toBe('pending')
   })
   it('database rows and errors', () => {
     const c = rowToCase({ id: 'x', acceptance_id: 'a', post_id: 'p', seeker_id: 'u1', steps: { opened: at(0), submitted: at(0), junk: 'x' }, docs: { passport: true, other: true }, tests: {}, permit: null,
@@ -202,7 +202,7 @@ describe('pages', () => {
     const emp = seedState(NOW); emp.role = 'employer'
     const me = html(<MePage />, emp)
     expect(me).toContain(T('m.vf.title')); expect(me).toContain(T('m.vf.hint.TH'))
-    emp.employerVerify = { country: 'CN', regNo: withChinaCheck('91310000MA1FL0000'), status: 'pending', at: at(0) }
+    emp.employerVerify = { kind: 'company', country: 'CN', regNo: withChinaCheck('91310000MA1FL0000'), status: 'pending', at: at(0) }
     expect(html(<MePage />, emp)).toContain(T('m.vf.demoApprove')) // local demo: you can play the agency
   })
   it('terms of use: an information and matching board; licensed agencies send workers; no fees from workers', () => {

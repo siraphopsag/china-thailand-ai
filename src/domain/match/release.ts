@@ -59,8 +59,10 @@ export function stageAt(s: Schedule, now: number): Level | 'expired' {
 export const isExpired = (post: Post, now: number) => now >= Date.parse(post.releasedAt) + POST_LIFE_DAYS * DAY_MS
 
 export interface Reach { level: Level; stage: Level | 'expired'; visible: boolean; /** when it opens for this seeker (null = already open, or not before a later level) */ opensAt: number | null }
-/** an employer not yet verified reaches levels 1 and 2 only (owner, Oct 2026) */
-export const capStage = (stage: Level | 'expired', post: Pick<Post, 'verified'>): Level | 'expired' => (stage !== 'expired' && !post.verified && stage > 2 ? 2 : stage)
+/** how far a post may go (owner, Oct 2026): a verified company all five levels, a verified private person up to level 3,
+ *  an employer not yet verified levels 1 and 2 only */
+export const levelCap = (post: Pick<Post, 'verified' | 'verifiedAs'>): Level => (!post.verified ? 2 : post.verifiedAs === 'person' ? 3 : 5)
+export const capStage = (stage: Level | 'expired', post: Pick<Post, 'verified' | 'verifiedAs'>): Level | 'expired' => (stage !== 'expired' && stage > levelCap(post) ? levelCap(post) : stage)
 /** the level a post has reached now, with the cap for unverified employers */
 export const stageOf = (post: Post, pool: PinLike[], now: number) => capStage(stageAt(scheduleOf(post, pool, now), now), post)
 /** can this seeker (their own pins) see the post now, and at which level does it reach them */
@@ -77,7 +79,7 @@ export function reachFor(post: Post, myPins: PinLike[], pool: PinLike[], now: nu
     return { level, stage, visible: now >= opens, opensAt: now >= opens ? null : opens }
   }
   const visible = level <= stage
-  const opensAt = visible || (!post.verified && level > 2) ? null : level === 2 ? s.end1 : level === 3 ? s.end2 : level === 4 ? s.end3 : s.end4
+  const opensAt = visible || level > levelCap(post) ? null : level === 2 ? s.end1 : level === 3 ? s.end2 : level === 4 ? s.end3 : s.end4
   return { level, stage, visible, opensAt }
 }
 

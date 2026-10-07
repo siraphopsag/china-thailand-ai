@@ -8,6 +8,7 @@ import { Icon } from './icons'
 import { GEO, HOME, MAX_K, clampView, codeOfIso, lerpView, viewForBox, type GeoCode, type View } from '../geo'
 import capitals from '../data/geo/capitals.json'
 import { FLAGS } from './flags'
+import { useLite } from '../theme'
 
 /**
  * Reusable map of China + ASEAN with Thai and Chinese provinces (same Natural Earth data and raised-relief style as the original
@@ -195,7 +196,9 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   useEffect(() => { flyTo(target); return () => cancelAnimationFrame(anim.current) }, [target]) // eslint-disable-line react-hooks/exhaustive-deps -- flyTo reads refs only
   const countryLift = useTween(country && !province ? 12 : 0, 420)
   const provLift = useTween(province ? 9 : 0, 380)
-  const tilt = useTween((country || province ? TILT.focused : TILT.overview) * (w < 640 ? TILT.phone : 1), 520)
+  // fewer effects (older phones): a flat map — the 3D lean is redrawn every frame while panning
+  const lite = useLite()
+  const tilt = useTween(lite ? 0 : (country || province ? TILT.focused : TILT.overview) * (w < 640 ? TILT.phone : 1), 520)
 
   // gestures: one finger (or the mouse) drags, two fingers pinch to zoom (owner, Oct 2026: pinching did nothing on phones),
   // wheel/buttons zoom, a tap picks a province (inside the focused country) or a country

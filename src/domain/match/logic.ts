@@ -4,11 +4,11 @@ import { isObj } from '../../profileSchema'
 import { provinces } from '../../locales/provinces'
 import { BENEFITS, COUNTRIES, CURRENCIES, EDU, EMPLOYMENT, EXPIRY_WARN_DAYS, FREE_POSTS_PER_WEEK, HOLDS_PLACE, MEMBER_PINS_PER_WEEK, MEMBER_WARN_DAYS, PLANS, type PlanId, INDUSTRIES, LANGS, LANG_LEVELS, MAX_CLOCK_HOURS, ME, MEMBER_POSTS_PER_WEEK, MY_EMPLOYER,
   PINS_PER_WEEK, POST_LIFE_DAYS, SKILLS, type Acceptance, type AppStatus, type Benefit, type Country, type Credit, type Edu, type Employment, type Industry, type LanguageSkill, type MatchState,
-  type Pin, type Place, type Post, type Salary, type Seeker, type Skill } from './types'
+  type Pin, type Place, type Post, type Salary, type Seeker, type Skill, type VerifyKind } from './types'
 import { DAY_MS, HOUR_MS, cycleQuota, isExpired, pinActive, reachFor, type PinLike } from './release'
 import { currentStep, lastUpdate, newCase, parseCase, type Case } from './cases'
 import { parseReports, reportedIds } from './reports'
-import { isRegNo } from './verify'
+import { isMobile, isRegNo, phoneLast4 } from './verify'
 
 export { DAY_MS, HOUR_MS }
 /**
@@ -36,8 +36,9 @@ const isIso = (v: unknown): v is string => typeof v === 'string' && !Number.isNa
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9:_-]{1,40}$/.test(v)
 
 export type Problem = 'place' | 'industry' | 'skills' | 'limit' | 'duplicate' | 'company' | 'position' | 'details' | 'years' | 'contact' | 'notOpen' | 'already' | 'unknown'
-  | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits' | 'quota' | 'network' | 'intro' | 'available' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'caseText' | 'departDate' | 'reported' | 'reportLimit' | 'reportNote' | 'suspended'
+  | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits' | 'quota' | 'network' | 'intro' | 'available' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'caseText' | 'departDate' | 'reported' | 'reportLimit' | 'reportNote' | 'suspended' | 'phone' | 'code'
 const oneOf = <T extends string>(all: readonly T[], v: unknown): v is T => typeof v === 'string' && (all as readonly string[]).includes(v)
+const VERIFY_KINDS: readonly VerifyKind[] = ['company', 'person']
 const intIn = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max
 const isLangs = (v: unknown): v is LanguageSkill[] => Array.isArray(v) && v.length <= LANGS.length && v.every((l) => isObj(l) && Object.keys(l).length === 2 && oneOf(LANGS, l.lang) && oneOf(LANG_LEVELS, l.level))
   && new Set(v.map((l) => (l as LanguageSkill).lang)).size === v.length
@@ -144,7 +145,12 @@ export function openCaseFor(st: MatchState, accs: Acceptance[], accId: string, c
 /** a registration number for verification: right form and check digit, then it waits for approval */
 export function requestVerify(country: Country, regNo: string, at: string): Outcome<NonNullable<MatchState['employerVerify']>> {
   if (!isCountry(country) || !isRegNo(country, regNo)) return fail('regNo')
-  return { ok: true, value: { country, regNo, status: 'pending', at } }
+  return { ok: true, value: { kind: 'company', country, regNo, status: 'pending', at } }
+}
+/** a private person: a mobile number confirmed with a code; only its last 4 digits go on (owner, Oct 2026) */
+export function requestPersonVerify(country: Country, phone: string, at: string): Outcome<NonNullable<MatchState['employerVerify']>> {
+  if (!isCountry(country) || !isMobile(country, phone)) return fail('phone')
+  return { ok: true, value: { kind: 'person', country, regNo: '', phone4: phoneLast4(phone), status: 'pending', at } }
 }
 
 /* ---------- applications and the reservation queue ---------- */
@@ -247,7 +253,7 @@ export function parseState(input: unknown): MatchState | null {
     .filter((s, i, all) => all.findIndex((x) => x.id === s.id) === i)
   // data saved before Oct 2026: posts without the new details
   // posts saved before verification existed: samples count as verified, my own as not yet
-  const posts = (Array.isArray(raw.posts) ? raw.posts.map((p) => (isObj(p) ? { ...withLegacy(p), verified: typeof p.verified === 'boolean' ? p.verified : p.employerId !== MY_EMPLOYER, sample: p.employerId !== MY_EMPLOYER } : p)) : []).filter(isPost)
+  const posts = (Array.isArray(raw.posts) ? raw.posts.map((p) => (isObj(p) ? { ...withLegacy(p), verified: typeof p.verified === 'boolean' ? p.verified : p.employerId !== MY_EMPLOYER, verifiedAs: oneOf(VERIFY_KINDS, p.verifiedAs) ? p.verifiedAs : undefined, sample: p.employerId !== MY_EMPLOYER } : p)) : []).filter(isPost)
     .filter((p, i, all) => all.findIndex((x) => x.id === p.id) === i)
   const postIds = new Set(posts.map((p) => p.id)), people = new Set([ME, ...seekers.map((s) => s.id)])
   const seen = new Set<string>()
@@ -258,8 +264,11 @@ export function parseState(input: unknown): MatchState | null {
   const cases = (Array.isArray(raw.cases) ? raw.cases.map(parseCase) : []).filter((c): c is Case => !!c && accIds.has(c.accId) && postIds.has(c.postId))
     .filter((c, i, all) => all.findIndex((x) => x.accId === c.accId) === i)
   const ev = raw.employerVerify
-  const employerVerify = isObj(ev) && isCountry(ev.country) && typeof ev.regNo === 'string' && isRegNo(ev.country, ev.regNo) && (ev.status === 'pending' || ev.status === 'verified' || ev.status === 'rejected') && isIso(ev.at)
-    ? { country: ev.country, regNo: ev.regNo, status: ev.status, at: ev.at, ...(isIso(ev.decidedAt) ? { decidedAt: ev.decidedAt } : {}) } as MatchState['employerVerify'] : null
+  // a company (registration number) or, from Oct 2026, a private person (last 4 digits of a phone); saved before: a company
+  const person = isObj(ev) && ev.kind === 'person'
+  const employerVerify = isObj(ev) && isCountry(ev.country) && (person ? typeof ev.phone4 === 'string' && /^\d{4}$/.test(ev.phone4) : typeof ev.regNo === 'string' && isRegNo(ev.country, ev.regNo))
+    && (ev.status === 'pending' || ev.status === 'verified' || ev.status === 'rejected') && isIso(ev.at)
+    ? { kind: person ? 'person' : 'company', country: ev.country, regNo: person ? '' : ev.regNo, ...(person ? { phone4: ev.phone4 } : {}), status: ev.status, at: ev.at, ...(isIso(ev.decidedAt) ? { decidedAt: ev.decidedAt } : {}) } as MatchState['employerVerify'] : null
   return {
     version: 2,
     role: raw.role === 'seeker' || raw.role === 'employer' ? raw.role : null,

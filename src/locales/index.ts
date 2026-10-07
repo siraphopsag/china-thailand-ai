@@ -15,7 +15,8 @@ import { match } from './match.js'
 import { cases } from './cases.js'
 import { safety } from './safety.js'
 import { design } from './design.js'
+import { market } from './market.js'
 
 /** Every message is [th, zh, en]. Later spreads override earlier keys (ux.ts = simplified copy). */
-export const messages = { ...common, ...data, ...pages, ...ux, ...legal, ...journey, ...geo, ...provinces, ...brand, ...plan, ...jobboard, ...entry, ...home, ...match, ...cases, ...safety, ...design }
+export const messages = { ...common, ...data, ...pages, ...ux, ...legal, ...journey, ...geo, ...provinces, ...brand, ...plan, ...jobboard, ...entry, ...home, ...match, ...cases, ...safety, ...design, ...market }
 export type MsgKey = keyof typeof messages

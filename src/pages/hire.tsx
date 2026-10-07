@@ -46,7 +46,8 @@ export function HirePage() {
   const [saving, setSaving] = useState(false)
   const [c, setC] = useState<GeoCode | null>(null), [p, setP] = useState<string | null>(null)
   const [form, setForm] = useState(false)
-  const [side, setSide] = useState<'new' | 'mine' | 'verify'>('new')
+  const tabAsked = useSearchParam('tab') // the board's "waiting for you" chip opens my posts
+  const [side, setSide] = useState<'new' | 'mine' | 'verify'>(tabAsked === 'mine' || tabAsked === 'verify' ? tabAsked : 'new')
   const fit = useFit()
   const [company, setCompany] = useState(st.myCompany), [position, setPosition] = useState('')
   const [industry, setIndustry] = useState<Industry>('manufacturing'), [skills, setSkills] = useState<Skill[]>([])

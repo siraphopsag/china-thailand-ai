@@ -4,8 +4,8 @@ import { NavLink, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
 import { localDay } from '../domain/match/logic'
 import { APPOINTMENTS, CASE_STEPS, DOCS, PERMITS, TESTS, currentStep, stepsDone, trainingsLeft, type Case, type CaseAction, type Training } from '../domain/match/cases'
-import { ME, MY_EMPLOYER, type Country } from '../domain/match/types'
-import { cleanRegNo, isRegNo } from '../domain/match/verify'
+import { ME, MY_EMPLOYER, type Country, type VerifyKind } from '../domain/match/types'
+import { cleanPhone, cleanRegNo, isMobile, isRegNo, oneTimeCode } from '../domain/match/verify'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
@@ -225,53 +225,110 @@ export function CaseLink({ c }: { c: Case }) {
 }
 
 /* ================= employer verification ================= */
+/** the code is good for 5 minutes and 5 tries; then a new one is needed */
+const CODE_LIFE_MS = 5 * 60_000, CODE_TRIES = 5
+const pick = (on: boolean) => `min-h-[44px] px-4 rounded-lg border ${on ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`
+/**
+ * An employer gets verified as a company (registration number) or — without one — as a private person (owner, Oct 2026,
+ * option ก): a mobile number confirmed with a one-time code, then the agency approves. Only the last 4 digits leave the browser.
+ * In the prototype the code is shown on the screen instead of being sent by SMS (said so next to it).
+ */
 export function VerifyCard() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, mode, requestVerification, decideVerification } = useMatch()
+  const { st, mode, requestVerification, requestPersonVerification, decideVerification } = useMatch()
   const ev = st.employerVerify
+  const [kind, setKind] = useState<VerifyKind>(ev?.kind ?? 'company')
   const [country, setCountry] = useState<Country>(ev?.country ?? 'TH')
   const [reg, setReg] = useState(''), [editing, setEditing] = useState(false), [busy, setBusy] = useState(false)
+  const [phone, setPhone] = useState(''), [sent, setSent] = useState<{ code: string; at: number; tries: number } | null>(null), [code, setCode] = useState('')
   const [err, setErr] = useState(''), [msg, setMsg] = useState<Msg>(null)
   const form = !ev || ev.status === 'rejected' || editing
-  const submit = async (e: FormEvent) => {
+  const done = (ok: boolean, problem?: string) => {
+    if (ok) { setErr(''); setReg(''); setPhone(''); setCode(''); setSent(null); setEditing(false); setMsg({ tone: 'info', text: t('m.vf.sent') }) }
+    else setMsg({ tone: 'danger', text: problem ?? t('m.err.network') })
+  }
+  const submitCompany = async (e: FormEvent) => {
     e.preventDefault(); setMsg(null)
     const v = cleanRegNo(reg)
     if (!isRegNo(country, v)) { setErr(N.problem('regNo')); return }
     setBusy(true); const r = await requestVerification(country, v); setBusy(false)
-    if (r.ok) { setErr(''); setReg(''); setEditing(false); setMsg({ tone: 'info', text: t('m.vf.sent') }) }
+    if (r.ok) done(true)
     else if (r.problem === 'regNo') setErr(N.problem('regNo'))
-    else setMsg({ tone: 'danger', text: N.problem(r.problem) })
+    else done(false, N.problem(r.problem))
   }
-  const demo = async (ok: boolean) => { setBusy(true); const done = await decideVerification(null, ok); setBusy(false); if (!done) setMsg({ tone: 'danger', text: t('m.err.network') }) }
+  // a private person: first the number (a code is "sent"), then the code
+  const sendCode = (e: FormEvent) => {
+    e.preventDefault(); setMsg(null)
+    if (!isMobile(country, cleanPhone(country, phone))) { setErr(N.problem('phone')); return }
+    setErr(''); setCode(''); setSent({ code: oneTimeCode(), at: Date.now(), tries: 0 })
+  }
+  const confirmCode = async (e: FormEvent) => {
+    e.preventDefault(); setMsg(null)
+    if (!sent) return
+    if (Date.now() - sent.at > CODE_LIFE_MS || sent.tries >= CODE_TRIES) { setErr(t('m.vf.codeOld')); return }
+    if (code.trim() !== sent.code) { setSent({ ...sent, tries: sent.tries + 1 }); setErr(N.problem('code')); return }
+    setBusy(true); const r = await requestPersonVerification(country, phone); setBusy(false)
+    if (r.ok) done(true)
+    else if (r.problem === 'phone') { setSent(null); setErr(N.problem('phone')) }
+    else done(false, N.problem(r.problem))
+  }
+  const demo = async (ok: boolean) => { setBusy(true); const d = await decideVerification(null, ok); setBusy(false); setMsg(d ? null : { tone: 'danger', text: t('m.err.network') }) }
+  const choose = (k: VerifyKind) => { setKind(k); setErr(''); setSent(null); setCode('') }
+  const person = ev?.kind === 'person'
   return (
     <section id="verify" className="card space-y-3" aria-labelledby="vf-h">
       <h2 id="vf-h" className="h2 flex items-center gap-2"><Icon name="shield" size={18} className="text-primary" />{t('m.vf.title')}</h2>
       {ev && (
         <p className="text-sm flex flex-wrap items-center gap-2">
-          {ev.status === 'verified' ? <span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name="shield" size={12} />{t('m.vf.verified')}</span>
+          {ev.status === 'verified' ? <span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name={person ? 'personCheck' : 'verified'} size={12} />{t(person ? 'm.vf.verified.person' : 'm.vf.verified')}</span>
             : ev.status === 'pending' ? <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="hourglass" size={12} />{t('m.vf.pending', { d: N.dayTime(Date.parse(ev.at)) })}</span>
               : <span className="chip bg-danger-bg text-danger-fg border-danger-line"><Icon name="warn" size={12} />{t('m.vf.rejected')}</span>}
-          <span className="text-muted">{tk('country', ev.country)} · <span className="font-mono">{ev.regNo}</span></span>
+          <span className="text-muted">{tk('country', ev.country)} · {person ? t('m.vf.asPerson', { d: ev.phone4 ?? '' }) : <span className="font-mono">{ev.regNo}</span>}</span>
         </p>)}
-      {(!ev || ev.status !== 'verified') && <p className="text-sm text-muted">{t('m.vf.lead')}</p>}
+      {(!ev || ev.status !== 'verified' || form) && <p className="text-sm text-muted">{t(kind === 'person' ? 'm.vf.lead.person' : 'm.vf.lead')}</p>}
+      {ev?.status === 'verified' && person && !form && <p className="text-sm text-muted">{t('m.vf.toCompany')}</p>}
       <Toast msg={msg} />
       {ev?.status === 'pending' && mode === 'local' && (
         <div className="flex flex-wrap gap-2"><button type="button" className="btn-primary text-sm" disabled={busy} onClick={() => void demo(true)}>{t('m.vf.demoApprove')}</button>
           <button type="button" className="btn-ghost text-sm" disabled={busy} onClick={() => void demo(false)}>{t('m.vf.demoReject')}</button></div>)}
       {form ? (
-        <form className="space-y-3" onSubmit={submit} noValidate>
+        <div className="space-y-3">
           {editing && <Warn>{t('m.vf.changeNote')}</Warn>}
-          <fieldset><legend className="label">{t('m.vf.country')}</legend><div className="flex gap-2">{(['TH', 'CN'] as const).map((k) => (
-            <button key={k} type="button" aria-pressed={country === k} onClick={() => { setCountry(k); setErr('') }} className={`min-h-[44px] px-4 rounded-lg border ${country === k ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{tk('country', k)}</button>))}</div></fieldset>
-          <div><label className="block"><span className="label">{t('m.vf.reg')}</span>
-            <input id="vf-reg" className="input font-mono" maxLength={24} autoComplete="off" spellCheck={false} value={reg} aria-invalid={!!err} aria-describedby={`vf-hint${err ? ' vf-err' : ''}`} onChange={(e) => { setReg(e.target.value); setErr('') }} /></label>
-            <span id="vf-hint" className="block text-xs text-muted mt-1">{t(country === 'TH' ? 'm.vf.hint.TH' : 'm.vf.hint.CN')} · {t('m.vf.public')}</span>
-            {err && <span id="vf-err" className="block text-sm text-danger-fg mt-1">{err}</span>}</div>
-          <div className="flex flex-wrap gap-2"><button type="submit" className="btn-primary" disabled={busy || !reg.trim()}><Icon name="send" size={16} />{busy ? t('m.ask.busy') : t('m.vf.send')}</button>
-            {editing && <button type="button" className="btn-ghost" onClick={() => { setEditing(false); setErr('') }}>{t('m.vf.cancel')}</button>}</div>
-        </form>
-      ) : <button type="button" className="btn-ghost text-sm" onClick={() => setEditing(true)}><Icon name="edit" size={15} />{t('m.vf.change')}</button>}
+          <fieldset><legend className="label">{t('m.vf.kind')}</legend><div className="flex flex-wrap gap-2">{(['company', 'person'] as const).map((k) => (
+            <button key={k} type="button" aria-pressed={kind === k} onClick={() => choose(k)} className={`${pick(kind === k)} flex items-center gap-2`}><Icon name={k === 'company' ? 'business' : 'user'} size={16} />{t(k === 'company' ? 'm.vf.kind.company' : 'm.vf.kind.person')}</button>))}</div></fieldset>
+          <fieldset><legend className="label">{t(kind === 'person' ? 'm.vf.country.person' : 'm.vf.country')}</legend><div className="flex gap-2">{(['TH', 'CN'] as const).map((k) => (
+            <button key={k} type="button" aria-pressed={country === k} onClick={() => { setCountry(k); setErr(''); setSent(null) }} className={pick(country === k)}>{tk('country', k)}</button>))}</div></fieldset>
+          {kind === 'company' ? (
+            <form className="space-y-3" onSubmit={submitCompany} noValidate>
+              <div><label className="block"><span className="label">{t('m.vf.reg')}</span>
+                <input id="vf-reg" className="input font-mono" maxLength={24} autoComplete="off" spellCheck={false} value={reg} aria-invalid={!!err} aria-describedby={`vf-hint${err ? ' vf-err' : ''}`} onChange={(e) => { setReg(e.target.value); setErr('') }} /></label>
+                <span id="vf-hint" className="block text-xs text-muted mt-1">{t(country === 'TH' ? 'm.vf.hint.TH' : 'm.vf.hint.CN')} · {t('m.vf.public')}</span>
+                {err && <span id="vf-err" className="block text-sm text-danger-fg mt-1">{err}</span>}</div>
+              <div className="flex flex-wrap gap-2"><button type="submit" className="btn-primary" disabled={busy || !reg.trim()}><Icon name="send" size={16} />{busy ? t('m.ask.busy') : t('m.vf.send')}</button>
+                {editing && <button type="button" className="btn-ghost" onClick={() => { setEditing(false); setErr('') }}>{t('m.vf.cancel')}</button>}</div>
+            </form>
+          ) : !sent ? (
+            <form className="space-y-3" onSubmit={sendCode} noValidate>
+              <div><label className="block"><span className="label">{t('m.vf.phone')}</span>
+                <input id="vf-phone" className="input font-mono" type="tel" inputMode="tel" maxLength={20} autoComplete="tel" value={phone} aria-invalid={!!err} aria-describedby={`vf-phint${err ? ' vf-err' : ''}`} onChange={(e) => { setPhone(e.target.value); setErr('') }} /></label>
+                <span id="vf-phint" className="block text-xs text-muted mt-1">{t(country === 'TH' ? 'm.vf.phone.hint.TH' : 'm.vf.phone.hint.CN')} · {t('m.vf.phone.privacy')}</span>
+                {err && <span id="vf-err" className="block text-sm text-danger-fg mt-1">{err}</span>}</div>
+              <div className="flex flex-wrap gap-2"><button type="submit" className="btn-primary" disabled={!phone.trim()}><Icon name="phone" size={16} />{t('m.vf.sendCode')}</button>
+                {editing && <button type="button" className="btn-ghost" onClick={() => { setEditing(false); setErr('') }}>{t('m.vf.cancel')}</button>}</div>
+            </form>
+          ) : (
+            <form className="space-y-3" onSubmit={confirmCode} noValidate>
+              <p role="status" className="text-sm rounded-lg border border-info-line bg-info-bg text-info-fg px-3 py-2 flex items-center gap-2"><Icon name="phone" size={16} />{t('m.vf.codeDemo', { c: sent.code })}</p>
+              <div><label className="block"><span className="label">{t('m.vf.code')}</span>
+                <input id="vf-code" className="input font-mono tracking-[0.3em] max-w-[12rem]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} aria-invalid={!!err} aria-describedby={err ? 'vf-err' : undefined} onChange={(e) => { setCode(e.target.value.replace(/\D/g, '')); setErr('') }} /></label>
+                {err && <span id="vf-err" className="block text-sm text-danger-fg mt-1">{err}</span>}</div>
+              <div className="flex flex-wrap gap-2"><button type="submit" className="btn-primary" disabled={busy || code.length !== 6}><Icon name="send" size={16} />{busy ? t('m.ask.busy') : t('m.vf.confirmCode')}</button>
+                <button type="button" className="btn-ghost" onClick={() => { setSent(null); setCode(''); setErr('') }}>{t('m.vf.resend')}</button></div>
+            </form>
+          )}
+        </div>
+      ) : <button type="button" className="btn-ghost text-sm" onClick={() => { setEditing(true); if (person && ev?.status === 'verified') choose('company') }}><Icon name="edit" size={15} />{t(person ? 'm.vf.toCompanyBtn' : 'm.vf.change')}</button>}
     </section>
   )
 }

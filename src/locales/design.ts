@@ -28,7 +28,7 @@ export const design = {
   'm.bd.mapShow': ['ดูแผนที่', '查看地图', 'Show the map'],
   'm.bd.mapHide': ['ซ่อนแผนที่', '隐藏地图', 'Hide the map'],
   'm.bd.side': ['แผนที่และสิทธิ์ของฉัน', '地图和我的额度', 'Map and my allowance'],
-  'm.bd.places': ['ได้ที่แล้ว', '已占名额', 'Places taken'],
+  'm.bd.places': ['รับแล้ว / ต้องการ', '已申请 / 招聘', 'Taken / wanted'],
   'm.bd.queue': ['คิวจอง', '预约', 'Queue'],
   'm.bd.years': ['ปีประสบการณ์', '年经验', 'Years'],
   'm.bd.fill': ['ความเต็มของตำแหน่ง', '名额占用', 'Places filled'],

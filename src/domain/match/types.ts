@@ -91,8 +91,10 @@ export interface Post extends Place {
   createdAt: string
   /** start of the current release (the posting time, or the last renewal) — the levels and the 6-month life count from here */
   releasedAt: string
-  /** the employer's company registration was approved (owner, Oct 2026): unverified posts stop at level 2 and carry a warning */
+  /** the employer was verified (owner, Oct 2026): unverified posts stop at level 2 and carry a warning */
   verified: boolean
+  /** how: a company registration (all five levels) or a private person's phone (up to level 3); missing = company (before 0007) */
+  verifiedAs?: VerifyKind
   /** hidden while an administrator checks reports (database only; its employer and administrators still see it) */
   hidden?: boolean
   /** a sample post made for the prototype, not a real employer (shown with a "Sample" badge) */
@@ -143,8 +145,13 @@ export interface MatchState {
   /** an administrator suspended me as an employer after reports: no new posts or renewals (database only) */
   suspended?: boolean
 }
-/** employer verification: the number is checked at once; an administrator (the agency in the prototype) approves it */
-export interface EmployerVerify { country: Country; regNo: string; status: 'pending' | 'verified' | 'rejected'; at: string; decidedAt?: string }
+/**
+ * Employer verification; an administrator (the agency in the prototype) approves it. A company gives its registration number
+ * (checked at once); an employer who is a private person confirms a phone number with a code instead (owner, Oct 2026: option ก —
+ * no identity-card numbers). Only the last 4 digits of the phone are kept; the full number never leaves the browser.
+ */
+export type VerifyKind = 'company' | 'person'
+export interface EmployerVerify { kind: VerifyKind; country: Country; regNo: string; phone4?: string; status: 'pending' | 'verified' | 'rejected'; at: string; decidedAt?: string }
 
 /**
  * Release level (owner, Oct 2026), also the "rarity" shown on the board:

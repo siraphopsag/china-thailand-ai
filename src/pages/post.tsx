@@ -3,7 +3,7 @@ import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
 import { capacityOf, caseBlocksDelete, localDay, type Outcome, type Problem } from '../domain/match/logic'
-import { reachFor, scheduleOf, stageAt, capStage } from '../domain/match/release'
+import { reachFor, scheduleOf, stageAt, capStage, levelCap } from '../domain/match/release'
 import { LEVELS, ME, MY_EMPLOYER, type Acceptance } from '../domain/match/types'
 import { usePresence } from '../presence'
 import { Icon } from '../components/icons'
@@ -11,7 +11,7 @@ import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { CaseLink } from './case'
 import { ReportButton, ScamNote } from './safety'
-import { AgencyLinks, SampleBadge, Empty, LevelBadge, Page, PostFacts, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
+import { AgencyLinks, SampleBadge, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 
 /**
  * One post (owner, Oct 2026): details, the five release levels with their times, who else is looking at it right now, and —
@@ -73,14 +73,13 @@ export function PostPage() {
   const statusLine = (a: Acceptance) => a.status === 'reserved' ? t('m.ap.inQueue', { n: c.reserved }) : t(`m.as.${a.status}` as never)
 
   return (
-    <Page title={p.position} sub={`${p.company} · ${N.place(p.country, p.province)} · ${N.industry(p.industry)}`} fit body="flex flex-col gap-3">
+    <Page title={p.position} sub={<>{p.company}<VerifyTick post={p} /> · {N.place(p.country, p.province)} · {N.industry(p.industry)}</>} fit body="flex flex-col gap-3">
       <div className="shrink-0 flex flex-wrap items-center gap-2">
         {stage !== 'expired' && <LevelBadge level={mine || !reach ? stage : reach.level} reached={mine || !reach} />}
         <span className="chip bg-surface3 border-line"><Icon name="users" size={12} />{t('m.cnt.held', { n: c.held, max: cap })}</span>
         {c.reserved > 0 && <span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ticket" size={12} />{t('m.cnt.reserved', { n: c.reserved })}</span>}
         {state !== 'open' && <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(state === 'waiting' ? 'm.state.waiting' : 'm.state.closed')}</span>}
-        {p.verified ? <span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name="shield" size={12} />{t('m.vf.badge')}</span>
-          : <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="warn" size={12} />{t('m.vf.unverified')}</span>}
+        <UnverifiedChip post={p} />
         {p.sample && <SampleBadge />}
       </div>
       {/* real people only: others who have this post open now, and how many are filling in the form (database mode) */}
@@ -162,7 +161,7 @@ export function PostPage() {
           {/* ---------- the release, level by level ---------- */}
           <section className="glass-card p-4 sm:p-5 space-y-3 xl:self-start fit:min-h-0 fit:overflow-y-auto" aria-labelledby="pp-tl"><h2 id="pp-tl" className="h2">{t('m.pp.timeline')}</h2>
             <p className="text-sm text-muted">{t(p.releasedAt !== p.createdAt ? 'm.pp.renewedOn' : 'm.pp.posted', { d: N.dayTime(Date.parse(p.releasedAt)) })}</p>
-            {!p.verified && mine && <Warn>{t('m.vf.capNote')} <NavLink to="me" className="underline underline-offset-4 font-medium">{t('m.cs.goVerify')}</NavLink></Warn>}
+            {mine && levelCap(p) < 5 && <Warn>{t(p.verified ? 'm.vf.capNote.person' : 'm.vf.capNote')} <NavLink to="me" className="underline underline-offset-4 font-medium">{t('m.cs.goVerify')}</NavLink></Warn>}
             <ol className="space-y-3">{LEVELS.map((l, i) => {
               const done = stage !== 'expired' && l < stage, current = stage === l
               return (

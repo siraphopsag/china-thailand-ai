@@ -1,12 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { addPin, applyTo, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, removePin, renewPost, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
+import { addPin, applyTo, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, removePin, renewPost, requestPersonVerify, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
 import { applyCaseAction, submitCase, type CaseAction } from './domain/match/cases'
-import { cleanRegNo } from './domain/match/verify'
+import { cleanPhone, cleanRegNo } from './domain/match/verify'
 import { reportPost, type ReportGroup, type ReportReason } from './domain/match/reports'
 import { HOUR_MS, pinActive, type PinLike } from './domain/match/release'
 import { seedState } from './domain/match/seed'
-import { HOLDS_PLACE, MAX_CLOCK_HOURS, ME, MY_EMPLOYER, type Acceptance, type Country, type Industry, type MatchState, type PlanId, type Place, type Post, type Role, type Skill } from './domain/match/types'
-import { buildState, dbProblem, postToRow, rowToAcceptance, rowToPost, statsByProvince, statsToPool, type AcceptanceRow, type AdminStats, type CaseRow, type PinStatRow, type PostRow, type ProfileRow, type ReportRow, reportQueue } from './domain/match/remote'
+import type { PinGroup } from './domain/match/market'
+import { HOLDS_PLACE, MAX_CLOCK_HOURS, ME, MY_EMPLOYER, type Acceptance, type Country, type Industry, type MatchState, type PlanId, type Place, type Post, type Role, type Skill, type VerifyKind } from './domain/match/types'
+import { buildState, dbProblem, postToRow, rowToAcceptance, rowToPost, statsByProvince, statsToGroups, statsToPool, verifyOf, type AcceptanceRow, type AdminStats, type CaseRow, type PinStatRow, type PostRow, type ProfileRow, type ReportRow, reportQueue } from './domain/match/remote'
 import { getClient, takeNext, useAuth } from './auth'
 import { go } from './store'
 
@@ -34,7 +35,7 @@ const readClock = () => { try { const n = Number(localStorage.getItem(CLOCK_KEY)
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 const emptyState = (clockHours = 0): MatchState => ({ ...seedState(), role: null, posts: [], seekers: [], acceptances: [], clockHours, myCompany: '', member: false, memberUntil: null, credits: [], cases: [], employerVerify: null })
 /** an employer waiting for verification, as the agency (administrator) sees it; id null = me in the local demo */
-export interface PendingVerify { id: string | null; name: string; company: string; country: Country; regNo: string; at: string }
+export interface PendingVerify { id: string | null; name: string; company: string; kind: VerifyKind; country: Country; regNo: string; phone4?: string; at: string }
 const CASE_RPC: Record<CaseAction['kind'], string> = { accept: 'accept', doc: 'doc', test: 'test', train: 'train', trainAdd: 'train_add', trainRemove: 'train_remove', permit: 'permit', departure: 'departure', departOk: 'depart_ok', note: 'note', arrived: 'arrived', date: 'date', trainDate: 'train_date' }
 const fail = <T,>(problem: Problem): Outcome<T> => ({ ok: false, problem })
 export const nowWith = (clockHours: number, real = Date.now()) => real + clockHours * HOUR_MS
@@ -62,6 +63,8 @@ interface Ctx {
   pool: PinLike[]
   /** active pins per province (board map) */
   pinsByProvince: Record<string, number>
+  /** active pins as anonymous groups with a count (the market view) */
+  pinGroups: PinGroup[]
   counts: Record<string, Counts>
   setRole: (r: Role | null) => Promise<void>
   setOrigin: (p: Place | null) => Promise<void>
@@ -84,6 +87,8 @@ interface Ctx {
   withdraw: (accId: string) => Promise<Outcome<unknown>>
   /** the employer sends a company registration number for verification */
   requestVerification: (country: Country, regNo: string) => Promise<Outcome<unknown>>
+  /** an employer who is a private person: a mobile number confirmed with a code (only its last 4 digits are sent) */
+  requestPersonVerification: (country: Country, phone: string) => Promise<Outcome<unknown>>
   /** the agency (administrator; anyone in the local demo) approves or rejects an employer — null = me in the demo */
   decideVerification: (userId: string | null, ok: boolean) => Promise<boolean>
   /** employers waiting for verification (agency view) */
@@ -191,6 +196,10 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     if (mode === 'remote') return statsByProvince(remotePool.filter((r) => Date.parse(r.hour) > now - 30 * 24 * HOUR_MS))
     return pool.filter((p) => pinActive(p, now)).reduce<Record<string, number>>((m, p) => ({ ...m, [p.province]: (m[p.province] ?? 0) + 1 }), {})
   }, [mode, remotePool, pool, now])
+  const pinGroups = useMemo<PinGroup[]>(() => {
+    if (mode === 'remote') return statsToGroups(remotePool.filter((r) => Date.parse(r.hour) > now - 30 * 24 * HOUR_MS))
+    return pool.filter((p) => pinActive(p, now)).map((p) => ({ country: p.country, province: p.province, industry: p.industry, at: p.at, n: 1 }))
+  }, [mode, remotePool, pool, now])
   const counts = useMemo(() => (mode === 'remote' && remoteCounts ? remoteCounts : countsFrom(st.acceptances)), [mode, remoteCounts, st.acceptances])
   const at = useCallback(() => new Date(nowWith(raw.clockHours)).toISOString(), [raw.clockHours])
   const limitNow = mode === 'remote' ? Date.now() : now
@@ -211,13 +220,12 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     const mineAcc = (accId: string) => st.acceptances.find((a) => a.id === accId)
     const today = () => localDay(at())
     const pendingVerifications: PendingVerify[] = local
-      ? (st.employerVerify?.status === 'pending' ? [{ id: null, name: '—', company: st.myCompany, country: st.employerVerify.country, regNo: st.employerVerify.regNo, at: st.employerVerify.at }] : [])
-      : people.filter((p) => p.verify_status === 'pending' && p.id && p.verify_reg && (p.verify_country === 'TH' || p.verify_country === 'CN'))
-        .map((p) => ({ id: p.id!, name: p.full_name || '—', company: p.company ?? '', country: p.verify_country as Country, regNo: p.verify_reg!, at: p.verify_at ?? '' }))
+      ? (st.employerVerify?.status === 'pending' ? [{ id: null, name: '—', company: st.myCompany, ...st.employerVerify }] : [])
+      : people.flatMap((p) => { const v = p.id && verifyOf(p); return v && v.status === 'pending' ? [{ id: p.id!, name: p.full_name || '—', company: p.company ?? '', kind: v.kind, country: v.country, regNo: v.regNo, ...(v.phone4 ? { phone4: v.phone4 } : {}), at: p.verify_at ?? '' }] : [] })
     // signed in: limits are checked at the real time, like the database does
     const limitAt = () => (local ? at() : new Date().toISOString())
     return {
-      st, now, limitNow, mode, pool, pinsByProvince, counts, stats: local ? null : stats, pendingVerifications, agency: local || admin, reports: local ? [] : reportQueue(reportRows),
+      st, now, limitNow, mode, pool, pinsByProvince, pinGroups, counts, stats: local ? null : stats, pendingVerifications, agency: local || admin, reports: local ? [] : reportQueue(reportRows),
       setRole: async (role) => { if (local) setLocal((s) => ({ ...s, role })); else await profile({ user_type: role }) },
       setOrigin: async (origin) => { if (local) setLocal((s) => ({ ...s, me: { ...s.me, origin } })); else await profile({ origin_country: origin?.country ?? null, origin_province: origin?.province ?? null }) },
       pin: async (input) => {
@@ -232,7 +240,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         if (!canPost(st, limitNow)) return { ok: false, problem: 'quota' } as const // weekly allowance used up
         const when = at()
         const made = makePost(input, uid('post'), MY_EMPLOYER, when); if (!made.ok) return made
-        const r = { ok: true as const, value: { ...made.value, verified: employerVerified(st) } }
+        const r = { ok: true as const, value: { ...made.value, verified: employerVerified(st), ...(employerVerified(st) ? { verifiedAs: st.employerVerify!.kind } : {}) } }
         if (local) { setLocal((s) => ({ ...s, myCompany: input.company, posts: [r.value, ...s.posts], credits: [...s.credits, { kind: 'post', at: when }] })); return r }
         if (input.company !== st.myCompany) await profile({ company: input.company })
         return write((sb) => sb.from('posts').insert(postToRow(input)).select().single(), (row) => rowToPost(row as PostRow, userId!))
@@ -293,8 +301,13 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       },
       requestVerification: async (country, regNo) => {
         const r = requestVerify(country, cleanRegNo(regNo), at()); if (!r.ok) return r
-        if (local) { setLocal((s) => ({ ...s, employerVerify: r.value, posts: s.posts.map((p) => (p.employerId === MY_EMPLOYER ? { ...p, verified: false } : p)) })); return r }
-        return profile({ verify_country: country, verify_reg: r.value.regNo })
+        if (local) { setLocal((s) => ({ ...s, employerVerify: r.value, posts: s.posts.map((p) => (p.employerId === MY_EMPLOYER ? { ...p, verified: false, verifiedAs: undefined } : p)) })); return r }
+        return profile({ verify_country: country, verify_reg: r.value.regNo }) // the database marks it a company (0007)
+      },
+      requestPersonVerification: async (country, phone) => {
+        const r = requestPersonVerify(country, cleanPhone(country, phone), at()); if (!r.ok) return r
+        if (local) { setLocal((s) => ({ ...s, employerVerify: r.value, posts: s.posts.map((p) => (p.employerId === MY_EMPLOYER ? { ...p, verified: false, verifiedAs: undefined } : p)) })); return r }
+        return profile({ verify_kind: 'person', verify_country: country, verify_phone4: r.value.phone4, verify_reg: null })
       },
       decideVerification: async (userId, ok) => {
         if (local) {
@@ -307,7 +320,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
             // approved: my posts become verified and my waiting cases go to the agency
             const cases = ok ? s.cases.map((c) => (mine.has(c.postId) ? submitCase(c, when) : c)) : s.cases
             const handed = new Set(cases.filter((c) => mine.has(c.postId) && c.steps.submitted).map((c) => c.accId))
-            return { ...s, employerVerify: ev, posts: s.posts.map((p) => (mine.has(p.id) ? { ...p, verified: ok } : p)), cases,
+            return { ...s, employerVerify: ev, posts: s.posts.map((p) => (mine.has(p.id) ? { ...p, verified: ok, verifiedAs: ok ? ev.kind : undefined } : p)), cases,
               acceptances: s.acceptances.map((a) => (handed.has(a.id) && a.status === 'confirmed' ? { ...a, status: 'forwarded' as const, forwardedAt: when } : a)) }
           })
           return true
@@ -344,7 +357,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       resetClock: () => { if (local) setLocal((s) => clampFuture(s, Date.now())); else setClock(0) },
       reset: () => { if (local) { const fresh = seedState(); setLocal((s) => ({ ...fresh, role: s.role })) } else setClock(0) },
     }
-  }, [st, now, limitNow, mode, pool, pinsByProvince, counts, stats, at, refresh, userId, admin, people, reportRows])
+  }, [st, now, limitNow, mode, pool, pinsByProvince, pinGroups, counts, stats, at, refresh, userId, admin, people, reportRows])
   return <C.Provider value={value}>{children}</C.Provider>
 }
 export const useMatch = () => { const c = useContext(C); if (!c) throw new Error('match'); return c }

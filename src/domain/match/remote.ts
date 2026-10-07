@@ -3,13 +3,14 @@
 import { isObj } from '../../profileSchema'
 import type { PostInput } from './logic'
 import type { PinLike } from './release'
+import type { PinGroup } from './market'
 import { APPOINTMENTS, CASE_STEPS, DOCS, PERMITS, TESTS, type Case, type CaseStep } from './cases'
 import { REPORT_REASONS, groupReports, type ReportGroup, type ReportReason } from './reports'
 export const isReason = (v: string): v is ReportReason => (REPORT_REASONS as readonly string[]).includes(v)
 /** the administrator's queue: open reports of everyone, grouped by post */
 export const reportQueue = (rows: ReportRow[]): ReportGroup[] =>
   groupReports(rows.filter((r) => r.status === 'open').flatMap((r) => (isReason(r.reason) ? [{ postId: r.post_id, reason: r.reason, note: r.note ?? '', at: iso(r.created_at) }] : [])))
-import { BENEFITS, EDU, EMPLOYMENT, INDUSTRIES, LANGS, LANG_LEVELS, ME, MY_EMPLOYER, SKILLS, type Acceptance, type AppStatus, type Benefit, type Country, type Credit, type Edu, type Employment, type Industry, type LanguageSkill, type MatchState, type Pin, type Post, type Role, type Seeker, type Skill } from './types'
+import { BENEFITS, EDU, EMPLOYMENT, INDUSTRIES, LANGS, LANG_LEVELS, ME, MY_EMPLOYER, SKILLS, type Acceptance, type AppStatus, type Benefit, type Country, type Credit, type Edu, type EmployerVerify, type Employment, type Industry, type LanguageSkill, type MatchState, type Pin, type Post, type Role, type Seeker, type Skill } from './types'
 
 export interface PostRow {
   id: string; employer_id: string | null; is_sample: boolean; company: string; position: string; industry: string; skills: string[]; min_years: number
@@ -21,6 +22,8 @@ export interface PostRow {
   verified?: boolean | null
   /** hidden while an administrator checks reports (0005) */
   hidden?: boolean | null
+  /** how the employer was verified (0007): 'company' or 'person'; missing → a company */
+  verify_kind?: string | null
 }
 export interface ReportRow { id: string; post_id: string; reporter_id: string; reason: string; note: string | null; status: string; created_at: string }
 export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string; dates?: unknown }
@@ -31,7 +34,9 @@ export interface QuotaRow { kind: string; created_at: string }
 /** anonymous counts of active pins (public.pin_stats): place, field and the hour they were made — no owner */
 export interface PinStatRow { country: string; province: string; industry: string; skills: string[]; hour: string; n: number }
 export interface ProfileRow { id?: string; full_name?: string | null; user_type: string | null; company: string | null; origin_country: string | null; origin_province: string | null; member: boolean | null; member_until?: string | null
-  verify_country?: string | null; verify_reg?: string | null; verify_status?: string | null; verify_at?: string | null; verify_decided_at?: string | null; suspended?: boolean | null }
+  verify_country?: string | null; verify_reg?: string | null; verify_status?: string | null; verify_at?: string | null; verify_decided_at?: string | null; suspended?: boolean | null
+  /** 0007: 'company' (registration number) or 'person' (a private person: only the last 4 digits of a confirmed phone) */
+  verify_kind?: string | null; verify_phone4?: string | null }
 export interface AdminStats { users: number; employers: number; seekers: number; posts: number; posts_7d: number; acceptances: number }
 
 const one = <T extends string>(all: readonly T[], v: unknown): T | null => (typeof v === 'string' && (all as readonly string[]).includes(v) ? (v as T) : null)
@@ -50,7 +55,7 @@ export const rowToPost = (r: PostRow, uid: string): Post => ({
   headcount: r.headcount, employment: one(EMPLOYMENT, r.employment),
   salary: r.salary_min !== null && r.salary_max !== null && (r.salary_currency === 'THB' || r.salary_currency === 'CNY') ? { min: r.salary_min, max: r.salary_max, currency: r.salary_currency } : null,
   startDate: r.start_date, languages: toLanguages(r.languages), education: one(EDU, r.education) ?? 'none', benefits: many(BENEFITS, r.benefits),
-  country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, ...(r.hidden ? { hidden: true } : {}), ...(r.is_sample ? { sample: true } : {}), synthetic: true,
+  country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, ...((r.verified ?? r.is_sample) ? { verifiedAs: r.verify_kind === 'person' ? 'person' as const : 'company' as const } : {}), ...(r.hidden ? { hidden: true } : {}), ...(r.is_sample ? { sample: true } : {}), synthetic: true,
 })
 export function toLanguages(v: unknown): LanguageSkill[] {
   if (!Array.isArray(v)) return []
@@ -90,6 +95,11 @@ export const statsToPool = (rows: PinStatRow[]): PinLike[] => rows.flatMap((r) =
   const c = country(r.country), ind = one(INDUSTRIES, r.industry)
   return c && ind ? [{ country: c, province: r.province, industry: ind, skills: many(SKILLS, r.skills), at: iso(r.hour) }] : []
 })
+/** the same counts as groups with their number (the market view) */
+export const statsToGroups = (rows: PinStatRow[]): PinGroup[] => rows.flatMap((r) => {
+  const c = country(r.country), ind = one(INDUSTRIES, r.industry)
+  return c && ind ? [{ country: c, province: r.province, industry: ind, at: iso(r.hour), n: Math.max(0, Number(r.n) || 0) }] : []
+})
 /** pins per province, for the board map */
 export const statsByProvince = (rows: PinStatRow[]) => rows.reduce<Record<string, number>>((m, r) => ({ ...m, [r.province]: (m[r.province] ?? 0) + Number(r.n) }), {})
 
@@ -121,19 +131,28 @@ export function buildState(input: { uid: string; name: string; profile: ProfileR
     cases: (input.cases ?? []).map((r) => rowToCase(r, input.uid)),
     reports: (input.reports ?? []).filter((r) => r.reporter_id === input.uid).flatMap((r) => (isReason(r.reason) ? [{ id: r.id, postId: r.post_id, reason: r.reason, note: r.note ?? '', at: iso(r.created_at) }] : [])),
     ...(p?.suspended ? { suspended: true } : {}),
-    employerVerify: p && country(p.verify_country) && p.verify_reg && (p.verify_status === 'pending' || p.verify_status === 'verified' || p.verify_status === 'rejected')
-      ? { country: country(p.verify_country)!, regNo: p.verify_reg, status: p.verify_status, at: iso(p.verify_at ?? new Date().toISOString()), ...(p.verify_decided_at ? { decidedAt: iso(p.verify_decided_at) } : {}) } : null,
+    employerVerify: verifyOf(p),
   }
 }
 
+/** my verification as the website shows it: a company (registration number) or a private person (last 4 digits of the phone) */
+export function verifyOf(p: ProfileRow | null): EmployerVerify | null {
+  const c = country(p?.verify_country), person = p?.verify_kind === 'person'
+  if (!p || !c || !(p.verify_status === 'pending' || p.verify_status === 'verified' || p.verify_status === 'rejected')) return null
+  if (person ? !/^\d{4}$/.test(p.verify_phone4 ?? '') : !p.verify_reg) return null
+  return { kind: person ? 'person' : 'company', country: c, regNo: person ? '' : p.verify_reg!, ...(person ? { phone4: p.verify_phone4! } : {}), status: p.verify_status,
+    at: iso(p.verify_at ?? new Date().toISOString()), ...(p.verify_decided_at ? { decidedAt: iso(p.verify_decided_at) } : {}) }
+}
+
 /** database error → one of the prototype's problems (the message text is never shown as is) */
-export function dbProblem(e: { message?: string; code?: string } | null | undefined): 'quota' | 'limit' | 'duplicate' | 'already' | 'contact' | 'notOpen' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'reportLimit' | 'suspended' | 'network' {
+export function dbProblem(e: { message?: string; code?: string } | null | undefined): 'quota' | 'limit' | 'duplicate' | 'already' | 'contact' | 'notOpen' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'reportLimit' | 'suspended' | 'phone' | 'network' {
   const m = e?.message ?? ''
   // a function, table or column this website needs is missing: the database has not been updated (0003_board.sql)
   if (['PGRST202', 'PGRST204', 'PGRST205', '42883', '42P01', '42703'].includes(e?.code ?? '') || /schema cache|does not exist/i.test(m)) return 'dbOld'
   if (m.includes('quota')) return 'quota'
   if (m.includes('below_held')) return 'belowHeld'
   if (m.includes('bad_reg_no')) return 'regNo'
+  if (m.includes('bad_phone')) return 'phone'
   if (m.includes('case_started')) return 'caseStarted'
   if (m.includes('report_limit')) return 'reportLimit'
   if (m.includes('suspended')) return 'suspended'

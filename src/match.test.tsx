@@ -256,8 +256,12 @@ describe('board bug hunt (Oct 2026)', () => {
     expect(src('./pages/board.tsx')).toContain('pinQuota(st, limitNow) : postQuota(st, limitNow)')
     expect(src('./pages/match.tsx')).toContain("{mode === 'remote' && <p className=\"text-xs text-muted\">{t('m.clock.noteRemote')}</p>}")
   })
-  it('a job seeker\'s map counts only the posts their list can show', () => {
-    expect(src('./pages/board.tsx')).toContain('const postsByProvince = items.map((x) => x.post).reduce')
+  it('the map view is the job market: the map and the panel count the same live posts (owner, Oct 2026 — replaces "the map counts the list")', () => {
+    // a tap on a province now narrows the market panel, not the card list, so the two can no longer disagree
+    const b = src('./pages/board.tsx')
+    expect(b).toContain("const live = st.posts.filter((p) => !p.hidden && stageOf(p, pool, now) !== 'expired')")
+    expect(b).toContain('const mk = marketOf(live, pinGroups, mScope, mProv, now)')
+    expect(b).toContain('? live.filter((p) => inScope(p.country))')
   })
 })
 
@@ -316,8 +320,9 @@ describe('the board (owner, Oct 2026)', () => {
     expect(page).toContain('Warehouse Coordinator') // level 5: over a month old, open to everyone
     expect(page).not.toContain('Front Office Manager') // Shanghai: not for me yet
     expect(page).toMatch(/class="chip rar rar-1"><span class="inline-flex" aria-hidden="true">(<svg[^>]*class="lucide[^"]*fill-current[^"]*"[^]*?<\/svg>){5}<\/span>/)
-    expect(page).toContain(T('m.sort.new')); expect(page).toContain(T('m.board.myPins')); expect(page).toContain(T('m.pin.new'))
-    expect(page).toContain(T('m.qb.pins', { n: 0, max: 5 }))
+    expect(page).toContain(T('m.sort.new'))
+    // the allowance is a small chip (owner, Oct 2026) that opens my pins
+    expect(page).toContain(T('m.qb.chip.pin', { n: 0, max: 5 })); expect(page).toContain('aria-expanded="false" aria-controls="bd-pins"')
   })
   it('employer: my posts with the level each reached, places and reservations, and my weekly allowance', () => {
     const st = seedState(); st.role = 'employer'
@@ -328,11 +333,11 @@ describe('the board (owner, Oct 2026)', () => {
     expect(page).toContain(`>${T('m.bd.manage')}</a>`); expect(page).toContain(`>${T('m.bd.view')}</a>`) // mine → manage · others' → view
     expect(page).toContain(T('m.lv.reached', { l: T('m.lv.2') }))
     expect(page).toContain('<p class="text-base sm:text-lg font-bold">1/2</p>'); expect(page).toContain(T('m.bd.places')) // places taken on the card
-    expect(page).toContain(T('m.qb.posts', { n: 1, max: 3 }))
+    expect(page).toContain(T('m.qb.chip.post', { n: 1, max: 3 }))
   })
   it('the map shows counts only, also listed in text; menu has the board; posts link to their page', () => {
     expect(src('./components/geomap.tsx')).toContain('className="g-count"')
-    expect(src('./pages/board.tsx')).toContain("t('m.board.top', { list: top.map(([p, n]) => `${N.prov(p)} ${n}`).join(' · ') })")
+    expect(src('./pages/market.tsx')).toContain(`<h3 className="text-sm font-semibold mb-1.5">{t('m.mk.top')}</h3>`) // the busiest places, also in a table
     expect(ROUTES.has('board')).toBe(true)
   })
 })

@@ -86,10 +86,26 @@ export function PostFacts({ post, compact }: { post: Post; compact?: boolean }) 
       <div key={k} className="flex items-start gap-2.5"><Icon name={icon} size={16} className="text-primary mt-0.5 shrink-0" /><div><dt className="text-muted text-xs">{k}</dt><dd className="font-medium">{v}</dd></div></div>))}</dl>
   )
 }
-export function Page({ title, sub, actions, fit, body, children }: { title: string; sub?: string; actions?: ReactNode; fit?: boolean; body?: string; children: ReactNode }) {
-  const head = <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 shrink-0"><div className="min-w-0"><h1 className="h1">{title}</h1>{sub && <p className="text-muted text-sm sm:text-base mt-0.5 sm:mt-1 max-w-3xl line-clamp-2 sm:line-clamp-none">{sub}</p>}</div>{actions && <div className="flex flex-wrap gap-2">{actions}</div>}</div>
+export function Page({ title, sub, actions, fit, body, children }: { title: string; sub?: ReactNode; actions?: ReactNode; fit?: boolean; body?: string; children: ReactNode }) {
+  const head = <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 shrink-0"><div className="min-w-0"><h1 className="h1">{title}</h1>{sub && <p className="text-muted text-sm sm:text-base mt-0.5 sm:mt-1 max-w-3xl line-clamp-2 sm:line-clamp-none">{sub}</p>}</div>{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}</div>
   if (!fit) return <div className="space-y-4 sm:space-y-5">{head}{children}</div>
   return <div className="space-y-4 sm:space-y-5 fit:space-y-0 fit:flex fit:flex-col fit:gap-3 fit:h-[var(--app-h)]">{head}<div className={`fit:flex-1 fit:min-h-0 ${body ?? 'space-y-4 fit:space-y-3 fit:overflow-y-auto'}`}>{children}</div></div>
+}
+/**
+ * Right after the employer's name (owner, Oct 2026: friends read a "Verified" chip as "the employees are verified"): a blue
+ * seal = a verified company, a person with a tick = a verified private person. Not verified → nothing here; the warning chip
+ * (UnverifiedChip) says so. The name is in the title (hover) and for screen readers.
+ */
+export function VerifyTick({ post, size = 15 }: { post: Pick<Post, 'verified' | 'verifiedAs'>; size?: number }) {
+  const { t } = useI18n()
+  if (!post.verified) return null
+  const person = post.verifiedAs === 'person', label = t(person ? 'm.vf.tick.person' : 'm.vf.tick.company')
+  return <span role="img" aria-label={label} title={label} className={`vf-tick ${person ? 'vf-person' : 'vf-company'}`}><Icon name={person ? 'personCheck' : 'verified'} size={size} /></span>
+}
+/** an employer not verified yet: a warning chip (anti-scam) */
+export function UnverifiedChip({ post }: { post: Pick<Post, 'verified'> }) {
+  const { t } = useI18n()
+  return post.verified ? null : <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="warn" size={12} />{t('m.vf.unverified')}</span>
 }
 /** a sample post made for the prototype (not a real employer) */
 export function SampleBadge() {
@@ -338,15 +354,14 @@ export function PostCard({ post, level, reached, children }: { post: Post; level
       </div>
       <div>
         <h3 className="font-semibold text-lg leading-snug"><NavLink to={`post?id=${post.id}`} className="hover:underline underline-offset-4">{post.position}</NavLink></h3>
-        <p className="text-sm text-muted">{post.company} · {N.place(post.country, post.province)} · {N.industry(post.industry)}</p>
+        <p className="text-sm text-muted">{post.company}<VerifyTick post={post} size={14} /> · {N.place(post.country, post.province)} · {N.industry(post.industry)}</p>
       </div>
       <PostFacts post={post} compact />
       <p className="flex flex-wrap gap-1.5">
         <span className="chip bg-surface3 border-line"><Icon name="users" size={12} />{t('m.cnt.held', { n: c.held, max: cap })}</span>
         {c.reserved > 0 && <span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ticket" size={12} />{t('m.cnt.reserved', { n: c.reserved })}</span>}
         {state !== 'open' && <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(state === 'waiting' ? 'm.state.waiting' : 'm.state.closed')}</span>}
-        {post.verified ? <span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name="shield" size={12} />{t('m.vf.badge')}</span>
-          : <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="warn" size={12} />{t('m.vf.unverified')}</span>}
+        <UnverifiedChip post={post} />
         {post.sample && <SampleBadge />}
       </p>
       {children}
@@ -569,7 +584,7 @@ export function PreparePage() {
 }
 export function SettingsPage() {
   const { t, lang, setLang } = useI18n()
-  const { theme, toggle, accent, setAccent, weekStart, setWeekStart } = useTheme()
+  const { theme, toggle, accent, setAccent, weekStart, setWeekStart, liteMode, setLiteMode, lite } = useTheme()
   const [accentMsg, setAccentMsg] = useState('')
   const { reset, mode } = useMatch()
   const [done, setDone] = useState(false)
@@ -600,6 +615,10 @@ export function SettingsPage() {
         {/* the home hero's moving lines (WCAG 2.2.2: a way to stop them; owner asked for no button on the hero itself) */}
         <fieldset aria-describedby="motion-hint"><legend className="label">{t('m.settings.motion')}</legend><div className="flex gap-2">{([true, false] as const).map((on) => <button key={String(on)} type="button" aria-pressed={motion === on} onClick={() => { setMotion(on); setMotionOff(!on) }} className={`min-h-[44px] px-4 rounded-lg border ${motion === on ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(on ? 'm.settings.on' : 'm.settings.off')}</button>)}</div>
           <p id="motion-hint" className="text-xs text-muted mt-1">{t('m.settings.motion.d')}</p></fieldset>
+        {/* fewer effects for older phones (owner, Oct 2026) */}
+        <fieldset aria-describedby="lite-hint"><legend className="label">{t('m.settings.lite')}</legend><div className="flex flex-wrap gap-2">{(['auto', 'on', 'off'] as const).map((m) => <button key={m} type="button" aria-pressed={liteMode === m} onClick={() => setLiteMode(m)} className={`min-h-[44px] px-4 rounded-lg border ${liteMode === m ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(m === 'auto' ? 'm.settings.lite.auto' : m === 'on' ? 'm.settings.on' : 'm.settings.off')}</button>)}</div>
+          <p id="lite-hint" className="text-xs text-muted mt-1">{t('m.settings.lite.d')}</p>
+          <p role="status" className="text-sm mt-1 inline-flex items-center gap-1.5"><Icon name="gauge" size={15} className="text-primary" />{t('m.settings.lite.now', { s: t(lite ? 'm.settings.lite.isOn' : 'm.settings.lite.isOff') })}</p></fieldset>
         <fieldset className="border-t border-line pt-3"><legend className="label">{t('m.clock.title')}</legend><ClockControls /></fieldset>
         {mode === 'local' && <div className="border-t border-line pt-3 space-y-2"><p className="text-sm text-muted">{t('m.settings.reset.d')}</p>
           <button type="button" className="btn-ghost" onClick={async () => { if (await ask(t('m.settings.reset.d'), { yes: t('m.settings.reset'), danger: true })) { reset(); setDone(true) } }}>{t('m.settings.reset')}</button>
@@ -690,10 +709,13 @@ export function BackofficePage() {
 
         {tab === 'verify' && (<>
           <p className="text-xs text-muted shrink-0">{t('m.adm.verifyCheck')}</p>
+          <p className="text-xs text-muted shrink-0">{t('m.adm.verifyPerson')}</p>
           <div className="fit:flex-1 fit:min-h-0"><PagedList items={pendingVerifications} rowH={66} keyOf={(v) => v.id ?? 'me'} empty={empty(t('m.adm.verifyNone'))} render={(v) => (
             <div className={`${ROW} flex flex-wrap items-center justify-between gap-3`}>
               <div className="min-w-0"><p className="font-semibold">{v.company || '—'} <span className="font-normal text-muted">· {v.name}</span></p>
-                <p className="text-xs text-muted">{t(`geo.c.${v.country}` as never)} · <span className="font-mono">{v.regNo}</span>{v.at ? ` · ${N.dayTime(Date.parse(v.at))}` : ''}</p></div>
+                <p className="text-xs text-muted">{t(`geo.c.${v.country}` as never)} · {v.kind === 'person'
+                  ? <span className="inline-flex items-center gap-1"><Icon name="personCheck" size={12} />{t('m.vf.asPerson', { d: v.phone4 ?? '' })}</span>
+                  : <span className="font-mono">{v.regNo}</span>}{v.at ? ` · ${N.dayTime(Date.parse(v.at))}` : ''}</p></div>
               <div className="flex gap-2"><button type="button" className="btn-primary text-sm" onClick={() => void decideV(v.id, true)}><Icon name="ok" size={15} />{t('m.adm.approve')}</button>
                 <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideV(v.id, false)}>{t('m.adm.reject')}</button></div>
             </div>)} /></div>
