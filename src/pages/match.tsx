@@ -113,9 +113,9 @@ export function UnverifiedChip({ post }: { post: Pick<Post, 'verified'> }) {
  * "ข้อมูลจำลอง" label on every simulated post — the samples, the administrator's generator and anything an administrator posts.
  * Posts without it come from real users.
  */
-export function SampleBadge() {
+export function SampleBadge({ className = '' }: { className?: string }) {
   const { t } = useI18n()
-  return <span className="chip bg-warn-bg text-warn-fg border-warn-line font-semibold" title={t('m.sample.d')}><Icon name="sim" size={12} />{t('m.sample.badge')}</span>
+  return <span className={`chip bg-warn-bg text-warn-fg border-warn-line font-semibold ${className}`} title={t('m.sample.d')}><Icon name="sim" size={12} />{t('m.sample.badge')}</span>
 }
 /** …and the same in words where a post is read in full */
 export function SampleNote({ apply }: { apply?: boolean }) {

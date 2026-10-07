@@ -519,7 +519,8 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 /* dialogs never grow past the screen; long ones scroll inside */
 .modal-panel { max-height: calc(100dvh - 2rem); overflow-y: auto }
 /* short computer screens: board cards drop their secondary lines (place, age, fill bar) so a whole row still fits */
-@media (min-width: 1024px) and (max-height: 760px) { .bd-card .bd-opt { display: none } .bd-card { padding: .75rem !important; gap: .3rem !important } .bd-card .rar-avatar { width: 3rem !important; height: 3rem !important; font-size: 1.1rem } }
+@media (min-width: 1024px) and (max-height: 760px) { .bd-card .bd-opt { display: none } .bd-card { padding: .6rem .75rem !important; gap: .2rem !important; row-gap: .2rem !important } .bd-card .rar-avatar { width: 3rem !important; height: 3rem !important; font-size: 1.1rem }
+  /* 4 × 2 on short screens too (owner, Oct 2026): smaller buttons, tighter rows */ .bd-card .btn-ghost, .bd-card .btn-primary { min-height: 30px !important; padding-top: .15rem; padding-bottom: .15rem } ul:has(> .bd-card) { row-gap: .5rem !important } }
 /* ── "meniscus" menu (owner, Oct 2026): a glass plate drawn as one path with a socket, a coloured bead that flows between items ── */
 .mn { --hue: #818cf8 }
 /* nearly solid so the socket (empty space around the bead) reads clearly, with a lit rim like the reference */

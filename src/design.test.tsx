@@ -93,7 +93,7 @@ describe('B. the board as cards', () => {
   it('after the reference: main button by the title, pill filters with the count, centred cards with two actions and a fill bar, a card/map switch', () => {
     const h = html(<BoardPage />, seeker())
     expect(h).toMatch(/<h1 class="h1">[^<]*<\/h1>.*class="btn-primary !rounded-full"/s)
-    expect(h).toContain('bd-card p-3.5 sm:p-5 fit:p-4 flex flex-row sm:flex-col items-start sm:items-center'); // on its side on phones, centred from 640 px expect(h).toContain('rar-avatar'); expect(h).toContain('class="fill-bar mt-1"')
+    expect(h).toContain('bd-card relative p-2.5 sm:p-5 fit:p-3.5 flex flex-col items-center text-center'); // centred on phones (3 a row) and tablets; a row card on computers (owner, Oct 2026) expect(h).toContain('rar-avatar'); expect(h).toContain('class="fill-bar mt-1"')
     expect(h).toContain(`>${T('m.bd.details')}</button>`); expect(h).toContain(T('m.bd.apply'))
     expect(h).toContain(T('m.bd.view.cards')); expect(h).toContain(T('m.bd.view.map'))
     expect(h).not.toContain('id="bd-map"') // the map shows when you switch to it

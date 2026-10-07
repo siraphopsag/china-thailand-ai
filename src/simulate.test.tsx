@@ -87,7 +87,7 @@ describe('the yellow label', () => {
     expect(tr('m.sample.badge', undefined, 'th')).toBe('ข้อมูลจำลอง')
     const st = seedState(NOW); st.role = 'employer'
     const page = html(<BoardPage />, st)
-    expect(page).toContain(`<span class="chip bg-warn-bg text-warn-fg border-warn-line font-semibold" title="${T('m.sample.d')}">`)
+    expect(page).toMatch(new RegExp(`<span class="chip bg-warn-bg text-warn-fg border-warn-line font-semibold [^"]*" title="${T('m.sample.d')}">`))
     expect(page.split(T('m.sample.badge')).length - 1).toBeGreaterThanOrEqual(3) // the three samples
     const post = src('./pages/post.tsx')
     expect(post).toContain('{p.sample && <div className="shrink-0"><SampleNote /></div>}'); expect(post).toContain('{p.sample && <SampleNote apply />}')
@@ -97,6 +97,18 @@ describe('the yellow label', () => {
     const base = seedState(NOW).posts[0]
     const m = marketOf([{ ...base, sample: true }, { ...base, id: 'real', sample: undefined }], [{ country: 'TH', province: 'TH-10', industry: 'hospitality', at: new Date(NOW).toISOString(), n: 5, sample: 3 }], 'all', null, NOW)
     expect(m.simulated).toEqual({ posts: 1, pins: 3 })
+  })
+})
+
+describe('board layout (owner, Oct 2026): computers 4 × 2, phones 3 a row', () => {
+  it('computers: pages of 8 cards in 4 columns; phones: 3 columns that scroll on; the whole small card opens the details', () => {
+    const b = src('./pages/board.tsx')
+    expect(b).toContain('const PAGE = { cols: 4, rows: 2 }')
+    expect(b).toContain('const pg = usePaged(shown, fit ? PAGE.cols * PAGE.rows : Infinity)')
+    expect(b).toContain('<ul className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4')
+    expect(b).toContain("after:absolute after:inset-0 after:content-[''] sm:after:hidden")
+    // the title is cut inside the button (a button is one box, so cutting the heading did nothing)
+    expect(b).toContain('<span className="line-clamp-2 fit:line-clamp-1">{post.position}</span></button>')
   })
 })
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
@@ -11,7 +11,7 @@ import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
 import { Icon } from '../components/icons'
 import { Drawer } from '../components/drawer'
-import { Pager, useFit, useFitGrid, usePaged } from '../components/pager'
+import { Pager, useFit, usePaged } from '../components/pager'
 import { Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
 import { ReportButton } from './safety'
 import { MarketPanel } from './market'
@@ -47,7 +47,7 @@ export function BoardPage() {
   const [pinsOpen, setPinsOpen] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
   const fit = useFit()
-  const [gridRef, dim] = useFitGrid(250, 16, 4, `${tab}|${scope}|${view}|${more}|${pinsOpen}`)
+  const gridRef = useRef<HTMLDivElement>(null)
   const gate = useGate('board')
   if (gate) return <Page title={t('m.board.title')}>{gate}</Page>
   if (!st.role) return <Page title={t('m.board.title')} sub={t('m.board.sub')}><Empty icon="posts" text={t('m.profile.none')} to="choose-role" action={t('hero.cta')} /></Page>
@@ -143,7 +143,7 @@ export function BoardPage() {
         </div>
 
         {!shown.length ? <Empty icon={seeker ? 'pin' : 'posts'} text={t(items.length ? 'm.board.noneFound' : seeker ? 'm.board.noneSeeker' : 'm.board.noneEmployer')} to={items.length ? undefined : seeker ? 'seek' : 'hire'} action={items.length ? undefined : t(seeker ? 'm.pin.go' : 'm.emp.post')} /> : (
-          <CardGrid shown={shown} fit={fit} dim={dim} gridRef={gridRef} label={t(seeker ? 'm.board.shop' : 'm.bd.listEmployer')}
+          <CardGrid shown={shown} fit={fit} gridRef={gridRef} label={t(seeker ? 'm.board.shop' : 'm.bd.listEmployer')}
             card={({ post, level }) => <BoardCard key={post.id} post={post} level={level} reached={!seeker} applied={mineApplied.has(post.id)} viewer={st.role!} onOpen={() => setOpen(post.id)} />} />)}
       </>)}
 
@@ -185,14 +185,18 @@ function QuotaChip({ q, kind, open, onToggle }: { q: Quota; kind: 'pin' | 'post'
     : <span className={cls} title={note}>{inner}</span>
 }
 
-/** the cards: on a computer exactly as many as fit the space (whole rows), then pages; elsewhere all of them */
-function CardGrid({ shown, fit, dim, gridRef, label, card }: { shown: { post: Post; level: Level }[]; fit: boolean; dim: { cols: number; rows: number }; gridRef: React.RefObject<HTMLDivElement | null>; label: string; card: (x: { post: Post; level: Level }) => React.ReactNode }) {
-  const pg = usePaged(shown, fit ? dim.cols * dim.rows : Infinity)
+/**
+ * The cards (owner, Oct 2026): computers 4 × 2 a page (rows of 4, then the next page); phones 3 small cards a row, scrolling on;
+ * tablets in between 2–4 a row.
+ */
+const PAGE = { cols: 4, rows: 2 }
+function CardGrid({ shown, fit, gridRef, label, card }: { shown: { post: Post; level: Level }[]; fit: boolean; gridRef: React.RefObject<HTMLDivElement | null>; label: string; card: (x: { post: Post; level: Level }) => React.ReactNode }) {
+  const pg = usePaged(shown, fit ? PAGE.cols * PAGE.rows : Infinity)
   return (
     <div className="fit:flex-1 fit:min-h-0 fit:flex fit:flex-col gap-2">
       <h2 id="bd-list" className="sr-only">{label}</h2>
       <div ref={gridRef} className="fit:flex-1 fit:min-h-0 fit:overflow-y-auto">
-        <ul className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 fit:items-start" style={fit ? { gridTemplateColumns: `repeat(${dim.cols}, minmax(0, 1fr))` } : undefined} aria-labelledby="bd-list">
+        <ul className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 fit:gap-3 fit:items-start" style={fit ? { gridTemplateColumns: `repeat(${PAGE.cols}, minmax(0, 1fr))` } : undefined} aria-labelledby="bd-list">
           {pg.items.map(card)}
         </ul>
       </div>
@@ -205,7 +209,12 @@ function CardGrid({ shown, fit, dim, gridRef, label, card }: { shown: { post: Po
 const actionKey = (post: Post, viewer: 'seeker' | 'employer', applied: boolean) =>
   post.employerId === MY_EMPLOYER ? 'm.bd.manage' : viewer === 'employer' ? 'm.bd.view' : applied ? 'm.bd.applied' : 'm.bd.apply'
 
-/** one post on the board, centred like the reference cards: letter badge, title, company, level, places, fill, two actions */
+/**
+ * One post on the board, in three shapes from the same markup:
+ *  · phones — a small card, 3 a row: letter, title, company, the ring in short, the yellow label, places; a tap anywhere opens the details
+ *  · tablets — centred like the reference cards, with the full ring label, places/queue, fill and two buttons
+ *  · computers — a compact row card (letter beside the text) so 4 × 2 fit the screen
+ */
 function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Post; level: Level; reached: boolean; applied: boolean; viewer: 'seeker' | 'employer'; onOpen: () => void }) {
   const { t } = useI18n()
   const N = useNames()
@@ -214,30 +223,39 @@ function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Po
   const c = counts[post.id] ?? { held: 0, pending: 0, reserved: 0 }, cap = capacityOf(post)
   const pct = Math.min(100, Math.round((c.held / cap) * 100))
   const act = t(actionKey(post, viewer, applied))
+  const ring = reached ? t('m.lv.reached', { l: t(`m.lv.to.${level}` as never) }) : t(`m.lv.${level}` as never)
   return (
-    <li data-fit-item className="bd-card p-3.5 sm:p-5 fit:p-4 flex flex-row sm:flex-col items-start sm:items-center text-left sm:text-center gap-3 sm:gap-2 fit:gap-1.5">
-      <div className="relative shrink-0">
-        <span aria-hidden className={`rar-${level} rar-avatar w-14 h-14 sm:w-16 sm:h-16 fit:w-14 fit:h-14 rounded-full grid place-items-center text-xl font-bold`}>{post.company.trim().charAt(0).toUpperCase()}</span>
+    <li data-fit-item className="bd-card relative p-2.5 sm:p-5 fit:p-3.5 flex flex-col items-center text-center gap-1.5 sm:gap-2 fit:grid fit:grid-cols-[3rem_minmax(0,1fr)] fit:items-start fit:text-left fit:gap-x-3 fit:gap-y-1 min-w-0">
+      <div className="relative shrink-0 fit:row-span-3">
+        <span aria-hidden className={`rar-${level} rar-avatar w-10 h-10 text-base sm:w-16 sm:h-16 sm:text-xl fit:w-12 fit:h-12 fit:text-lg rounded-full grid place-items-center font-bold`}>{post.company.trim().charAt(0).toUpperCase()}</span>
         {/* not verified: a small warning on the letter (verified: the tick after the name) */}
-        {!post.verified && <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full grid place-items-center ring-2 ring-[rgb(var(--surface))] bg-warn-bg text-warn-fg" title={t('m.vf.unverified')}>
-          <Icon name="warn" size={13} /><span className="sr-only">{t('m.vf.unverified')}</span></span>}
+        {!post.verified && <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full grid place-items-center ring-2 ring-[rgb(var(--surface))] bg-warn-bg text-warn-fg" title={t('m.vf.unverified')}>
+          <Icon name="warn" size={12} /><span className="sr-only">{t('m.vf.unverified')}</span></span>}
       </div>
-      <div className="flex-1 min-w-0 w-full flex flex-col sm:items-center gap-1.5 sm:gap-2 fit:gap-1.5">
-      <h3 className="font-semibold leading-snug sm:mt-1 line-clamp-2"><button type="button" onClick={onOpen} className="text-left sm:text-center hover:underline underline-offset-4">{post.position}</button></h3>
-      <p className="text-sm text-muted -mt-1 line-clamp-1">{post.company}<VerifyTick post={post} size={14} /></p>
-      <div className="flex flex-wrap sm:justify-center gap-1.5"><LevelBadge level={level} reached={reached} />{post.sample && <SampleBadge />}</div>
-      <p className="text-xs text-muted bd-opt">{N.place(post.country, post.province)} · {ago(post.releasedAt)}</p>
-      <div className="grid grid-cols-2 w-full border-t border-line pt-2 sm:pt-3 sm:mt-1 divide-x divide-line text-center">
+      <div className="flex-1 min-w-0 w-full flex flex-col items-center gap-1 sm:gap-2 fit:contents">
+      {/* phones: the whole card opens the details (the title button stretches over it) */}
+      <h3 className="font-semibold leading-snug text-[13px] sm:text-base sm:mt-1 fit:mt-0 w-full fit:col-start-2 text-center fit:text-left"><button type="button" onClick={onOpen} className="block w-full text-center fit:text-left hover:underline underline-offset-4 after:absolute after:inset-0 after:content-[''] sm:after:hidden"><span className="line-clamp-2 fit:line-clamp-1">{post.position}</span></button></h3>
+      <p className="text-[11px] sm:text-sm text-muted -mt-0.5 sm:-mt-1 fit:mt-0 line-clamp-1 w-full fit:col-start-2">{post.company}<VerifyTick post={post} size={13} /></p>
+      <div className="flex flex-wrap justify-center fit:justify-start fit:flex-nowrap fit:min-w-0 gap-1 sm:gap-1.5 fit:col-start-2">
+        {/* the ring: in short on phones and computers, in full on tablets (the full words are in the title and for screen readers) */}
+        <span className={`chip rar rar-${level} !px-1.5 sm:!px-2 text-[10px] sm:text-xs sm:hidden fit:inline-flex fit:min-w-0`} title={ring}><ReachRings level={level} size={11} /><span className="sr-only">{t('m.lv.ring', { n: level })} · {ring}</span><span aria-hidden className="truncate">{t(`m.lv.${level}` as never)}</span></span>
+        <span className="hidden sm:contents fit:hidden"><LevelBadge level={level} reached={reached} /></span>
+        {post.sample && <SampleBadge className="!px-1.5 sm:!px-2 text-[10px] sm:text-xs shrink-0" />}
+      </div>
+      <p className="text-xs text-muted bd-opt hidden sm:block fit:col-span-2 fit:mt-1">{N.place(post.country, post.province)} · {ago(post.releasedAt)}</p>
+      {/* places: one short line on phones and computers, two figures on tablets */}
+      <p className="sm:hidden fit:block text-[11px] sm:text-sm text-muted fit:col-span-2"><span className="font-bold text-ink">{c.held}/{cap}</span> <span className="fit:hidden" aria-hidden>{t('m.bd.placesShort')}</span><span className="sr-only fit:not-sr-only">{t('m.bd.places')}</span><span className="hidden fit:inline"> · {t('m.bd.queue')} <span className="font-bold text-ink">{c.reserved}</span></span></p>
+      <div className="hidden sm:grid fit:hidden grid-cols-2 w-full border-t border-line pt-3 mt-1 divide-x divide-line text-center">
         <div><p className="text-base sm:text-lg font-bold">{c.held}/{cap}</p><p className="text-xs text-muted">{t('m.bd.places')}</p></div>
         <div><p className="text-base sm:text-lg font-bold">{c.reserved}</p><p className="text-xs text-muted">{t('m.bd.queue')}</p></div>
       </div>
-      <div className="w-full text-left bd-opt">
+      <div className="w-full text-left bd-opt hidden sm:block fit:hidden">
         <p className="flex justify-between text-xs text-muted"><span>{t('m.bd.fill')}</span><span>{pct}%</span></p>
         <div className="fill-bar mt-1" role="img" aria-label={`${t('m.bd.fill')} ${pct}%`}><span style={{ width: `${pct}%` }} /></div>
       </div>
-      <div className="grid grid-cols-2 gap-2 w-full mt-auto sm:pt-1">
-        <button type="button" className="btn-ghost text-sm justify-center !rounded-full" onClick={onOpen} aria-label={`${t('m.bd.details')}: ${post.position}`}>{t('m.bd.details')}</button>
-        <NavLink to={`post?id=${post.id}`} className="btn-primary text-sm justify-center !rounded-full" aria-label={`${act}: ${post.position}`}>{act}</NavLink>
+      <div className="hidden sm:grid grid-cols-2 gap-2 w-full mt-auto sm:pt-1 fit:pt-1.5 fit:col-span-2">
+        <button type="button" className="btn-ghost text-sm justify-center !rounded-full fit:!min-h-[36px]" onClick={onOpen} aria-label={`${t('m.bd.details')}: ${post.position}`}>{t('m.bd.details')}</button>
+        <NavLink to={`post?id=${post.id}`} className="btn-primary text-sm justify-center !rounded-full fit:!min-h-[36px]" aria-label={`${act}: ${post.position}`}>{act}</NavLink>
       </div>
       </div>
     </li>

@@ -86,6 +86,7 @@ export const market = {
   'm.sample.apply': ['คุณกำลังทดลองสมัครประกาศจำลอง — ใช้ลองขั้นตอนเท่านั้น ไม่มีงานจริงรออยู่', '您正在试着申请模拟招聘——仅用于体验流程，并无真实职位', 'You are trying out a simulated post — it only shows the steps; there is no real job behind it'],
   'm.sample.pin': ['หมุดจำลอง', '模拟标记', 'Simulated pin'],
   'm.mk.simulated': ['รวมข้อมูลจำลอง: ประกาศ {p} · หมุด {n}', '其中模拟数据：招聘 {p} · 标记 {n}', 'Of which simulated: {p} posts · {n} pins'],
+  'm.bd.placesShort': ['คน', '人', 'people'],
   'm.qb.chip.pinU': ['หมุด {n} · ไม่จำกัด', '标记 {n} · 不限', 'Pins {n} · unlimited'],
   'm.qb.chip.postU': ['ประกาศ {n} · ไม่จำกัด', '发布 {n} · 不限', 'Posts {n} · unlimited'],
   'm.adm.tab.sim': ['ข้อมูลจำลอง', '模拟数据', 'Simulated data'],
