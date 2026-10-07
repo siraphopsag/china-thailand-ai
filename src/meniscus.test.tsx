@@ -81,4 +81,9 @@ describe('colours and behaviour', () => {
     expect(css).toContain('@media (prefers-reduced-motion: reduce) { .mn-bead, .mn-label, .mn-icon { transition: none } }')
     expect(css).toMatch(/\.mn-bead \{[^}]*touch-action: none/)
   })
+  it('tapping the bead again on the phone "More" opens and closes the list (owner, Oct 2026: the bead covers that button)', () => {
+    expect(src('./components/meniscus.tsx')).toContain('else if (press.current.moved < 6) slots[i].onPress?.()')
+    // a tap on the bead is not a tap "away" from the open list (that closed it and the tap opened it again at once)
+    expect(src('./components/sidenav.tsx')).toContain("!(tg instanceof Element && tg.closest('.mn-bead'))")
+  })
 })

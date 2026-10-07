@@ -97,6 +97,7 @@ export function Meniscus({ slots, vertical, label, className = '', style, onSele
   const active = slots.findIndex((s) => s.current)
   const [shown, setShown] = useState(active)
   const sim = useRef({ u: -1, v: 0, target: -1, dragging: false, raf: 0 })
+  const press = useRef({ from: 0, moved: 0 }) // a tap on the bead (moved < 6 px) presses the item under it
 
   const nearest = (u: number) => { let best = 0; centers.current.forEach((c, i) => { if (Math.abs(c - u) < Math.abs(centers.current[best] - u)) best = i }); return best }
   const draw = useCallback(() => {
@@ -157,10 +158,12 @@ export function Meniscus({ slots, vertical, label, className = '', style, onSele
   const down = (e: React.PointerEvent<HTMLDivElement>) => {
     if (active < 0 && !sim.current.dragging) return
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* synthetic pointer */ }
+    press.current = { from: along(e), moved: 0 }
     sim.current.dragging = true; kick()
   }
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
     const s = sim.current; if (!s.dragging) return
+    press.current.moved = Math.max(press.current.moved, Math.abs(along(e) - press.current.from))
     const c = centers.current, u = Math.min(c[c.length - 1], Math.max(c[0], along(e)))
     s.v = u - s.u; s.u = u; s.target = u
   }
@@ -169,6 +172,9 @@ export function Meniscus({ slots, vertical, label, className = '', style, onSele
     s.dragging = false
     const i = nearest(s.u); s.target = centers.current[i]; kick()
     if (!slots[i].current) onSelect(slots[i])
+    // tapping the bead again on a button item (the phone "More") opens or closes it (owner, Oct 2026: people tap the same
+    // place again and nothing happened, because the bead covers that button)
+    else if (press.current.moved < 6) slots[i].onPress?.()
   }
 
   const cur = slots[shown >= 0 ? shown : 0]

@@ -69,7 +69,8 @@ export function SideNav({ route }: { route: string }) {
     if (!moreOpen) return
     moreList.current?.querySelector<HTMLElement>('a[href]')?.focus()
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setMoreOpen(false); moreBtn.current?.focus() } }
-    const away = (e: PointerEvent) => { const tg = e.target as Node; if (!moreList.current?.contains(tg) && !moreBtn.current?.contains(tg)) setMoreOpen(false) }
+    // the bead sits on "More" while the list is open: a tap on it toggles the list there, so it is not "away"
+    const away = (e: PointerEvent) => { const tg = e.target as Node; if (!moreList.current?.contains(tg) && !moreBtn.current?.contains(tg) && !(tg instanceof Element && tg.closest('.mn-bead'))) setMoreOpen(false) }
     document.addEventListener('keydown', esc); document.addEventListener('pointerdown', away)
     return () => { document.removeEventListener('keydown', esc); document.removeEventListener('pointerdown', away) }
   }, [moreOpen])
