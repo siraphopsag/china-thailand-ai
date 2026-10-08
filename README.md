@@ -7,7 +7,7 @@ A prototype that connects employers and job seekers across language, culture and
 - Themes: light / dark via CSS variables (`src/index.css`); choice persisted in localStorage
 - Local dev: `npm install && npm run dev`; build: `npm run build`; tests: `npm test`
 - Matching rules: `src/domain/match/` (pure, tested); browser state: `src/matchData.tsx` (validated on load, never trusted as is)
-- Employer pre-check (`src/domain/match/precheck.ts`) is a simple rule set labelled "simulated AI" — not a real AI review and not legal advice.
+- Real AI (Oct 2026): the employer pre-check and the legal Q&A assistant (`/ask`) call Claude through `api/ai.ts` (server-side key `ANTHROPIC_API_KEY`, signed-in users only, daily limits in SQL 0009; prompts and cleaning in `src/ai/spec.ts`). Without a key the pre-check falls back to the rule set in `src/domain/match/precheck.ts`. Not legal advice.
 - No server API, no accounts and no payments yet. The admin sign-in is a prototype gate whose credentials are in the client code (visible to anyone) — replace it before real use.
 - Accessibility: WCAG 2.2 A/AA checks run in the tests (contrast of colour tokens in both themes, labels, focus, motion with an on/off switch in Settings).
 

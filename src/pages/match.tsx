@@ -596,7 +596,8 @@ function AccountSection() {
 }
 export function PreparePage() {
   const { t } = useI18n()
-  const cards = [['safety', 'shield', 'm.sc.prepare', 'm.sc.prepare.d'], ['language', 'culture', 'm.prepare.lang', 'm.prepare.lang.d'], ['sources', 'legal', 'm.prepare.legal', 'm.prepare.legal.d']] as const
+  // the AI legal assistant first (owner, Oct 2026 — the real AI for the AI + Law competition)
+  const cards = [['ask', 'ai', 'ai.ask.title', 'ai.ask.d'], ['safety', 'shield', 'm.sc.prepare', 'm.sc.prepare.d'], ['language', 'culture', 'm.prepare.lang', 'm.prepare.lang.d'], ['sources', 'legal', 'm.prepare.legal', 'm.prepare.legal.d']] as const
   return (
     <Page title={t('m.prepare.title')}>
       <ul className="grid md:grid-cols-2 gap-3">{cards.map(([to, icon, h, d]) => (

@@ -1,0 +1,65 @@
+import type { Msg } from './common.js'
+/**
+ * The real AI (owner, Oct 2026 — "A + B" for the AI + Law competition): A) the check before posting, B) the legal Q&A assistant.
+ * Every AI text on screen says it may be wrong and is not legal advice.
+ */
+export const ai = {
+  // ---------- why there is no AI answer (the page falls back or explains)
+  'ai.why.off': ['ยังไม่ได้เปิดใช้ AI บนเว็บนี้', '本网站尚未启用 AI', 'AI is not switched on for this site'],
+  'ai.why.signin': ['ต้องเข้าสู่ระบบก่อน', '请先登录', 'Please sign in first'],
+  'ai.why.limit': ['วันนี้ใช้ครบ 20 ครั้งแล้ว พรุ่งนี้ใช้ได้ใหม่', '今天已用满 20 次，明天可再用', 'You have used all 20 for today — more tomorrow'],
+  'ai.why.site': ['วันนี้ทั้งเว็บใช้ AI ครบโควตาแล้ว', '今天全站的 AI 额度已用完', 'The whole site has used today’s AI allowance'],
+  'ai.why.busy': ['ระบบ AI ไม่ว่างหรือเชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง', 'AI 繁忙或无法连接，请重试', 'The AI is busy or cannot be reached — try again'],
+  'ai.why.refused': ['AI ตอบเรื่องนี้ไม่ได้', 'AI 无法回答此内容', 'The AI cannot answer this'],
+  'ai.why.bad': ['ข้อมูลที่ส่งไม่ถูกต้อง', '提交的内容无效', 'What was sent is not valid'],
+  'ai.why.error': ['เกิดข้อผิดพลาด ลองใหม่อีกครั้ง', '出错了，请重试', 'Something went wrong — try again'],
+  'ai.left': ['วันนี้ใช้ AI ได้อีก {n} ครั้ง', '今天还可使用 AI {n} 次', '{n} AI uses left today'],
+
+  // ---------- A) the check before posting
+  'ai.chk.by': ['ตรวจโดย AI', 'AI 检查', 'Checked by AI'],
+  'ai.chk.loading': ['AI กำลังอ่านประกาศของคุณ… (ประมาณ 5–20 วินาที)', 'AI 正在阅读您的招聘信息…（约 5–20 秒）', 'The AI is reading your post… (about 5–20 seconds)'],
+  'ai.chk.note': ['AI ช่วยชี้จุดที่ควรระวัง อาจผิดพลาดได้ และไม่ใช่คำปรึกษาทางกฎหมาย', 'AI 帮助指出需要注意的地方，可能出错，且并非法律意见', 'The AI points out what to watch for. It can be wrong and it is not legal advice.'],
+  'ai.chk.fallback': ['ใช้ AI ไม่ได้ตอนนี้ ({why}) จึงแสดงผลจากตัวตรวจพื้นฐานแทน', '暂时无法使用 AI（{why}），以下为基础检查结果', 'The AI is not available now ({why}), so this is the basic check'],
+  'ai.chk.v.ok': ['AI ไม่พบสิ่งที่ต้องระวัง', 'AI 未发现需要注意的地方', 'The AI found nothing to watch for'],
+  'ai.chk.v.review': ['มีบางจุดที่ควรตรวจก่อนโพสต์', '发布前有几处值得检查', 'A few things are worth checking before posting'],
+  'ai.chk.v.high_risk': ['พบสัญญาณเสี่ยงหลอกลวงหรือค้ามนุษย์', '发现诈骗或人口贩卖风险迹象', 'Signs of a scam or human trafficking were found'],
+  'ai.cat.scam': ['เสี่ยงหลอกลวง', '诈骗风险', 'Scam risk'],
+  'ai.cat.trafficking': ['เสี่ยงค้ามนุษย์', '人口贩卖风险', 'Trafficking risk'],
+  'ai.cat.labour_law': ['กฎหมายแรงงาน', '劳动法', 'Labour law'],
+  'ai.cat.discrimination': ['การเลือกปฏิบัติ', '歧视', 'Discrimination'],
+  'ai.cat.missing_info': ['ข้อมูลขาด', '信息缺失', 'Missing details'],
+  'ai.cat.other': ['อื่น ๆ', '其他', 'Other'],
+  'ai.sev.high': ['สูง', '高', 'High'],
+  'ai.sev.medium': ['กลาง', '中', 'Medium'],
+  'ai.sev.low': ['ต่ำ', '低', 'Low'],
+  'ai.chk.quote': ['ข้อความในประกาศ', '招聘信息原文', 'In your post'],
+  'ai.chk.fixIt': ['แนะนำให้แก้', '修改建议', 'Suggested fix'],
+  'ai.chk.laws': ['ข้อมูลกฎหมายที่เกี่ยวข้อง', '相关法律信息', 'Related legal records'],
+  'ai.chk.ack': ['ฉันตรวจแล้ว ยืนยันว่าเป็นงานจริงและไม่เก็บเงินจากผู้หางาน', '我已检查，确认这是真实职位且不向求职者收费', 'I have checked: this is a real job and job seekers pay nothing'],
+
+  // ---------- B) the legal Q&A assistant
+  'ai.ask.title': ['ผู้ช่วยกฎหมาย AI', 'AI 法律助手', 'AI legal assistant'],
+  'ai.ask.sub': ['ถามเรื่องกฎหมายการทำงานข้ามพรมแดนไทย–จีน ได้ 3 ภาษา — AI ตอบจากคลังข้อมูลกฎหมายของเว็บ พร้อมแหล่งอ้างอิง', '用三种语言询问泰中跨境工作的法律问题——AI 仅依据本站法律资料库回答，并附来源', 'Ask about the law on working across the Thai–Chinese border in 3 languages — the AI answers from the site’s legal records, with sources'],
+  'ai.ask.d': ['ถามเรื่องใบอนุญาตทำงาน วีซ่า การจ้างงานข้ามชาติ ได้คำตอบพร้อมแหล่งข้อมูลทางการ', '询问工作许可、签证、跨国雇佣等问题，答案附官方来源', 'Ask about work permits, visas and hiring across borders — answers come with official sources'],
+  'ai.ask.label': ['คำถามของคุณ', '您的问题', 'Your question'],
+  'ai.ask.ph': ['เช่น คนจีนจะมาทำงานในไทยต้องมีใบอนุญาตอะไรบ้าง', '例如：中国人来泰国工作需要哪些许可？', 'e.g. What permits does a Chinese national need to work in Thailand?'],
+  'ai.ask.privacy': ['อย่าใส่ชื่อ เลขบัตร เบอร์โทร หรือข้อมูลส่วนตัวในคำถาม', '请勿在问题中填写姓名、证件号、电话等个人信息', 'Do not put names, ID numbers, phone numbers or other personal data in your question'],
+  'ai.ask.send': ['ถาม AI', '询问 AI', 'Ask the AI'],
+  'ai.ask.loading': ['AI กำลังค้นในคลังข้อมูลกฎหมาย…', 'AI 正在查阅法律资料库…', 'The AI is looking through the legal records…'],
+  'ai.ask.try': ['ลองถาม', '试着问', 'Try asking'],
+  'ai.ask.ex1': ['คนจีนจะมาทำงานในไทยต้องมีใบอนุญาตอะไรบ้าง', '中国人来泰国工作需要哪些许可？', 'What permits does a Chinese national need to work in Thailand?'],
+  'ai.ask.ex2': ['คนไทยไปทำงานที่จีนต้องขอใบอนุญาตอะไร', '泰国人去中国工作需要申请什么许可？', 'What permits does a Thai need to work in China?'],
+  'ai.ask.ex3': ['บริษัทจีนจะตั้งธุรกิจในไทยมีข้อจำกัดอะไร', '中国公司在泰国开展业务有哪些限制？', 'What limits apply to a Chinese company starting a business in Thailand?'],
+  'ai.ask.short': ['พิมพ์คำถามอย่างน้อย 4 ตัวอักษร', '请至少输入 4 个字符', 'Type at least 4 characters'],
+  'ai.ask.answer': ['คำตอบ', '回答', 'Answer'],
+  'ai.ask.g.grounded': ['ตอบจากคลังข้อมูลกฎหมาย', '依据法律资料库回答', 'Answered from the legal records'],
+  'ai.ask.g.partial': ['ตอบได้บางส่วน', '仅能部分回答', 'Partly answered'],
+  'ai.ask.g.out_of_scope': ['อยู่นอกคลังข้อมูลกฎหมาย', '超出法律资料库范围', 'Outside the legal records'],
+  'ai.ask.sources': ['แหล่งข้อมูลที่ AI ใช้', 'AI 使用的资料', 'Records the AI used'],
+  'ai.ask.next': ['ขั้นต่อไป', '下一步', 'Next step'],
+  'ai.ask.unverified': ['ยังไม่ได้ตรวจโดยนักกฎหมาย', '尚未经律师核查', 'Not yet checked by a lawyer'],
+  'ai.ask.official': ['เว็บหน่วยงาน', '机构网站', 'Agency website'],
+  'ai.ask.note': ['คำตอบจาก AI อาจผิดพลาดได้ และไม่ใช่คำปรึกษาทางกฎหมาย โปรดตรวจกับหน่วยงานหรือทนายความก่อนตัดสินใจ', 'AI 的回答可能有误，且并非法律意见。做决定前请向相关机构或律师核实。', 'AI answers can be wrong and are not legal advice. Check with the authority or a lawyer before you decide.'],
+  'ai.ask.signin': ['เข้าสู่ระบบเพื่อใช้ผู้ช่วย AI (ฟรี วันละ 20 คำถาม)', '登录后即可使用 AI 助手（免费，每天 20 个问题）', 'Sign in to use the AI assistant (free, 20 questions a day)'],
+  'ai.ask.again': ['ถามคำถามใหม่', '提出新问题', 'Ask another question'],
+} as const satisfies Record<string, Msg>

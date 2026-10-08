@@ -29,8 +29,8 @@ describe('accessibility audit fixes (WCAG 2.2 A/AA)', () => {
     // the only endless one is the hero's Background Paths light band (owner, Oct 2026): it runs only while .is-on, which the on/off switch in Settings
     // controls (reduce-motion devices start off)
     const endless = [...css.matchAll(/animation:\s*([a-z-]+)[^;}]*infinite/g)].map((m) => m[1])
-    // (ai-scan is a busy indicator, shown only while the AI is working)
-    expect(endless.sort()).toEqual(['ai-scan', 'bg-flow', 'bg-sheen', 'bg-sheen-lines'])
+    // (ai-scan and ai-spin are busy indicators, shown only while the AI is working)
+    expect(endless.sort()).toEqual(['ai-scan', 'ai-spin', 'bg-flow', 'bg-sheen', 'bg-sheen-lines'])
     expect(css).toContain('.bg-paths.is-on .bg-sheen { display: block; animation: bg-sheen')
   })
   it('#13 Chinese inside Thai text (and Thai inside Chinese text) is marked with its own language', () => {

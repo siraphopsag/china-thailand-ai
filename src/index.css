@@ -548,6 +548,11 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 @media (prefers-reduced-motion: reduce) { .mn-bead, .mn-label, .mn-icon { transition: none } }
 @media (prefers-reduced-transparency: reduce) { .mn-blur { backdrop-filter: none; -webkit-backdrop-filter: none } .mn-plate { fill: rgb(var(--surface)) } }
 
+/* waiting for the AI: a small ring (a still ring when motion is reduced — the text says what is happening) */
+.ai-spin { width: 1.1rem; height: 1.1rem; border-radius: 9999px; border: 2.5px solid rgb(var(--primary) / .25); border-top-color: rgb(var(--primary)); animation: ai-spin .8s linear infinite; flex-shrink: 0 }
+@keyframes ai-spin { to { transform: rotate(360deg) } }
+@media (prefers-reduced-motion: reduce) { .ai-spin { animation: none } }
+
 /* the C.A.L.L. logo (owner, Oct 2026): indigo letters, teal dots; lighter in the dark theme (≥ 3:1 on the header either way) */
 :root, :root[data-theme='light'] { --logo-a: 79 70 229; --logo-b: 13 148 136 }
 :root[data-theme='dark'] { --logo-a: 199 210 254; --logo-b: 45 212 191 }

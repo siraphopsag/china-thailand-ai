@@ -5,6 +5,10 @@ import { useMatch } from '../matchData'
 import { canPost, caseBlocksDelete, isCountry, localDay, memberActive, postQuota, type PostInput, type Problem } from '../domain/match/logic'
 import { scheduleOf, stageAt, capStage } from '../domain/match/release'
 import { precheck, type Precheck } from '../domain/match/precheck'
+import { useAuth } from '../auth'
+import { aiCheck } from '../ai/client'
+import type { AiCheck, AiResponse } from '../ai/spec'
+import { AiCheckResult } from './ask'
 import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MY_EMPLOYER, type Benefit, type Currency, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Skill } from '../domain/match/types'
 import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
@@ -19,7 +23,8 @@ import { postToInput } from '../domain/match/remote'
 import { PlanGrid } from './member'
 
 /**
- * Employer flow (owner, Oct 2026): place on the map → company and needs (4 groups) → "Check and post" → simulated AI pre-check →
+ * Employer flow (owner, Oct 2026): place on the map → company and needs (4 groups) → "Check and post" → pre-check (the real AI when
+ * signed in and switched on — scam/trafficking signs, labour law, missing details; otherwise the basic rules) →
  * "Post this job?" → "Your post is live" with [View the post] [Post another]. 3 free posts per weekly cycle (new or renewed); after
  * that the membership package window (10 per cycle; planned price shown struck through, free in the prototype — no payment).
  * Editing (owner, Oct 2026): "Edit" on one of my posts (or hire?edit=<id>) fills the same form; saving keeps the posting date.
@@ -36,7 +41,8 @@ const FIELD: Partial<Record<Problem, [string, string]>> = {
 }
 
 export function HirePage() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
+  const { status, online } = useAuth()
   const N = useNames()
   const { st, now, limitNow, pool, post, editPost, deletePost, renew } = useMatch()
   const [joinedUntil, setJoinedUntil] = useState<string | null>(null)
@@ -58,6 +64,9 @@ export function HirePage() {
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   const [stage, setStage] = useState<Stage>(null)
   const [check, setCheck] = useState<Precheck | null>(null)
+  // the AI check (null = not asked; 'busy' = waiting); a high-risk result needs the employer's tick before posting
+  const [aiRes, setAiRes] = useState<AiResponse<AiCheck> | 'busy' | null>(null), [ack, setAck] = useState(false)
+  const aiRun = useRef(0)
   const [pending, setPending] = useState<PostInput | null>(null)
   const [posted, setPosted] = useState<Post | null>(null)
   const fe = useFieldError()
@@ -98,16 +107,25 @@ export function HirePage() {
     return { place: { country: c, province: p }, company: company.trim(), position: position.trim(), industry, skills, minYears: Number(years), details: details.trim(),
       headcount: Number(headcount), employment, salary: hasSalary ? { min: Number(salMin), max: Number(salMax), currency } : null, startDate: start, languages: langs, education: edu, benefits }
   }
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault(); setMsg(null); fe.clear()
     const i = input(); if (!i) { setMsg({ tone: 'danger', text: N.problem('place') }); return }
     if (!editing && !canPost(st, limitNow)) { setStage('package'); return }
     // editing without changing the start date: it is checked against the posting day, so a post whose start has passed can still be fixed
     const r = precheck(i, editing && editing.startDate && i.startDate === editing.startDate ? editing.createdAt : new Date(now).toISOString())
-    setPending(i); setCheck(r)
+    setPending(i); setCheck(r); setAiRes(null); setAck(false)
+    // rule errors (e.g. a phone number in the details) must be fixed first; otherwise the AI reads the post when it can
+    if (!r.errors.length && status === 'signedIn' && online !== false) {
+      const run = ++aiRun.current
+      setAiRes('busy'); setStage('check')
+      const res = await aiCheck(i, lang)
+      if (run === aiRun.current) setAiRes(res)
+      return
+    }
     setStage(r.errors.length || r.warnings.length ? 'check' : 'confirm')
   }
-  const closeCheck = () => { setStage(null); if (check?.errors[0]) showProblem(check.errors[0]) }
+  const closeCheck = () => { aiRun.current++; setStage(null); if (check?.errors[0]) showProblem(check.errors[0]) }
+  const aiOk = aiRes && aiRes !== 'busy' && aiRes.ok ? aiRes : null
   const confirm = async () => {
     if (!pending || saving) return
     setSaving(true)
@@ -118,7 +136,7 @@ export function HirePage() {
     setStage(null); showProblem(r.problem)
   }
   const another = () => {
-    setStage(null); setPosted(null); setPending(null); setCheck(null); setEditing(null)
+    setStage(null); setPosted(null); setPending(null); setCheck(null); setAiRes(null); setEditing(null)
     setPosition(''); setSkills([]); setDetails(''); setYears('0'); setHeadcount('1'); setEmployment('permanent'); setSalMin(''); setSalMax(''); setStart(''); setLangs([]); setEdu('none'); setBenefits([])
     setForm(false); setC(null); setP(null)
     // the form unmounts, so keyboard focus would fall back to the page: put it on the country field to start the next post
@@ -250,23 +268,28 @@ export function HirePage() {
       </MapLayout>
 
       {askDialog}
-      {/* 1) pre-check (simulated AI) */}
+      {/* 1) pre-check: the real AI when available, otherwise the basic rules (labelled as such) */}
       <Modal open={stage === 'check'} onClose={closeCheck} wide>{(id) => check && (<>
-        <div className="flex flex-wrap items-center gap-2"><h2 id={id} className="h2">{t('m.chk.title')}</h2><span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ai" size={12} />{t('m.chk.sim')}</span></div>
-        <p className="text-xs text-muted">{t('m.chk.simNote')}</p>
-        {check.errors.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-danger-fg flex items-center gap-1.5"><Icon name="alert" size={16} />{t('m.chk.errors')}</p>
+        <div className="flex flex-wrap items-center gap-2"><h2 id={id} className="h2">{t('m.chk.title')}</h2><span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ai" size={12} />{t(aiRes && (aiRes === 'busy' || aiRes.ok) ? 'ai.chk.by' : 'm.chk.sim')}</span></div>
+        {aiRes === 'busy' ? <p role="status" className="text-sm text-muted flex items-center gap-2 py-6 justify-center"><span className="ai-spin" aria-hidden />{t('ai.chk.loading')}</p>
+          : aiOk ? <AiCheckResult res={aiOk.result} left={aiOk.left} />
+          : <p className="text-xs text-muted">{aiRes && !aiRes.ok ? t('ai.chk.fallback', { why: t(`ai.why.${aiRes.reason}` as never) }) : t('m.chk.simNote')}</p>}
+        {!aiOk && aiRes !== 'busy' && check.errors.length === 0 && check.warnings.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')}</p>}
+        {aiOk?.result.verdict === 'high_risk' && <label className="flex items-start gap-2 text-sm font-medium rounded-lg border border-danger-line bg-danger-bg text-danger-fg p-3"><input type="checkbox" className="mt-1" checked={ack} onChange={(e) => setAck(e.target.checked)} />{t('ai.chk.ack')}</label>}
+        {!aiOk && aiRes !== 'busy' && check.errors.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-danger-fg flex items-center gap-1.5"><Icon name="alert" size={16} />{t('m.chk.errors')}</p>
           <ul className="list-disc pl-6 text-sm space-y-1">{check.errors.map((e) => <li key={e}>{N.problem(e)}</li>)}</ul></div>}
-        {check.warnings.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-warn-fg flex items-center gap-1.5"><Icon name="warn" size={16} />{t('m.chk.warnings')}</p>
+        {!aiOk && aiRes !== 'busy' && check.warnings.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-warn-fg flex items-center gap-1.5"><Icon name="warn" size={16} />{t('m.chk.warnings')}</p>
           <ul className="list-disc pl-6 text-sm space-y-1">{check.warnings.map((w) => <li key={w}>{t(`m.chk.w.${w}` as never)}</li>)}</ul></div>}
         <div className="flex flex-wrap justify-end gap-2 pt-1">
           <button type="button" className="btn-ghost" onClick={closeCheck}>{t('m.chk.fix')}</button>
-          {check.errors.length === 0 && <button type="button" className="btn-primary" onClick={() => setStage('confirm')}>{t('m.chk.continue')}<Icon name="next" size={16} /></button>}
+          {check.errors.length === 0 && aiRes !== 'busy' && <button type="button" className="btn-primary" disabled={aiOk?.result.verdict === 'high_risk' && !ack} onClick={() => setStage('confirm')}>{t('m.chk.continue')}<Icon name="next" size={16} /></button>}
         </div></>)}</Modal>
 
       {/* 2) are you sure? */}
       <Modal open={stage === 'confirm'} onClose={() => setStage(null)}>{(id) => pending && (<>
         <h2 id={id} className="h2">{t(editing ? 'm.edit.cf.title' : 'm.cf.title')}</h2>
-        {check && check.warnings.length === 0 && check.errors.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')} <span className="text-muted">({t('m.chk.sim')})</span></p>}
+        {aiOk ? (aiOk.result.verdict === 'ok' && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('ai.chk.v.ok')} <span className="text-muted">({t('ai.chk.by')})</span></p>)
+          : check && check.warnings.length === 0 && check.errors.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')} <span className="text-muted">({t('m.chk.sim')})</span></p>}
         <div className="card-i space-y-1 text-sm"><p className="font-semibold">{pending.position} · {pending.company}</p><p className="text-muted">{N.place(pending.place.country, pending.place.province)} · {t('m.people', { n: pending.headcount })} · {N.employment(pending.employment)}</p></div>
         <p className="text-xs text-muted">{editing ? t('m.edit.note') : t('m.cf.quota', { n: used + 1, max: limit })}</p>
         <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setStage(null)}>{t('m.cf.back')}</button><button type="button" className="btn-primary" disabled={saving} onClick={confirm}><Icon name="send" size={16} />{t(editing ? 'm.edit.cf.yes' : 'm.cf.yes')}</button></div></>)}</Modal>
