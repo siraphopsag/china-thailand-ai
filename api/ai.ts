@@ -1,12 +1,15 @@
-// Vercel serverless function (Node runtime): the real AI (owner, Oct 2026 — "A + B"). The Anthropic key lives ONLY in the server's
-// environment (ANTHROPIC_API_KEY, set by the owner in Vercel); the browser never sees it. Only signed-in people may use it, and each
-// use is counted in the database first (ai_take, SQL 0009: per person per day, admins unlimited, and a cap for the whole site).
-// Prompts, limits and cleaning are in src/ai/spec.ts (tested). Post text and questions are not logged.
+// Vercel serverless function (Node runtime): the real AI (owner, Oct 2026 — "A + B"). The AI key lives ONLY in the server's
+// environment, set by the owner in Vercel; the browser never sees it.
+//  · GEMINI_API_KEY — Google AI Studio's free tier (owner: no paid services; a key made without billing can never be charged —
+//    over the free quota Google just says no and the page falls back to the basic check). Model: GEMINI_MODEL or the default list.
+//  · ANTHROPIC_API_KEY — Claude, used instead when set (paid; kept for later). Model: AI_MODEL or claude-haiku-5-5.
+// Only signed-in people may use it, and each use is counted in the database first (ai_take, SQL 0009). Prompts, limits and cleaning
+// are in src/ai/spec.ts (tested). Post text and questions are not logged.
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import {
-  AI_LANGS, DEFAULT_MODEL, FLAG_CATEGORIES, MAX_QUESTION, SEVERITIES, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, postForAi,
+  AI_LANGS, DEFAULT_MODEL, FLAG_CATEGORIES, GEMINI_MODELS, MAX_QUESTION, SEVERITIES, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, postForAi,
   type AiKind, type AiLang, type AiReason,
 } from '../src/ai/spec.js'
 import type { PostInput } from '../src/domain/match/logic.js'
@@ -40,6 +43,51 @@ async function take(token: string, kind: AiKind): Promise<{ ok: boolean; reason?
   return { ok: v.ok === true, reason: v.reason === 'site' ? 'site' : v.reason === 'limit' ? 'limit' : undefined, left: typeof v.left === 'number' ? v.left : null }
 }
 
+type Outcome = { raw: unknown } | { reason: AiReason; status: number }
+const BLOCKED = ['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'RECITATION']
+
+/** Gemini (free tier): JSON mode, the shape is described in the system prompt; cleanCheck / cleanAnswer then keep only valid parts */
+async function gemini(apiKey: string, system: string, content: string): Promise<Outcome> {
+  const models = [...new Set([env('GEMINI_MODEL'), ...GEMINI_MODELS].filter(Boolean))]
+  for (const model of models) {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 25_000)
+    let r: Response
+    try {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST', signal: ctl.signal, headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: content }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.2 } }),
+      })
+    } catch { return { reason: 'busy', status: 503 } } finally { clearTimeout(timer) }
+    if (r.status === 404) continue // this model is not offered (any more): try the next one
+    if (r.status === 429 || r.status >= 500) return { reason: 'busy', status: 503 } // free quota used up, or Google is busy
+    if (!r.ok) { console.error('gemini', model, r.status); return { reason: 'error', status: 500 } }
+    const v = (await r.json()) as { promptFeedback?: { blockReason?: string }; candidates?: { finishReason?: string; content?: { parts?: { text?: string; thought?: boolean }[] } }[] }
+    const c = v.candidates?.[0]
+    if (v.promptFeedback?.blockReason || BLOCKED.includes(c?.finishReason ?? '')) return { reason: 'refused', status: 200 }
+    const text = (c?.content?.parts ?? []).filter((p) => !p.thought && typeof p.text === 'string').map((p) => p.text).join('').trim().replace(/^```(?:json)?\s*|\s*```$/g, '')
+    try { const raw: unknown = JSON.parse(text); return raw && typeof raw === 'object' ? { raw } : { reason: 'bad', status: 502 } } catch { return { reason: 'bad', status: 502 } }
+  }
+  console.error('gemini: no model available', models.join(','))
+  return { reason: 'error', status: 500 }
+}
+
+/** Claude (paid, when ANTHROPIC_API_KEY is set): structured output */
+async function claude(apiKey: string, kind: AiKind, system: string, content: string): Promise<Outcome> {
+  const client = new Anthropic({ apiKey, timeout: 25_000, maxRetries: 1 })
+  const model = env('AI_MODEL') || DEFAULT_MODEL
+  const sys = [{ type: 'text' as const, text: system, cache_control: { type: 'ephemeral' as const } }]
+  try {
+    const res = kind === 'check'
+      ? await client.messages.parse({ model, max_tokens: 8000, system: sys, output_config: { effort: 'medium', format: zodOutputFormat(CheckSchema) }, messages: [{ role: 'user', content }] })
+      : await client.messages.parse({ model, max_tokens: 6000, system: sys, output_config: { effort: 'low', format: zodOutputFormat(AskSchema) }, messages: [{ role: 'user', content }] })
+    if (res.stop_reason === 'refusal') return { reason: 'refused', status: 200 }
+    return res.parsed_output ? { raw: res.parsed_output } : { reason: 'bad', status: 502 }
+  } catch (e) {
+    if (e instanceof Anthropic.RateLimitError || e instanceof Anthropic.APIConnectionError || (e instanceof Anthropic.APIError && (e.status === 529 || e.status === 503))) return { reason: 'busy', status: 503 }
+    throw e
+  }
+}
+
 export async function POST(request: Request) {
   try {
     // same-origin only
@@ -57,28 +105,22 @@ export async function POST(request: Request) {
     const post = kind === 'check' && body.post && typeof body.post === 'object' ? postForAi(body.post as PostInput) : null
     if (kind === 'check' && (!post || typeof post.position !== 'string')) return fail('bad', 400)
 
-    const apiKey = env('ANTHROPIC_API_KEY')
-    if (!apiKey) return fail('off', 503)
+    const claudeKey = env('ANTHROPIC_API_KEY'), geminiKey = env('GEMINI_API_KEY')
+    if (!claudeKey && !geminiKey) return fail('off', 503)
     const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
     if (!token) return fail('signin', 401)
     const t = await take(token, kind)
     if (!t) return fail('signin', 401)
     if (!t.ok) return fail(t.reason ?? 'limit', 429)
 
-    const client = new Anthropic({ apiKey, timeout: 25_000, maxRetries: 1 })
-    const model = env('AI_MODEL') || DEFAULT_MODEL
-    const system = [{ type: 'text' as const, text: kind === 'check' ? checkSystem(lang) : askSystem(lang), cache_control: { type: 'ephemeral' as const } }]
+    const system = kind === 'check' ? checkSystem(lang) : askSystem(lang)
     const content = kind === 'check' ? checkUser(post!) : askUser(question)
-    const res = kind === 'check'
-      ? await client.messages.parse({ model, max_tokens: 8000, system, output_config: { effort: 'medium', format: zodOutputFormat(CheckSchema) }, messages: [{ role: 'user', content }] })
-      : await client.messages.parse({ model, max_tokens: 6000, system, output_config: { effort: 'low', format: zodOutputFormat(AskSchema) }, messages: [{ role: 'user', content }] })
-    if (res.stop_reason === 'refusal') return fail('refused', 200)
-    if (!res.parsed_output) return fail('bad', 502)
-    const result = kind === 'check' ? cleanCheck(res.parsed_output) : cleanAnswer(res.parsed_output)
+    const out = claudeKey ? await claude(claudeKey, kind, system, content) : await gemini(geminiKey, system, content)
+    if ('reason' in out) return fail(out.reason, out.status)
+    const result = kind === 'check' ? cleanCheck(out.raw) : cleanAnswer(out.raw)
+    if (kind === 'ask' && !(result as ReturnType<typeof cleanAnswer>).answer) return fail('bad', 502)
     return json({ ok: true, result, left: t.left })
   } catch (e) {
-    if (e instanceof Anthropic.RateLimitError || (e instanceof Anthropic.APIError && (e.status === 529 || e.status === 503))) return fail('busy', 503)
-    if (e instanceof Anthropic.APIConnectionError) return fail('busy', 503)
     console.error('ai failed', e instanceof Error ? e.name + ': ' + e.message : 'unknown') // no user text in the logs
     return fail('error', 500)
   }

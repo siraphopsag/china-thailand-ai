@@ -18,7 +18,7 @@ export const ai = {
   // ---------- A) the check before posting
   'ai.chk.by': ['ตรวจโดย AI', 'AI 检查', 'Checked by AI'],
   'ai.chk.loading': ['AI กำลังอ่านประกาศของคุณ… (ประมาณ 5–20 วินาที)', 'AI 正在阅读您的招聘信息…（约 5–20 秒）', 'The AI is reading your post… (about 5–20 seconds)'],
-  'ai.chk.note': ['AI ช่วยชี้จุดที่ควรระวัง อาจผิดพลาดได้ และไม่ใช่คำปรึกษาทางกฎหมาย', 'AI 帮助指出需要注意的地方，可能出错，且并非法律意见', 'The AI points out what to watch for. It can be wrong and it is not legal advice.'],
+  'ai.chk.note': ['AI (ผู้ให้บริการภายนอก) ช่วยชี้จุดที่ควรระวัง อาจผิดพลาดได้ และไม่ใช่คำปรึกษาทางกฎหมาย', 'AI（外部服务商）帮助指出需要注意的地方，可能出错，且并非法律意见', 'The AI (an outside provider) points out what to watch for. It can be wrong and it is not legal advice.'],
   'ai.chk.fallback': ['ใช้ AI ไม่ได้ตอนนี้ ({why}) จึงแสดงผลจากตัวตรวจพื้นฐานแทน', '暂时无法使用 AI（{why}），以下为基础检查结果', 'The AI is not available now ({why}), so this is the basic check'],
   'ai.chk.v.ok': ['AI ไม่พบสิ่งที่ต้องระวัง', 'AI 未发现需要注意的地方', 'The AI found nothing to watch for'],
   'ai.chk.v.review': ['มีบางจุดที่ควรตรวจก่อนโพสต์', '发布前有几处值得检查', 'A few things are worth checking before posting'],
@@ -43,7 +43,7 @@ export const ai = {
   'ai.ask.d': ['ถามเรื่องใบอนุญาตทำงาน วีซ่า การจ้างงานข้ามชาติ ได้คำตอบพร้อมแหล่งข้อมูลทางการ', '询问工作许可、签证、跨国雇佣等问题，答案附官方来源', 'Ask about work permits, visas and hiring across borders — answers come with official sources'],
   'ai.ask.label': ['คำถามของคุณ', '您的问题', 'Your question'],
   'ai.ask.ph': ['เช่น คนจีนจะมาทำงานในไทยต้องมีใบอนุญาตอะไรบ้าง', '例如：中国人来泰国工作需要哪些许可？', 'e.g. What permits does a Chinese national need to work in Thailand?'],
-  'ai.ask.privacy': ['อย่าใส่ชื่อ เลขบัตร เบอร์โทร หรือข้อมูลส่วนตัวในคำถาม', '请勿在问题中填写姓名、证件号、电话等个人信息', 'Do not put names, ID numbers, phone numbers or other personal data in your question'],
+  'ai.ask.privacy': ['คำถามจะถูกส่งไปประมวลผลที่ผู้ให้บริการ AI ภายนอก — อย่าใส่ชื่อ เลขบัตร เบอร์โทร หรือข้อมูลส่วนตัว', '问题将发送给外部 AI 服务商处理——请勿填写姓名、证件号、电话等个人信息', 'Your question is sent to an outside AI provider — do not include names, ID numbers, phone numbers or other personal data'],
   'ai.ask.send': ['ถาม AI', '询问 AI', 'Ask the AI'],
   'ai.ask.loading': ['AI กำลังค้นในคลังข้อมูลกฎหมาย…', 'AI 正在查阅法律资料库…', 'The AI is looking through the legal records…'],
   'ai.ask.try': ['ลองถาม', '试着问', 'Try asking'],

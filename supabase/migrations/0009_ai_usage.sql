@@ -1,6 +1,6 @@
 -- 0009 · Counting uses of the real AI (owner, Oct 2026 — "A + B": AI check before posting, AI legal Q&A).
 -- The server function (api/ai.ts) calls ai_take() AS THE SIGNED-IN PERSON before every AI call: 20 uses a day per person and kind,
--- 1000 a day for the whole site (cost guard), administrators unlimited. Nobody reads or writes the table directly.
+-- 200 a day for the whole site (the free AI tier allows little), administrators unlimited. Nobody reads or writes the table directly.
 -- Safe to run more than once.
 
 create table if not exists public.ai_usage (
@@ -23,7 +23,7 @@ declare
   me uuid := auth.uid();
   today date := (now() at time zone 'Asia/Bangkok')::date;
   per_user constant int := 20;
-  site_cap constant int := 1000;
+  site_cap constant int := 200;
   used int;
   site int;
 begin

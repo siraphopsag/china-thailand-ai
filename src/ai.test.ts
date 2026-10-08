@@ -117,3 +117,51 @@ describe('the server function', () => {
     expect((await call({ kind: 'ask', question: 'hello there' }, { authorization: 'Bearer t' })).body).toEqual({ ok: false, reason: 'busy' })
   })
 })
+
+describe('the server function with the free Gemini key (owner: no paid services)', () => {
+  const env = { ...process.env }
+  const call = async (body: unknown) => {
+    const { POST } = await import('../api/ai')
+    const r = await POST(new Request('https://x.test/api/ai', { method: 'POST', headers: { host: 'x.test', 'content-type': 'application/json', authorization: 'Bearer t' }, body: JSON.stringify(body) }))
+    return { status: r.status, body: await r.json() }
+  }
+  /** answers for ai_take, then each Gemini model in turn */
+  const net = (gem: (url: string) => Response) => vi.spyOn(globalThis, 'fetch').mockImplementation(async (u) => String(u).includes('/rpc/ai_take') ? new Response(JSON.stringify({ ok: true, left: 3 })) : gem(String(u)))
+  const reply = (text: string, extra: Record<string, unknown> = {}) => new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'thinking…', thought: true }, { text }] } }], ...extra }))
+  beforeEach(() => {
+    delete process.env.ANTHROPIC_API_KEY; process.env.GEMINI_API_KEY = 'free-key'; delete process.env.GEMINI_MODEL
+    process.env.VITE_SUPABASE_URL = 'https://abc.supabase.co'; process.env.VITE_SUPABASE_ANON_KEY = 'anon-key-for-tests'
+    parse.mockReset()
+  })
+  afterEach(() => { process.env = { ...env }; vi.restoreAllMocks() })
+
+  it('asks Gemini in JSON mode with the key in a header, and cleans the answer', async () => {
+    const f = net(() => reply('```json\n{"answer":"Work permit needed.","lawIds":["th-labour","nope"],"grounding":"grounded","nextStep":"Ask the Ministry of Labour."}\n```'))
+    expect((await call({ kind: 'ask', lang: 'en', question: 'Do I need a permit?' })).body).toEqual({ ok: true, left: 3, result: { answer: 'Work permit needed.', lawIds: ['th-labour'], grounding: 'grounded', nextStep: 'Ask the Ministry of Labour.' } })
+    const [url, init] = f.mock.calls[1] as [string, RequestInit]
+    expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent')
+    expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe('free-key')
+    const sent = JSON.parse(String(init.body))
+    expect(sent.generationConfig.responseMimeType).toBe('application/json')
+    expect(sent.systemInstruction.parts[0].text).toContain('"grounding":"grounded"|"partial"|"out_of_scope"')
+    expect(String(init.body)).not.toContain('free-key')
+    expect(parse).not.toHaveBeenCalled() // Claude is not used without its key
+  })
+  it('tries the next model when one is not offered', async () => {
+    const f = net((u) => u.includes('gemini-flash-latest') ? new Response('{}', { status: 404 }) : reply('{"verdict":"ok","summary":"Fine.","flags":[]}'))
+    expect((await call({ kind: 'check', post })).body).toEqual({ ok: true, left: 3, result: { verdict: 'ok', summary: 'Fine.', flags: [] } })
+    expect(String(f.mock.calls[2][0])).toContain('gemini-3.8-flash')
+  })
+  it('free quota used up → "busy" (the page falls back to the basic check); blocked → "refused"; nonsense → "bad"', async () => {
+    net(() => new Response('{}', { status: 429 }))
+    expect((await call({ kind: 'check', post })).body).toEqual({ ok: false, reason: 'busy' })
+    vi.restoreAllMocks(); net(() => reply('', { promptFeedback: { blockReason: 'SAFETY' } }))
+    expect((await call({ kind: 'check', post })).body).toEqual({ ok: false, reason: 'refused' })
+    vi.restoreAllMocks(); net(() => reply('not json'))
+    expect((await call({ kind: 'ask', question: 'hello there' })).body).toEqual({ ok: false, reason: 'bad' })
+  })
+  it('no key at all → "off"', async () => {
+    delete process.env.GEMINI_API_KEY
+    expect(await call({ kind: 'ask', question: 'hello there' })).toEqual({ status: 503, body: { ok: false, reason: 'off' } })
+  })
+})

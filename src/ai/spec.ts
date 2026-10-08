@@ -13,11 +13,13 @@ import type { PostInput } from '../domain/match/logic.js'
 export type AiKind = 'check' | 'ask'
 export type AiLang = 'th' | 'zh' | 'en'
 export const AI_LANGS: AiLang[] = ['th', 'zh', 'en']
-/** the default model; the owner can change it in Vercel (AI_MODEL) without a code change */
+/** Claude's default model (paid, used only when ANTHROPIC_API_KEY is set); the owner can change it in Vercel (AI_MODEL) */
 export const DEFAULT_MODEL = 'claude-haiku-5-5'
+/** Gemini (free tier, the owner's choice: no paid services): tried in order until one is offered; GEMINI_MODEL goes first */
+export const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.5-flash-lite']
 /** uses a day per person and kind (admins: no limit) and for the whole site — enforced in the database (SQL 0009) */
 export const PER_USER_DAY = 20
-export const SITE_DAY = 1000
+export const SITE_DAY = 200
 export const MAX_QUESTION = 600
 const MAX_FIELD = 2000
 
@@ -84,6 +86,8 @@ concrete suggestion for rewording, and related LEGAL RECORDS ids (often none). v
 when something should be checked, "high_risk" only for clear scam or trafficking signs. Do not flag normal things (a salary range,
 a language requirement that the job needs, a probation period with pay).
 Write summary, explanation and suggestion in ${LANG_NAME[lang]}, short and plain. Keep quote in the post's own language.
+Reply with ONE JSON object only, exactly this shape:
+{"verdict":"ok"|"review"|"high_risk","summary":string,"flags":[{"category":"scam"|"trafficking"|"labour_law"|"discrimination"|"missing_info"|"other","severity":"high"|"medium"|"low","quote":string,"explanation":string,"suggestion":string,"lawIds":string[]}]}
 
 LEGAL RECORDS:
 ${legalContext()}`
@@ -101,6 +105,8 @@ below. Rules:
 - lawIds: the ids you relied on. nextStep: one concrete next step (which authority or professional to check with).
 - answer: at most about 180 words of plain text, short paragraphs; lines starting with "• " for lists; no markdown, no headings.
 - Write answer and nextStep in ${LANG_NAME[lang]}. Never ask for or repeat personal data.
+Reply with ONE JSON object only, exactly this shape:
+{"answer":string,"lawIds":string[],"grounding":"grounded"|"partial"|"out_of_scope","nextStep":string}
 
 LEGAL RECORDS:
 ${legalContext()}`
