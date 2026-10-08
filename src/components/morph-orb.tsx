@@ -4,7 +4,7 @@
  * dots turn green, condense into a glossy ball and unfold into the answer card. Ported from the owner's MorphOrb (timelines, easing,
  * dotted sphere) and fitted to our page: it lives in a stage box (not the whole window), copy comes from the page in three languages,
  * the answer card then grows into the full answer the page renders (children), a failed answer returns to the pill.
- * Reduced motion or the lite mode → cross-fades only and a still sphere. Styles: index.css (.mo-*).
+ * Reduced motion or the lite mode → cross-fades only; the working sphere still turns (owner, Oct 2026). Styles: index.css (.mo-*).
  */
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { motionOff } from './ui/background-paths'
@@ -110,9 +110,9 @@ const unfoldTracks = (g: Geo): Track[] => [
 const FAIL: Track[] = [
   T('orb.warn', 0, 1, 0, 400, E.out), T('orb.spin', 0.9, 0.2, 0, 600, E.out), T('orb.gain', 1, 0, 0, 400, E.out), T('orb.floor', 0, 0.8, 0, 400, E.out),
 ]
-/* reduced motion / lite: cross-fades only */
+/* reduced motion / lite: cross-fades only — but the working sphere still turns (it shows the AI is busy) */
 const R_OUT: Track[] = [T('oInput', 1, 0, 0, 140, E.out), T('oPill', 1, 0, 0, 200, E.out), T('oGlow', 1, 0, 0, 200, E.out), T('oAur', 1, 0, 0, 200, E.out), T('oRing', 1, 0, 0, 200, E.out)]
-const R_IN: Track[] = [T('orb.alpha', 0, 1, 0, 200, E.out), T('sOp', 0, 1, 0, 200, E.out), T('cHalo', 0, 0.6, 0, 200, E.out)]
+const R_IN: Track[] = [T('orb.alpha', 0, 1, 0, 200, E.out), T('orb.spin', 0, 0.9, 0, 200, E.out), T('sOp', 0, 1, 0, 200, E.out), T('cHalo', 0, 0.6, 0, 200, E.out)]
 const R_RESOLVE: Track[] = [T('orb.sweep', 0, 1, 0, 250, E.io), T('orb.floor', 0, 0.95, 0, 250, E.out)]
 const R_CONDENSE: Track[] = [T('oGreen', 0, 1, 0, 250, E.out), T('orb.alpha', 1, 0, 0, 250, E.out), T('sOp', 1, 0, 0, 250, E.out)]
 const R_CARD: Track[] = [T('oGreen', 1, 0, 0, 120, E.out), T('oCard', 0, 1, 0, 250, E.out), T('hOp', 0, 1, 0, 250, E.out)]
