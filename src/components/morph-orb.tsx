@@ -250,7 +250,8 @@ function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean, isLight:
   const frame = (now: number) => {
     raf = 0
     if (dead) return
-    const dt = isReduced() ? 0 : Math.max(0, Math.min(0.05, (now - last) / 1000))
+    // the sphere always turns while it is shown: it is the sign that the AI is working (owner, Oct 2026) — never frozen
+    const dt = Math.max(0, Math.min(0.05, (now - last) / 1000))
     last = now
     draw(dt)
     if (P.alpha > 0.002 && (!keepAlive || keepAlive())) raf = requestAnimationFrame(frame); else if (P.alpha <= 0.002) ctx.clearRect(0, 0, CANVAS, CANVAS)
@@ -514,7 +515,7 @@ function createRuntime(env: Env): Runtime {
     escape() { if (!busy || idling) return; current?.abort(); void toIdle('esc', true) },
     reset() { if (!busy || idling) return; void toIdle('reset') },
     hard,
-    home() { if (busy) return; geo = { ...env.geo(), dir: geo.dir }; setNow('w', geo.pw); setNow('u', 0) },
+    home() { if (busy) return; geo = { ...env.geo(), dir: geo.dir }; fromX = geo.sx; fromY = geo.sy; setNow('w', geo.pw); setNow('u', 0) },
     busy: () => busy,
     destroy() { life.abort(); orb.destroy() },
   }
@@ -594,7 +595,7 @@ export function useLightTheme() {
  * the five kinds of issue ticked off one by one while the AI reads the post (a sign of progress — the AI checks all five at once);
  * when the result arrives the dots turn green and onDone fires, then the page shows the result.
  */
-export function ThinkingOrb({ chips, label, doneText, done, onDone, lite }: { chips: string[]; label: (chip: string) => string; doneText: string; done: boolean; onDone: () => void; lite?: boolean }) {
+export function ThinkingOrb({ chips, label, doneText, summing, done, onDone, lite }: { chips: string[]; label: (chip: string) => string; doneText: string; summing: string; done: boolean; onDone: () => void; lite?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const light = useLightTheme()
   const [step, setStep] = useState(0)
@@ -625,7 +626,7 @@ export function ThinkingOrb({ chips, label, doneText, done, onDone, lite }: { ch
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (done) return
-    const id = window.setInterval(() => setStep((s) => Math.min(chips.length - 1, s + 1)), 1600)
+    const id = window.setInterval(() => setStep((s) => Math.min(chips.length, s + 1)), 1600)
     return () => window.clearInterval(id)
   }, [done, chips.length])
   useEffect(() => { if (orbRef.current) orbRef.current.P.prog = step % 4 }, [step])
@@ -642,7 +643,7 @@ export function ThinkingOrb({ chips, label, doneText, done, onDone, lite }: { ch
   return (
     <div className={`mo-mini${light ? ' is-light' : ''}`} role="status" aria-live="polite">
       <canvas ref={canvasRef} className="mo-mini-orb" aria-hidden="true" />
-      <p className={done ? 'mo-mini-label is-done' : 'mo-mini-label'}>{done ? doneText : <>{label(chips[step])}<span className="mo-dots" aria-hidden="true"><i /><i /><i /></span></>}</p>
+      <p className={done ? 'mo-mini-label is-done' : 'mo-mini-label'}>{done ? doneText : <>{step >= chips.length ? summing : label(chips[step])}<span className="mo-dots" aria-hidden="true"><i /><i /><i /></span></>}</p>
       <div className="mo-mini-chips">{chips.map((c, i) => <span key={c} className={done || i < step ? 'is-done' : i === step ? 'is-now' : ''}>{done || i < step ? '✓ ' : ''}{c}</span>)}</div>
     </div>
   )
@@ -702,7 +703,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
 
   // the theme decides the stage: dark dots on light, light dots on dark (follows the theme switch live)
   // the resting sphere: alive while the chat is empty; draggable until a question is sent
-  const restState = useRestingOrb(stillRef, empty || resting, !still && !props.lite, light) // slow turn only with motion on and not in the lite mode
+  const restState = useRestingOrb(stillRef, empty || resting, !still, light) // slow turn while motion is on (Settings)
   const restRef = useRef(restState)
   restRef.current = restState
 
@@ -764,11 +765,17 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
     })
     rtRef.current = rt
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && phaseRef.current !== 'idle' && phaseRef.current !== 'reset' && phaseRef.current !== 'answered') { e.preventDefault(); rt.escape(); setFlight(null) } }
-    const ro = new ResizeObserver(() => { if (phaseRef.current === 'idle' && !rt.busy()) rt.home() })
-    ro.observe(wrap)
+    // keep the pill on its slot whenever anything around it moves (phone toolbars, fonts, the examples strip, rotation)
+    const rehome = () => { if (phaseRef.current === 'idle' && !rt.busy()) rt.home() }
+    const ro = new ResizeObserver(rehome)
+    ro.observe(wrap); ro.observe(slot); if (slot.parentElement) ro.observe(slot.parentElement)
+    window.addEventListener('resize', rehome); window.addEventListener('orientationchange', rehome)
+    void document.fonts?.ready.then(rehome)
+    const late = window.setTimeout(rehome, 600)
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey); ro.disconnect(); mq.removeEventListener('change', onMq)
+      window.removeEventListener('resize', rehome); window.removeEventListener('orientationchange', rehome); window.clearTimeout(late)
       window.clearTimeout(timers.current.typing); window.clearTimeout(timers.current.shake)
       rt.destroy(); rtRef.current = null
     }

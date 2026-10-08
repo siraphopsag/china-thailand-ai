@@ -590,7 +590,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 @media (max-width: 1023px) {
   .mo-qcard { padding: 10px 12px; gap: .4rem; flex-shrink: 0 }
   .mo-qlabel, .mo-ex-list { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
-  .mo-slot { height: 54px }
+  .mo-slot { height: 60px }
   .mo-note { font-size: .7rem }
   .mo-wrap.is-empty .mo-ex-strip { display: flex; min-width: 0; max-width: 100%; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 2px }
   .mo-ex-chip { flex-shrink: 0; max-width: 72%; text-align: left; font-size: .8rem; line-height: 1.35; padding: 8px 12px; border-radius: 14px; border: 1px solid rgb(var(--control-line)); background: rgb(var(--surface)) }
@@ -606,18 +606,19 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-mover { position: absolute; width: 0; height: 0 }
 .mo-actor { position: absolute; left: 0; top: 0; width: var(--w, 560px); height: var(--h, 60px); border-radius: var(--r, 999px); transform: translate(-50%, -50%) }
 .mo-actor[data-shake] { animation: mo-shake .26s ease }
-.mo-underglow { position: absolute; left: 6%; right: 6%; bottom: -16px; height: 30px; border-radius: 999px; filter: blur(16px); opacity: calc(var(--oGlow, 1) * .7);
-  background: linear-gradient(90deg, #34d399, #f472b6 30%, #8b5cf6 58%, #fbbf24 85%); pointer-events: none }
-.mo-surface { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; opacity: var(--oPill, 1); background: var(--mo-pill);
+.mo-underglow { position: absolute; left: 4%; right: 4%; bottom: -22px; height: 40px; opacity: calc(var(--oGlow, 1) * .55); pointer-events: none;
+  background: radial-gradient(closest-side, rgb(52 211 153 / .9), transparent) 0% 50% / 34% 100% no-repeat, radial-gradient(closest-side, rgb(244 114 182 / .9), transparent) 33% 50% / 34% 100% no-repeat,
+    radial-gradient(closest-side, rgb(139 92 246 / .9), transparent) 66% 50% / 34% 100% no-repeat, radial-gradient(closest-side, rgb(251 191 36 / .9), transparent) 100% 50% / 34% 100% no-repeat }
+.mo-surface { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; clip-path: inset(0 round var(--r, 999px)); opacity: var(--oPill, 1); background: var(--mo-pill);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1), 0 10px 30px rgb(0 0 0 / .35) }
 .mo-surface::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
   background: conic-gradient(from var(--mo-angle), #34d399, #f472b6, #8b5cf6, #fbbf24, #34d399);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: .7 }
 .mo-actor[data-typing] .mo-surface::before { opacity: 1 }
 .mo-aurora { position: absolute; inset: 0; opacity: var(--oAur, 1); pointer-events: none }
-.mo-aurora i { position: absolute; bottom: -60%; width: 34%; height: 120%; border-radius: 50%; filter: blur(14px); opacity: .55 }
-.mo-aurora i:nth-child(1) { left: 2%; background: #10b981 } .mo-aurora i:nth-child(2) { left: 26%; background: #ec4899; animation-delay: -2s }
-.mo-aurora i:nth-child(3) { left: 50%; background: #7c3aed; animation-delay: -4s } .mo-aurora i:nth-child(4) { left: 72%; background: #f59e0b; animation-delay: -6s }
+.mo-aurora i { position: absolute; bottom: -70%; width: 40%; height: 140%; opacity: .6 }
+.mo-aurora i:nth-child(1) { left: 0%; background: radial-gradient(closest-side, #10b981, transparent) } .mo-aurora i:nth-child(2) { left: 22%; background: radial-gradient(closest-side, #ec4899, transparent); animation-delay: -2s }
+.mo-aurora i:nth-child(3) { left: 44%; background: radial-gradient(closest-side, #7c3aed, transparent); animation-delay: -4s } .mo-aurora i:nth-child(4) { left: 66%; background: radial-gradient(closest-side, #f59e0b, transparent); animation-delay: -6s }
 .mo-ball { position: absolute; inset: 0; border-radius: 50%; opacity: var(--oBall, 0); background: radial-gradient(circle at 35% 30%, #2a2a31, #0b0b0e 70%); box-shadow: 0 12px 30px rgb(0 0 0 / .4) }
 .mo-ring { position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px; opacity: calc(var(--oRing, 1) * var(--oBall, 0)); pointer-events: none;
   background: conic-gradient(from var(--mo-angle), #34d399, #f472b6, #8b5cf6, #fbbf24, #34d399);
@@ -715,7 +716,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 /* reduced motion and the lite mode: nothing loops (the runtime also cross-fades instead of flying) */
 @media (prefers-reduced-motion: reduce) { .mo-surface::before, .mo-ring, .mo-aurora i, .mo-dots i { animation: none } .mo-w, .mo-a-body, .mo-q, .mo-lab.mo-in { animation: none } .mo-lab.mo-out { display: none } }
 [data-lite] .mo-surface::before, [data-lite] .mo-ring, [data-lite] .mo-aurora i, [data-lite] .mo-dots i { animation: none }
-[data-lite] .mo-w, [data-lite] .mo-lab.mo-in { animation: none } [data-lite] .mo-lab.mo-out { display: none } [data-lite] .mo-underglow, [data-lite] .mo-aurora i { filter: none; opacity: .35 }
+[data-lite] .mo-w, [data-lite] .mo-lab.mo-in { animation: none } [data-lite] .mo-lab.mo-out { display: none }
 
 /* waiting for the AI: a small ring (a still ring when motion is reduced — the text says what is happening) */
 .ai-spin { width: 1.1rem; height: 1.1rem; border-radius: 9999px; border: 2.5px solid rgb(var(--primary) / .25); border-top-color: rgb(var(--primary)); animation: ai-spin .8s linear infinite; flex-shrink: 0 }
