@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go } from '../store'
-import { rememberNext, takeAuthError, useAuth, type AuthResult } from '../auth'
+import { authDetail, rememberNext, takeAuthError, useAuth, type AuthResult } from '../auth'
 import { Icon, type IconName } from '../components/icons'
 import { Warn } from '../components/ui'
 import { GoogleIdButton } from '../components/google-signin'
@@ -66,18 +66,27 @@ function GoogleButton({ next }: { next: string }) {
   const { signInGoogle, signInGoogleToken } = useAuth()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<AuthResult | null>(null)
+  const [detail, setDetail] = useState('')
+  const [tokenFailed, setTokenFailed] = useState(false)
   // Google's own button when it is set up (Google then shows our site, not the Supabase address); otherwise the redirect button
+  const redirectButton = (
+    <button type="button" className="btn-ghost w-full justify-center" disabled={busy}
+      onClick={async () => { setBusy(true); setErr(null); setDetail(''); rememberNext(next); const r = await signInGoogle(); if (r !== 'ok') { setErr(r); setBusy(false) } }}>
+      <GoogleMark />{t('m.auth.google')}</button>
+  )
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3 text-xs text-muted" aria-hidden><span className="h-px flex-1 bg-line" />{t('m.lg.or')}<span className="h-px flex-1 bg-line" /></div>
-      <GoogleIdButton lang={lang === 'zh' ? 'zh' : lang === 'en' ? 'en' : 'th'} onBefore={() => { setErr(null); rememberNext(next) }}
-        onToken={async (token, nonce) => { setBusy(true); const r = await signInGoogleToken(token, nonce); setBusy(false); if (r !== 'ok') setErr(r) }}
-        fallback={<button type="button" className="btn-ghost w-full justify-center" disabled={busy}
-          onClick={async () => { setBusy(true); setErr(null); rememberNext(next); const r = await signInGoogle(); if (r !== 'ok') { setErr(r); setBusy(false) } }}>
-          <GoogleMark />{t('m.auth.google')}</button>} />
+      <GoogleIdButton lang={lang === 'zh' ? 'zh' : lang === 'en' ? 'en' : 'th'} onBefore={() => { setErr(null); setDetail(''); rememberNext(next) }}
+        onToken={async (token, nonce) => {
+          setBusy(true); const r = await signInGoogleToken(token, nonce); setBusy(false)
+          if (r !== 'ok') { setErr(r); setDetail(authDetail()); setTokenFailed(true) } // and offer the old way below
+        }}
+        fallback={redirectButton} />
+      {tokenFailed && redirectButton}
       {busy && <p className="text-sm text-muted" role="status">{t('m.lg.busy')}</p>}
       <p className="text-xs text-muted">{t('m.auth.china')}</p>
-      <div role="status">{err && <p className="text-sm text-danger-fg">{t(err === 'unavailable' ? 'm.auth.fail' : 'm.lg.err.error')}</p>}</div>
+      <div role="status">{err && <p className="text-sm text-danger-fg">{t(err === 'unavailable' ? 'm.auth.fail' : 'm.lg.err.error')}{detail && <span className="block text-xs font-mono opacity-80 mt-0.5 break-words" lang="en">{detail}</span>}</p>}</div>
     </div>
   )
 }

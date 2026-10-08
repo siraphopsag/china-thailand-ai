@@ -70,6 +70,10 @@ export function toUser(s: Session | null): AuthUser | null {
 }
 
 /** Supabase error → a message we can show (never the raw text) */
+/** what the service said about the last failed Google sign-in (shown small under the button, to find the cause) */
+let lastDetail = ''
+export const authDetail = () => lastDetail
+
 export function authResult(e: Pick<AuthError, 'code' | 'status' | 'message'> | null | undefined): AuthResult {
   if (!e) return 'ok'
   const c = e.code ?? ''
@@ -183,7 +187,14 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
       const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname, queryParams: { prompt: 'select_account' } } }) // always let people pick the Google account (owner, Oct 2026)
       return authResult(error)
     }),
-    signInGoogleToken: (token, nonce) => guard(async (sb) => authResult((await sb.auth.signInWithIdToken({ provider: 'google', token, nonce })).error)),
+    signInGoogleToken: (token, nonce) => guard(async (sb) => {
+      lastDetail = ''
+      try {
+        const { error } = await sb.auth.signInWithIdToken({ provider: 'google', token, nonce })
+        if (error) { lastDetail = [error.status, error.code, error.message].filter(Boolean).join(' · '); console.warn('Google sign-in:', lastDetail) }
+        return authResult(error)
+      } catch (e) { lastDetail = e instanceof Error ? e.message : String(e); throw e }
+    }),
     signInEmail: (email, password) => guard(async (sb) => authResult((await sb.auth.signInWithPassword({ email: email.trim(), password })).error)),
     signUp: (name, email, password) => guard(async (sb) => {
       const { data, error } = await sb.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() } } })

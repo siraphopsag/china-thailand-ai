@@ -88,7 +88,7 @@ export function GoogleIdButton({ lang, onBefore, onToken, fallback }: { lang: 't
   return (
     <>
       {state !== 'ready' && fallback}
-      <div ref={box} className={state === 'ready' ? 'flex justify-center min-h-[44px]' : 'hidden'} aria-hidden={state !== 'ready' || undefined} />
+      <div ref={box} style={{ colorScheme: 'light' }} className={state === 'ready' ? 'flex justify-center min-h-[44px]' : 'hidden'} aria-hidden={state !== 'ready' || undefined} />
     </>
   )
 }
