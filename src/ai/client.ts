@@ -11,13 +11,14 @@ async function call<T>(body: Record<string, unknown>): Promise<AiResponse<T>> {
     const { data } = await (await getClient()).auth.getSession()
     const token = data.session?.access_token
     if (!token) return { ok: false, reason: 'signin' }
-    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 40_000)
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 60_000)
     const r = await fetch('/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body), signal: ctl.signal })
       .finally(() => clearTimeout(timer))
     if (!(r.headers.get('content-type') ?? '').includes('application/json')) return { ok: false, reason: 'off' } // no function here (e.g. local dev)
-    const v = (await r.json()) as { ok?: boolean; result?: T; left?: number | null; reason?: string }
-    if (v.ok === true && v.result) return { ok: true, result: v.result, left: typeof v.left === 'number' ? v.left : null }
-    return { ok: false, reason: REASONS.includes(v.reason as AiReason) ? (v.reason as AiReason) : 'error' }
+    const v = (await r.json()) as { ok?: boolean; result?: T; left?: number | null; reason?: string; detail?: unknown }
+    const detail = typeof v.detail === 'string' ? v.detail.slice(0, 600) : undefined
+    if (v.ok === true && v.result) return { ok: true, result: v.result, left: typeof v.left === 'number' ? v.left : null, detail }
+    return { ok: false, reason: REASONS.includes(v.reason as AiReason) ? (v.reason as AiReason) : 'error', detail }
   } catch {
     return { ok: false, reason: 'busy' }
   }

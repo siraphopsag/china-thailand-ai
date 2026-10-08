@@ -16,7 +16,7 @@ export const AI_LANGS: AiLang[] = ['th', 'zh', 'en']
 /** Claude's default model (paid, used only when ANTHROPIC_API_KEY is set); the owner can change it in Vercel (AI_MODEL) */
 export const DEFAULT_MODEL = 'claude-haiku-5-5'
 /** Gemini (free tier, the owner's choice: no paid services): tried in order until one is offered; GEMINI_MODEL goes first */
-export const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.5-flash-lite']
+export const GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash']
 /** uses a day per person and kind (admins: no limit) and for the whole site — enforced in the database (SQL 0009) */
 export const PER_USER_DAY = 20
 export const SITE_DAY = 200
@@ -139,4 +139,5 @@ export function cleanAnswer(raw: unknown): AiAnswer {
 
 /** what the server answers: a result, or why there is none (the browser then falls back or explains) */
 export type AiReason = 'off' | 'signin' | 'limit' | 'site' | 'busy' | 'refused' | 'bad' | 'error'
-export type AiResponse<T> = { ok: true; result: T; left: number | null } | { ok: false; reason: AiReason }
+/** detail: for administrators only — which AI model answered or what each attempt got */
+export type AiResponse<T> = { ok: true; result: T; left: number | null; detail?: string } | { ok: false; reason: AiReason; detail?: string }

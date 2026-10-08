@@ -97,6 +97,8 @@ export function AskPage() {
           {!res && <p className="text-sm text-muted flex items-center gap-2"><Icon name="legal" size={18} />{t('ai.ask.note')}</p>}
           {res === 'busy' && <p role="status" className="text-sm text-muted flex items-center gap-2 py-8 justify-center"><span className="ai-spin" aria-hidden />{t('ai.ask.loading')}</p>}
           {res && res !== 'busy' && !res.ok && <Warn tone={res.reason === 'busy' || res.reason === 'error' ? 'danger' : 'info'}>{t(`ai.why.${res.reason}`)}</Warn>}
+          {/* administrators only: what went wrong / which model answered (no keys, no user text) */}
+          {res && res !== 'busy' && res.detail && <p className="text-xs text-muted font-mono break-words" lang="en">{res.detail}</p>}
           {ok && <>
             <p className="text-sm text-muted"><q>{asked}</q></p>
             <div className="flex flex-wrap items-center gap-2"><h2 className="h2">{t('ai.ask.answer')}</h2>

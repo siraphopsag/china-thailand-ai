@@ -139,7 +139,7 @@ describe('the server function with the free Gemini key (owner: no paid services)
     const f = net(() => reply('```json\n{"answer":"Work permit needed.","lawIds":["th-labour","nope"],"grounding":"grounded","nextStep":"Ask the Ministry of Labour."}\n```'))
     expect((await call({ kind: 'ask', lang: 'en', question: 'Do I need a permit?' })).body).toEqual({ ok: true, left: 3, result: { answer: 'Work permit needed.', lawIds: ['th-labour'], grounding: 'grounded', nextStep: 'Ask the Ministry of Labour.' } })
     const [url, init] = f.mock.calls[1] as [string, RequestInit]
-    expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent')
+    expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent')
     expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe('free-key')
     const sent = JSON.parse(String(init.body))
     expect(sent.generationConfig.responseMimeType).toBe('application/json')
@@ -147,10 +147,10 @@ describe('the server function with the free Gemini key (owner: no paid services)
     expect(String(init.body)).not.toContain('free-key')
     expect(parse).not.toHaveBeenCalled() // Claude is not used without its key
   })
-  it('tries the next model when one is not offered', async () => {
-    const f = net((u) => u.includes('gemini-flash-latest') ? new Response('{}', { status: 404 }) : reply('{"verdict":"ok","summary":"Fine.","flags":[]}'))
+  it('tries the next model when one is not offered or out of free quota', async () => {
+    const f = net((u) => u.includes('gemini-3.8-flash') ? new Response('{}', { status: 404 }) : u.includes('gemini-3.5-flash-lite') ? new Response(JSON.stringify({ error: { status: 'RESOURCE_EXHAUSTED', message: 'quota' } }), { status: 429 }) : reply('{"verdict":"ok","summary":"Fine.","flags":[]}'))
     expect((await call({ kind: 'check', post })).body).toEqual({ ok: true, left: 3, result: { verdict: 'ok', summary: 'Fine.', flags: [] } })
-    expect(String(f.mock.calls[2][0])).toContain('gemini-3.8-flash')
+    expect(String(f.mock.calls[3][0])).toContain('gemini-3.1-flash-lite')
   })
   it('free quota used up → "busy" (the page falls back to the basic check); blocked → "refused"; nonsense → "bad"', async () => {
     net(() => new Response('{}', { status: 429 }))
@@ -159,6 +159,13 @@ describe('the server function with the free Gemini key (owner: no paid services)
     expect((await call({ kind: 'check', post })).body).toEqual({ ok: false, reason: 'refused' })
     vi.restoreAllMocks(); net(() => reply('not json'))
     expect((await call({ kind: 'ask', question: 'hello there' })).body).toEqual({ ok: false, reason: 'bad' })
+  })
+  it('administrators (only) see what each model got, without the key', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (u) => String(u).includes('/rpc/ai_take') ? new Response(JSON.stringify({ ok: true, left: null })) : new Response(JSON.stringify({ error: { status: 'RESOURCE_EXHAUSTED', message: 'Quota exceeded' } }), { status: 429 }))
+    const r = await call({ kind: 'ask', question: 'hello there' })
+    expect(r.body.reason).toBe('busy')
+    expect(r.body.detail).toContain('gemini-3.8-flash:429 RESOURCE_EXHAUSTED')
+    expect(r.body.detail).not.toContain('free-key')
   })
   it('no key at all → "off"', async () => {
     delete process.env.GEMINI_API_KEY

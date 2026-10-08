@@ -43,32 +43,42 @@ async function take(token: string, kind: AiKind): Promise<{ ok: boolean; reason?
   return { ok: v.ok === true, reason: v.reason === 'site' ? 'site' : v.reason === 'limit' ? 'limit' : undefined, left: typeof v.left === 'number' ? v.left : null }
 }
 
-type Outcome = { raw: unknown } | { reason: AiReason; status: number }
+/** detail = what each attempt got (model and status, no user text) — shown to administrators only, to find problems */
+type Outcome = ({ raw: unknown } | { reason: AiReason; status: number }) & { detail?: string }
 const BLOCKED = ['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'RECITATION']
 
 /** Gemini (free tier): JSON mode, the shape is described in the system prompt; cleanCheck / cleanAnswer then keep only valid parts */
 async function gemini(apiKey: string, system: string, content: string): Promise<Outcome> {
   const models = [...new Set([env('GEMINI_MODEL'), ...GEMINI_MODELS].filter(Boolean))]
+  const tried: string[] = [], started = Date.now()
+  let busy = false
   for (const model of models) {
-    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 25_000)
+    const budget = 50_000 - (Date.now() - started) // the function may run 60 s (vercel.json)
+    if (budget < 8_000) { tried.push('time'); break }
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), Math.min(budget, 30_000))
     let r: Response
     try {
       r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST', signal: ctl.signal, headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: content }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.2 } }),
       })
-    } catch { return { reason: 'busy', status: 503 } } finally { clearTimeout(timer) }
-    if (r.status === 404) continue // this model is not offered (any more): try the next one
-    if (r.status === 429 || r.status >= 500) return { reason: 'busy', status: 503 } // free quota used up, or Google is busy
-    if (!r.ok) { console.error('gemini', model, r.status); return { reason: 'error', status: 500 } }
+    } catch (e) { tried.push(`${model}:${e instanceof Error && e.name === 'AbortError' ? 'timeout' : 'network'}`); busy = true; continue } finally { clearTimeout(timer) }
+    if (!r.ok) {
+      // each model has its own free quota: a model that is not offered (404), out of quota (429) or busy (5xx) → try the next one
+      const g = await r.json().catch(() => null) as { error?: { status?: string; message?: string } } | null
+      tried.push(`${model}:${r.status}${g?.error?.status ? ' ' + g.error.status : ''}${g?.error?.message ? ' — ' + g.error.message.slice(0, 160) : ''}`)
+      if (r.status === 404 || r.status === 429 || r.status >= 500) { busy ||= r.status !== 404; continue }
+      console.error('gemini', tried[tried.length - 1]); return { reason: 'error', status: 500, detail: tried.join(' | ') }
+    }
     const v = (await r.json()) as { promptFeedback?: { blockReason?: string }; candidates?: { finishReason?: string; content?: { parts?: { text?: string; thought?: boolean }[] } }[] }
     const c = v.candidates?.[0]
-    if (v.promptFeedback?.blockReason || BLOCKED.includes(c?.finishReason ?? '')) return { reason: 'refused', status: 200 }
+    if (v.promptFeedback?.blockReason || BLOCKED.includes(c?.finishReason ?? '')) return { reason: 'refused', status: 200, detail: `${model}:${v.promptFeedback?.blockReason ?? c?.finishReason}` }
     const text = (c?.content?.parts ?? []).filter((p) => !p.thought && typeof p.text === 'string').map((p) => p.text).join('').trim().replace(/^```(?:json)?\s*|\s*```$/g, '')
-    try { const raw: unknown = JSON.parse(text); return raw && typeof raw === 'object' ? { raw } : { reason: 'bad', status: 502 } } catch { return { reason: 'bad', status: 502 } }
+    try { const raw: unknown = JSON.parse(text); if (raw && typeof raw === 'object') return { raw, detail: model } } catch { /* below */ }
+    return { reason: 'bad', status: 502, detail: `${model}:not-json` }
   }
-  console.error('gemini: no model available', models.join(','))
-  return { reason: 'error', status: 500 }
+  console.error('gemini: no answer', tried.join(' | '))
+  return busy ? { reason: 'busy', status: 503, detail: tried.join(' | ') } : { reason: 'error', status: 500, detail: tried.join(' | ') }
 }
 
 /** Claude (paid, when ANTHROPIC_API_KEY is set): structured output */
@@ -116,10 +126,11 @@ export async function POST(request: Request) {
     const system = kind === 'check' ? checkSystem(lang) : askSystem(lang)
     const content = kind === 'check' ? checkUser(post!) : askUser(question)
     const out = claudeKey ? await claude(claudeKey, kind, system, content) : await gemini(geminiKey, system, content)
-    if ('reason' in out) return fail(out.reason, out.status)
+    const admin = t.left === null // administrators see what went wrong (model + status; never a key or user text)
+    if ('reason' in out) return json({ ok: false, reason: out.reason, ...(admin && out.detail ? { detail: out.detail } : {}) }, out.status)
     const result = kind === 'check' ? cleanCheck(out.raw) : cleanAnswer(out.raw)
     if (kind === 'ask' && !(result as ReturnType<typeof cleanAnswer>).answer) return fail('bad', 502)
-    return json({ ok: true, result, left: t.left })
+    return json({ ok: true, result, left: t.left, ...(admin && out.detail ? { detail: out.detail } : {}) })
   } catch (e) {
     console.error('ai failed', e instanceof Error ? e.name + ': ' + e.message : 'unknown') // no user text in the logs
     return fail('error', 500)
