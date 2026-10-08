@@ -32,9 +32,9 @@ export interface MorphOrbProps {
 type Phase = 'idle' | 'launch' | 'assemble' | 'think' | 'resolve' | 'condense' | 'unfold' | 'answered' | 'reset'
 
 /* ─────────── geometry (relative to the stage box) ─────────── */
-const PILL_H = 60, BALL_SMALL = 60, ORB_D = 132, ORB_R = 66, CANVAS = 220, CARD_H = 64, FLY_D = 138
+const PILL_H = 60, BALL_SMALL = 60, ORB_D = 132, ORB_R = 66, CANVAS = 220, CARD_H = 64
 /** pw: pill width · cw: answer-card width · (sx, sy): where the pill sits, relative to the orb point · lift: how far the card rises while it unfolds */
-interface Geo { pw: number; cw: number; sx: number; sy: number; lift: number; dir: number }
+interface Geo { pw: number; cw: number; sx: number; sy: number; lift: number; dir: number; ax: number; ay: number; rest: boolean }
 
 /* ─────────── math + easing ─────────── */
 type Ease = (t: number) => number
@@ -74,15 +74,14 @@ const bez = (t: number, p0: number, c: number, p2: number) => (1 - t) * (1 - t) 
 /* ─────────── timelines ─────────── */
 interface Track { ch: string; from: number; to: number; t0: number; t1: number; ease: Ease }
 const T = (ch: string, from: number, to: number, t0: number, t1: number, ease: Ease = E.io): Track => ({ ch, from, to, t0, t1, ease })
-const launchTracks = (g: Geo): Track[] => [
-  T('w', g.pw, g.pw - 12, 0, 100, E.out), T('oInput', 1, 0, 0, 160, E.in), T('inScale', 1, 0.6, 0, 160, E.in),
-  T('oGlow', 1, 0, 0, 300, E.out), T('oAur', 1, 0, 0, 300, E.out),
-  T('w', g.pw - 12, BALL_SMALL, 100, 560, E.io), T('h', PILL_H, PILL_H + 6, 380, 500, E.out), T('h', PILL_H + 6, BALL_SMALL, 500, 620, E.out),
-  T('oPill', 1, 0, 300, 560, E.out), T('oBall', 0, 1, 300, 560, E.out),
-  T('u', 0, 1, 620, 1500, E.fly), T('w', BALL_SMALL, FLY_D, 620, 1300, E.grow), T('h', BALL_SMALL, FLY_D, 620, 1300, E.grow),
-  T('w', FLY_D, ORB_D, 1300, 1500, E.out), T('h', FLY_D, ORB_D, 1300, 1500, E.out),
-  T('cHalo', 0, 0.6, 620, 1500, E.out), T('trail', 0, 1, 700, 800, E.out), T('trail', 1, 0, 1300, 1500, E.in),
+/** the pill folds up in place: it narrows into a ball and sinks away (no flight — the orb waits in the chat) */
+const collapseTracks = (g: Geo): Track[] => [
+  T('oInput', 1, 0, 0, 160, E.in), T('inScale', 1, 0.6, 0, 160, E.in), T('oGlow', 1, 0, 0, 260, E.out), T('oAur', 1, 0, 0, 260, E.out),
+  T('w', g.pw, BALL_SMALL, 60, 440, E.io), T('oPill', 1, 0, 220, 440, E.out), T('oBall', 0, 1, 220, 440, E.out),
+  T('w', BALL_SMALL, 6, 440, 660, E.in), T('h', PILL_H, 6, 440, 660, E.in), T('oBall', 1, 0, 540, 680, E.out),
 ]
+/** the resting sphere comes alive and glides to its place under the question */
+const TAKEOVER: Track[] = [T('orb.alpha', 0, 1, 0, 260, E.out), T('orb.spin', 0, 0.9, 0, 800, E.out), T('cHalo', 0, 0.6, 0, 600, E.out), T('u', 0, 1, 200, 850, E.io), T('sOp', 0, 1, 650, 950, E.out), T('sTy', 6, 0, 650, 950, E.out)]
 const ASSEMBLE: Track[] = [
   T('oRing', 1, 0, 0, 300, E.out), T('oBall', 1, 0, 0, 260, E.out), T('orb.k', 0, 1, 0, 800, E.out), T('orb.alpha', 0, 1, 0, 800, E.out),
   T('orb.spin', 0, 0.9, 0, 800, E.out), T('orb.pop', 1, 1.05, 0, 420, E.out), T('orb.pop', 1.05, 1, 420, 800, E.io),
@@ -257,7 +256,7 @@ function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean, isLight:
 }
 
 /* ─────────── runtime ─────────── */
-interface UI { answered(): void; failed(): void; setPhase(p: Phase): void; swapLabel(name: string): void; resetLabel(): void; clearInput(): void; live(s: string): void; lock(on: boolean): void; idleReady(): void; focusAnswer(): void }
+interface UI { handoff(): void; answered(): void; failed(): void; setPhase(p: Phase): void; swapLabel(name: string): void; resetLabel(): void; clearInput(): void; live(s: string): void; lock(on: boolean): void; idleReady(): void; focusAnswer(): void }
 interface Env {
   root: HTMLElement; mover: HTMLElement; actor: HTMLElement; form: HTMLElement; ghosts: HTMLElement[]; canvas: HTMLCanvasElement; pulse: HTMLElement; status: HTMLElement
   ui: UI; isReduced: () => boolean; isLight: () => boolean; copy: () => OrbCopy; geo: () => Geo
@@ -287,6 +286,7 @@ function createRuntime(env: Env): Runtime {
   let current: AbortController | null = null, idleCtl: AbortController | null = null
   let busy = false, idling = false, epoch = 0
   let curX = 0, curY = 0, curD = BALL_SMALL, trailVis = 0, ghostsShown = false
+  let fromX = geo.sx, fromY = geo.sy
   const hist: Sample[] = []
   const tmp: Sample = { t: 0, x: 0, y: 0, d: 0 }
   const child = () => { const ac = new AbortController(); if (life.signal.aborted) ac.abort(); else life.signal.addEventListener('abort', () => ac.abort(), { once: true }); return ac }
@@ -304,7 +304,7 @@ function createRuntime(env: Env): Runtime {
   }
   // the flight: a curve from the pill (sx, sy) to the orb point (0, 0); across the page it arcs upward, down the page it swings sideways
   const applyPath = () => {
-    const u = vals.u ?? 0, { sx, sy } = geo, len = Math.hypot(sx, sy) || 1
+    const u = vals.u ?? 0, sx = fromX, sy = fromY, len = Math.hypot(sx, sy) || 1
     let px = -sy / len, py = sx / len
     if (Math.abs(sx) > Math.abs(sy)) { if (py > 0) { px = -px; py = -py } } else { px *= geo.dir; py *= geo.dir }
     const cx = sx / 2 + px * 0.3 * len, cy = sy / 2 + py * 0.3 * len
@@ -330,7 +330,7 @@ function createRuntime(env: Env): Runtime {
   const set = (ch: string, v: number) => { vals[ch] = v; dirty.add(ch) }
   const flush = () => { dirty.forEach((ch) => CH[ch]?.(vals[ch])); dirty.clear() }
   const setNow = (ch: string, v: number) => { vals[ch] = v; CH[ch]?.(v) }
-  const resetChannels = () => { setNow('w', geo.pw); for (const ch of Object.keys(INIT)) setNow(ch, INIT[ch]) }
+  const resetChannels = () => { fromX = geo.sx; fromY = geo.sy; setNow('w', geo.pw); for (const ch of Object.keys(INIT)) setNow(ch, INIT[ch]) }
 
   const play = (tracks: Track[], sig: AbortSignal) => new Promise<void>((res) => {
     if (sig.aborted) return res()
@@ -373,16 +373,23 @@ function createRuntime(env: Env): Runtime {
       hist.length = 0
       // ask at once: the AI works while the pill turns into the orb
       const pending = Promise.resolve().then(() => ask(text)).then((v) => v === true, () => false)
-      if (!reduced) {
-        await go(launchTracks(geo))
-        setNow('r', ORB_D / 2)
-        env.ui.setPhase('assemble')
-        await go(ASSEMBLE)
+      // the pill folds up where it is; the orb is already in the chat: the resting sphere comes alive (first question),
+      // or a new one gathers under the new question (follow-ups)
+      await go(reduced ? R_OUT : collapseTracks(geo))
+      fromX = geo.ax; fromY = geo.ay
+      setNow('oPill', 0); setNow('oInput', 0); setNow('oBall', 0); setNow('oRing', 0); setNow('oGlow', 0); setNow('oAur', 0)
+      setNow('w', ORB_D); setNow('h', ORB_D); setNow('r', ORB_D / 2); setNow('inScale', 1)
+      env.ui.setPhase('assemble')
+      if (geo.rest) {
+        orb.P.rot = 0.6 // the resting sphere's angle, so the hand-over is seamless
+        setNow('orb.k', 1); setNow('u', 0)
+        env.ui.handoff()
+        if (!reduced) await go(TAKEOVER)
+        else { setNow('u', 1); setNow('sTy', 0); await go(R_IN) }
       } else {
-        await go(R_OUT)
-        setNow('u', 1); setNow('w', ORB_D); setNow('h', ORB_D); setNow('r', ORB_D / 2); setNow('sTy', 0); setNow('orb.k', 1); setNow('orb.spin', 0)
-        env.ui.setPhase('assemble')
-        await go(R_IN)
+        setNow('u', 1)
+        if (!reduced) await go(ASSEMBLE.filter((k) => k.ch !== 'oRing' && k.ch !== 'oBall'))
+        else { setNow('sTy', 0); setNow('orb.k', 1); await go(R_IN) }
       }
       env.ui.setPhase('think')
       env.ui.live(env.copy().labels[0])
@@ -645,6 +652,8 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
   const { copy, turns, disabled = false, maxLength = 600 } = props
   const [phase, setPhaseState] = useState<Phase>('idle')
   const [flight, setFlight] = useState<number | null>(null) // the turn whose answer is still on its way (orb shown in its place)
+  const [resting, setResting] = useState(false) // the first question was sent: the resting sphere stays until the orb takes over
+  const [fading, setFading] = useState(false) // …and fades as the live orb appears on top of it
   const [value, setValue] = useState('')
   const [still] = useState(() => typeof window === 'undefined' || motionOff())
   const light = useLightTheme()
@@ -677,7 +686,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
     mq.addEventListener('change', onMq)
     // measure: the orb point is the waiting place in the chat (or the middle of the empty chat); the pill sits in its slot
     const geo = (): Geo => {
-      const w = wrap.getBoundingClientRect(), sl = slot.getBoundingClientRect()
+      const w = wrap.getBoundingClientRect(), sl = slot.getBoundingClientRect(), still = stillRef.current?.getBoundingClientRect()
       const pend = pendRef.current, th = threadRef.current
       let ox: number, oy: number, lift = 0, cw = 300
       if (pend) {
@@ -692,7 +701,9 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
       } else { ox = w.width / 2; oy = 200 }
       mover.style.left = ox + 'px'; mover.style.top = oy + 'px'
       status.style.left = ox + 'px'; status.style.top = oy + 92 + 'px'
-      return { pw: sl.width, cw, sx: sl.left - w.left + sl.width / 2 - ox, sy: sl.top - w.top + sl.height / 2 - oy, lift, dir: -1 }
+      const rest = !!still && still.width > 0 && !!pend
+      return { pw: sl.width, cw, sx: sl.left - w.left + sl.width / 2 - ox, sy: sl.top - w.top + sl.height / 2 - oy, lift, dir: -1,
+        ax: rest ? still!.left - w.left + still!.width / 2 - ox : 0, ay: rest ? still!.top - w.top + still!.height / 2 - oy : 0, rest }
     }
     const rt = createRuntime({
       root: wrap, mover, actor, form, ghosts, canvas, pulse, status, geo,
@@ -700,8 +711,9 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
       isLight: isLightTheme,
       copy: () => propsRef.current.copy,
       ui: {
+        handoff: () => { setFading(true); window.setTimeout(() => { setResting(false); setFading(false) }, 320) },
         answered: () => setFlight(null),
-        failed: () => setFlight(null),
+        failed: () => { setFlight(null); setResting(false) },
         setPhase: (p) => { phaseRef.current = p; setPhaseState(p) },
         swapLabel: (name) => setLbl((l) => (l.cur === name ? l : { cur: name, prev: l.cur, n: l.n + 1 })),
         resetLabel: () => setLbl((l) => ({ cur: propsRef.current.copy.labels[0], prev: null, n: l.n + 1 })),
@@ -746,6 +758,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
     if (!rt || rt.busy() || phaseRef.current !== 'idle' || propsRef.current.disabled) return
     const id = nextId.current++
     setFlight(id)
+    if (propsRef.current.turns.length === 0) setResting(true)
     const done = propsRef.current.onAsk(text)
     // wait for the new question bubble and the waiting place to be drawn, scroll to them, then fly
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -781,8 +794,8 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
         <div className="mo-bg" aria-hidden="true" />
         {props.meta && <div className="mo-meta">{props.meta}</div>}
         <div className="mo-thread" ref={threadRef} aria-live="polite" aria-busy={waiting}>
-          {empty && !waiting && (
-            <div className="mo-idle">
+          {(empty || resting) && (
+            <div className={`mo-idle${resting ? ' is-sending' : ''}${fading ? ' is-fading' : ''}`}>
               <canvas className="mo-still" ref={stillRef} aria-hidden="true" />
               <p className="mo-idle-hint">{props.idleHint}</p>
               {props.idleChips && <div className="mo-idle-chips">{props.idleChips.map((c) => <span key={c}>{c}</span>)}</div>}
