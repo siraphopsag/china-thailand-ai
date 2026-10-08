@@ -26,7 +26,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const T = (k: MsgKey, v?: Record<string, string | number>) => esc(tr(k, v, 'th'))
 const ok = async () => 'ok' as const
 const state = (o: Partial<AuthCtx>): AuthCtx => ({ status: 'signedOut', user: null, isAdmin: false, online: true, recovery: false,
-  signInGoogle: ok, signInEmail: ok, signUp: ok, sendReset: ok, updatePassword: ok, signOut: async () => {}, deleteAccount: async () => true, ...o })
+  signInGoogle: ok, signInGoogleToken: ok, signInEmail: ok, signUp: ok, sendReset: ok, updatePassword: ok, signOut: async () => {}, deleteAccount: async () => true, ...o })
 const ann: AuthCtx['user'] = { id: 'u1', email: 'ann@example.com', name: 'Ann Example', avatar: null }
 /** local = the demo data (MatchProvider initial); otherwise the data mode follows the sign-in state */
 const html = (node: ReactNode, auth?: AuthCtx, local = true) => {
@@ -232,9 +232,9 @@ describe('keep-alive and security header', () => {
     const w = src('../.github/workflows/supabase-keepalive.yml')
     expect(w).toContain("cron: '23 1,13 * * *'"); expect(w).toContain('$SUPABASE_URL/rest/v1/rpc/ping'); expect(w).not.toMatch(/service_role/i); expect(w).toContain('nothing to ping.')
   })
-  it('the browser may talk to Supabase and show Google profile pictures — nothing else is added', () => {
+  it('the browser may talk to Supabase, show Google profile pictures and use Google\'s sign-in button — nothing else is added', () => {
     const v = JSON.parse(src('../vercel.json')) as { headers: { headers: { key: string; value: string }[] }[] }
     const csp = v.headers.flatMap((h) => h.headers).find((h) => h.key === 'Content-Security-Policy')!.value
-    expect(csp).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co;") // wss: who else is viewing a post (realtime); expect(csp).toContain("img-src 'self' data: https://*.googleusercontent.com;"); expect(csp).toContain("script-src 'self';")
+    expect(csp).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com/gsi/;") // wss: who else is viewing a post (realtime); expect(csp).toContain("img-src 'self' data: https://*.googleusercontent.com;"); expect(csp).toContain("script-src 'self' https://accounts.google.com/gsi/client;"); expect(csp).toContain('frame-src https://accounts.google.com/gsi/;')
   })
 })

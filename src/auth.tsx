@@ -24,6 +24,8 @@ interface Ctx {
   /** the visitor arrived from a "reset password" e-mail and may now set a new password */
   recovery: boolean
   signInGoogle: () => Promise<AuthResult>
+  /** Google's own button gave an ID token (components/google-signin.tsx): Supabase signs in with it, no redirect */
+  signInGoogleToken: (token: string, nonce: string) => Promise<AuthResult>
   signInEmail: (email: string, password: string) => Promise<AuthResult>
   signUp: (name: string, email: string, password: string) => Promise<AuthResult>
   sendReset: (email: string) => Promise<AuthResult>
@@ -181,6 +183,7 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
       const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname, queryParams: { prompt: 'select_account' } } }) // always let people pick the Google account (owner, Oct 2026)
       return authResult(error)
     }),
+    signInGoogleToken: (token, nonce) => guard(async (sb) => authResult((await sb.auth.signInWithIdToken({ provider: 'google', token, nonce })).error)),
     signInEmail: (email, password) => guard(async (sb) => authResult((await sb.auth.signInWithPassword({ email: email.trim(), password })).error)),
     signUp: (name, email, password) => guard(async (sb) => {
       const { data, error } = await sb.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() } } })

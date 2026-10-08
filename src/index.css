@@ -586,14 +586,17 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-qcard { display: flex; flex-direction: column; gap: .6rem; min-width: 0 }
 .mo-slot { height: 60px; flex-shrink: 0 }
 .mo-note { display: flex; justify-content: space-between; gap: 8px; font-size: .75rem; color: rgb(var(--muted)) }
-.mo-ex-strip { display: none }
+.mo-ex-card { display: none }
 @media (max-width: 1023px) {
   .mo-qcard { padding: 10px 12px; gap: .4rem; flex-shrink: 0 }
-  .mo-qlabel, .mo-ex-list { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+  .mo-qlabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+  .mo-ex-list { display: none }
   .mo-slot { height: 60px }
   .mo-note { font-size: .7rem }
-  .mo-wrap.is-empty .mo-ex-strip { display: flex; min-width: 0; max-width: 100%; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 2px }
-  .mo-ex-chip { flex-shrink: 0; max-width: 72%; text-align: left; font-size: .8rem; line-height: 1.35; padding: 8px 12px; border-radius: 14px; border: 1px solid rgb(var(--control-line)); background: rgb(var(--surface)) }
+  .mo-ex-card { display: block; padding: 10px 12px; flex-shrink: 0 }
+  .mo-ex-row { text-align: left; font-size: .85rem; line-height: 1.35; padding: 8px 12px; border-radius: 10px; border: 1px solid rgb(var(--control-line)) }
+  .mo-ex-row:active { background: rgb(var(--surface3)) }
+  .mo-ex-row:disabled { opacity: .6 }
   .mo-thread { padding: 30px 12px 14px }
   /* phones: a little smaller, in balance with the narrow chat */
   .mo-still { width: 176px; height: 176px; margin: -14px 0 -18px }

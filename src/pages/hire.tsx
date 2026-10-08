@@ -17,6 +17,7 @@ import { GeoMap } from '../components/geomap'
 import { Modal } from '../components/modal'
 import { useConfirm } from '../components/confirm'
 import { Icon } from '../components/icons'
+import { MoneyInput } from '../components/money-input'
 import { Warn } from '../components/ui'
 import { IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PanelTabs, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
 import { VerifyCard } from './case'
@@ -217,8 +218,8 @@ export function HirePage() {
           <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="documents" size={16} />{t('m.emp.sec.terms')}</legend>
             <fieldset aria-describedby={fe.describe('emp-salary', 'emp-salary-hint')}><legend className="label">{t('m.f.salary')} <span className="font-normal text-muted">({t('m.opt')})</span></legend>
               <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
-                <input id="emp-salary-min" className="input" type="number" min={1} inputMode="numeric" aria-label={t('m.f.salaryMin')} placeholder={t('m.f.salaryMin')} aria-invalid={fe.invalid('emp-salary')} value={salMin} onChange={(e) => { setSalMin(e.target.value); clear() }} />
-                <input className="input" type="number" min={1} inputMode="numeric" aria-label={t('m.f.salaryMax')} placeholder={t('m.f.salaryMax')} aria-invalid={fe.invalid('emp-salary')} value={salMax} onChange={(e) => { setSalMax(e.target.value); clear() }} />
+                <MoneyInput id="emp-salary-min" className="input" aria-label={t('m.f.salaryMin')} placeholder={t('m.f.salaryMin')} aria-invalid={fe.invalid('emp-salary')} value={salMin} onValue={(v) => { setSalMin(v); clear() }} />
+                <MoneyInput className="input" aria-label={t('m.f.salaryMax')} placeholder={t('m.f.salaryMax')} aria-invalid={fe.invalid('emp-salary')} value={salMax} onValue={(v) => { setSalMax(v); clear() }} />
                 <select className="input !w-auto" aria-label={t('m.f.currency')} value={currency} onChange={(e) => setCurrency(e.target.value as Currency)}>{CURRENCIES.map((x) => <option key={x} value={x}>{t(`m.cur.${x}` as never)}</option>)}</select>
               </div>
               <span id="emp-salary-hint" className="block text-xs text-muted mt-1">{t('m.f.salaryHint')}</span>{fe.msg('emp-salary')}

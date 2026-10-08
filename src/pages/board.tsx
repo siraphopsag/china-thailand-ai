@@ -10,6 +10,7 @@ import { CURRENCIES, LEVELS, ME, MY_EMPLOYER, SKILLS, type Currency, type Level,
 import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
 import { Icon } from '../components/icons'
+import { MoneyInput } from '../components/money-input'
 import { Drawer } from '../components/drawer'
 import { Pager, useFit, usePaged } from '../components/pager'
 import { Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
@@ -140,7 +141,7 @@ export function BoardPage() {
           <label className="block"><span className="label">{t('m.board.skill')}</span><select className="input" value={f.skill} onChange={(e) => set({ skill: e.target.value as Filter['skill'] })}><option value="">{t('m.board.any')}</option>{SKILLS.map((s) => <option key={s} value={s}>{N.skill(s)}</option>)}</select></label>
           <div><span className="label" id="bd-sal">{t('m.board.salary')}</span>
             <div className="grid grid-cols-[1fr_auto] gap-2" role="group" aria-labelledby="bd-sal">
-              <input className="input" type="number" min={0} inputMode="numeric" aria-label={t('m.f.salaryMin')} placeholder={t('m.f.salaryMin')} value={f.salary} onChange={(e) => set({ salary: e.target.value })} />
+              <MoneyInput className="input" aria-label={t('m.f.salaryMin')} placeholder={t('m.f.salaryMin')} value={f.salary} onValue={(v) => set({ salary: v })} />
               <select className="input !w-auto" aria-label={t('m.f.currency')} value={f.currency} onChange={(e) => set({ currency: e.target.value as Currency })}>{CURRENCIES.map((c) => <option key={c} value={c}>{t(`m.cur.${c}` as never)}</option>)}</select>
             </div></div>
           {filtering && <div className="sm:col-span-2 lg:col-span-4"><button type="button" className="btn-ghost text-sm" onClick={() => setF(NO_FILTER)}><Icon name="close" size={15} />{t('m.board.clear')}</button></div>}

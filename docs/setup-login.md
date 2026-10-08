@@ -159,6 +159,18 @@ Supabase แบบฟรีส่งอีเมลได้แค่คนใ�
 5. ลองใช้: เข้าสู่ระบบ → **เตรียมตัว → ผู้ช่วยกฎหมาย AI** → กดคำถามตัวอย่าง · หรือโพสต์งาน → "ตรวจและโพสต์" → ป้ายจะเป็น "ตรวจโดย AI"
 6. ไม่ใส่คีย์ = เว็บยังใช้ได้ตามเดิม: ตัวตรวจประกาศใช้กฎพื้นฐาน และหน้าผู้ช่วยบอกว่า "ยังไม่ได้เปิดใช้ AI" · หมายเหตุ: ข้อความที่ส่งเข้า Gemini แบบฟรี Google อาจนำไปปรับปรุงบริการ — หน้าเว็บจึงเตือนไม่ให้ใส่ข้อมูลส่วนตัว · ถ้าวันหนึ่งมีเครดิต Claude ใส่ `ANTHROPIC_API_KEY` แทนได้ (ระบบจะใช้ Claude ก่อน)
 
+## 19. ให้หน้า Google แสดงชื่อเว็บเรา แทน "…supabase.co" (ทำครั้งเดียว · ไม่เสียเงิน)
+เดิมหน้า Google เขียนว่า "to continue to qdhdaxompcnjvurxlpzf.supabase.co" เพราะการล็อกอินวิ่งผ่าน Supabase — เว็บจึงเปลี่ยนไปใช้ปุ่ม "Sign in with Google" ของ Google เอง
+1. Google Cloud → **Google Auth Platform → Clients** → กด client แบบ Web เดิม (จากข้อ 7) → **Authorized JavaScript origins** → **Add URI** ทีละอัน:
+   - `https://china-thailand-ai.vercel.app`
+   - `https://china-thailand-ai-git-poc-board-boss-608c.vercel.app` (Preview)
+   - → **Save** (มีผลภายในไม่กี่นาที บางครั้งนานกว่านั้น) · ช่อง Authorized redirect URIs เดิม **ไม่ต้องลบ**
+2. **Google Auth Platform → Branding** → **App name** = `C.A.L.L.` → Save (**ไม่ต้องใส่โลโก้**)
+3. คัดลอก **Client ID** ของ client เดียวกัน (ลงท้าย `.apps.googleusercontent.com` — **ไม่ใช่ Client secret**) → Vercel → **Settings → Environment Variables** → **Add**: Key = `VITE_GOOGLE_CLIENT_ID` · Value = Client ID · เลือก **Production** และ **Preview** → Save → **Redeploy** รุ่นล่าสุด
+4. Supabase → **Authentication → Sign In / Providers → Google** → ดูว่าช่อง **Client ID** เป็นค่าเดียวกัน · ปล่อย **Skip nonce checks** ไว้ **ปิด**
+5. ลอง: หน้าเข้าสู่ระบบจะเห็นปุ่ม Google แบบใหม่ (ของ Google) → กด → หน้าต่าง Google ต้องไม่มีคำว่า supabase.co
+6. ไม่ใส่ `VITE_GOOGLE_CLIENT_ID` หรือ Google โหลดไม่ได้ = ปุ่มเดิมแสดงแทน (ใช้ได้เหมือนเดิม)
+
 ---
 
 ## ✅ เช็กลิสต์ก่อนวันส่งงาน (14)

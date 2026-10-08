@@ -788,7 +788,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
       if (!w) return
       if (!window.matchMedia('(max-width: 1023px)').matches) { w.style.height = ''; return }
       const top = w.getBoundingClientRect().top + window.scrollY
-      w.style.height = Math.max(360, Math.round(window.innerHeight - top - 104)) + 'px'
+      w.style.height = Math.max(560, Math.round(window.innerHeight - top - 104)) + 'px'
     }
     fit()
     window.addEventListener('resize', fit)
@@ -853,14 +853,17 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
           ))}
         </div>
       </section>
-      {/* the question card: computers — heading, pill, note, examples; phones — the pill at the bottom, examples above it while empty */}
+      {/* the question card: computers — heading, pill, note, examples; phones — the pill, then the examples in their own card below (always there) */}
       <section className="card mo-qcard">
         <label htmlFor="mo-field" className="label mo-qlabel">{props.label}</label>
-        {empty && <div className="mo-ex-strip">{exampleButtons('mo-ex-chip')}</div>}
         <div className="mo-slot" ref={slotRef} />
         <div className="mo-note"><span>{props.note}</span><span className="shrink-0">{value.length}/{maxLength}</span></div>
         <div className="mo-ex-list"><p className="text-xs text-muted mb-1.5">{props.examplesTitle}</p>
           <div className="flex flex-col gap-1.5">{exampleButtons('text-left text-sm rounded-lg border border-control px-3 py-2 hover:bg-surface3 disabled:opacity-60')}</div></div>
+      </section>
+      <section className="card mo-ex-card" aria-label={props.examplesTitle}>
+        <p className="text-xs text-muted mb-1.5">{props.examplesTitle}</p>
+        <div className="flex flex-col gap-1.5">{exampleButtons('mo-ex-row')}</div>
       </section>
       {/* the status words under the orb, and the travelling shape (pill → ball → orb → card), drawn over everything */}
       <div className="mo-status" ref={statusRef} aria-hidden="true">
