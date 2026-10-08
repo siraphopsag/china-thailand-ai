@@ -165,6 +165,8 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
       setOnline(up)
       if (up) { if (retry) window.clearInterval(retry); retry = undefined } else if (!retry) retry = window.setInterval(check, 20_000)
     })
+    const onShow = () => { if (document.visibilityState === 'visible' && retry) check() }
+    document.addEventListener('visibilitychange', onShow)
     check()
     getClient().then(async (sb) => {
       const apply = (s: Session | null) => { if (!alive.current) return; const u = toUser(s); setUser(u); setStatus(u ? 'signedIn' : 'signedOut'); void loadRole(u) }
@@ -172,7 +174,7 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
       const { data } = await sb.auth.getSession()
       apply(data.session); cleanUrl()
     }).catch(() => { if (alive.current) { setStatus('signedOut'); setOnline(false) } })
-    return () => { alive.current = false; unsub?.(); if (retry) window.clearInterval(retry) }
+    return () => { alive.current = false; unsub?.(); if (retry) window.clearInterval(retry); document.removeEventListener('visibilitychange', onShow) }
   }, [enabled, loadRole])
 
   const guard = useCallback(async (run: (sb: SupabaseClient) => Promise<AuthResult>): Promise<AuthResult> => {

@@ -17,6 +17,12 @@ declare global { interface Window { google?: { accounts?: { id?: IdApi } } } }
 export const GOOGLE_CLIENT_ID = ((import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? '').trim()
 export const googleClientOk = (id: string) => /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(id)
 const SRC = 'https://accounts.google.com/gsi/client'
+/**
+ * Phones and tablets keep the old redirect button (owner, Oct 2026: on an iPhone Google's popup stayed white and sign-in failed);
+ * Google's button is used with a mouse (computers), where it was tested.
+ */
+const touchDevice = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
+const gisOn = () => googleClientOk(GOOGLE_CLIENT_ID) && !touchDevice()
 
 let scriptP: Promise<IdApi> | null = null
 function loadGis(): Promise<IdApi> {
@@ -59,12 +65,12 @@ function useLight() {
  */
 export function GoogleIdButton({ lang, onBefore, onToken, fallback }: { lang: 'th' | 'zh' | 'en'; onBefore: () => void; onToken: (token: string, nonce: string) => void; fallback: ReactNode }) {
   const box = useRef<HTMLDivElement>(null)
-  const [state, setState] = useState<'loading' | 'ready' | 'off'>(googleClientOk(GOOGLE_CLIENT_ID) ? 'loading' : 'off')
+  const [state, setState] = useState<'loading' | 'ready' | 'off'>(() => (gisOn() ? 'loading' : 'off'))
   const light = useLight()
   const cb = useRef({ onBefore, onToken })
   cb.current = { onBefore, onToken }
   useEffect(() => {
-    if (!googleClientOk(GOOGLE_CLIENT_ID)) return
+    if (!gisOn()) return
     let live = true
     const setup = async () => {
       const [api, nonce] = await Promise.all([loadGis(), makeNonce()])
