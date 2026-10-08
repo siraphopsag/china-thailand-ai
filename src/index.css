@@ -565,7 +565,9 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-wrap:not([data-phase='idle']) .mo-thread { overflow: hidden } /* hold still while the ball flies */
 .mo-idle { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 30px 14px 16px; pointer-events: none }
 .mo-idle.is-sending .mo-idle-hint, .mo-idle.is-sending .mo-idle-chips { opacity: 0; transition: opacity .25s ease }
-.mo-still { width: 220px; height: 220px; margin: -20px 0 -24px } /* the live orb's size, so the hand-over does not jump */
+.mo-still { width: 210px; height: 210px; margin: -18px 0 -22px; pointer-events: auto; cursor: grab; touch-action: none } /* smaller than the working orb (250); drag to spin */
+.mo-still:active { cursor: grabbing }
+.mo-idle.is-sending .mo-still { pointer-events: none; cursor: default }
 .mo-idle.is-fading .mo-still { opacity: 0 !important; animation: none; transition: opacity .3s ease }
 .mo-idle-hint { font-size: .9rem; color: rgb(255 255 255 / .62) }
 .mo-idle-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px }
@@ -573,7 +575,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-q { align-self: flex-end; max-width: 85%; animation: mo-in .3s ease both }
 .mo-q span { display: block; padding: 9px 14px; border-radius: 18px 18px 4px 18px; font-size: .95rem; background: rgb(99 102 241 / .28); color: #e0e7ff; overflow-wrap: anywhere }
 .mo-a { align-self: stretch }
-.mo-pend { height: 190px; flex-shrink: 0 }
+.mo-pend { height: 220px; flex-shrink: 0 }
 .mo-err { display: flex; gap: 8px; align-items: flex-start; max-width: 92%; padding: 10px 12px; border-radius: 16px; font-size: .875rem; background: rgb(251 146 60 / .12); color: #fdba74 }
 .mo-answer { width: 100%; border-radius: 18px 18px 18px 6px; padding: 16px 16px 14px; outline: none; background: linear-gradient(90deg, rgb(52 211 153 / .1), transparent 40%), var(--mo-card-bg);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08); color: #e4e4e7 }
@@ -593,6 +595,9 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
   .mo-wrap.is-empty .mo-ex-strip { display: flex; min-width: 0; max-width: 100%; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 2px }
   .mo-ex-chip { flex-shrink: 0; max-width: 72%; text-align: left; font-size: .8rem; line-height: 1.35; padding: 8px 12px; border-radius: 14px; border: 1px solid rgb(var(--control-line)); background: rgb(var(--surface)) }
   .mo-thread { padding: 30px 12px 14px }
+  /* phones: a little smaller, in balance with the narrow chat */
+  .mo-still { width: 176px; height: 176px; margin: -14px 0 -18px }
+  .mo-pend { height: 196px }
 }
 /* the travelling shape */
 .mo-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; overflow: hidden }
@@ -634,8 +639,8 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-send[data-ready] { background: #fafafa; color: #0c0c0f }
 .mo-send:focus-visible { outline: 2px solid #6ee7b7; outline-offset: 2px }
 .mo-wrap:has(.mo-field:focus-visible) .mo-surface { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .35), 0 10px 30px rgb(0 0 0 / .35) }
-.mo-orb { position: absolute; left: 50%; top: 50%; width: 220px; height: 220px; transform: translate(-50%, -50%); pointer-events: none }
-.mo-pulse { position: absolute; left: 50%; top: 50%; width: 132px; height: 132px; border-radius: 50%; border: 2px solid #34d399; opacity: 0; transform: translate(-50%, -50%); pointer-events: none }
+.mo-orb { position: absolute; left: 50%; top: 50%; width: 250px; height: 250px; transform: translate(-50%, -50%); pointer-events: none }
+.mo-pulse { position: absolute; left: 50%; top: 50%; width: 150px; height: 150px; border-radius: 50%; border: 2px solid #34d399; opacity: 0; transform: translate(-50%, -50%); pointer-events: none }
 .mo-trail { position: absolute; left: 0; top: 0; width: 100px; height: 100px; border-radius: 50%; opacity: 0; pointer-events: none; background: radial-gradient(circle at 35% 30%, #2a2a31, #0b0b0e 70%); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12) }
 .mo-status { position: absolute; translate: -50% 0; height: 22px; width: 280px; z-index: 6; pointer-events: none; opacity: var(--sOp, 0); transform: translateY(calc(var(--sTy, 6) * 1px)) }
 .mo-lab { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: .85rem; color: rgb(255 255 255 / .62) }
@@ -695,8 +700,8 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-wrap.is-light .mo-green { box-shadow: 0 0 30px rgb(5 150 105 / .35) }
 .mo-wrap.is-light .mo-trail { opacity: 0 !important }
 .mo-wrap.is-light:has(.mo-field:focus-visible) .mo-surface { box-shadow: inset 0 0 0 1px rgb(0 0 0 / .35), 0 8px 24px rgb(0 0 0 / .08) }
+@media (max-width: 1023px) { .mo-orb { width: 220px; height: 220px } } /* phones: the working orb a little smaller */
 @keyframes mo-spin { to { --mo-angle: 360deg } }
-@keyframes mo-breathe { from { opacity: .55; transform: scale(.97) } to { opacity: 1; transform: scale(1.02) } }
 @keyframes mo-drift { from { transform: translateX(-14%) } to { transform: translateX(14%) } }
 @keyframes mo-dot { 0%, 80%, 100% { opacity: .25 } 40% { opacity: 1 } }
 @keyframes mo-in { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
@@ -707,10 +712,9 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 /* the rim, the glow and the resting sphere keep moving only while motion is on (Settings switch; reduce-motion devices start off) — WCAG 2.2.2 */
 .mo-wrap.is-on .mo-surface::before { animation: mo-spin 6s linear infinite } .mo-wrap.is-on .mo-ring { animation: mo-spin 4s linear infinite }
 .mo-wrap.is-on .mo-aurora i { animation: mo-drift 7s ease-in-out infinite alternate }
-.mo-wrap.is-on .mo-still { animation: mo-breathe 3.6s ease-in-out infinite alternate }
 /* reduced motion and the lite mode: nothing loops (the runtime also cross-fades instead of flying) */
-@media (prefers-reduced-motion: reduce) { .mo-still, .mo-surface::before, .mo-ring, .mo-aurora i, .mo-dots i { animation: none } .mo-w, .mo-a-body, .mo-q, .mo-lab.mo-in { animation: none } .mo-lab.mo-out { display: none } }
-[data-lite] .mo-still, [data-lite] .mo-surface::before, [data-lite] .mo-ring, [data-lite] .mo-aurora i, [data-lite] .mo-dots i { animation: none }
+@media (prefers-reduced-motion: reduce) { .mo-surface::before, .mo-ring, .mo-aurora i, .mo-dots i { animation: none } .mo-w, .mo-a-body, .mo-q, .mo-lab.mo-in { animation: none } .mo-lab.mo-out { display: none } }
+[data-lite] .mo-surface::before, [data-lite] .mo-ring, [data-lite] .mo-aurora i, [data-lite] .mo-dots i { animation: none }
 [data-lite] .mo-w, [data-lite] .mo-lab.mo-in { animation: none } [data-lite] .mo-lab.mo-out { display: none } [data-lite] .mo-underglow, [data-lite] .mo-aurora i { filter: none; opacity: .35 }
 
 /* waiting for the AI: a small ring (a still ring when motion is reduced — the text says what is happening) */

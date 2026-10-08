@@ -32,9 +32,11 @@ export interface MorphOrbProps {
 type Phase = 'idle' | 'launch' | 'assemble' | 'think' | 'resolve' | 'condense' | 'unfold' | 'answered' | 'reset'
 
 /* ─────────── geometry (relative to the stage box) ─────────── */
-const PILL_H = 60, BALL_SMALL = 60, ORB_D = 132, ORB_R = 66, CANVAS = 220, CARD_H = 64
+const PILL_H = 60, BALL_SMALL = 60, ORB_D = 150, ORB_R = 66, CANVAS = 220, CARD_H = 64
+/** the working orb is drawn on a 220 canvas shown at this size (radius 66 → 75 px); the resting sphere is smaller (index.css) */
+const ORB_PX = 250
 /** pw: pill width · cw: answer-card width · (sx, sy): where the pill sits, relative to the orb point · lift: how far the card rises while it unfolds */
-interface Geo { pw: number; cw: number; sx: number; sy: number; lift: number; dir: number; ax: number; ay: number; rest: boolean }
+interface Geo { pw: number; cw: number; sx: number; sy: number; lift: number; dir: number; ax: number; ay: number; rest: boolean; pop0: number }
 
 /* ─────────── math + easing ─────────── */
 type Ease = (t: number) => number
@@ -81,7 +83,8 @@ const collapseTracks = (g: Geo): Track[] => [
   T('w', BALL_SMALL, 6, 440, 660, E.in), T('h', PILL_H, 6, 440, 660, E.in), T('oBall', 1, 0, 540, 680, E.out),
 ]
 /** the resting sphere comes alive and glides to its place under the question */
-const TAKEOVER: Track[] = [T('orb.alpha', 0, 1, 0, 260, E.out), T('orb.spin', 0, 0.9, 0, 800, E.out), T('cHalo', 0, 0.6, 0, 600, E.out), T('u', 0, 1, 200, 850, E.io), T('sOp', 0, 1, 650, 950, E.out), T('sTy', 6, 0, 650, 950, E.out)]
+const takeoverTracks = (g: Geo, spin0: number): Track[] => [T('orb.alpha', 0, 1, 0, 220, E.out), T('orb.pop', g.pop0, 1, 120, 720, E.out), T('orb.spin', spin0, 0.9, 0, 800, E.out),
+  T('cHalo', 0, 0.6, 0, 600, E.out), T('sOp', 0, 1, 450, 750, E.out), T('sTy', 6, 0, 450, 750, E.out)]
 const ASSEMBLE: Track[] = [
   T('oRing', 1, 0, 0, 300, E.out), T('oBall', 1, 0, 0, 260, E.out), T('orb.k', 0, 1, 0, 800, E.out), T('orb.alpha', 0, 1, 0, 800, E.out),
   T('orb.spin', 0, 0.9, 0, 800, E.out), T('orb.pop', 1, 1.05, 0, 420, E.out), T('orb.pop', 1.05, 1, 420, 800, E.io),
@@ -169,32 +172,34 @@ const palette = (from: RGB, to: RGB) => {
 let TABLES: { dark: [string[], string[]]; light: [string[], string[]] } | null = null // built on first use (not while rendering on the server)
 const DOT_DARK: RGB = [235, 235, 235], DOT_LIGHT: RGB = [38, 38, 46]
 
-interface OrbParams { k: number; alpha: number; spin: number; rot: number; sweep: number; pop: number; vortex: number; gain: number; floor: number; rad: number; prog: number; warn: number }
-const ORB_KEYS = ['k', 'alpha', 'spin', 'sweep', 'pop', 'vortex', 'gain', 'floor', 'rad', 'warn'] as const
+interface OrbParams { k: number; alpha: number; spin: number; rot: number; sweep: number; pop: number; vortex: number; gain: number; floor: number; rad: number; prog: number; warn: number; tilt: number }
+const ORB_KEYS = ['k', 'alpha', 'spin', 'sweep', 'pop', 'vortex', 'gain', 'floor', 'rad', 'warn', 'tilt'] as const
 
-function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean, isLight: () => boolean) {
-  const P: OrbParams = { k: 0, alpha: 0, spin: 0, rot: 0, sweep: 0, pop: 1, vortex: 0, gain: 1, floor: 0, rad: 0, prog: 0, warn: 0 }
+function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean, isLight: () => boolean, tick?: (P: OrbParams, dt: number) => void, keepAlive?: () => boolean) {
+  const P: OrbParams = { k: 0, alpha: 0, spin: 0, rot: 0, sweep: 0, pop: 1, vortex: 0, gain: 1, floor: 0, rad: 0, prog: 0, warn: 0, tilt: 0.35 }
   const ctx = canvas.getContext('2d')
   const lit = new Float32Array(N), SX = new Float32Array(N), SY = new Float32Array(N), SR = new Float32Array(N), SD = new Float32Array(N), SC = new Int16Array(N)
   const pw = [1, 0, 0, 0]
   let time = 0, raf = 0, last = 0, dead = false
   const reset = () => {
-    Object.assign(P, { k: 0, alpha: 0, spin: 0, rot: 0, sweep: 0, pop: 1, vortex: 0, gain: 1, floor: 0, rad: 0, prog: 0, warn: 0 })
+    Object.assign(P, { k: 0, alpha: 0, spin: 0, rot: 0, sweep: 0, pop: 1, vortex: 0, gain: 1, floor: 0, rad: 0, prog: 0, warn: 0, tilt: 0.35 })
     lit.fill(0); pw[0] = 1; pw[1] = 0; pw[2] = 0; pw[3] = 0
     time = isReduced() ? 1.2 : 0
   }
   reset()
-  if (!ctx) return { P, ensure() {}, reset, destroy() {} }
+  if (!ctx) return { P, ensure() {}, reset, destroy() {}, paint() {} }
   TABLES ??= { dark: [palette(DOT_DARK, [52, 211, 153]), palette(DOT_DARK, [251, 146, 60])], light: [palette(DOT_LIGHT, [5, 150, 105]), palette(DOT_LIGHT, [217, 119, 6])] }
   const dpr = Math.min(2, window.devicePixelRatio || 1)
   canvas.width = Math.round(CANVAS * dpr); canvas.height = Math.round(CANVAS * dpr)
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  const S = 0.6, CP = Math.cos(0.35), SP = Math.sin(0.35), C0 = CANVAS / 2
+  const S = 0.6, C0 = CANVAS / 2
 
   const draw = (dt: number) => {
     ctx.clearRect(0, 0, CANVAS, CANVAS)
     time += dt
+    tick?.(P, dt)
     P.rot += P.spin * dt
+    const CP = Math.cos(P.tilt), SP = Math.sin(P.tilt)
     const yaw = P.rot + P.vortex, cyw = Math.cos(yaw), syw = Math.sin(yaw)
     const stepW = dt / 0.35
     for (let q = 0; q < 4; q++) { const d = (q === P.prog ? 1 : 0) - pw[q]; pw[q] += Math.abs(d) <= stepW ? d : d > 0 ? stepW : -stepW }
@@ -248,15 +253,17 @@ function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean, isLight:
     const dt = isReduced() ? 0 : Math.max(0, Math.min(0.05, (now - last) / 1000))
     last = now
     draw(dt)
-    if (P.alpha > 0.002) raf = requestAnimationFrame(frame); else ctx.clearRect(0, 0, CANVAS, CANVAS)
+    if (P.alpha > 0.002 && (!keepAlive || keepAlive())) raf = requestAnimationFrame(frame); else if (P.alpha <= 0.002) ctx.clearRect(0, 0, CANVAS, CANVAS)
   }
   const ensure = () => { if (raf || dead || P.alpha <= 0.002) return; last = performance.now(); raf = requestAnimationFrame(frame) }
+  /** draw once now (a still frame) */
+  const paint = () => { if (!dead) draw(0) }
   const destroy = () => { dead = true; if (raf) cancelAnimationFrame(raf); raf = 0 }
-  return { P, ensure, reset, destroy }
+  return { P, ensure, reset, destroy, paint }
 }
 
 /* ─────────── runtime ─────────── */
-interface UI { handoff(): void; answered(): void; failed(): void; setPhase(p: Phase): void; swapLabel(name: string): void; resetLabel(): void; clearInput(): void; live(s: string): void; lock(on: boolean): void; idleReady(): void; focusAnswer(): void }
+interface UI { handoff(): { rot: number; tilt: number; spin: number };  answered(): void; failed(): void; setPhase(p: Phase): void; swapLabel(name: string): void; resetLabel(): void; clearInput(): void; live(s: string): void; lock(on: boolean): void; idleReady(): void; focusAnswer(): void }
 interface Env {
   root: HTMLElement; mover: HTMLElement; actor: HTMLElement; form: HTMLElement; ghosts: HTMLElement[]; canvas: HTMLCanvasElement; pulse: HTMLElement; status: HTMLElement
   ui: UI; isReduced: () => boolean; isLight: () => boolean; copy: () => OrbCopy; geo: () => Geo
@@ -381,11 +388,12 @@ function createRuntime(env: Env): Runtime {
       setNow('w', ORB_D); setNow('h', ORB_D); setNow('r', ORB_D / 2); setNow('inScale', 1)
       env.ui.setPhase('assemble')
       if (geo.rest) {
-        orb.P.rot = 0.6 // the resting sphere's angle, so the hand-over is seamless
-        setNow('orb.k', 1); setNow('u', 0)
-        env.ui.handoff()
-        if (!reduced) await go(TAKEOVER)
-        else { setNow('u', 1); setNow('sTy', 0); await go(R_IN) }
+        // first question: the resting sphere becomes the working orb right where it is (no move)
+        const was = env.ui.handoff()
+        orb.P.rot = was.rot; orb.P.tilt = was.tilt
+        setNow('orb.k', 1); setNow('u', 1)
+        if (!reduced) { setNow('orb.pop', geo.pop0); await go([...takeoverTracks(geo, Math.max(0, Math.min(3, Math.abs(was.spin)))), { ch: 'orb.tilt', from: was.tilt, to: 0.35, t0: 0, t1: 700, ease: E.io }]) }
+        else { setNow('sTy', 0); await go(R_IN) }
       } else {
         setNow('u', 1)
         if (!reduced) await go(ASSEMBLE.filter((k) => k.ch !== 'oRing' && k.ch !== 'oBall'))
@@ -529,23 +537,42 @@ export function RevealText({ text, lang }: { text: string; lang: string }) {
   ))}</>
 }
 
-/* ─────────── a still sphere of dots for the empty chat ─────────── */
-function drawStill(canvas: HTMLCanvasElement, light: boolean) {
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
-  const dpr = Math.min(2, window.devicePixelRatio || 1)
-  canvas.width = Math.round(CANVAS * dpr); canvas.height = Math.round(CANVAS * dpr)
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  ctx.clearRect(0, 0, CANVAS, CANVAS)
-  const CP = Math.cos(0.35), SP = Math.sin(0.35), C0 = CANVAS / 2, yaw = 0.6, cy = Math.cos(yaw), sy = Math.sin(yaw)
-  const [r, g, b] = light ? DOT_LIGHT : DOT_DARK
-  for (let n = 0; n < N; n++) {
-    const x1 = DX[n] * cy + DZ[n] * sy, z1 = -DX[n] * sy + DZ[n] * cy
-    const y2 = DY[n] * CP - z1 * SP, z2 = DY[n] * SP + z1 * CP
-    const f = 2.8 / (2.8 - z2), depth = (z2 + 1) / 2
-    ctx.fillStyle = `rgba(${r},${g},${b},${((light ? 0.1 : 0.08) + 0.32 * depth * depth).toFixed(3)})`
-    ctx.beginPath(); ctx.arc(C0 + x1 * ORB_R * f, C0 - y2 * ORB_R * f, 1.15 * (0.45 + 0.75 * depth) * f, 0, TAU); ctx.fill()
-  }
+/* ─────────── the resting sphere (owner, Oct 2026): turns slowly; drag it to spin it any way, it then eases back to its slow turn ─────────── */
+const REST_SPIN = 0.32
+function useRestingOrb(canvasRef: { current: HTMLCanvasElement | null }, active: boolean, moving: boolean, light: boolean) {
+  const st = useRef({ drag: false, x: 0, y: 0, t: 0, v: 0, orb: null as ReturnType<typeof createOrb> | null })
+  useEffect(() => {
+    const c = canvasRef.current
+    if (!c || !active) return
+    const s = st.current
+    const base = () => (moving ? REST_SPIN : 0)
+    const tick = (P: OrbParams, dt: number) => {
+      if (s.drag) { P.spin = 0; return }
+      const k = 1 - Math.exp(-dt / 1.4)
+      P.spin += (base() - P.spin) * k // a fast spin from a flick slows back to the resting turn
+      P.tilt += (0.35 - P.tilt) * (1 - Math.exp(-dt / 0.9))
+    }
+    const alive = () => s.drag || moving || Math.abs(s.orb?.P.spin ?? 0) > 0.01 || Math.abs((s.orb?.P.tilt ?? 0.35) - 0.35) > 0.002
+    const orb = createOrb(c, () => false, isLightTheme, tick, alive)
+    s.orb = orb
+    Object.assign(orb.P, { k: 1, alpha: 1, spin: base(), gain: 0.55, floor: 0.42, rot: 0.6 })
+    orb.paint(); orb.ensure()
+    const down = (e: PointerEvent) => { s.drag = true; s.x = e.clientX; s.y = e.clientY; s.t = performance.now(); s.v = 0; c.setPointerCapture(e.pointerId); orb.ensure() }
+    const move = (e: PointerEvent) => {
+      if (!s.drag) return
+      const now = performance.now(), dt = Math.max(1, now - s.t) / 1000, dx = e.clientX - s.x, dy = e.clientY - s.y
+      orb.P.rot += dx * 0.012
+      orb.P.tilt = Math.max(-0.6, Math.min(1.2, orb.P.tilt + dy * 0.008))
+      s.v = s.v * 0.5 + ((dx * 0.012) / dt) * 0.5
+      s.x = e.clientX; s.y = e.clientY; s.t = now
+      orb.ensure()
+    }
+    const up = () => { if (!s.drag) return; s.drag = false; orb.P.spin = Math.max(-14, Math.min(14, s.v)); orb.ensure() }
+    c.addEventListener('pointerdown', down); c.addEventListener('pointermove', move); c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up)
+    return () => { c.removeEventListener('pointerdown', down); c.removeEventListener('pointermove', move); c.removeEventListener('pointerup', up); c.removeEventListener('pointercancel', up); orb.destroy(); s.orb = null }
+  }, [active, moving]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { st.current.orb?.paint() }, [light]) // the theme changed: redraw with the other dot colour
+  return () => { const P = st.current.orb?.P; return { rot: P?.rot ?? 0.6, tilt: P?.tilt ?? 0.35, spin: P?.spin ?? 0 } }
 }
 const isLightTheme = () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
 
@@ -654,6 +681,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
   const [flight, setFlight] = useState<number | null>(null) // the turn whose answer is still on its way (orb shown in its place)
   const [resting, setResting] = useState(false) // the first question was sent: the resting sphere stays until the orb takes over
   const [fading, setFading] = useState(false) // …and fades as the live orb appears on top of it
+  const empty = turns.length === 0
   const [value, setValue] = useState('')
   const [still] = useState(() => typeof window === 'undefined' || motionOff())
   const light = useLightTheme()
@@ -673,7 +701,10 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
   const nextId = useRef(1)
 
   // the theme decides the stage: dark dots on light, light dots on dark (follows the theme switch live)
-  useEffect(() => { if (stillRef.current) drawStill(stillRef.current, light) }, [light, turns.length])
+  // the resting sphere: alive while the chat is empty; draggable until a question is sent
+  const restState = useRestingOrb(stillRef, empty || resting, !still && !props.lite, light) // slow turn only with motion on and not in the lite mode
+  const restRef = useRef(restState)
+  restRef.current = restState
 
   useIsoLayoutEffect(() => {
     const wrap = wrapRef.current, slot = slotRef.current, mover = moverRef.current, actor = actorRef.current, canvas = canvasRef.current
@@ -691,19 +722,26 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
       let ox: number, oy: number, lift = 0, cw = 300
       if (pend) {
         const p = pend.getBoundingClientRect()
-        ox = p.left - w.left + p.width / 2; oy = p.top - w.top + 76
-        lift = 76 - CARD_H / 2 // the card ends at the top of the waiting place, where the answer bubble then stands
+        ox = p.left - w.left + p.width / 2; oy = p.top - w.top + 92
+        lift = 92 - CARD_H / 2 // the card ends at the top of the waiting place, where the answer bubble then stands
         cw = Math.max(220, p.width)
       } else if (th) {
         const t = th.getBoundingClientRect()
         ox = t.left - w.left + t.width / 2; oy = t.top - w.top + t.height * 0.42
         cw = Math.max(220, t.width - 32)
       } else { ox = w.width / 2; oy = 200 }
-      mover.style.left = ox + 'px'; mover.style.top = oy + 'px'
-      status.style.left = ox + 'px'; status.style.top = oy + 92 + 'px'
+      const orbPx = canvas.getBoundingClientRect().width || ORB_PX // the working orb's size on screen (smaller on phones)
       const rest = !!still && still.width > 0 && !!pend
-      return { pw: sl.width, cw, sx: sl.left - w.left + sl.width / 2 - ox, sy: sl.top - w.top + sl.height / 2 - oy, lift, dir: -1,
-        ax: rest ? still!.left - w.left + still!.width / 2 - ox : 0, ay: rest ? still!.top - w.top + still!.height / 2 - oy : 0, rest }
+      let pop0 = 1
+      if (rest && pend) {
+        const p = pend.getBoundingClientRect()
+        ox = still!.left - w.left + still!.width / 2; oy = still!.top - w.top + still!.height / 2
+        lift = oy - (p.top - w.top) - CARD_H / 2 // the card unfolds where the orb is, then rises to where the answer stands
+        pop0 = still!.width / orbPx
+      }
+      mover.style.left = ox + 'px'; mover.style.top = oy + 'px'
+      status.style.left = ox + 'px'; status.style.top = oy + orbPx * 0.42 + 'px'
+      return { pw: sl.width, cw, sx: sl.left - w.left + sl.width / 2 - ox, sy: sl.top - w.top + sl.height / 2 - oy, lift, dir: -1, ax: 0, ay: 0, rest, pop0 }
     }
     const rt = createRuntime({
       root: wrap, mover, actor, form, ghosts, canvas, pulse, status, geo,
@@ -711,7 +749,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
       isLight: isLightTheme,
       copy: () => propsRef.current.copy,
       ui: {
-        handoff: () => { setFading(true); window.setTimeout(() => { setResting(false); setFading(false) }, 320) },
+        handoff: () => { const was = restRef.current(); setFading(true); window.setTimeout(() => { setResting(false); setFading(false) }, 260); return was },
         answered: () => setFlight(null),
         failed: () => { setFlight(null); setResting(false) },
         setPhase: (p) => { phaseRef.current = p; setPhaseState(p) },
@@ -781,7 +819,6 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
   }
   const pick = (q: string) => { if (phaseRef.current !== 'idle' || disabled) return; setValue(q); requestAnimationFrame(() => ask(q)) }
   const ready = value.trim().length >= 4 && !disabled
-  const empty = turns.length === 0
   const lastId = turns.length ? turns[turns.length - 1].id : null
   const waiting = flight !== null
   const labelInner = (name: string) => name === copy.done ? <span className="mo-lab-done">{name}</span> : <><span>{name}</span><span className="mo-dots" aria-hidden="true"><i /><i /><i /></span></>
