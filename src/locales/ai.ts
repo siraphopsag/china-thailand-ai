@@ -61,5 +61,12 @@ export const ai = {
   'ai.ask.official': ['เว็บหน่วยงาน', '机构网站', 'Agency website'],
   'ai.ask.note': ['คำตอบจาก AI อาจผิดพลาดได้ และไม่ใช่คำปรึกษาทางกฎหมาย โปรดตรวจกับหน่วยงานหรือทนายความก่อนตัดสินใจ', 'AI 的回答可能有误，且并非法律意见。做决定前请向相关机构或律师核实。', 'AI answers can be wrong and are not legal advice. Check with the authority or a lawyer before you decide.'],
   'ai.ask.signin': ['เข้าสู่ระบบเพื่อใช้ผู้ช่วย AI (ฟรี วันละ 20 คำถาม)', '登录后即可使用 AI 助手（免费，每天 20 个问题）', 'Sign in to use the AI assistant (free, 20 questions a day)'],
+  // the thinking orb (owner, Oct 2026): the status words while the AI works
+  'ai.orb.ph': ['ถามเรื่องกฎหมายการทำงานไทย–จีน…', '询问泰中跨境工作的法律问题…', 'Ask about working across the Thai–Chinese border…'],
+  'ai.orb.l1': ['กำลังคิด', '思考中', 'Thinking'],
+  'ai.orb.l2': ['กำลังค้นคลังกฎหมาย', '查阅法律资料库', 'Searching the legal records'],
+  'ai.orb.l3': ['กำลังวิเคราะห์', '分析中', 'Analyzing'],
+  'ai.orb.l4': ['กำลังเรียบเรียง', '整理答案', 'Composing'],
+  'ai.orb.done': ['เสร็จแล้ว', '完成', 'Done'],
   'ai.ask.again': ['ถามคำถามใหม่', '提出新问题', 'Ask another question'],
 } as const satisfies Record<string, Msg>

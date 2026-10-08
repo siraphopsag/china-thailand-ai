@@ -1,0 +1,658 @@
+/**
+ * "Thinking orb" while the AI works (owner, Oct 2026 — from the sample component and screen recording the owner sent): the question
+ * pill shrinks into a ball, flies up and grows into a turning sphere of dots with rotating status words; when the answer arrives the
+ * dots turn green, condense into a glossy ball and unfold into the answer card. Ported from the owner's MorphOrb (timelines, easing,
+ * dotted sphere) and fitted to our page: it lives in a stage box (not the whole window), copy comes from the page in three languages,
+ * the answer card then grows into the full answer the page renders (children), a failed answer returns to the pill.
+ * Reduced motion or the lite mode → cross-fades only and a still sphere. Styles: index.css (.mo-*).
+ */
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { motionOff } from './ui/background-paths'
+
+export interface OrbCopy { placeholder: string; labels: [string, string, string, string]; done: string; answerTitle: string; reset: string; send: string; field: string }
+export interface MorphOrbProps {
+  copy: OrbCopy
+  /** ask the AI: resolves to true when an answer is ready (the page renders it as children), false to go back to the pill */
+  onSubmit: (text: string) => Promise<boolean>
+  /** called when the person starts a new question */
+  onReset?: () => void
+  /** the full answer, shown in the card once the orb has unfolded */
+  children?: ReactNode
+  /** a chip next to the answer title (e.g. "answered from the legal records") */
+  badge?: ReactNode
+  disabled?: boolean
+  maxLength?: number
+  minThinkMs?: number
+  /** fewer effects (lite mode): treated like reduced motion */
+  lite?: boolean
+  /** put this text in the pill and ask at once (example questions); change `nonce` to ask again */
+  preset?: { text: string; nonce: number } | null
+}
+
+type Phase = 'idle' | 'launch' | 'assemble' | 'think' | 'resolve' | 'condense' | 'unfold' | 'answered' | 'reset'
+
+/* ─────────── geometry (relative to the stage box) ─────────── */
+const PILL_H = 60, BALL_SMALL = 60, ORB_D = 132, ORB_R = 66, CANVAS = 220, CARD_H = 64, FLY_D = 138
+interface Geo { pw: number; cw: number; H: number; dir: number }
+
+/* ─────────── math + easing ─────────── */
+type Ease = (t: number) => number
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v)
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t
+const fmt = (v: number) => String(Math.round(v * 1e4) / 1e4)
+const TAU = Math.PI * 2
+function mulberry32(a: number) {
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+function cubicBezier(x1: number, y1: number, x2: number, y2: number): Ease {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by
+  const sx = (t: number) => ((ax * t + bx) * t + cx) * t
+  const sy = (t: number) => ((ay * t + by) * t + cy) * t
+  const dx = (t: number) => (3 * ax * t + 2 * bx) * t + cx
+  const solve = (x: number) => {
+    let t = x
+    for (let i = 0; i < 8; i++) { const e = sx(t) - x; if (Math.abs(e) < 1e-6) return t; const d = dx(t); if (Math.abs(d) < 1e-6) break; t -= e / d }
+    let lo = 0, hi = 1; t = x
+    for (let i = 0; i < 40; i++) { const e = sx(t); if (Math.abs(e - x) < 1e-6) break; if (x > e) lo = t; else hi = t; t = (hi - lo) / 2 + lo }
+    return t
+  }
+  return (x) => (x <= 0 ? 0 : x >= 1 ? 1 : sy(solve(x)))
+}
+const E = {
+  out: cubicBezier(0.22, 1, 0.36, 1), io: cubicBezier(0.65, 0, 0.35, 1), in: cubicBezier(0.4, 0, 1, 1), fly: cubicBezier(0.5, 0, 0.1, 1),
+  grow: cubicBezier(0.3, 0, 0.2, 1), vortex: cubicBezier(0.6, 0, 0.2, 1), spring: cubicBezier(0.34, 1.4, 0.64, 1), card: cubicBezier(0.65, 0, 0.2, 1),
+}
+const bez = (t: number, p0: number, c: number, p2: number) => (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * c + t * t * p2
+
+/* ─────────── timelines ─────────── */
+interface Track { ch: string; from: number; to: number; t0: number; t1: number; ease: Ease }
+const T = (ch: string, from: number, to: number, t0: number, t1: number, ease: Ease = E.io): Track => ({ ch, from, to, t0, t1, ease })
+const launchTracks = (g: Geo): Track[] => [
+  T('w', g.pw, g.pw - 12, 0, 100, E.out), T('oInput', 1, 0, 0, 160, E.in), T('inScale', 1, 0.6, 0, 160, E.in),
+  T('oGlow', 1, 0, 0, 300, E.out), T('oAur', 1, 0, 0, 300, E.out),
+  T('w', g.pw - 12, BALL_SMALL, 100, 560, E.io), T('h', PILL_H, PILL_H + 6, 380, 500, E.out), T('h', PILL_H + 6, BALL_SMALL, 500, 620, E.out),
+  T('oPill', 1, 0, 300, 560, E.out), T('oBall', 0, 1, 300, 560, E.out),
+  T('u', 0, 1, 620, 1500, E.fly), T('w', BALL_SMALL, FLY_D, 620, 1300, E.grow), T('h', BALL_SMALL, FLY_D, 620, 1300, E.grow),
+  T('w', FLY_D, ORB_D, 1300, 1500, E.out), T('h', FLY_D, ORB_D, 1300, 1500, E.out),
+  T('cHalo', 0, 0.6, 620, 1500, E.out), T('trail', 0, 1, 700, 800, E.out), T('trail', 1, 0, 1300, 1500, E.in),
+]
+const ASSEMBLE: Track[] = [
+  T('oRing', 1, 0, 0, 300, E.out), T('oBall', 1, 0, 0, 260, E.out), T('orb.k', 0, 1, 0, 800, E.out), T('orb.alpha', 0, 1, 0, 800, E.out),
+  T('orb.spin', 0, 0.9, 0, 800, E.out), T('orb.pop', 1, 1.05, 0, 420, E.out), T('orb.pop', 1.05, 1, 420, 800, E.io),
+  T('sOp', 0, 1, 300, 620, E.out), T('sTy', 6, 0, 300, 620, E.out),
+]
+const RESOLVE: Track[] = [
+  T('orb.sweep', 0, 1, 0, 700, E.io), T('orb.spin', 0.9, 0.3, 0, 700, E.out), T('orb.gain', 1, 0, 0, 700, E.out),
+  T('orb.floor', 0, 0.95, 400, 900, E.out), T('orb.rad', 0, 0.15, 400, 900, E.out), T('orb.pop', 1, 1.04, 600, 800, E.out), T('orb.pop', 1.04, 1, 800, 900, E.out),
+]
+const CONDENSE: Track[] = [
+  T('orb.pop', 1, 1.06, 0, 120, E.out), T('sOp', 1, 0, 0, 160, E.in), T('sTy', 0, -6, 0, 160, E.in),
+  T('orb.k', 1, 0, 120, 640, E.vortex), T('orb.vortex', 0, 1.6, 120, 640, E.vortex),
+  T('oGreen', 0, 1, 260, 700, E.spring), T('gs', 0.55, 1, 260, 700, E.spring), T('pulse', 0, 1, 320, 760, E.out),
+  T('oHalo', 0, 0.35, 380, 700, E.out), T('orb.alpha', 1, 0, 500, 800, E.out),
+]
+const unfoldTracks = (g: Geo): Track[] => [
+  T('w', ORB_D, 124, 0, 90, E.in), T('h', ORB_D, 124, 0, 90, E.in),
+  T('w', 124, g.cw, 90, 700, E.card), T('h', 124, CARD_H, 90, 700, E.out), T('r', ORB_D / 2, 20, 90, 700, E.io),
+  T('oGreen', 1, 0, 200, 560, E.out), T('oCard', 0, 1, 200, 560, E.out), T('oHalo', 0.35, 0, 300, 700, E.out), T('cHalo', 0.6, 0.22, 300, 700, E.out),
+  T('hOp', 0, 1, 520, 840, E.out), T('dotS', 0, 1, 520, 840, E.spring),
+]
+/* a failed answer: the dots turn amber and fade, the pill comes back */
+const FAIL: Track[] = [
+  T('orb.warn', 0, 1, 0, 400, E.out), T('orb.spin', 0.9, 0.2, 0, 600, E.out), T('orb.gain', 1, 0, 0, 400, E.out), T('orb.floor', 0, 0.8, 0, 400, E.out),
+]
+/* reduced motion / lite: cross-fades only */
+const R_OUT: Track[] = [T('oInput', 1, 0, 0, 140, E.out), T('oPill', 1, 0, 0, 200, E.out), T('oGlow', 1, 0, 0, 200, E.out), T('oAur', 1, 0, 0, 200, E.out), T('oRing', 1, 0, 0, 200, E.out)]
+const R_IN: Track[] = [T('orb.alpha', 0, 1, 0, 200, E.out), T('sOp', 0, 1, 0, 200, E.out), T('cHalo', 0, 0.6, 0, 200, E.out)]
+const R_RESOLVE: Track[] = [T('orb.sweep', 0, 1, 0, 250, E.io), T('orb.floor', 0, 0.95, 0, 250, E.out)]
+const R_CONDENSE: Track[] = [T('oGreen', 0, 1, 0, 250, E.out), T('orb.alpha', 1, 0, 0, 250, E.out), T('sOp', 1, 0, 0, 250, E.out)]
+const R_CARD: Track[] = [T('oGreen', 1, 0, 0, 120, E.out), T('oCard', 0, 1, 0, 250, E.out), T('hOp', 0, 1, 0, 250, E.out)]
+
+const FADE = ['oGlow', 'oAur', 'oPill', 'oBall', 'oGreen', 'oCard', 'oRing', 'oInput', 'oHalo', 'sOp', 'orb.alpha', 'trail']
+const INIT: Record<string, number> = {
+  h: PILL_H, r: 999, oGlow: 1, oHalo: 0, oPill: 1, oBall: 0, oGreen: 0, oCard: 0, oRing: 1, oInput: 1, inScale: 1, oAur: 1,
+  gs: 0.55, hOp: 0, dotS: 0, u: 0, yOff: 0, trail: 0, pulse: -1, sOp: 0, sTy: 6, cHalo: 0,
+  'orb.k': 0, 'orb.alpha': 0, 'orb.spin': 0, 'orb.pop': 1, 'orb.sweep': 0, 'orb.vortex': 0, 'orb.gain': 1, 'orb.floor': 0, 'orb.rad': 0, 'orb.warn': 0,
+}
+
+/* ─────────── async helpers ─────────── */
+const ABORT = Symbol('abort')
+function sleep(ms: number, sig: AbortSignal) {
+  return new Promise<void>((res) => {
+    if (sig.aborted) return res()
+    let id = 0
+    const onAbort = () => { window.clearTimeout(id); res() }
+    id = window.setTimeout(() => { sig.removeEventListener('abort', onAbort); res() }, Math.max(0, ms))
+    sig.addEventListener('abort', onAbort, { once: true })
+  })
+}
+function abortable<V>(p: Promise<V>, sig: AbortSignal) {
+  return new Promise<V | undefined>((res) => {
+    if (sig.aborted) return res(undefined)
+    const onAbort = () => res(undefined)
+    sig.addEventListener('abort', onAbort, { once: true })
+    p.then((v) => { sig.removeEventListener('abort', onAbort); res(v) }, () => { sig.removeEventListener('abort', onAbort); res(undefined) })
+  })
+}
+
+/* ─────────── the dotted sphere (canvas) ─────────── */
+const RINGS = 16
+const DOT_LIST = (() => {
+  const rand = mulberry32(7)
+  const out: { x: number; y: number; z: number; u: number; seed: number }[] = []
+  for (let k = 0; k < RINGS; k++) {
+    const y = 1 - ((k + 0.5) / RINGS) * 2, r = Math.sqrt(1 - y * y), m = Math.max(4, Math.round(30 * r))
+    for (let j = 0; j < m; j++) { const a = (j / m) * TAU + k * 0.35; out.push({ x: Math.cos(a) * r, y, z: Math.sin(a) * r, u: (1 - y) / 2, seed: rand() * 6.283 }) }
+  }
+  return out
+})()
+const N = DOT_LIST.length
+const DX = Float32Array.from(DOT_LIST, (d) => d.x), DY = Float32Array.from(DOT_LIST, (d) => d.y), DZ = Float32Array.from(DOT_LIST, (d) => d.z)
+const DU = Float32Array.from(DOT_LIST, (d) => d.u), DS = Float32Array.from(DOT_LIST, (d) => d.seed)
+const G_STEPS = 24, A_STEPS = 48
+/** white → green (done); a second table white → amber (failed) */
+const palette = (to: [number, number, number]) => {
+  const out: string[] = []
+  for (let gi = 0; gi <= G_STEPS; gi++) {
+    const g = gi / G_STEPS, r = Math.round(lerp(235, to[0], g)), gg = Math.round(lerp(235, to[1], g)), b = Math.round(lerp(235, to[2], g))
+    for (let ai = 0; ai <= A_STEPS; ai++) out.push(`rgba(${r},${gg},${b},${(ai / A_STEPS).toFixed(3)})`)
+  }
+  return out
+}
+let COLORS: string[] | null = null, WARN: string[] | null = null // built on first use (not while rendering on the server)
+
+interface OrbParams { k: number; alpha: number; spin: number; rot: number; sweep: number; pop: number; vortex: number; gain: number; floor: number; rad: number; prog: number; warn: number }
+const ORB_KEYS = ['k', 'alpha', 'spin', 'sweep', 'pop', 'vortex', 'gain', 'floor', 'rad', 'warn'] as const
+
+function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean) {
+  const P: OrbParams = { k: 0, alpha: 0, spin: 0, rot: 0, sweep: 0, pop: 1, vortex: 0, gain: 1, floor: 0, rad: 0, prog: 0, warn: 0 }
+  const ctx = canvas.getContext('2d')
+  const lit = new Float32Array(N), SX = new Float32Array(N), SY = new Float32Array(N), SR = new Float32Array(N), SD = new Float32Array(N), SC = new Int16Array(N)
+  const pw = [1, 0, 0, 0]
+  let time = 0, raf = 0, last = 0, dead = false
+  const reset = () => {
+    Object.assign(P, { k: 0, alpha: 0, spin: 0, rot: 0, sweep: 0, pop: 1, vortex: 0, gain: 1, floor: 0, rad: 0, prog: 0, warn: 0 })
+    lit.fill(0); pw[0] = 1; pw[1] = 0; pw[2] = 0; pw[3] = 0
+    time = isReduced() ? 1.2 : 0
+  }
+  reset()
+  if (!ctx) return { P, ensure() {}, reset, destroy() {} }
+  COLORS ??= palette([52, 211, 153]); WARN ??= palette([251, 146, 60])
+  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  canvas.width = Math.round(CANVAS * dpr); canvas.height = Math.round(CANVAS * dpr)
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  const S = 0.6, CP = Math.cos(0.35), SP = Math.sin(0.35), C0 = CANVAS / 2
+
+  const draw = (dt: number) => {
+    ctx.clearRect(0, 0, CANVAS, CANVAS)
+    time += dt
+    P.rot += P.spin * dt
+    const yaw = P.rot + P.vortex, cyw = Math.cos(yaw), syw = Math.sin(yaw)
+    const stepW = dt / 0.35
+    for (let q = 0; q < 4; q++) { const d = (q === P.prog ? 1 : 0) - pw[q]; pw[q] += Math.abs(d) <= stepW ? d : d > 0 ? stepW : -stepW }
+    const decay = Math.exp(-dt / 0.5)
+    const h0 = (time * 300) % N, h3 = (time * 480) % N
+    const a1 = time * 0.8, b1 = Math.sin(time * 0.5) * 0.9
+    const f1x = Math.cos(b1) * Math.cos(a1), f1y = Math.sin(b1), f1z = Math.cos(b1) * Math.sin(a1)
+    const a2 = time * 0.55 + 2.1, b2 = Math.cos(time * 0.42) * 0.9
+    const f2x = Math.cos(b2) * Math.cos(a2), f2y = Math.sin(b2), f2z = Math.cos(b2) * Math.sin(a2)
+    const lat = Math.sin(time * 2.2), swirlK = P.vortex * 1.5
+    const table = P.warn > 0.5 ? WARN! : COLORS!
+    const sweep = Math.max(P.sweep, P.warn)
+    for (let n = 0; n < N; n++) {
+      const dx = DX[n], dy = DY[n], dz = DZ[n], u = DU[n]
+      // the lights move over the dots in turn: four programs, one per status word
+      let pulse = 0
+      if (pw[0] > 0.001) { let dd = Math.abs(n - h0); if (dd > N - dd) dd = N - dd; const v = Math.max(0, 1 - dd / 16); pulse = Math.max(pulse, v * v * pw[0]) }
+      if (pw[1] > 0.001) { const v = Math.max(Math.max(0, (dx * f1x + dy * f1y + dz * f1z - 0.72) / 0.28), Math.max(0, (dx * f2x + dy * f2y + dz * f2z - 0.72) / 0.28)); pulse = Math.max(pulse, v * v * pw[1]) }
+      if (pw[2] > 0.001) { const e = dy - lat; const v = Math.max(0, 1 - (e * e) / 0.02); pulse = Math.max(pulse, v * v * pw[2]) }
+      if (pw[3] > 0.001) { let dd = Math.abs(n - h3); if (dd > N - dd) dd = N - dd; const v = Math.max(0, 1 - dd / 22); pulse = Math.max(pulse, v * v * pw[3]) }
+      const l = Math.max(lit[n] * decay, pulse * P.gain)
+      lit[n] = l
+      // dots appear from the top and leave from the bottom
+      const ki = clamp01(P.k * (1 + S) - S * u)
+      if (ki <= 0.001) { SC[n] = -1; continue }
+      const eo = E.out(ki), kk = eo * P.pop
+      const x1 = dx * cyw + dz * syw, z1 = -dx * syw + dz * cyw
+      const y2 = dy * CP - z1 * SP, z2 = dy * SP + z1 * CP
+      const f = 2.8 / (2.8 - z2), depth = (z2 + 1) / 2
+      let ox = x1 * ORB_R * kk * f, oy = -y2 * ORB_R * kk * f
+      if (swirlK > 0.001) { const sw = (1 - ki) * swirlK, cc = Math.cos(sw), ss = Math.sin(sw); const tx = ox * cc - oy * ss; oy = ox * ss + oy * cc; ox = tx }
+      const g = clamp01((sweep * 1.4 - u) / 0.4)
+      let a = 0.1 + 0.035 * Math.sin(DS[n] + time * 1.6) * (1 - g) + 0.32 * depth * depth + 0.75 * l * (1 - g) + g * (0.55 + 0.4 * depth) + 2 * g * (1 - g)
+      a = Math.max(a, P.floor * (0.7 + 0.3 * depth))
+      if (a > 1) a = 1
+      a *= eo * P.alpha
+      SX[n] = C0 + ox; SY[n] = C0 + oy; SD[n] = depth
+      SR[n] = (1.15 * (0.45 + 0.75 * depth) * f + 0.9 * l + g * 0.25) * (1 + P.rad) * (0.4 + 0.6 * eo)
+      const ai = Math.round(a * A_STEPS), gi = Math.round(g * G_STEPS)
+      SC[n] = ai <= 0 ? -1 : gi * (A_STEPS + 1) + ai
+    }
+    for (let pass = 0; pass < 2; pass++) for (let n = 0; n < N; n++) {
+      const c = SC[n]
+      if (c < 0 || (SD[n] >= 0.5) !== (pass === 1)) continue
+      ctx.fillStyle = table[c]; ctx.beginPath(); ctx.arc(SX[n], SY[n], SR[n], 0, TAU); ctx.fill()
+    }
+  }
+  const frame = (now: number) => {
+    raf = 0
+    if (dead) return
+    const dt = isReduced() ? 0 : Math.max(0, Math.min(0.05, (now - last) / 1000))
+    last = now
+    draw(dt)
+    if (P.alpha > 0.002) raf = requestAnimationFrame(frame); else ctx.clearRect(0, 0, CANVAS, CANVAS)
+  }
+  const ensure = () => { if (raf || dead || P.alpha <= 0.002) return; last = performance.now(); raf = requestAnimationFrame(frame) }
+  const destroy = () => { dead = true; if (raf) cancelAnimationFrame(raf); raf = 0 }
+  return { P, ensure, reset, destroy }
+}
+
+/* ─────────── runtime ─────────── */
+interface UI { setPhase(p: Phase): void; swapLabel(name: string): void; resetLabel(): void; clearInput(): void; live(s: string): void; lock(on: boolean): void; idleReady(): void; focusAnswer(): void }
+interface Env {
+  root: HTMLElement; mover: HTMLElement; actor: HTMLElement; form: HTMLElement; ghosts: HTMLElement[]; canvas: HTMLCanvasElement; pulse: HTMLElement; status: HTMLElement
+  ui: UI; isReduced: () => boolean; copy: () => OrbCopy; geo: () => Geo
+}
+interface Runtime { start(text: string, ask: (t: string) => Promise<boolean>, minThink: number): boolean; reset(): void; escape(): void; hard(): void; home(): void; busy(): boolean; destroy(): void }
+interface Sample { t: number; x: number; y: number; d: number }
+function sampleAt(h: Sample[], t: number, out: Sample) {
+  const n = h.length
+  const copy = (s: Sample) => { out.x = s.x; out.y = s.y; out.d = s.d }
+  if (n === 0) { out.x = 0; out.y = 0; out.d = 0; return }
+  if (t <= h[0].t) return copy(h[0])
+  for (let i = n - 1; i > 0; i--) {
+    const a = h[i - 1], b = h[i]
+    if (t >= a.t) { if (t >= b.t) return copy(b); const k = (t - a.t) / (b.t - a.t || 1); out.x = lerp(a.x, b.x, k); out.y = lerp(a.y, b.y, k); out.d = lerp(a.d, b.d, k); return }
+  }
+  copy(h[n - 1])
+}
+
+function createRuntime(env: Env): Runtime {
+  const { actor, mover, root, status, pulse, ghosts, form } = env
+  const life = new AbortController()
+  let geo = env.geo()
+  const orb = createOrb(env.canvas, env.isReduced)
+  const vals: Record<string, number> = {}
+  const dirty = new Set<string>()
+  const CH: Record<string, (v: number) => void> = {}
+  let current: AbortController | null = null, idleCtl: AbortController | null = null
+  let busy = false, idling = false, epoch = 0
+  let curX = 0, curY = 0, curD = BALL_SMALL, trailVis = 0, ghostsShown = false
+  const hist: Sample[] = []
+  const tmp: Sample = { t: 0, x: 0, y: 0, d: 0 }
+  const child = () => { const ac = new AbortController(); if (life.signal.aborted) ac.abort(); else life.signal.addEventListener('abort', () => ac.abort(), { once: true }); return ac }
+
+  const renderTrail = () => {
+    if (trailVis <= 0.001) { if (ghostsShown) { ghosts.forEach((g) => (g.style.opacity = '0')); ghostsShown = false } return }
+    ghostsShown = true
+    const now = performance.now()
+    for (let i = 0; i < ghosts.length; i++) {
+      sampleAt(hist, now - (i + 1) * 45, tmp)
+      const k = (tmp.d * (1 - 0.08 * (i + 1))) / 100, g = ghosts[i]
+      g.style.transform = `translate3d(${(tmp.x - curX).toFixed(2)}px,${(tmp.y - curY).toFixed(2)}px,0) translate(-50%,-50%) scale(${k.toFixed(3)})`
+      g.style.opacity = (0.28 * Math.pow(1 - i / 6, 1.5) * trailVis).toFixed(3)
+    }
+  }
+  const applyPath = () => {
+    const u = vals.u ?? 0, H = geo.H
+    curX = bez(u, 0, geo.dir * 0.3 * H, 0)
+    curY = bez(u, H, 0.6 * H, 0) + (vals.yOff ?? 0)
+    mover.style.transform = `translate3d(${curX.toFixed(2)}px,${curY.toFixed(2)}px,0)`
+    const now = performance.now()
+    hist.push({ t: now, x: curX, y: curY, d: curD })
+    while (hist.length > 2 && hist[0].t < now - 500) hist.shift()
+    renderTrail()
+  }
+  ;['oGlow', 'oHalo', 'oPill', 'oBall', 'oGreen', 'oCard', 'oRing', 'oInput', 'oAur', 'gs', 'hOp', 'dotS'].forEach((n) => { CH[n] = (v) => actor.style.setProperty('--' + n, fmt(v)) })
+  ;['w', 'h', 'r'].forEach((n) => { CH[n] = (v) => { actor.style.setProperty('--' + n, fmt(v) + 'px'); if (n === 'w') curD = v } })
+  CH.inScale = (v) => { actor.style.setProperty('--inScale', fmt(v)); form.style.filter = v >= 0.999 ? 'none' : `blur(${fmt((1 - v) * 15)}px)` }
+  CH.sOp = (v) => status.style.setProperty('--sOp', fmt(v))
+  CH.sTy = (v) => status.style.setProperty('--sTy', fmt(v))
+  CH.cHalo = (v) => root.style.setProperty('--oCenter', fmt(v))
+  CH.u = () => applyPath()
+  CH.yOff = () => applyPath()
+  CH.trail = (v) => { trailVis = v; renderTrail() }
+  CH.pulse = (v) => { if (v < 0) { pulse.style.opacity = '0'; return } pulse.style.opacity = fmt(0.5 * (1 - v)); pulse.style.transform = `translate(-50%,-50%) scale(${fmt(1 + v)})` }
+  ORB_KEYS.forEach((name) => { CH['orb.' + name] = (v) => { orb.P[name] = v; if (name === 'alpha') orb.ensure() } })
+  const set = (ch: string, v: number) => { vals[ch] = v; dirty.add(ch) }
+  const flush = () => { dirty.forEach((ch) => CH[ch]?.(vals[ch])); dirty.clear() }
+  const setNow = (ch: string, v: number) => { vals[ch] = v; CH[ch]?.(v) }
+  const resetChannels = () => { setNow('w', geo.pw); for (const ch of Object.keys(INIT)) setNow(ch, INIT[ch]) }
+
+  const play = (tracks: Track[], sig: AbortSignal) => new Promise<void>((res) => {
+    if (sig.aborted) return res()
+    const end = tracks.reduce((m, k) => Math.max(m, k.t1), 0)
+    const done = new Set<Track>()
+    let raf = 0, t = 0, last = performance.now()
+    const onAbort = () => { cancelAnimationFrame(raf); res() }
+    const finish = () => { sig.removeEventListener('abort', onAbort); res() }
+    const step = (now: number) => {
+      t += Math.max(0, Math.min(100, now - last)); last = now
+      for (const k of tracks) {
+        if (done.has(k) || t < k.t0) continue
+        const p = Math.min(1, (t - k.t0) / Math.max(1, k.t1 - k.t0))
+        set(k.ch, k.from + (k.to - k.from) * k.ease(p))
+        if (p === 1) done.add(k)
+      }
+      flush()
+      if (t >= end) finish(); else raf = requestAnimationFrame(step)
+    }
+    sig.addEventListener('abort', onAbort, { once: true })
+    raf = requestAnimationFrame(step)
+  })
+
+  const labelLoop = async (sig: AbortSignal, ctl: { stop: boolean }) => {
+    let i = 0
+    for (;;) {
+      await sleep(1700, sig)
+      if (sig.aborted || ctl.stop) return
+      i = (i + 1) % 4
+      orb.P.prog = i
+      env.ui.swapLabel(env.copy().labels[i])
+    }
+  }
+
+  const run = async (text: string, sig: AbortSignal, ask: (t: string) => Promise<boolean>, minThink: number) => {
+    const reduced = env.isReduced()
+    const go = async (tracks: Track[]) => { await play(tracks, sig); if (sig.aborted) throw ABORT }
+    try {
+      env.ui.setPhase('launch')
+      hist.length = 0
+      // ask at once: the AI works while the pill turns into the orb
+      const pending = Promise.resolve().then(() => ask(text)).then((v) => v === true, () => false)
+      if (!reduced) {
+        await go(launchTracks(geo))
+        setNow('r', ORB_D / 2)
+        env.ui.setPhase('assemble')
+        await go(ASSEMBLE)
+      } else {
+        await go(R_OUT)
+        setNow('u', 1); setNow('w', ORB_D); setNow('h', ORB_D); setNow('r', ORB_D / 2); setNow('sTy', 0); setNow('orb.k', 1); setNow('orb.spin', 0)
+        env.ui.setPhase('assemble')
+        await go(R_IN)
+      }
+      env.ui.setPhase('think')
+      env.ui.live(env.copy().labels[0])
+      const ctl = { stop: false }
+      void labelLoop(sig, ctl)
+      const t0 = performance.now()
+      const ok = await abortable(pending, sig)
+      if (sig.aborted) throw ABORT
+      await sleep(minThink - (performance.now() - t0), sig)
+      ctl.stop = true
+      if (sig.aborted) throw ABORT
+      if (!ok) {
+        // no answer: amber dots, then back to the pill (the page says why)
+        env.ui.swapLabel('…')
+        await go(FAIL)
+        await sleep(500, sig)
+        if (sig.aborted) throw ABORT
+        busy = true; void toIdle('esc', true)
+        return
+      }
+      env.ui.setPhase('resolve')
+      env.ui.swapLabel(env.copy().done)
+      if (!reduced) {
+        await go(RESOLVE)
+        env.ui.setPhase('condense')
+        await go(CONDENSE)
+        env.ui.setPhase('unfold')
+        await go(unfoldTracks(geo))
+      } else {
+        await go(R_RESOLVE)
+        await sleep(350, sig)
+        if (sig.aborted) throw ABORT
+        env.ui.setPhase('condense')
+        setNow('gs', 1)
+        await go(R_CONDENSE)
+        env.ui.setPhase('unfold')
+        setNow('w', geo.cw); setNow('h', CARD_H); setNow('r', 20); setNow('dotS', 1)
+        await go(R_CARD)
+      }
+      env.ui.setPhase('answered')
+      env.ui.focusAnswer()
+    } catch (e) {
+      if (e === ABORT) return
+      hard()
+    }
+  }
+
+  const toIdle = async (kind: 'reset' | 'esc', keepText = false) => {
+    if (idling) return
+    idling = true
+    const my = ++epoch
+    const ac = child()
+    idleCtl = ac
+    const sig = ac.signal
+    const outMs = kind === 'reset' ? 240 : 200, inMs = kind === 'reset' ? 420 : 200
+    env.ui.setPhase('reset')
+    const out: Track[] = [T('cHalo', vals.cHalo ?? 0, 0, 0, outMs, E.out)]
+    for (const ch of FADE) { const v = vals[ch] ?? 0; if (v > 0.001) out.push(T(ch, v, 0, 0, outMs, E.out)) }
+    await play(out, sig)
+    if (sig.aborted || my !== epoch) return
+    setNow('pulse', -1)
+    env.ui.resetLabel()
+    if (!keepText) env.ui.clearInput()
+    orb.reset()
+    hist.length = 0
+    geo = env.geo()
+    resetChannels()
+    const pillCh = ['oPill', 'oInput', 'oGlow', 'oAur', 'oRing']
+    pillCh.forEach((ch) => setNow(ch, 0))
+    setNow('yOff', kind === 'reset' ? 8 : 0)
+    const inn: Track[] = pillCh.map((ch) => T(ch, 0, 1, 0, inMs, E.out))
+    if (kind === 'reset') inn.push(T('yOff', 8, 0, 0, inMs, E.out))
+    await play(inn, sig)
+    if (sig.aborted || my !== epoch) return
+    resetChannels()
+    current = null; idleCtl = null; busy = false; idling = false
+    env.ui.lock(false)
+    env.ui.setPhase('idle')
+    env.ui.idleReady()
+  }
+
+  function hard() {
+    epoch++
+    current?.abort(); current = null
+    idleCtl?.abort(); idleCtl = null
+    orb.reset(); hist.length = 0
+    env.ui.resetLabel()
+    geo = env.geo()
+    resetChannels()
+    setNow('pulse', -1)
+    busy = false; idling = false
+    env.ui.lock(false)
+    env.ui.setPhase('idle')
+  }
+
+  resetChannels()
+  return {
+    start(text, ask, minThink) {
+      if (busy) return false
+      busy = true
+      const dir = -geo.dir
+      geo = { ...env.geo(), dir }
+      orb.reset()
+      setNow('u', 0)
+      const ac = child()
+      current = ac
+      env.ui.lock(true)
+      void run(text, ac.signal, ask, minThink)
+      return true
+    },
+    escape() { if (!busy || idling) return; current?.abort(); void toIdle('esc', true) },
+    reset() { if (!busy || idling) return; void toIdle('reset') },
+    hard,
+    home() { if (busy) return; geo = { ...env.geo(), dir: geo.dir }; setNow('w', geo.pw); setNow('u', 0) },
+    busy: () => busy,
+    destroy() { life.abort(); orb.destroy() },
+  }
+}
+
+/* ─────────── words of the answer appear one by one (Thai has no spaces: split with the browser's word breaker) ─────────── */
+export function splitWords(text: string, lang: string): string[] {
+  const Seg = (Intl as unknown as { Segmenter?: new (l: string, o: { granularity: 'word' }) => { segment(s: string): Iterable<{ segment: string }> } }).Segmenter
+  if (!Seg) return text.split(/(\s+)/).filter(Boolean)
+  return Array.from(new Seg(lang, { granularity: 'word' }).segment(text), (s) => s.segment)
+}
+export function RevealText({ text, lang }: { text: string; lang: string }) {
+  const lines = text.split('\n')
+  let i = 0
+  const parts = lines.map((l) => splitWords(l, lang))
+  const total = parts.reduce((n, p) => n + p.length, 0)
+  const stagger = total > 1 ? Math.min(28, 1400 / total) : 0 // the whole answer appears within about 1.5 s
+  return <>{parts.map((ws, li) => (
+    <Fragment key={li}>{li > 0 && <br />}{ws.map((w, wi) => <span key={wi} className="mo-w" style={{ animationDelay: `${Math.round(i++ * stagger)}ms` }}>{w}</span>)}</Fragment>
+  ))}</>
+}
+
+/* ─────────── component ─────────── */
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
+const STAGE_H = 440, ORB_Y = STAGE_H * 0.4 // the orb's centre; the pill sits 70 px above the stage's bottom
+
+export default function MorphOrb(props: MorphOrbProps) {
+  const { copy, children, badge, disabled = false, maxLength = 600 } = props
+  const [phase, setPhaseState] = useState<Phase>('idle')
+  const [value, setValue] = useState('')
+  const [still] = useState(() => typeof window === 'undefined' || motionOff()) // the Settings motion switch: the idle glow loops only when on
+  const [lbl, setLbl] = useState<{ cur: string; prev: string | null; n: number }>({ cur: copy.labels[0], prev: null, n: 0 })
+  const rootRef = useRef<HTMLDivElement>(null), moverRef = useRef<HTMLDivElement>(null), actorRef = useRef<HTMLDivElement>(null)
+  const formRef = useRef<HTMLFormElement>(null), inputRef = useRef<HTMLInputElement>(null), canvasRef = useRef<HTMLCanvasElement>(null)
+  const pulseRef = useRef<HTMLDivElement>(null), statusRef = useRef<HTMLDivElement>(null), answerRef = useRef<HTMLDivElement>(null), liveRef = useRef<HTMLDivElement>(null)
+  const ghostRefs = useRef<(HTMLSpanElement | null)[]>([])
+  const propsRef = useRef(props)
+  propsRef.current = props
+  const phaseRef = useRef<Phase>('idle')
+  const reducedRef = useRef(false)
+  const rtRef = useRef<Runtime | null>(null)
+  const timers = useRef<{ typing?: number; shake?: number }>({})
+
+  useIsoLayoutEffect(() => {
+    const root = rootRef.current, mover = moverRef.current, actor = actorRef.current, canvas = canvasRef.current
+    const pulse = pulseRef.current, status = statusRef.current, form = formRef.current
+    const ghosts = ghostRefs.current.filter((g): g is HTMLSpanElement => !!g)
+    if (!root || !mover || !actor || !canvas || !pulse || !status || !form) return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    reducedRef.current = mq.matches
+    const onMq = (e: MediaQueryListEvent) => { reducedRef.current = e.matches }
+    mq.addEventListener('change', onMq)
+    const geo = (): Geo => {
+      const w = root.clientWidth || 600
+      return { pw: Math.min(560, w - 32), cw: Math.min(720, w - 32), H: STAGE_H - 70 - ORB_Y, dir: -1 }
+    }
+    const rt = createRuntime({
+      root, mover, actor, form, ghosts, canvas, pulse, status, geo,
+      isReduced: () => reducedRef.current || !!propsRef.current.lite,
+      copy: () => propsRef.current.copy,
+      ui: {
+        setPhase: (p) => { phaseRef.current = p; setPhaseState(p) },
+        swapLabel: (name) => setLbl((l) => (l.cur === name ? l : { cur: name, prev: l.cur, n: l.n + 1 })),
+        resetLabel: () => setLbl((l) => ({ cur: propsRef.current.copy.labels[0], prev: null, n: l.n + 1 })),
+        clearInput: () => setValue(''),
+        live: (s) => { if (liveRef.current) liveRef.current.textContent = s },
+        lock: (on) => { form.toggleAttribute('inert', on) },
+        idleReady: () => { inputRef.current?.focus({ preventScroll: true }) },
+        focusAnswer: () => { answerRef.current?.focus({ preventScroll: true }) },
+      },
+    })
+    rtRef.current = rt
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && phaseRef.current !== 'idle' && phaseRef.current !== 'reset' && phaseRef.current !== 'answered') { e.preventDefault(); rt.escape() } }
+    const ro = new ResizeObserver(() => { if (phaseRef.current === 'idle' && !rt.busy()) rt.home() })
+    ro.observe(root)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey); ro.disconnect(); mq.removeEventListener('change', onMq)
+      window.clearTimeout(timers.current.typing); window.clearTimeout(timers.current.shake)
+      rt.destroy(); rtRef.current = null
+    }
+  }, [])
+
+  const ask = (text: string) => {
+    const rt = rtRef.current
+    if (!rt || rt.busy() || phaseRef.current !== 'idle' || propsRef.current.disabled) return
+    rt.start(text, (t) => propsRef.current.onSubmit(t), propsRef.current.minThinkMs ?? 2600)
+  }
+  // example questions: fill the pill and ask
+  useEffect(() => {
+    const p = props.preset
+    if (!p || phaseRef.current !== 'idle') return
+    setValue(p.text)
+    requestAnimationFrame(() => ask(p.text))
+  }, [props.preset?.nonce]) // eslint-disable-line react-hooks/exhaustive-deps
+  // the status words follow the page language
+  useEffect(() => { setLbl((l) => ({ ...l, cur: phaseRef.current === 'idle' ? copy.labels[0] : l.cur })) }, [copy.labels])
+
+  const shake = () => {
+    const a = actorRef.current
+    if (!a) return
+    a.removeAttribute('data-shake'); void a.offsetWidth; a.setAttribute('data-shake', '')
+    window.clearTimeout(timers.current.shake)
+    timers.current.shake = window.setTimeout(() => a.removeAttribute('data-shake'), 260)
+  }
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    const text = value.trim()
+    if (text.length < 4) { shake(); return }
+    ask(text)
+  }
+  const onReset = () => { if (phaseRef.current === 'answered') { propsRef.current.onReset?.(); rtRef.current?.reset() } }
+  const ready = value.trim().length >= 4 && !disabled
+  const answered = phase === 'answered'
+  const labelInner = (name: string) => name === copy.done ? <span className="mo-lab-done">{name}</span> : <><span>{name}</span><span className="mo-dots" aria-hidden="true"><i /><i /><i /></span></>
+
+  return (
+    <div className={`mo-root${still ? '' : ' is-on'}`} data-phase={phase} ref={rootRef} style={{ minHeight: STAGE_H }}>
+      <div className="mo-bg" aria-hidden="true" />
+      <div className="mo-halo" aria-hidden="true" style={{ top: ORB_Y }} />
+      <div className="mo-mover" ref={moverRef} style={{ top: ORB_Y, visibility: answered ? 'hidden' : undefined }}>
+        {Array.from({ length: 6 }).map((_, i) => <span key={i} className="mo-trail" aria-hidden="true" ref={(el) => { ghostRefs.current[i] = el }} />)}
+        <div className="mo-actor" ref={actorRef}>
+          <div className="mo-underglow" aria-hidden="true" />
+          <div className="mo-halo-green" aria-hidden="true" />
+          <div className="mo-surface" aria-hidden="true"><div className="mo-aurora"><i /><i /><i /><i /></div></div>
+          <div className="mo-ball" aria-hidden="true" />
+          <div className="mo-green" aria-hidden="true" />
+          <div className="mo-card" aria-hidden="true"><div className="mo-a-head"><i className="mo-a-dot" />{copy.answerTitle}</div></div>
+          <div className="mo-ring" aria-hidden="true" />
+          <form className="mo-input" ref={formRef} onSubmit={onSubmit} autoComplete="off">
+            <svg className="mo-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10 3.5l1.7 4.8 4.8 1.7-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7L10 3.5z" /><path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" />
+            </svg>
+            <input ref={inputRef} className="mo-field" type="text" value={value} maxLength={maxLength} placeholder={copy.placeholder} aria-label={copy.field} disabled={disabled} spellCheck={false}
+              onChange={(e) => {
+                setValue(e.target.value)
+                const a = actorRef.current
+                if (a) { a.setAttribute('data-typing', ''); window.clearTimeout(timers.current.typing); timers.current.typing = window.setTimeout(() => a.removeAttribute('data-typing'), 300) }
+              }} />
+            <button type="submit" className="mo-send" aria-label={copy.send} data-ready={ready ? '' : undefined} disabled={disabled}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="M5.5 11.5L12 5l6.5 6.5" /></svg>
+            </button>
+          </form>
+          <canvas className="mo-orb" ref={canvasRef} aria-hidden="true" />
+          <div className="mo-pulse" ref={pulseRef} aria-hidden="true" />
+        </div>
+      </div>
+      <div className="mo-status" ref={statusRef} aria-hidden="true" style={{ top: ORB_Y + 92 }}>
+        {lbl.prev !== null && <span key={'p' + lbl.n} className="mo-lab mo-out">{labelInner(lbl.prev)}</span>}
+        <span key={'c' + lbl.n} className="mo-lab mo-in">{labelInner(lbl.cur)}</span>
+      </div>
+      {/* the answer: the unfolded card grows into the full answer (in the page flow) */}
+      {answered && (
+        <div className="mo-answer-wrap" style={{ paddingTop: ORB_Y - CARD_H / 2 }}>
+          <div className="mo-answer" ref={answerRef} tabIndex={-1} role="group" aria-label={copy.answerTitle}>
+            <div className="mo-a-head"><i className="mo-a-dot" aria-hidden="true" />{copy.answerTitle}{badge}</div>
+            <div className="mo-a-body">{children}</div>
+          </div>
+          <button type="button" className="mo-reset" onClick={onReset}>{copy.reset}</button>
+        </div>
+      )}
+      <div className="mo-live sr-only" ref={liveRef} role="status" aria-live="polite" />
+    </div>
+  )
+}

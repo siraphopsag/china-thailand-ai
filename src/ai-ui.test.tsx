@@ -10,6 +10,7 @@ import { AuthProvider } from './auth'
 import { seedState } from './domain/match/seed'
 import { ai } from './locales/ai'
 import { AiCheckResult, AskPage } from './pages/ask'
+import { RevealText, splitWords } from './components/morph-orb'
 import { PreparePage } from './pages/match'
 
 function html(node: ReactNode): string {
@@ -42,11 +43,18 @@ describe('AI on screen', () => {
     const out = html(<AskPage />)
     expect(out).toContain('ผู้ช่วยกฎหมาย AI')
     expect(out).toContain('เข้าสู่ระบบเพื่อใช้ผู้ช่วย AI')
-    expect(out).toMatch(/<textarea[^>]*disabled/)
+    expect(out).toMatch(/<input[^>]*class="mo-field"[^>]*disabled/) // the pill of the thinking-orb stage
+    expect(out).toContain('mo-root') // the dark stage
     expect(out).toContain('อย่าใส่ชื่อ เลขบัตร เบอร์โทร')
   })
   it('is the first card under "Prepare", and the AI key never reaches the browser code', () => {
     expect(html(<PreparePage />)).toContain('href="/ask"')
     for (const f of ['src/ai/client.ts', 'src/pages/ask.tsx', 'src/pages/hire.tsx']) expect(readFileSync(f, 'utf8')).not.toMatch(/ANTHROPIC|anthropic-ai/)
+  })
+  it('the answer appears word by word, Thai words split by the browser, line breaks kept', () => {
+    expect(splitWords('คนจีนต้องมีใบอนุญาตทำงาน', 'th').length).toBeGreaterThan(3)
+    const out = html(<RevealText text={'บรรทัดแรก\n• ข้อสอง'} lang="th" />)
+    expect(out).toContain('<br/>')
+    expect((out.match(/class="mo-w"/g) ?? []).length).toBeGreaterThan(3)
   })
 })
