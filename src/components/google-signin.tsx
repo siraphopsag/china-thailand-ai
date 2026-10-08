@@ -5,6 +5,8 @@
  * Needs VITE_GOOGLE_CLIENT_ID (the public client ID of the same Google OAuth client Supabase uses, not a secret) and the site's
  * addresses under "Authorized JavaScript origins" in Google Cloud (docs/setup-login.md, step 19).
  * Google's script is loaded only on the sign-in pages. If it cannot load (no client ID, Google blocked, offline), the old button shows.
+ * Computers: Google's popup. Phones and tablets: Google's page and back (the popup stayed white on an iPhone) — Google posts the
+ * token to api/google.ts, which returns to /login#gcred=…; the sign-in page picks it up (takeGisReturn) and signs in.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
@@ -17,12 +19,28 @@ declare global { interface Window { google?: { accounts?: { id?: IdApi } } } }
 export const GOOGLE_CLIENT_ID = ((import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? '').trim()
 export const googleClientOk = (id: string) => /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(id)
 const SRC = 'https://accounts.google.com/gsi/client'
-/**
- * Phones and tablets keep the old redirect button (owner, Oct 2026: on an iPhone Google's popup stayed white and sign-in failed);
- * Google's button is used with a mouse (computers), where it was tested.
- */
+/** phones and tablets: Google's page and back instead of the popup (owner, Oct 2026: on an iPhone the popup stayed white) */
 const touchDevice = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
-const gisOn = () => googleClientOk(GOOGLE_CLIENT_ID) && !touchDevice()
+const gisOn = () => googleClientOk(GOOGLE_CLIENT_ID)
+
+/* the round trip on phones: the raw nonce waits in this tab while the person is on Google's page */
+const NONCE_KEY = 'call.gis.nonce'
+type GisReturn = { token: string; nonce: string } | 'error' | null
+let gisReturn: GisReturn | undefined
+/** back from Google's page (/login#gcred=… or ?gerr=1): the token and this tab's nonce, read once; the address is cleaned at once */
+export function takeGisReturn(): GisReturn {
+  if (gisReturn !== undefined) return gisReturn
+  if (typeof window === 'undefined') return null
+  const h = new URLSearchParams(window.location.hash.slice(1)), q = new URLSearchParams(window.location.search)
+  const token = h.get('gcred'), err = q.has('gerr')
+  if (!token && !err) return (gisReturn = null)
+  q.delete('gerr')
+  const qs = q.toString()
+  window.history.replaceState(window.history.state, '', window.location.pathname + (qs ? `?${qs}` : ''))
+  let nonce = ''
+  try { nonce = sessionStorage.getItem(NONCE_KEY) ?? ''; sessionStorage.removeItem(NONCE_KEY) } catch { /* storage blocked */ }
+  return (gisReturn = token && nonce ? { token, nonce } : 'error')
+}
 
 let scriptP: Promise<IdApi> | null = null
 function loadGis(): Promise<IdApi> {
@@ -75,8 +93,11 @@ export function GoogleIdButton({ lang, onBefore, onToken, fallback }: { lang: 't
     const setup = async () => {
       const [api, nonce] = await Promise.all([loadGis(), makeNonce()])
       if (!live || !box.current) return
+      const redirect = touchDevice()
+      if (redirect) { try { sessionStorage.setItem(NONCE_KEY, nonce.raw) } catch { throw new Error('storage') } } // without it the trip cannot finish
       api.initialize({
-        client_id: GOOGLE_CLIENT_ID, nonce: nonce.hashed, ux_mode: 'popup', auto_select: false, itp_support: true, use_fedcm_for_button: true,
+        client_id: GOOGLE_CLIENT_ID, nonce: nonce.hashed, auto_select: false, itp_support: true,
+        ...(redirect ? { ux_mode: 'redirect', login_uri: window.location.origin + '/api/google' } : { ux_mode: 'popup', use_fedcm_for_button: true }),
         callback: (r: { credential?: string }) => {
           if (!r.credential) return
           cb.current.onToken(r.credential, nonce.raw)

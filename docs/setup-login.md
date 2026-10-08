@@ -170,6 +170,9 @@ Supabase แบบฟรีส่งอีเมลได้แค่คนใ�
 4. Supabase → **Authentication → Sign In / Providers → Google** → ดูว่าช่อง **Client ID** เป็นค่าเดียวกัน · ปล่อย **Skip nonce checks** ไว้ **ปิด**
 5. ลอง: หน้าเข้าสู่ระบบจะเห็นปุ่ม Google แบบใหม่ (ของ Google) → กด → หน้าต่าง Google ต้องไม่มีคำว่า supabase.co
 6. ไม่ใส่ `VITE_GOOGLE_CLIENT_ID` หรือ Google โหลดไม่ได้ = ปุ่มเดิมแสดงแทน (ใช้ได้เหมือนเดิม)
+7. **มือถือ** (ไปหน้า Google แล้วกลับมา แทนหน้าต่างแยกที่ค้างขาวบน iPhone): client เดิม → **Authorized redirect URIs** → **Add URI** เพิ่ม 2 อัน (ของเดิมไม่ต้องลบ) → **Save**
+   - `https://china-thailand-ai.vercel.app/api/google`
+   - `https://china-thailand-ai-git-poc-board-boss-608c.vercel.app/api/google`
 
 ---
 

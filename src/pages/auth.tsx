@@ -4,7 +4,7 @@ import { NavLink, go } from '../store'
 import { authDetail, rememberNext, takeAuthError, useAuth, type AuthResult } from '../auth'
 import { Icon, type IconName } from '../components/icons'
 import { Warn } from '../components/ui'
-import { GoogleIdButton } from '../components/google-signin'
+import { GoogleIdButton, takeGisReturn } from '../components/google-signin'
 import { useFieldError, type FieldError } from './match'
 
 /*
@@ -61,6 +61,7 @@ function Field({ id, label, icon, value, onChange, fe, type = 'text', autoComple
   )
 }
 
+let gisHandled = false
 function GoogleButton({ next }: { next: string }) {
   const { t, lang } = useI18n()
   const { signInGoogle, signInGoogleToken } = useAuth()
@@ -68,6 +69,17 @@ function GoogleButton({ next }: { next: string }) {
   const [err, setErr] = useState<AuthResult | null>(null)
   const [detail, setDetail] = useState('')
   const [tokenFailed, setTokenFailed] = useState(false)
+  // back from Google's page (phones): finish the sign-in here; on a problem, say why and offer the old button
+  const [ret] = useState(takeGisReturn)
+  useEffect(() => {
+    if (!ret || gisHandled) return
+    gisHandled = true
+    if (ret === 'error') { setErr('error'); setDetail('google · no token'); setTokenFailed(true); return }
+    void (async () => {
+      setBusy(true); const r = await signInGoogleToken(ret.token, ret.nonce); setBusy(false)
+      if (r !== 'ok') { setErr(r); setDetail(authDetail()); setTokenFailed(true) }
+    })()
+  }, [ret, signInGoogleToken])
   // Google's own button when it is set up (Google then shows our site, not the Supabase address); otherwise the redirect button
   const redirectButton = (
     <button type="button" className="btn-ghost w-full justify-center" disabled={busy}
