@@ -542,6 +542,78 @@ function drawStill(canvas: HTMLCanvasElement, light: boolean) {
 }
 const isLightTheme = () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
 
+/** the light theme, followed live (the stage swaps light dots for dark ones) */
+export function useLightTheme() {
+  const [light, setLight] = useState(false)
+  useEffect(() => {
+    const read = () => setLight(isLightTheme())
+    read()
+    const mo = new MutationObserver(read)
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => mo.disconnect()
+  }, [])
+  return light
+}
+
+/**
+ * The small thinking orb for the AI check before posting (owner, Oct 2026: "ใช้แบบใหม่"): a turning sphere of dots in a small stage,
+ * the five kinds of issue ticked off one by one while the AI reads the post (a sign of progress — the AI checks all five at once);
+ * when the result arrives the dots turn green and onDone fires, then the page shows the result.
+ */
+export function ThinkingOrb({ chips, label, doneText, done, onDone, lite }: { chips: string[]; label: (chip: string) => string; doneText: string; done: boolean; onDone: () => void; lite?: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const light = useLightTheme()
+  const [step, setStep] = useState(0)
+  const doneRef = useRef(onDone)
+  doneRef.current = onDone
+  const orbRef = useRef<ReturnType<typeof createOrb> | null>(null)
+  const reduced = () => !!lite || (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const tween = (to: Partial<Record<'k' | 'alpha' | 'spin' | 'sweep' | 'gain' | 'floor', number>>, ms: number) => new Promise<void>((res) => {
+    const o = orbRef.current
+    if (!o) return res()
+    const from = Object.fromEntries(Object.keys(to).map((k) => [k, o.P[k as keyof OrbParams] as number]))
+    const t0 = performance.now()
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / Math.max(1, ms)), e = E.out(p)
+      for (const [k, v] of Object.entries(to)) (o.P as unknown as Record<string, number>)[k] = from[k] + ((v as number) - from[k]) * e
+      o.ensure()
+      if (p < 1) requestAnimationFrame(tick); else res()
+    }
+    requestAnimationFrame(tick)
+  })
+  useEffect(() => {
+    const c = canvasRef.current
+    if (!c) return
+    const o = createOrb(c, reduced, isLightTheme)
+    orbRef.current = o
+    void tween({ k: 1, alpha: 1, spin: 0.9 }, reduced() ? 1 : 700)
+    return () => { o.destroy(); orbRef.current = null }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (done) return
+    const id = window.setInterval(() => setStep((s) => Math.min(chips.length - 1, s + 1)), 1600)
+    return () => window.clearInterval(id)
+  }, [done, chips.length])
+  useEffect(() => { if (orbRef.current) orbRef.current.P.prog = step % 4 }, [step])
+  useEffect(() => {
+    if (!done) return
+    let live = true
+    void (async () => {
+      await tween({ sweep: 1, spin: 0.3, gain: 0, floor: 0.95 }, reduced() ? 1 : 700)
+      await new Promise((r) => setTimeout(r, reduced() ? 50 : 300))
+      if (live) doneRef.current()
+    })()
+    return () => { live = false }
+  }, [done]) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className={`mo-mini${light ? ' is-light' : ''}`} role="status" aria-live="polite">
+      <canvas ref={canvasRef} className="mo-mini-orb" aria-hidden="true" />
+      <p className={done ? 'mo-mini-label is-done' : 'mo-mini-label'}>{done ? doneText : <>{label(chips[step])}<span className="mo-dots" aria-hidden="true"><i /><i /><i /></span></>}</p>
+      <div className="mo-mini-chips">{chips.map((c, i) => <span key={c} className={done || i < step ? 'is-done' : i === step ? 'is-now' : ''}>{done || i < step ? '✓ ' : ''}{c}</span>)}</div>
+    </div>
+  )
+}
+
 /* ─────────── component: a chat — the question card (left on computers, at the bottom on phones) and the conversation ─────────── */
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
@@ -575,7 +647,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
   const [flight, setFlight] = useState<number | null>(null) // the turn whose answer is still on its way (orb shown in its place)
   const [value, setValue] = useState('')
   const [still] = useState(() => typeof window === 'undefined' || motionOff())
-  const [light, setLight] = useState(false)
+  const light = useLightTheme()
   const [lbl, setLbl] = useState<{ cur: string; prev: string | null; n: number }>({ cur: copy.labels[0], prev: null, n: 0 })
   const wrapRef = useRef<HTMLDivElement>(null), slotRef = useRef<HTMLDivElement>(null), threadRef = useRef<HTMLDivElement>(null)
   const moverRef = useRef<HTMLDivElement>(null), actorRef = useRef<HTMLDivElement>(null), stillRef = useRef<HTMLCanvasElement>(null)
@@ -592,13 +664,6 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
   const nextId = useRef(1)
 
   // the theme decides the stage: dark dots on light, light dots on dark (follows the theme switch live)
-  useEffect(() => {
-    const read = () => setLight(isLightTheme())
-    read()
-    const mo = new MutationObserver(read)
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
-    return () => mo.disconnect()
-  }, [])
   useEffect(() => { if (stillRef.current) drawStill(stillRef.current, light) }, [light, turns.length])
 
   useIsoLayoutEffect(() => {

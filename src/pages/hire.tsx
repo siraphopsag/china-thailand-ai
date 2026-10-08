@@ -9,6 +9,8 @@ import { useAuth } from '../auth'
 import { aiCheck } from '../ai/client'
 import type { AiCheck, AiResponse } from '../ai/spec'
 import { AiCheckResult } from './ask'
+import { ThinkingOrb } from '../components/morph-orb'
+import { useLite } from '../theme'
 import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MY_EMPLOYER, type Benefit, type Currency, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Skill } from '../domain/match/types'
 import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
@@ -67,6 +69,8 @@ export function HirePage() {
   // the AI check (null = not asked; 'busy' = waiting); a high-risk result needs the employer's tick before posting
   const [aiRes, setAiRes] = useState<AiResponse<AiCheck> | 'busy' | null>(null), [ack, setAck] = useState(false)
   const aiRun = useRef(0)
+  const lite = useLite()
+  const [shown, setShown] = useState(false) // the orb has turned green: show the result
   const [pending, setPending] = useState<PostInput | null>(null)
   const [posted, setPosted] = useState<Post | null>(null)
   const fe = useFieldError()
@@ -113,19 +117,22 @@ export function HirePage() {
     if (!editing && !canPost(st, limitNow)) { setStage('package'); return }
     // editing without changing the start date: it is checked against the posting day, so a post whose start has passed can still be fixed
     const r = precheck(i, editing && editing.startDate && i.startDate === editing.startDate ? editing.createdAt : new Date(now).toISOString())
-    setPending(i); setCheck(r); setAiRes(null); setAck(false)
+    setPending(i); setCheck(r); setAiRes(null); setAck(false); setShown(false)
     // rule errors (e.g. a phone number in the details) must be fixed first; otherwise the AI reads the post when it can
-    if (!r.errors.length && status === 'signedIn' && online !== false) {
+    // local development only (?orbdemo): try the AI check without an account or an AI key — not in the built site
+    const demo = import.meta.env.DEV && new URLSearchParams(location.search).has('orbdemo')
+    if (!r.errors.length && ((status === 'signedIn' && online !== false) || demo)) {
       const run = ++aiRun.current
       setAiRes('busy'); setStage('check')
-      const res = await aiCheck(i, lang)
+      const res: AiResponse<AiCheck> = demo ? await new Promise((ok) => setTimeout(() => ok({ ok: true, left: 18, result: { verdict: 'review', summary: 'ประกาศนี้ยังขาดข้อมูลบางส่วน', flags: [{ category: 'missing_info', severity: 'low', quote: '', explanation: 'ยังไม่ระบุเวลาทำงานและประเภทสัญญาจ้าง', suggestion: 'เพิ่มเวลาทำงานต่อวันและวันหยุด', lawIds: [] }] } }), 6000)) : await aiCheck(i, lang)
       if (run === aiRun.current) setAiRes(res)
       return
     }
     setStage(r.errors.length || r.warnings.length ? 'check' : 'confirm')
   }
   const closeCheck = () => { aiRun.current++; setStage(null); if (check?.errors[0]) showProblem(check.errors[0]) }
-  const aiOk = aiRes && aiRes !== 'busy' && aiRes.ok ? aiRes : null
+  const aiOk = aiRes && aiRes !== 'busy' && aiRes.ok && shown ? aiRes : null
+  const orbOn = aiRes === 'busy' || (aiRes !== null && aiRes.ok && !shown) // still reading, or turning green
   const confirm = async () => {
     if (!pending || saving) return
     setSaving(true)
@@ -271,18 +278,18 @@ export function HirePage() {
       {/* 1) pre-check: the real AI when available, otherwise the basic rules (labelled as such) */}
       <Modal open={stage === 'check'} onClose={closeCheck} wide>{(id) => check && (<>
         <div className="flex flex-wrap items-center gap-2"><h2 id={id} className="h2">{t('m.chk.title')}</h2><span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ai" size={12} />{t(aiRes && (aiRes === 'busy' || aiRes.ok) ? 'ai.chk.by' : 'm.chk.sim')}</span></div>
-        {aiRes === 'busy' ? <p role="status" className="text-sm text-muted flex items-center gap-2 py-6 justify-center"><span className="ai-spin" aria-hidden />{t('ai.chk.loading')}</p>
-          : aiOk ? <AiCheckResult res={aiOk.result} left={aiOk.left} />
+        {orbOn ? <><ThinkingOrb lite={lite} done={aiRes !== 'busy'} onDone={() => setShown(true)} chips={[t('ai.cat.scam'), t('ai.cat.trafficking'), t('ai.cat.labour_law'), t('ai.cat.discrimination'), t('ai.cat.missing_info')]} label={(c) => t('ai.chk.now', { c })} doneText={t('ai.chk.allDone')} /><p className="text-xs text-muted text-center">{t('ai.chk.wait')}</p></>
+          : aiOk ? <><p className="mo-checked"><span className="mo-checked-ball" aria-hidden="true" />{t('ai.chk.allDone')}</p><AiCheckResult res={aiOk.result} left={aiOk.left} /></>
           : <p className="text-xs text-muted">{aiRes && !aiRes.ok ? t('ai.chk.fallback', { why: t(`ai.why.${aiRes.reason}` as never) }) : t('m.chk.simNote')}</p>}
-        {!aiOk && aiRes !== 'busy' && check.errors.length === 0 && check.warnings.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')}</p>}
+        {!aiOk && !orbOn && check.errors.length === 0 && check.warnings.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')}</p>}
         {aiOk?.result.verdict === 'high_risk' && <label className="flex items-start gap-2 text-sm font-medium rounded-lg border border-danger-line bg-danger-bg text-danger-fg p-3"><input type="checkbox" className="mt-1" checked={ack} onChange={(e) => setAck(e.target.checked)} />{t('ai.chk.ack')}</label>}
-        {!aiOk && aiRes !== 'busy' && check.errors.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-danger-fg flex items-center gap-1.5"><Icon name="alert" size={16} />{t('m.chk.errors')}</p>
+        {!aiOk && !orbOn && check.errors.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-danger-fg flex items-center gap-1.5"><Icon name="alert" size={16} />{t('m.chk.errors')}</p>
           <ul className="list-disc pl-6 text-sm space-y-1">{check.errors.map((e) => <li key={e}>{N.problem(e)}</li>)}</ul></div>}
-        {!aiOk && aiRes !== 'busy' && check.warnings.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-warn-fg flex items-center gap-1.5"><Icon name="warn" size={16} />{t('m.chk.warnings')}</p>
+        {!aiOk && !orbOn && check.warnings.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-warn-fg flex items-center gap-1.5"><Icon name="warn" size={16} />{t('m.chk.warnings')}</p>
           <ul className="list-disc pl-6 text-sm space-y-1">{check.warnings.map((w) => <li key={w}>{t(`m.chk.w.${w}` as never)}</li>)}</ul></div>}
         <div className="flex flex-wrap justify-end gap-2 pt-1">
           <button type="button" className="btn-ghost" onClick={closeCheck}>{t('m.chk.fix')}</button>
-          {check.errors.length === 0 && aiRes !== 'busy' && <button type="button" className="btn-primary" disabled={aiOk?.result.verdict === 'high_risk' && !ack} onClick={() => setStage('confirm')}>{t('m.chk.continue')}<Icon name="next" size={16} /></button>}
+          {check.errors.length === 0 && !orbOn && <button type="button" className="btn-primary" disabled={aiOk?.result.verdict === 'high_risk' && !ack} onClick={() => setStage('confirm')}>{t('m.chk.continue')}<Icon name="next" size={16} /></button>}
         </div></>)}</Modal>
 
       {/* 2) are you sure? */}

@@ -18,6 +18,9 @@ export const ai = {
   // ---------- A) the check before posting
   'ai.chk.by': ['ตรวจโดย AI', 'AI 检查', 'Checked by AI'],
   'ai.chk.loading': ['AI กำลังอ่านประกาศของคุณ… (ประมาณ 5–20 วินาที)', 'AI 正在阅读您的招聘信息…（约 5–20 秒）', 'The AI is reading your post… (about 5–20 seconds)'],
+  'ai.chk.now': ['กำลังตรวจ: {c}', '正在检查：{c}', 'Checking: {c}'],
+  'ai.chk.allDone': ['ตรวจครบ 5 หมวดแล้ว', '5 个类别已检查完毕', 'All 5 checks done'],
+  'ai.chk.wait': ['ประมาณ 5–20 วินาที · กดกลับไปแก้ไขได้ตลอด', '约 5–20 秒 · 可随时返回修改', 'About 5–20 seconds · you can go back and edit at any time'],
   'ai.chk.note': ['AI (ผู้ให้บริการภายนอก) ช่วยชี้จุดที่ควรระวัง อาจผิดพลาดได้ และไม่ใช่คำปรึกษาทางกฎหมาย', 'AI（外部服务商）帮助指出需要注意的地方，可能出错，且并非法律意见', 'The AI (an outside provider) points out what to watch for. It can be wrong and it is not legal advice.'],
   'ai.chk.fallback': ['ใช้ AI ไม่ได้ตอนนี้ ({why}) จึงแสดงผลจากตัวตรวจพื้นฐานแทน', '暂时无法使用 AI（{why}），以下为基础检查结果', 'The AI is not available now ({why}), so this is the basic check'],
   'ai.chk.v.ok': ['AI ไม่พบสิ่งที่ต้องระวัง', 'AI 未发现需要注意的地方', 'The AI found nothing to watch for'],
