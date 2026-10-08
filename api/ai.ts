@@ -9,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import {
-  AI_LANGS, DEFAULT_MODEL, FLAG_CATEGORIES, GEMINI_MODELS, MAX_QUESTION, SEVERITIES, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, postForAi,
+  AI_LANGS, DEFAULT_MODEL, FLAG_CATEGORIES, GEMINI_MODELS, MAX_QUESTION, SEVERITIES, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, cleanHistory, postForAi,
   type AiKind, type AiLang, type AiReason,
 } from '../src/ai/spec.js'
 import type { PostInput } from '../src/domain/match/logic.js'
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
     if (!t.ok) return fail(t.reason ?? 'limit', 429)
 
     const system = kind === 'check' ? checkSystem(lang) : askSystem(lang)
-    const content = kind === 'check' ? checkUser(post!) : askUser(question)
+    const content = kind === 'check' ? checkUser(post!) : askUser(question, cleanHistory(body.history))
     const out = claudeKey ? await claude(claudeKey, kind, system, content) : await gemini(geminiKey, system, content)
     const admin = t.left === null // administrators see what went wrong (model + status; never a key or user text)
     if ('reason' in out) return json({ ok: false, reason: out.reason, ...(admin && out.detail ? { detail: out.detail } : {}) }, out.status)

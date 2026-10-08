@@ -44,7 +44,9 @@ describe('AI on screen', () => {
     expect(out).toContain('ผู้ช่วยกฎหมาย AI')
     expect(out).toContain('เข้าสู่ระบบเพื่อใช้ผู้ช่วย AI')
     expect(out).toMatch(/<input[^>]*class="mo-field"[^>]*disabled/) // the pill of the thinking-orb stage
-    expect(out).toContain('mo-root') // the dark stage
+    expect(out).toContain('mo-root') // the conversation stage
+    expect(out).toContain('ถามเรื่องกฎหมายการทำงานไทย') // the empty-chat hint and placeholder
+    expect(out).toContain('คนจีนจะมาทำงานในไทยต้องมีใบอนุญาตอะไรบ้าง') // the examples
     expect(out).toContain('อย่าใส่ชื่อ เลขบัตร เบอร์โทร')
   })
   it('is the first card under "Prepare", and the AI key never reaches the browser code', () => {

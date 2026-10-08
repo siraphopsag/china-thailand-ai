@@ -157,21 +157,23 @@ const N = DOT_LIST.length
 const DX = Float32Array.from(DOT_LIST, (d) => d.x), DY = Float32Array.from(DOT_LIST, (d) => d.y), DZ = Float32Array.from(DOT_LIST, (d) => d.z)
 const DU = Float32Array.from(DOT_LIST, (d) => d.u), DS = Float32Array.from(DOT_LIST, (d) => d.seed)
 const G_STEPS = 24, A_STEPS = 48
-/** white → green (done); a second table white → amber (failed) */
-const palette = (to: [number, number, number]) => {
+type RGB = [number, number, number]
+/** base dot colour → green (done) / amber (failed); light dots for the dark stage, dark dots for the light stage */
+const palette = (from: RGB, to: RGB) => {
   const out: string[] = []
   for (let gi = 0; gi <= G_STEPS; gi++) {
-    const g = gi / G_STEPS, r = Math.round(lerp(235, to[0], g)), gg = Math.round(lerp(235, to[1], g)), b = Math.round(lerp(235, to[2], g))
+    const g = gi / G_STEPS, r = Math.round(lerp(from[0], to[0], g)), gg = Math.round(lerp(from[1], to[1], g)), b = Math.round(lerp(from[2], to[2], g))
     for (let ai = 0; ai <= A_STEPS; ai++) out.push(`rgba(${r},${gg},${b},${(ai / A_STEPS).toFixed(3)})`)
   }
   return out
 }
-let COLORS: string[] | null = null, WARN: string[] | null = null // built on first use (not while rendering on the server)
+let TABLES: { dark: [string[], string[]]; light: [string[], string[]] } | null = null // built on first use (not while rendering on the server)
+const DOT_DARK: RGB = [235, 235, 235], DOT_LIGHT: RGB = [38, 38, 46]
 
 interface OrbParams { k: number; alpha: number; spin: number; rot: number; sweep: number; pop: number; vortex: number; gain: number; floor: number; rad: number; prog: number; warn: number }
 const ORB_KEYS = ['k', 'alpha', 'spin', 'sweep', 'pop', 'vortex', 'gain', 'floor', 'rad', 'warn'] as const
 
-function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean) {
+function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean, isLight: () => boolean) {
   const P: OrbParams = { k: 0, alpha: 0, spin: 0, rot: 0, sweep: 0, pop: 1, vortex: 0, gain: 1, floor: 0, rad: 0, prog: 0, warn: 0 }
   const ctx = canvas.getContext('2d')
   const lit = new Float32Array(N), SX = new Float32Array(N), SY = new Float32Array(N), SR = new Float32Array(N), SD = new Float32Array(N), SC = new Int16Array(N)
@@ -184,7 +186,7 @@ function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean) {
   }
   reset()
   if (!ctx) return { P, ensure() {}, reset, destroy() {} }
-  COLORS ??= palette([52, 211, 153]); WARN ??= palette([251, 146, 60])
+  TABLES ??= { dark: [palette(DOT_DARK, [52, 211, 153]), palette(DOT_DARK, [251, 146, 60])], light: [palette(DOT_LIGHT, [5, 150, 105]), palette(DOT_LIGHT, [217, 119, 6])] }
   const dpr = Math.min(2, window.devicePixelRatio || 1)
   canvas.width = Math.round(CANVAS * dpr); canvas.height = Math.round(CANVAS * dpr)
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -204,7 +206,7 @@ function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean) {
     const a2 = time * 0.55 + 2.1, b2 = Math.cos(time * 0.42) * 0.9
     const f2x = Math.cos(b2) * Math.cos(a2), f2y = Math.sin(b2), f2z = Math.cos(b2) * Math.sin(a2)
     const lat = Math.sin(time * 2.2), swirlK = P.vortex * 1.5
-    const table = P.warn > 0.5 ? WARN! : COLORS!
+    const tt = isLight() ? TABLES!.light : TABLES!.dark, table = P.warn > 0.5 ? tt[1] : tt[0]
     const sweep = Math.max(P.sweep, P.warn)
     for (let n = 0; n < N; n++) {
       const dx = DX[n], dy = DY[n], dz = DZ[n], u = DU[n]
@@ -255,10 +257,10 @@ function createOrb(canvas: HTMLCanvasElement, isReduced: () => boolean) {
 }
 
 /* ─────────── runtime ─────────── */
-interface UI { setPhase(p: Phase): void; swapLabel(name: string): void; resetLabel(): void; clearInput(): void; live(s: string): void; lock(on: boolean): void; idleReady(): void; focusAnswer(): void }
+interface UI { answered(): void; failed(): void; setPhase(p: Phase): void; swapLabel(name: string): void; resetLabel(): void; clearInput(): void; live(s: string): void; lock(on: boolean): void; idleReady(): void; focusAnswer(): void }
 interface Env {
   root: HTMLElement; mover: HTMLElement; actor: HTMLElement; form: HTMLElement; ghosts: HTMLElement[]; canvas: HTMLCanvasElement; pulse: HTMLElement; status: HTMLElement
-  ui: UI; isReduced: () => boolean; copy: () => OrbCopy; geo: () => Geo
+  ui: UI; isReduced: () => boolean; isLight: () => boolean; copy: () => OrbCopy; geo: () => Geo
 }
 interface Runtime { start(text: string, ask: (t: string) => Promise<boolean>, minThink: number): boolean; reset(): void; escape(): void; hard(): void; home(): void; busy(): boolean; destroy(): void }
 interface Sample { t: number; x: number; y: number; d: number }
@@ -278,7 +280,7 @@ function createRuntime(env: Env): Runtime {
   const { actor, mover, root, status, pulse, ghosts, form } = env
   const life = new AbortController()
   let geo = env.geo()
-  const orb = createOrb(env.canvas, env.isReduced)
+  const orb = createOrb(env.canvas, env.isReduced, env.isLight)
   const vals: Record<string, number> = {}
   const dirty = new Set<string>()
   const CH: Record<string, (v: number) => void> = {}
@@ -398,6 +400,7 @@ function createRuntime(env: Env): Runtime {
         await go(FAIL)
         await sleep(500, sig)
         if (sig.aborted) throw ABORT
+        env.ui.failed()
         busy = true; void toIdle('esc', true)
         return
       }
@@ -420,8 +423,10 @@ function createRuntime(env: Env): Runtime {
         setNow('w', geo.cw); setNow('h', CARD_H); setNow('r', 20); setNow('dotS', 1); setNow('yOff', -geo.lift)
         await go(R_CARD)
       }
+      // the answer now stands in the chat; the card fades and the pill comes back for the next question
       env.ui.setPhase('answered')
-      env.ui.focusAnswer()
+      env.ui.answered()
+      busy = true; void toIdle('reset')
     } catch (e) {
       if (e === ABORT) return
       hard()
@@ -517,47 +522,66 @@ export function RevealText({ text, lang }: { text: string; lang: string }) {
   ))}</>
 }
 
-/* ─────────── a still sphere of dots for the empty stage ─────────── */
-function drawStill(canvas: HTMLCanvasElement) {
+/* ─────────── a still sphere of dots for the empty chat ─────────── */
+function drawStill(canvas: HTMLCanvasElement, light: boolean) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
   const dpr = Math.min(2, window.devicePixelRatio || 1)
   canvas.width = Math.round(CANVAS * dpr); canvas.height = Math.round(CANVAS * dpr)
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, CANVAS, CANVAS)
   const CP = Math.cos(0.35), SP = Math.sin(0.35), C0 = CANVAS / 2, yaw = 0.6, cy = Math.cos(yaw), sy = Math.sin(yaw)
+  const [r, g, b] = light ? DOT_LIGHT : DOT_DARK
   for (let n = 0; n < N; n++) {
     const x1 = DX[n] * cy + DZ[n] * sy, z1 = -DX[n] * sy + DZ[n] * cy
     const y2 = DY[n] * CP - z1 * SP, z2 = DY[n] * SP + z1 * CP
     const f = 2.8 / (2.8 - z2), depth = (z2 + 1) / 2
-    ctx.fillStyle = `rgba(235,235,235,${(0.08 + 0.3 * depth * depth).toFixed(3)})`
+    ctx.fillStyle = `rgba(${r},${g},${b},${((light ? 0.1 : 0.08) + 0.32 * depth * depth).toFixed(3)})`
     ctx.beginPath(); ctx.arc(C0 + x1 * ORB_R * f, C0 - y2 * ORB_R * f, 1.15 * (0.45 + 0.75 * depth) * f, 0, TAU); ctx.fill()
   }
 }
+const isLightTheme = () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
 
-/* ─────────── component: a question card (left) and the dark answer stage (right; below on phones) ─────────── */
+/* ─────────── component: a chat — the question card (left on computers, at the bottom on phones) and the conversation ─────────── */
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
-export interface MorphOrbLayout {
-  /** the question card: its heading, and what sits under the pill (privacy note, examples) */
+/** one exchange: the question, and the page's result once there is one (null while the AI works) */
+export interface ChatTurn<R> { id: number; q: string; res: R | null }
+export interface MorphChatProps<R> {
+  copy: OrbCopy
+  turns: ChatTurn<R>[]
+  /** a new question: the page adds the turn and asks the AI; resolves true when an answer is ready, false for none */
+  onAsk: (text: string) => Promise<boolean>
+  /** how a finished turn looks (the answer bubble; also the "no answer" bubble) */
+  renderAnswer: (t: ChatTurn<R>) => ReactNode
   label: string
   note: ReactNode
-  below?: ReactNode
-  /** the empty stage: a short hint and small chips */
+  /** example questions (a list on computers; small cards above the pill on phones, only while the chat is empty) */
+  examples: string[]
+  examplesTitle: string
   idleHint: string
   idleChips?: string[]
+  /** shown at the top of the conversation (e.g. uses left today) */
+  meta?: ReactNode
+  disabled?: boolean
+  maxLength?: number
+  minThinkMs?: number
+  lite?: boolean
 }
 
-export default function MorphOrb(props: MorphOrbProps & MorphOrbLayout) {
-  const { copy, children, badge, disabled = false, maxLength = 600 } = props
+export default function MorphChat<R>(props: MorphChatProps<R>) {
+  const { copy, turns, disabled = false, maxLength = 600 } = props
   const [phase, setPhaseState] = useState<Phase>('idle')
+  const [flight, setFlight] = useState<number | null>(null) // the turn whose answer is still on its way (orb shown in its place)
   const [value, setValue] = useState('')
-  const [still] = useState(() => typeof window === 'undefined' || motionOff()) // the Settings motion switch: the idle glow loops only when on
+  const [still] = useState(() => typeof window === 'undefined' || motionOff())
+  const [light, setLight] = useState(false)
   const [lbl, setLbl] = useState<{ cur: string; prev: string | null; n: number }>({ cur: copy.labels[0], prev: null, n: 0 })
-  const wrapRef = useRef<HTMLDivElement>(null), slotRef = useRef<HTMLDivElement>(null), stageRef = useRef<HTMLDivElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null), slotRef = useRef<HTMLDivElement>(null), threadRef = useRef<HTMLDivElement>(null)
   const moverRef = useRef<HTMLDivElement>(null), actorRef = useRef<HTMLDivElement>(null), stillRef = useRef<HTMLCanvasElement>(null)
   const formRef = useRef<HTMLFormElement>(null), inputRef = useRef<HTMLInputElement>(null), canvasRef = useRef<HTMLCanvasElement>(null)
-  const pulseRef = useRef<HTMLDivElement>(null), statusRef = useRef<HTMLDivElement>(null), haloRef = useRef<HTMLDivElement>(null)
-  const answerRef = useRef<HTMLDivElement>(null), liveRef = useRef<HTMLDivElement>(null)
+  const pulseRef = useRef<HTMLDivElement>(null), statusRef = useRef<HTMLDivElement>(null), pendRef = useRef<HTMLDivElement>(null)
+  const liveRef = useRef<HTMLDivElement>(null)
   const ghostRefs = useRef<(HTMLSpanElement | null)[]>([])
   const propsRef = useRef(props)
   propsRef.current = props
@@ -565,43 +589,66 @@ export default function MorphOrb(props: MorphOrbProps & MorphOrbLayout) {
   const reducedRef = useRef(false)
   const rtRef = useRef<Runtime | null>(null)
   const timers = useRef<{ typing?: number; shake?: number }>({})
+  const nextId = useRef(1)
+
+  // the theme decides the stage: dark dots on light, light dots on dark (follows the theme switch live)
+  useEffect(() => {
+    const read = () => setLight(isLightTheme())
+    read()
+    const mo = new MutationObserver(read)
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => mo.disconnect()
+  }, [])
+  useEffect(() => { if (stillRef.current) drawStill(stillRef.current, light) }, [light, turns.length])
 
   useIsoLayoutEffect(() => {
-    const wrap = wrapRef.current, slot = slotRef.current, stage = stageRef.current, mover = moverRef.current, actor = actorRef.current, canvas = canvasRef.current
-    const pulse = pulseRef.current, status = statusRef.current, form = formRef.current, halo = haloRef.current
+    const wrap = wrapRef.current, slot = slotRef.current, mover = moverRef.current, actor = actorRef.current, canvas = canvasRef.current
+    const pulse = pulseRef.current, status = statusRef.current, form = formRef.current
     const ghosts = ghostRefs.current.filter((g): g is HTMLSpanElement => !!g)
-    if (!wrap || !slot || !stage || !mover || !actor || !canvas || !pulse || !status || !form || !halo) return
-    if (stillRef.current) drawStill(stillRef.current)
+    if (!wrap || !slot || !mover || !actor || !canvas || !pulse || !status || !form) return
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
     reducedRef.current = mq.matches
     const onMq = (e: MediaQueryListEvent) => { reducedRef.current = e.matches }
     mq.addEventListener('change', onMq)
-    // measure the page: the orb point sits in the stage (42 % down), the pill in its slot in the question card
+    // measure: the orb point is the waiting place in the chat (or the middle of the empty chat); the pill sits in its slot
     const geo = (): Geo => {
-      const w = wrap.getBoundingClientRect(), st = stage.getBoundingClientRect(), sl = slot.getBoundingClientRect()
-      const oy = Math.max(150, Math.min(st.height * 0.42, 240))
-      const ox = st.left - w.left + st.width / 2, oyW = st.top - w.top + oy
-      mover.style.left = ox + 'px'; mover.style.top = oyW + 'px'
-      status.style.top = oy + 92 + 'px'; halo.style.top = oy + 'px'
-      return { pw: sl.width, cw: Math.max(240, st.width - 32), sx: sl.left - w.left + sl.width / 2 - ox, sy: sl.top - w.top + sl.height / 2 - oyW, lift: oy - 20 - CARD_H / 2, dir: -1 }
+      const w = wrap.getBoundingClientRect(), sl = slot.getBoundingClientRect()
+      const pend = pendRef.current, th = threadRef.current
+      let ox: number, oy: number, lift = 0, cw = 300
+      if (pend) {
+        const p = pend.getBoundingClientRect()
+        ox = p.left - w.left + p.width / 2; oy = p.top - w.top + 76
+        lift = 76 - CARD_H / 2 // the card ends at the top of the waiting place, where the answer bubble then stands
+        cw = Math.max(220, p.width)
+      } else if (th) {
+        const t = th.getBoundingClientRect()
+        ox = t.left - w.left + t.width / 2; oy = t.top - w.top + t.height * 0.42
+        cw = Math.max(220, t.width - 32)
+      } else { ox = w.width / 2; oy = 200 }
+      mover.style.left = ox + 'px'; mover.style.top = oy + 'px'
+      status.style.left = ox + 'px'; status.style.top = oy + 92 + 'px'
+      return { pw: sl.width, cw, sx: sl.left - w.left + sl.width / 2 - ox, sy: sl.top - w.top + sl.height / 2 - oy, lift, dir: -1 }
     }
     const rt = createRuntime({
-      root: stage, mover, actor, form, ghosts, canvas, pulse, status, geo,
+      root: wrap, mover, actor, form, ghosts, canvas, pulse, status, geo,
       isReduced: () => reducedRef.current || !!propsRef.current.lite,
+      isLight: isLightTheme,
       copy: () => propsRef.current.copy,
       ui: {
+        answered: () => setFlight(null),
+        failed: () => setFlight(null),
         setPhase: (p) => { phaseRef.current = p; setPhaseState(p) },
         swapLabel: (name) => setLbl((l) => (l.cur === name ? l : { cur: name, prev: l.cur, n: l.n + 1 })),
         resetLabel: () => setLbl((l) => ({ cur: propsRef.current.copy.labels[0], prev: null, n: l.n + 1 })),
         clearInput: () => setValue(''),
         live: (s) => { if (liveRef.current) liveRef.current.textContent = s },
         lock: (on) => { form.toggleAttribute('inert', on) },
-        idleReady: () => { inputRef.current?.focus({ preventScroll: true }) },
-        focusAnswer: () => { answerRef.current?.focus({ preventScroll: true }) },
+        idleReady: () => { if (!window.matchMedia('(max-width: 1023px)').matches) inputRef.current?.focus({ preventScroll: true }) },
+        focusAnswer: () => {},
       },
     })
     rtRef.current = rt
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && phaseRef.current !== 'idle' && phaseRef.current !== 'reset' && phaseRef.current !== 'answered') { e.preventDefault(); rt.escape() } }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && phaseRef.current !== 'idle' && phaseRef.current !== 'reset' && phaseRef.current !== 'answered') { e.preventDefault(); rt.escape(); setFlight(null) } }
     const ro = new ResizeObserver(() => { if (phaseRef.current === 'idle' && !rt.busy()) rt.home() })
     ro.observe(wrap)
     window.addEventListener('keydown', onKey)
@@ -612,24 +659,35 @@ export default function MorphOrb(props: MorphOrbProps & MorphOrbLayout) {
     }
   }, [])
 
+  // phones: the chat fills the screen down to the menu bar (like an AI chat app); computers use the CSS height
+  useEffect(() => {
+    const fit = () => {
+      const w = wrapRef.current
+      if (!w) return
+      if (!window.matchMedia('(max-width: 1023px)').matches) { w.style.height = ''; return }
+      const top = w.getBoundingClientRect().top + window.scrollY
+      w.style.height = Math.max(360, Math.round(window.innerHeight - top - 104)) + 'px'
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [])
+  // keep the newest message in view
+  const scrollEnd = (smooth: boolean) => { const th = threadRef.current; if (th) th.scrollTo({ top: th.scrollHeight, behavior: smooth && !reducedRef.current ? 'smooth' : 'auto' }) }
+  useEffect(() => { if (phaseRef.current === 'idle' || phaseRef.current === 'reset' || phaseRef.current === 'answered') scrollEnd(true) }, [turns])
+
   const ask = (text: string) => {
     const rt = rtRef.current
     if (!rt || rt.busy() || phaseRef.current !== 'idle' || propsRef.current.disabled) return
-    // phones: the stage is below the card — bring it into view as the ball flies down
-    const st = stageRef.current
-    if (st && window.matchMedia('(max-width: 1023px)').matches) st.scrollIntoView({ behavior: reducedRef.current ? 'auto' : 'smooth', block: 'center' })
-    rt.start(text, (t) => propsRef.current.onSubmit(t), propsRef.current.minThinkMs ?? 2600)
+    const id = nextId.current++
+    setFlight(id)
+    const done = propsRef.current.onAsk(text)
+    // wait for the new question bubble and the waiting place to be drawn, scroll to them, then fly
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      scrollEnd(false)
+      rt.start(text, () => done, propsRef.current.minThinkMs ?? 2600)
+    }))
   }
-  // example questions: fill the pill and ask
-  useEffect(() => {
-    const p = props.preset
-    if (!p || phaseRef.current !== 'idle') return
-    setValue(p.text)
-    requestAnimationFrame(() => ask(p.text))
-  }, [props.preset?.nonce]) // eslint-disable-line react-hooks/exhaustive-deps
-  // the status words follow the page language
-  useEffect(() => { setLbl((l) => ({ ...l, cur: phaseRef.current === 'idle' ? copy.labels[0] : l.cur })) }, [copy.labels])
-
   const shake = () => {
     const a = actorRef.current
     if (!a) return
@@ -643,47 +701,52 @@ export default function MorphOrb(props: MorphOrbProps & MorphOrbLayout) {
     if (text.length < 4) { shake(); return }
     ask(text)
   }
-  const onReset = () => { if (phaseRef.current === 'answered') { propsRef.current.onReset?.(); rtRef.current?.reset() } }
+  const pick = (q: string) => { if (phaseRef.current !== 'idle' || disabled) return; setValue(q); requestAnimationFrame(() => ask(q)) }
   const ready = value.trim().length >= 4 && !disabled
-  const answered = phase === 'answered'
+  const empty = turns.length === 0
+  const lastId = turns.length ? turns[turns.length - 1].id : null
+  const waiting = flight !== null
   const labelInner = (name: string) => name === copy.done ? <span className="mo-lab-done">{name}</span> : <><span>{name}</span><span className="mo-dots" aria-hidden="true"><i /><i /><i /></span></>
+  const exampleButtons = (cls: string) => props.examples.map((q) => <button key={q} type="button" disabled={disabled} onClick={() => pick(q)} className={cls}>{q}</button>)
 
   return (
-    <div className={`mo-wrap${still ? '' : ' is-on'}`} ref={wrapRef} data-phase={phase}>
-      {/* the question card (our usual card): heading, the pill's slot, the note and what the page puts below */}
-      <section className="card mo-qcard">
-        <label htmlFor="mo-field" className="label">{props.label}</label>
-        <div className="mo-slot" ref={slotRef} />
-        <div className="flex justify-between gap-2 text-xs text-muted"><span>{props.note}</span><span className="shrink-0">{value.length}/{maxLength}</span></div>
-        {props.below}
-      </section>
-      {/* the dark stage: an empty-state sphere and hint; the status words; the answer once it has unfolded */}
-      <section className="mo-root" ref={stageRef} aria-live="polite" aria-busy={phase !== 'idle' && !answered}>
+    <div className={`mo-wrap${still ? '' : ' is-on'}${light ? ' is-light' : ''}${empty ? ' is-empty' : ''}`} ref={wrapRef} data-phase={phase}>
+      {/* the conversation */}
+      <section className="mo-root" aria-label={props.label}>
         <div className="mo-bg" aria-hidden="true" />
-        <div className="mo-halo" ref={haloRef} aria-hidden="true" />
-        <div className="mo-idle" aria-hidden={phase !== 'idle'}>
-          <canvas className="mo-still" ref={stillRef} aria-hidden="true" />
-          <p className="mo-idle-hint">{props.idleHint}</p>
-          {props.idleChips && <div className="mo-idle-chips">{props.idleChips.map((c) => <span key={c}>{c}</span>)}</div>}
-        </div>
-        <div className="mo-status" ref={statusRef} aria-hidden="true">
-          {lbl.prev !== null && <span key={'p' + lbl.n} className="mo-lab mo-out">{labelInner(lbl.prev)}</span>}
-          <span key={'c' + lbl.n} className="mo-lab mo-in">{labelInner(lbl.cur)}</span>
-        </div>
-        {answered && (
-          <div className="mo-answer-wrap">
-            <div className="mo-answer" ref={answerRef} tabIndex={-1} role="group" aria-label={copy.answerTitle}>
-              <div className="mo-a-head"><i className="mo-a-dot" aria-hidden="true" />{copy.answerTitle}{badge}</div>
-              <div className="mo-a-body">{children}</div>
+        {props.meta && <div className="mo-meta">{props.meta}</div>}
+        <div className="mo-thread" ref={threadRef} aria-live="polite" aria-busy={waiting}>
+          {empty && !waiting && (
+            <div className="mo-idle">
+              <canvas className="mo-still" ref={stillRef} aria-hidden="true" />
+              <p className="mo-idle-hint">{props.idleHint}</p>
+              {props.idleChips && <div className="mo-idle-chips">{props.idleChips.map((c) => <span key={c}>{c}</span>)}</div>}
             </div>
-            <button type="button" className="mo-reset" onClick={onReset}>{copy.reset}</button>
-          </div>
-        )}
-        <div className="mo-live sr-only" ref={liveRef} role="status" aria-live="polite" />
+          )}
+          {turns.map((t) => (
+            <Fragment key={t.id}>
+              <div className="mo-q"><span>{t.q}</span></div>
+              {waiting && t.id === lastId ? <div className="mo-pend" ref={pendRef} aria-hidden="true" /> : t.res !== null && <div className="mo-a">{props.renderAnswer(t)}</div>}
+            </Fragment>
+          ))}
+        </div>
       </section>
-      {/* the travelling shape: pill → ball → orb → card; drawn over both columns */}
+      {/* the question card: computers — heading, pill, note, examples; phones — the pill at the bottom, examples above it while empty */}
+      <section className="card mo-qcard">
+        <label htmlFor="mo-field" className="label mo-qlabel">{props.label}</label>
+        {empty && <div className="mo-ex-strip">{exampleButtons('mo-ex-chip')}</div>}
+        <div className="mo-slot" ref={slotRef} />
+        <div className="mo-note"><span>{props.note}</span><span className="shrink-0">{value.length}/{maxLength}</span></div>
+        <div className="mo-ex-list"><p className="text-xs text-muted mb-1.5">{props.examplesTitle}</p>
+          <div className="flex flex-col gap-1.5">{exampleButtons('text-left text-sm rounded-lg border border-control px-3 py-2 hover:bg-surface3 disabled:opacity-60')}</div></div>
+      </section>
+      {/* the status words under the orb, and the travelling shape (pill → ball → orb → card), drawn over everything */}
+      <div className="mo-status" ref={statusRef} aria-hidden="true">
+        {lbl.prev !== null && <span key={'p' + lbl.n} className="mo-lab mo-out">{labelInner(lbl.prev)}</span>}
+        <span key={'c' + lbl.n} className="mo-lab mo-in">{labelInner(lbl.cur)}</span>
+      </div>
       <div className="mo-layer">
-        <div className="mo-mover" ref={moverRef} style={{ visibility: answered ? 'hidden' : undefined }}>
+        <div className="mo-mover" ref={moverRef}>
           {Array.from({ length: 6 }).map((_, i) => <span key={i} className="mo-trail" aria-hidden="true" ref={(el) => { ghostRefs.current[i] = el }} />)}
           <div className="mo-actor" ref={actorRef}>
             <div className="mo-underglow" aria-hidden="true" />
@@ -697,7 +760,7 @@ export default function MorphOrb(props: MorphOrbProps & MorphOrbLayout) {
               <svg className="mo-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M10 3.5l1.7 4.8 4.8 1.7-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7L10 3.5z" /><path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" />
               </svg>
-              <input id="mo-field" ref={inputRef} className="mo-field" type="text" value={value} maxLength={maxLength} placeholder={copy.placeholder} disabled={disabled} spellCheck={false}
+              <input id="mo-field" ref={inputRef} className="mo-field" type="text" value={value} maxLength={maxLength} placeholder={empty ? copy.placeholder : copy.field} disabled={disabled} spellCheck={false} enterKeyHint="send"
                 onChange={(e) => {
                   setValue(e.target.value)
                   const a = actorRef.current
@@ -712,6 +775,7 @@ export default function MorphOrb(props: MorphOrbProps & MorphOrbLayout) {
           </div>
         </div>
       </div>
+      <div className="mo-live sr-only" ref={liveRef} role="status" aria-live="polite" />
     </div>
   )
 }

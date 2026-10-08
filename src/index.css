@@ -548,36 +548,58 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 @media (prefers-reduced-motion: reduce) { .mn-bead, .mn-label, .mn-icon { transition: none } }
 @media (prefers-reduced-transparency: reduce) { .mn-blur { backdrop-filter: none; -webkit-backdrop-filter: none } .mn-plate { fill: rgb(var(--surface)) } }
 
-/* the AI "thinking orb" stage (owner, Oct 2026 — from the owner's sample recording; component: components/morph-orb.tsx). A dark stage in
-   both themes, like the sample: the pill with a rainbow glow → a ball that flies up → a turning sphere of dots → green → the answer card.
+/* the AI chat with the "thinking orb" (owner, Oct 2026 — from the owner's sample recording; component: components/morph-orb.tsx).
+   Computers: the question card on the left, the conversation stage on the right. Phones: the conversation fills the screen, the pill
+   sits at the bottom like an AI chat app. Dark stage with light dots in the dark theme; light stage with dark dots in the light theme.
    Values come from the runtime as custom properties (--w, --h, --r, --oPill, …). */
 @property --mo-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false }
-.mo-wrap { position: relative; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) }
-@media (min-width: 1024px) { .mo-wrap { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr) } }
-.mo-qcard { display: flex; flex-direction: column; gap: .6rem }
+.mo-wrap { position: relative; min-width: 0; display: flex; flex-direction: column; gap: .75rem; height: max(400px, calc(100dvh - 15.5rem)) }
+@media (min-width: 1024px) { .mo-wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 1rem; height: clamp(460px, calc(100dvh - 13rem), 760px) } .mo-wrap > .mo-qcard { grid-column: 1; grid-row: 1 } .mo-wrap > .mo-root { grid-column: 2; grid-row: 1 } }
+.mo-root { position: relative; isolation: isolate; overflow: hidden; border-radius: 24px; flex: 1; min-height: 0; color: #f4f4f5; background: #0c0c0f; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06) }
+.mo-bg { position: absolute; inset: 0; z-index: -1; background: radial-gradient(70% 55% at 50% 38%, #18181d 0%, #0c0c0f 70%), radial-gradient(rgb(255 255 255 / .035) 1px, transparent 1.5px) 0 0 / 22px 22px }
+.mo-meta { position: absolute; top: 10px; right: 14px; z-index: 3; font-size: .72rem; color: rgb(255 255 255 / .55) }
+.mo-thread { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; padding: 30px 14px 16px; scrollbar-width: thin }
+.mo-wrap:not([data-phase='idle']) .mo-thread { overflow: hidden } /* hold still while the ball flies */
+.mo-idle { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 8px }
+.mo-still { width: 180px; height: 180px }
+.mo-idle-hint { font-size: .9rem; color: rgb(255 255 255 / .62) }
+.mo-idle-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px }
+.mo-idle-chips span { font-size: .72rem; padding: 3px 10px; border-radius: 999px; color: rgb(255 255 255 / .7); background: rgb(255 255 255 / .06); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08) }
+.mo-q { align-self: flex-end; max-width: 85%; animation: mo-in .3s ease both }
+.mo-q span { display: block; padding: 9px 14px; border-radius: 18px 18px 4px 18px; font-size: .95rem; background: rgb(99 102 241 / .28); color: #e0e7ff; overflow-wrap: anywhere }
+.mo-a { align-self: stretch }
+.mo-pend { height: 190px; flex-shrink: 0 }
+.mo-err { display: flex; gap: 8px; align-items: flex-start; max-width: 92%; padding: 10px 12px; border-radius: 16px; font-size: .875rem; background: rgb(251 146 60 / .12); color: #fdba74 }
+.mo-answer { width: 100%; border-radius: 18px 18px 18px 6px; padding: 16px 16px 14px; outline: none; background: linear-gradient(90deg, rgb(52 211 153 / .1), transparent 40%), #0e1110;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .07); color: #e4e4e7 }
+.mo-a-body { margin-top: 10px; animation: mo-grow .45s cubic-bezier(.22, 1, .36, 1) both }
+.mo-fine { font-size: .72rem; color: rgb(255 255 255 / .45); border-top: 1px solid rgb(255 255 255 / .08); padding-top: 8px; margin-top: 12px }
+.mo-fine + .mo-fine { border: 0; padding-top: 0; margin-top: 4px }
+/* the question card */
+.mo-qcard { display: flex; flex-direction: column; gap: .6rem; min-width: 0 }
 .mo-slot { height: 60px; flex-shrink: 0 }
-.mo-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5 }
+.mo-note { display: flex; justify-content: space-between; gap: 8px; font-size: .75rem; color: rgb(var(--muted)) }
+.mo-ex-strip { display: none }
+@media (max-width: 1023px) {
+  .mo-qcard { padding: 10px 12px; gap: .4rem; flex-shrink: 0 }
+  .mo-qlabel, .mo-ex-list { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+  .mo-slot { height: 54px }
+  .mo-note { font-size: .7rem }
+  .mo-wrap.is-empty .mo-ex-strip { display: flex; min-width: 0; max-width: 100%; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 2px }
+  .mo-ex-chip { flex-shrink: 0; max-width: 72%; text-align: left; font-size: .8rem; line-height: 1.35; padding: 8px 12px; border-radius: 14px; border: 1px solid rgb(var(--control-line)); background: rgb(var(--surface)) }
+  .mo-thread { padding: 30px 12px 14px }
+}
+/* the travelling shape */
+.mo-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; overflow: hidden }
 .mo-layer .mo-actor { pointer-events: auto }
 .mo-wrap:not([data-phase='idle']) .mo-layer .mo-actor { pointer-events: none }
-.mo-idle { position: absolute; inset: 0; transition: opacity .35s ease; pointer-events: none }
-.mo-wrap:not([data-phase='idle']) .mo-idle { opacity: 0 }
-.mo-still { position: absolute; left: 50%; top: 42%; width: 220px; height: 220px; transform: translate(-50%, -50%) }
-.mo-idle-hint { position: absolute; left: 16px; right: 16px; top: calc(42% + 96px); text-align: center; font-size: .9rem; color: rgb(255 255 255 / .62) }
-.mo-idle-chips { position: absolute; left: 16px; right: 16px; top: calc(42% + 130px); display: flex; flex-wrap: wrap; justify-content: center; gap: 6px }
-.mo-idle-chips span { font-size: .72rem; padding: 3px 10px; border-radius: 999px; color: rgb(255 255 255 / .7); background: rgb(255 255 255 / .06); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08) }
-.mo-root { min-height: 440px; position: relative; isolation: isolate; overflow: hidden; border-radius: 28px; color: #f4f4f5; background: #0c0c0f;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06); --oCenter: 0 }
-.mo-bg { position: absolute; inset: 0; z-index: -2; background: radial-gradient(70% 55% at 50% 38%, #18181d 0%, #0c0c0f 70%),
-  radial-gradient(rgb(255 255 255 / .035) 1px, transparent 1.5px) 0 0 / 22px 22px }
-.mo-halo { position: absolute; left: 50%; width: 360px; height: 360px; translate: -50% -50%; z-index: -1; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(circle, rgb(255 255 255 / .09), transparent 65%); opacity: var(--oCenter) }
 .mo-mover { position: absolute; width: 0; height: 0 }
 .mo-actor { position: absolute; left: 0; top: 0; width: var(--w, 560px); height: var(--h, 60px); border-radius: var(--r, 999px); transform: translate(-50%, -50%) }
 .mo-actor[data-shake] { animation: mo-shake .26s ease }
-.mo-underglow { position: absolute; left: 6%; right: 6%; bottom: -18px; height: 34px; border-radius: 999px; filter: blur(16px); opacity: calc(var(--oGlow, 1) * .75);
+.mo-underglow { position: absolute; left: 6%; right: 6%; bottom: -16px; height: 30px; border-radius: 999px; filter: blur(16px); opacity: calc(var(--oGlow, 1) * .7);
   background: linear-gradient(90deg, #34d399, #f472b6 30%, #8b5cf6 58%, #fbbf24 85%); pointer-events: none }
 .mo-surface { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; opacity: var(--oPill, 1); background: #101014;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1), 0 10px 30px rgb(0 0 0 / .45) }
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1), 0 10px 30px rgb(0 0 0 / .35) }
 .mo-surface::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
   background: conic-gradient(from var(--mo-angle), #34d399, #f472b6, #8b5cf6, #fbbf24, #34d399);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: .7 }
@@ -586,71 +608,85 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-aurora i { position: absolute; bottom: -60%; width: 34%; height: 120%; border-radius: 50%; filter: blur(14px); opacity: .55 }
 .mo-aurora i:nth-child(1) { left: 2%; background: #10b981 } .mo-aurora i:nth-child(2) { left: 26%; background: #ec4899; animation-delay: -2s }
 .mo-aurora i:nth-child(3) { left: 50%; background: #7c3aed; animation-delay: -4s } .mo-aurora i:nth-child(4) { left: 72%; background: #f59e0b; animation-delay: -6s }
-.mo-ball { position: absolute; inset: 0; border-radius: 50%; opacity: var(--oBall, 0); background: radial-gradient(circle at 35% 30%, #2a2a31, #0b0b0e 70%);
-  box-shadow: 0 12px 30px rgb(0 0 0 / .5) }
+.mo-ball { position: absolute; inset: 0; border-radius: 50%; opacity: var(--oBall, 0); background: radial-gradient(circle at 35% 30%, #2a2a31, #0b0b0e 70%); box-shadow: 0 12px 30px rgb(0 0 0 / .4) }
 .mo-ring { position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px; opacity: calc(var(--oRing, 1) * var(--oBall, 0)); pointer-events: none;
   background: conic-gradient(from var(--mo-angle), #34d399, #f472b6, #8b5cf6, #fbbf24, #34d399);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude }
 .mo-green { position: absolute; inset: 0; border-radius: 50%; opacity: var(--oGreen, 0); transform: scale(var(--gs, .55));
   background: radial-gradient(circle at 34% 28%, #d1fae5 0%, #6ee7b7 22%, #34d399 50%, #059669 100%); box-shadow: 0 0 40px rgb(52 211 153 / .45) }
 .mo-halo-green { position: absolute; inset: -40%; border-radius: 50%; opacity: var(--oHalo, 0); background: radial-gradient(circle, rgb(52 211 153 / .45), transparent 65%); pointer-events: none }
-.mo-card { position: absolute; inset: 0; border-radius: inherit; opacity: var(--oCard, 0); overflow: hidden;
-  background: linear-gradient(90deg, rgb(52 211 153 / .1), transparent 40%), #0e1110; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .07), 0 18px 40px rgb(0 0 0 / .5) }
-.mo-card .mo-a-head { position: absolute; left: 20px; top: 50%; translate: 0 -50%; opacity: var(--hOp, 0) }
+.mo-card { position: absolute; inset: 0; border-radius: inherit; opacity: var(--oCard, 0); overflow: hidden; background: linear-gradient(90deg, rgb(52 211 153 / .1), transparent 40%), #0e1110; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .07) }
+.mo-card .mo-a-head { position: absolute; left: 16px; top: 50%; translate: 0 -50%; opacity: var(--hOp, 0) }
 .mo-card .mo-a-dot { transform: scale(var(--dotS, 0)) }
-.mo-input { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 20px; opacity: var(--oInput, 1); transform: scale(var(--inScale, 1)) }
+.mo-input { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 0 9px 0 18px; opacity: var(--oInput, 1); transform: scale(var(--inScale, 1)) }
 .mo-input[inert] { pointer-events: none }
 .mo-spark { width: 18px; height: 18px; flex-shrink: 0; color: rgb(255 255 255 / .55) }
 .mo-field { flex: 1; min-width: 0; height: 100%; background: transparent; border: 0; outline: none; color: #fafafa; font-size: 1rem }
-.mo-field::placeholder { color: rgb(255 255 255 / .42) }
+.mo-field::placeholder { color: rgb(255 255 255 / .45) }
 .mo-field:disabled { cursor: not-allowed }
 .mo-send { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; color: rgb(255 255 255 / .6); background: rgb(255 255 255 / .08); transition: background .2s, color .2s }
 .mo-send svg { width: 18px; height: 18px }
 .mo-send[data-ready] { background: #fafafa; color: #0c0c0f }
-.mo-send:focus-visible, .mo-reset:focus-visible { outline: 2px solid #6ee7b7; outline-offset: 2px }
-.mo-root:has(.mo-field:focus-visible) .mo-surface { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .35), 0 10px 30px rgb(0 0 0 / .45) }
+.mo-send:focus-visible { outline: 2px solid #6ee7b7; outline-offset: 2px }
+.mo-wrap:has(.mo-field:focus-visible) .mo-surface { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .35), 0 10px 30px rgb(0 0 0 / .35) }
 .mo-orb { position: absolute; left: 50%; top: 50%; width: 220px; height: 220px; transform: translate(-50%, -50%); pointer-events: none }
 .mo-pulse { position: absolute; left: 50%; top: 50%; width: 132px; height: 132px; border-radius: 50%; border: 2px solid #34d399; opacity: 0; transform: translate(-50%, -50%); pointer-events: none }
-.mo-trail { position: absolute; left: 0; top: 0; width: 100px; height: 100px; border-radius: 50%; opacity: 0; pointer-events: none;
-  background: radial-gradient(circle at 35% 30%, #2a2a31, #0b0b0e 70%); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12) }
-.mo-status { position: absolute; left: 50%; translate: -50% 0; height: 22px; width: 280px; z-index: 2; pointer-events: none; opacity: var(--sOp, 0); transform: translateY(calc(var(--sTy, 6) * 1px)) }
-.mo-lab { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: .85rem; color: rgb(255 255 255 / .62); letter-spacing: .01em }
+.mo-trail { position: absolute; left: 0; top: 0; width: 100px; height: 100px; border-radius: 50%; opacity: 0; pointer-events: none; background: radial-gradient(circle at 35% 30%, #2a2a31, #0b0b0e 70%); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12) }
+.mo-status { position: absolute; translate: -50% 0; height: 22px; width: 280px; z-index: 6; pointer-events: none; opacity: var(--sOp, 0); transform: translateY(calc(var(--sTy, 6) * 1px)) }
+.mo-lab { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: .85rem; color: rgb(255 255 255 / .62) }
 .mo-lab.mo-in { animation: mo-in .32s ease both } .mo-lab.mo-out { animation: mo-out .32s ease both }
 .mo-lab-done { color: #6ee7b7; font-weight: 600 }
 .mo-dots { display: inline-flex; gap: 3px } .mo-dots i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; animation: mo-dot 1.2s infinite }
 .mo-dots i:nth-child(2) { animation-delay: .15s } .mo-dots i:nth-child(3) { animation-delay: .3s }
 .mo-a-head { display: flex; align-items: center; gap: 8px; font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(255 255 255 / .55) }
 .mo-a-dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399; flex-shrink: 0 }
-.mo-answer-wrap { position: absolute; inset: 0; z-index: 2; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 16px 24px }
-.mo-answer { width: 100%; border-radius: 20px; padding: 21px 20px 18px; outline: none; background: linear-gradient(90deg, rgb(52 211 153 / .1), transparent 40%), #0e1110;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .07), 0 18px 40px rgb(0 0 0 / .5) }
-.mo-answer:focus-visible { box-shadow: inset 0 0 0 2px #6ee7b7 }
-.mo-a-body { margin-top: 12px; animation: mo-grow .45s cubic-bezier(.22, 1, .36, 1) both; color: #e4e4e7 }
-.mo-w { display: inline; animation: mo-word .32s ease both }
-.mo-reset { font-size: .9rem; color: #fafafa; padding: 8px 16px; border-radius: 999px; animation: mo-fade-in .3s .4s ease both }
-.mo-reset:hover { background: rgb(255 255 255 / .08) }
 .mo-chip { margin-left: 4px; padding: 2px 8px; border-radius: 999px; font-size: .68rem; letter-spacing: .02em; text-transform: none; font-weight: 600 }
 .mo-chip-ok { background: rgb(52 211 153 / .14); color: #6ee7b7 } .mo-chip-warn { background: rgb(251 191 36 / .14); color: #fcd34d }
 .mo-sub { font-size: .8rem; font-weight: 700; color: rgb(255 255 255 / .6); margin-bottom: 4px }
 .mo-src { font-size: .875rem; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px }
+.mo-src-title { font-weight: 500; color: #f4f4f5 } .mo-src-warn { color: #fcd34d }
 .mo-link { display: inline-flex; align-items: center; gap: 2px; font-size: .75rem; color: #6ee7b7; text-decoration: underline; text-underline-offset: 2px }
 .mo-next { margin-top: 14px; display: flex; gap: 8px; font-size: .875rem; border-radius: 12px; padding: 10px 12px; background: rgb(52 211 153 / .1); color: #d1fae5 }
+.mo-w { display: inline; animation: mo-word .32s ease both }
+/* the light theme: a light stage and dark dots, a white pill, white answer cards (owner, Oct 2026) */
+.mo-wrap.is-light .mo-root { color: #18181b; background: #f6f6f9; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .07) }
+.mo-wrap.is-light .mo-bg { background: radial-gradient(70% 55% at 50% 38%, #ffffff 0%, #f1f1f5 75%), radial-gradient(rgb(0 0 0 / .05) 1px, transparent 1.5px) 0 0 / 22px 22px }
+.mo-wrap.is-light .mo-meta, .mo-wrap.is-light .mo-idle-hint { color: rgb(0 0 0 / .58) }
+.mo-wrap.is-light .mo-idle-chips span { color: rgb(0 0 0 / .65); background: rgb(0 0 0 / .04); box-shadow: inset 0 0 0 1px rgb(0 0 0 / .08) }
+.mo-wrap.is-light .mo-q span { background: #4f46e5; color: #fff }
+.mo-wrap.is-light .mo-err { background: #fff7ed; color: #9a3412; box-shadow: inset 0 0 0 1px #fed7aa }
+.mo-wrap.is-light .mo-answer, .mo-wrap.is-light .mo-card { background: linear-gradient(90deg, rgb(5 150 105 / .07), transparent 40%), #ffffff; color: #27272a; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .08), 0 6px 18px rgb(0 0 0 / .06) }
+.mo-wrap.is-light .mo-a-head, .mo-wrap.is-light .mo-sub { color: rgb(0 0 0 / .5) }
+.mo-wrap.is-light .mo-a-dot { background: #059669; box-shadow: 0 0 6px rgb(5 150 105 / .6) }
+.mo-wrap.is-light .mo-chip-ok { background: rgb(5 150 105 / .12); color: #047857 } .mo-wrap.is-light .mo-chip-warn { background: rgb(217 119 6 / .12); color: #b45309 }
+.mo-wrap.is-light .mo-src-title { color: #18181b } .mo-wrap.is-light .mo-src-warn { color: #b45309 }
+.mo-wrap.is-light .mo-link { color: #047857 }
+.mo-wrap.is-light .mo-next { background: rgb(5 150 105 / .09); color: #065f46 }
+.mo-wrap.is-light .mo-fine { color: rgb(0 0 0 / .5); border-color: rgb(0 0 0 / .08) }
+.mo-wrap.is-light .mo-lab { color: rgb(0 0 0 / .6) } .mo-wrap.is-light .mo-lab-done { color: #047857 }
+.mo-wrap.is-light .mo-surface { background: #ffffff; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1), 0 8px 24px rgb(0 0 0 / .08) }
+.mo-wrap.is-light .mo-aurora i { opacity: .28 }
+.mo-wrap.is-light .mo-spark { color: rgb(0 0 0 / .45) }
+.mo-wrap.is-light .mo-field { color: #18181b } .mo-wrap.is-light .mo-field::placeholder { color: rgb(0 0 0 / .45) }
+.mo-wrap.is-light .mo-send { background: rgb(0 0 0 / .06); color: rgb(0 0 0 / .55) } .mo-wrap.is-light .mo-send[data-ready] { background: #18181b; color: #fff }
+.mo-wrap.is-light .mo-green { box-shadow: 0 0 30px rgb(5 150 105 / .35) }
+.mo-wrap.is-light .mo-trail { opacity: 0 !important }
+.mo-wrap.is-light:has(.mo-field:focus-visible) .mo-surface { box-shadow: inset 0 0 0 1px rgb(0 0 0 / .35), 0 8px 24px rgb(0 0 0 / .08) }
 @keyframes mo-spin { to { --mo-angle: 360deg } }
-@keyframes mo-breathe { from { opacity: .55; transform: translate(-50%, -50%) scale(.97) } to { opacity: 1; transform: translate(-50%, -50%) scale(1.02) } }
+@keyframes mo-breathe { from { opacity: .55; transform: scale(.97) } to { opacity: 1; transform: scale(1.02) } }
 @keyframes mo-drift { from { transform: translateX(-14%) } to { transform: translateX(14%) } }
 @keyframes mo-dot { 0%, 80%, 100% { opacity: .25 } 40% { opacity: 1 } }
 @keyframes mo-in { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
 @keyframes mo-out { from { opacity: 1; transform: none } to { opacity: 0; transform: translateY(-6px) } }
-@keyframes mo-fade-in { from { opacity: 0 } to { opacity: 1 } }
 @keyframes mo-shake { 0%, 100% { transform: translate(-50%, -50%) } 25% { transform: translate(calc(-50% - 4px), -50%) } 75% { transform: translate(calc(-50% + 4px), -50%) } }
 @keyframes mo-grow { from { opacity: 0; transform: translateY(-6px) } to { opacity: 1; transform: none } }
 @keyframes mo-word { from { opacity: 0; filter: blur(4px) } to { opacity: 1; filter: none } }
-/* the rim and the glow keep moving only while motion is on (Settings switch; reduce-motion devices start off) — WCAG 2.2.2 */
+/* the rim, the glow and the resting sphere keep moving only while motion is on (Settings switch; reduce-motion devices start off) — WCAG 2.2.2 */
 .mo-wrap.is-on .mo-surface::before { animation: mo-spin 6s linear infinite } .mo-wrap.is-on .mo-ring { animation: mo-spin 4s linear infinite }
 .mo-wrap.is-on .mo-aurora i { animation: mo-drift 7s ease-in-out infinite alternate }
 .mo-wrap.is-on .mo-still { animation: mo-breathe 3.6s ease-in-out infinite alternate }
 /* reduced motion and the lite mode: nothing loops (the runtime also cross-fades instead of flying) */
-@media (prefers-reduced-motion: reduce) { .mo-still, .mo-surface::before, .mo-ring, .mo-aurora i, .mo-dots i { animation: none } .mo-w, .mo-a-body, .mo-lab.mo-in { animation: none } .mo-lab.mo-out { display: none } }
+@media (prefers-reduced-motion: reduce) { .mo-still, .mo-surface::before, .mo-ring, .mo-aurora i, .mo-dots i { animation: none } .mo-w, .mo-a-body, .mo-q, .mo-lab.mo-in { animation: none } .mo-lab.mo-out { display: none } }
 [data-lite] .mo-still, [data-lite] .mo-surface::before, [data-lite] .mo-ring, [data-lite] .mo-aurora i, [data-lite] .mo-dots i { animation: none }
 [data-lite] .mo-w, [data-lite] .mo-lab.mo-in { animation: none } [data-lite] .mo-lab.mo-out { display: none } [data-lite] .mo-underglow, [data-lite] .mo-aurora i { filter: none; opacity: .35 }
 
