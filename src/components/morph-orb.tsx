@@ -33,7 +33,8 @@ type Phase = 'idle' | 'launch' | 'assemble' | 'think' | 'resolve' | 'condense' |
 
 /* ─────────── geometry (relative to the stage box) ─────────── */
 const PILL_H = 60, BALL_SMALL = 60, ORB_D = 132, ORB_R = 66, CANVAS = 220, CARD_H = 64, FLY_D = 138
-interface Geo { pw: number; cw: number; H: number; dir: number }
+/** pw: pill width · cw: answer-card width · (sx, sy): where the pill sits, relative to the orb point · lift: how far the card rises while it unfolds */
+interface Geo { pw: number; cw: number; sx: number; sy: number; lift: number; dir: number }
 
 /* ─────────── math + easing ─────────── */
 type Ease = (t: number) => number
@@ -98,7 +99,7 @@ const CONDENSE: Track[] = [
   T('oHalo', 0, 0.35, 380, 700, E.out), T('orb.alpha', 1, 0, 500, 800, E.out),
 ]
 const unfoldTracks = (g: Geo): Track[] => [
-  T('w', ORB_D, 124, 0, 90, E.in), T('h', ORB_D, 124, 0, 90, E.in),
+  T('w', ORB_D, 124, 0, 90, E.in), T('h', ORB_D, 124, 0, 90, E.in), T('yOff', 0, -g.lift, 90, 700, E.card),
   T('w', 124, g.cw, 90, 700, E.card), T('h', 124, CARD_H, 90, 700, E.out), T('r', ORB_D / 2, 20, 90, 700, E.io),
   T('oGreen', 1, 0, 200, 560, E.out), T('oCard', 0, 1, 200, 560, E.out), T('oHalo', 0.35, 0, 300, 700, E.out), T('cHalo', 0.6, 0.22, 300, 700, E.out),
   T('hOp', 0, 1, 520, 840, E.out), T('dotS', 0, 1, 520, 840, E.spring),
@@ -299,10 +300,14 @@ function createRuntime(env: Env): Runtime {
       g.style.opacity = (0.28 * Math.pow(1 - i / 6, 1.5) * trailVis).toFixed(3)
     }
   }
+  // the flight: a curve from the pill (sx, sy) to the orb point (0, 0); across the page it arcs upward, down the page it swings sideways
   const applyPath = () => {
-    const u = vals.u ?? 0, H = geo.H
-    curX = bez(u, 0, geo.dir * 0.3 * H, 0)
-    curY = bez(u, H, 0.6 * H, 0) + (vals.yOff ?? 0)
+    const u = vals.u ?? 0, { sx, sy } = geo, len = Math.hypot(sx, sy) || 1
+    let px = -sy / len, py = sx / len
+    if (Math.abs(sx) > Math.abs(sy)) { if (py > 0) { px = -px; py = -py } } else { px *= geo.dir; py *= geo.dir }
+    const cx = sx / 2 + px * 0.3 * len, cy = sy / 2 + py * 0.3 * len
+    curX = bez(u, sx, cx, 0)
+    curY = bez(u, sy, cy, 0) + (vals.yOff ?? 0)
     mover.style.transform = `translate3d(${curX.toFixed(2)}px,${curY.toFixed(2)}px,0)`
     const now = performance.now()
     hist.push({ t: now, x: curX, y: curY, d: curD })
@@ -412,7 +417,7 @@ function createRuntime(env: Env): Runtime {
         setNow('gs', 1)
         await go(R_CONDENSE)
         env.ui.setPhase('unfold')
-        setNow('w', geo.cw); setNow('h', CARD_H); setNow('r', 20); setNow('dotS', 1)
+        setNow('w', geo.cw); setNow('h', CARD_H); setNow('r', 20); setNow('dotS', 1); setNow('yOff', -geo.lift)
         await go(R_CARD)
       }
       env.ui.setPhase('answered')
@@ -512,19 +517,47 @@ export function RevealText({ text, lang }: { text: string; lang: string }) {
   ))}</>
 }
 
-/* ─────────── component ─────────── */
-const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
-const STAGE_H = 440, ORB_Y = STAGE_H * 0.4 // the orb's centre; the pill sits 70 px above the stage's bottom
+/* ─────────── a still sphere of dots for the empty stage ─────────── */
+function drawStill(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  canvas.width = Math.round(CANVAS * dpr); canvas.height = Math.round(CANVAS * dpr)
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  const CP = Math.cos(0.35), SP = Math.sin(0.35), C0 = CANVAS / 2, yaw = 0.6, cy = Math.cos(yaw), sy = Math.sin(yaw)
+  for (let n = 0; n < N; n++) {
+    const x1 = DX[n] * cy + DZ[n] * sy, z1 = -DX[n] * sy + DZ[n] * cy
+    const y2 = DY[n] * CP - z1 * SP, z2 = DY[n] * SP + z1 * CP
+    const f = 2.8 / (2.8 - z2), depth = (z2 + 1) / 2
+    ctx.fillStyle = `rgba(235,235,235,${(0.08 + 0.3 * depth * depth).toFixed(3)})`
+    ctx.beginPath(); ctx.arc(C0 + x1 * ORB_R * f, C0 - y2 * ORB_R * f, 1.15 * (0.45 + 0.75 * depth) * f, 0, TAU); ctx.fill()
+  }
+}
 
-export default function MorphOrb(props: MorphOrbProps) {
+/* ─────────── component: a question card (left) and the dark answer stage (right; below on phones) ─────────── */
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
+
+export interface MorphOrbLayout {
+  /** the question card: its heading, and what sits under the pill (privacy note, examples) */
+  label: string
+  note: ReactNode
+  below?: ReactNode
+  /** the empty stage: a short hint and small chips */
+  idleHint: string
+  idleChips?: string[]
+}
+
+export default function MorphOrb(props: MorphOrbProps & MorphOrbLayout) {
   const { copy, children, badge, disabled = false, maxLength = 600 } = props
   const [phase, setPhaseState] = useState<Phase>('idle')
   const [value, setValue] = useState('')
   const [still] = useState(() => typeof window === 'undefined' || motionOff()) // the Settings motion switch: the idle glow loops only when on
   const [lbl, setLbl] = useState<{ cur: string; prev: string | null; n: number }>({ cur: copy.labels[0], prev: null, n: 0 })
-  const rootRef = useRef<HTMLDivElement>(null), moverRef = useRef<HTMLDivElement>(null), actorRef = useRef<HTMLDivElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null), slotRef = useRef<HTMLDivElement>(null), stageRef = useRef<HTMLDivElement>(null)
+  const moverRef = useRef<HTMLDivElement>(null), actorRef = useRef<HTMLDivElement>(null), stillRef = useRef<HTMLCanvasElement>(null)
   const formRef = useRef<HTMLFormElement>(null), inputRef = useRef<HTMLInputElement>(null), canvasRef = useRef<HTMLCanvasElement>(null)
-  const pulseRef = useRef<HTMLDivElement>(null), statusRef = useRef<HTMLDivElement>(null), answerRef = useRef<HTMLDivElement>(null), liveRef = useRef<HTMLDivElement>(null)
+  const pulseRef = useRef<HTMLDivElement>(null), statusRef = useRef<HTMLDivElement>(null), haloRef = useRef<HTMLDivElement>(null)
+  const answerRef = useRef<HTMLDivElement>(null), liveRef = useRef<HTMLDivElement>(null)
   const ghostRefs = useRef<(HTMLSpanElement | null)[]>([])
   const propsRef = useRef(props)
   propsRef.current = props
@@ -534,20 +567,26 @@ export default function MorphOrb(props: MorphOrbProps) {
   const timers = useRef<{ typing?: number; shake?: number }>({})
 
   useIsoLayoutEffect(() => {
-    const root = rootRef.current, mover = moverRef.current, actor = actorRef.current, canvas = canvasRef.current
-    const pulse = pulseRef.current, status = statusRef.current, form = formRef.current
+    const wrap = wrapRef.current, slot = slotRef.current, stage = stageRef.current, mover = moverRef.current, actor = actorRef.current, canvas = canvasRef.current
+    const pulse = pulseRef.current, status = statusRef.current, form = formRef.current, halo = haloRef.current
     const ghosts = ghostRefs.current.filter((g): g is HTMLSpanElement => !!g)
-    if (!root || !mover || !actor || !canvas || !pulse || !status || !form) return
+    if (!wrap || !slot || !stage || !mover || !actor || !canvas || !pulse || !status || !form || !halo) return
+    if (stillRef.current) drawStill(stillRef.current)
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
     reducedRef.current = mq.matches
     const onMq = (e: MediaQueryListEvent) => { reducedRef.current = e.matches }
     mq.addEventListener('change', onMq)
+    // measure the page: the orb point sits in the stage (42 % down), the pill in its slot in the question card
     const geo = (): Geo => {
-      const w = root.clientWidth || 600
-      return { pw: Math.min(560, w - 32), cw: Math.min(720, w - 32), H: STAGE_H - 70 - ORB_Y, dir: -1 }
+      const w = wrap.getBoundingClientRect(), st = stage.getBoundingClientRect(), sl = slot.getBoundingClientRect()
+      const oy = Math.max(150, Math.min(st.height * 0.42, 240))
+      const ox = st.left - w.left + st.width / 2, oyW = st.top - w.top + oy
+      mover.style.left = ox + 'px'; mover.style.top = oyW + 'px'
+      status.style.top = oy + 92 + 'px'; halo.style.top = oy + 'px'
+      return { pw: sl.width, cw: Math.max(240, st.width - 32), sx: sl.left - w.left + sl.width / 2 - ox, sy: sl.top - w.top + sl.height / 2 - oyW, lift: oy - 20 - CARD_H / 2, dir: -1 }
     }
     const rt = createRuntime({
-      root, mover, actor, form, ghosts, canvas, pulse, status, geo,
+      root: stage, mover, actor, form, ghosts, canvas, pulse, status, geo,
       isReduced: () => reducedRef.current || !!propsRef.current.lite,
       copy: () => propsRef.current.copy,
       ui: {
@@ -564,7 +603,7 @@ export default function MorphOrb(props: MorphOrbProps) {
     rtRef.current = rt
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && phaseRef.current !== 'idle' && phaseRef.current !== 'reset' && phaseRef.current !== 'answered') { e.preventDefault(); rt.escape() } }
     const ro = new ResizeObserver(() => { if (phaseRef.current === 'idle' && !rt.busy()) rt.home() })
-    ro.observe(root)
+    ro.observe(wrap)
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey); ro.disconnect(); mq.removeEventListener('change', onMq)
@@ -576,6 +615,9 @@ export default function MorphOrb(props: MorphOrbProps) {
   const ask = (text: string) => {
     const rt = rtRef.current
     if (!rt || rt.busy() || phaseRef.current !== 'idle' || propsRef.current.disabled) return
+    // phones: the stage is below the card — bring it into view as the ball flies down
+    const st = stageRef.current
+    if (st && window.matchMedia('(max-width: 1023px)').matches) st.scrollIntoView({ behavior: reducedRef.current ? 'auto' : 'smooth', block: 'center' })
     rt.start(text, (t) => propsRef.current.onSubmit(t), propsRef.current.minThinkMs ?? 2600)
   }
   // example questions: fill the pill and ask
@@ -607,52 +649,69 @@ export default function MorphOrb(props: MorphOrbProps) {
   const labelInner = (name: string) => name === copy.done ? <span className="mo-lab-done">{name}</span> : <><span>{name}</span><span className="mo-dots" aria-hidden="true"><i /><i /><i /></span></>
 
   return (
-    <div className={`mo-root${still ? '' : ' is-on'}`} data-phase={phase} ref={rootRef} style={{ minHeight: STAGE_H }}>
-      <div className="mo-bg" aria-hidden="true" />
-      <div className="mo-halo" aria-hidden="true" style={{ top: ORB_Y }} />
-      <div className="mo-mover" ref={moverRef} style={{ top: ORB_Y, visibility: answered ? 'hidden' : undefined }}>
-        {Array.from({ length: 6 }).map((_, i) => <span key={i} className="mo-trail" aria-hidden="true" ref={(el) => { ghostRefs.current[i] = el }} />)}
-        <div className="mo-actor" ref={actorRef}>
-          <div className="mo-underglow" aria-hidden="true" />
-          <div className="mo-halo-green" aria-hidden="true" />
-          <div className="mo-surface" aria-hidden="true"><div className="mo-aurora"><i /><i /><i /><i /></div></div>
-          <div className="mo-ball" aria-hidden="true" />
-          <div className="mo-green" aria-hidden="true" />
-          <div className="mo-card" aria-hidden="true"><div className="mo-a-head"><i className="mo-a-dot" />{copy.answerTitle}</div></div>
-          <div className="mo-ring" aria-hidden="true" />
-          <form className="mo-input" ref={formRef} onSubmit={onSubmit} autoComplete="off">
-            <svg className="mo-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M10 3.5l1.7 4.8 4.8 1.7-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7L10 3.5z" /><path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" />
-            </svg>
-            <input ref={inputRef} className="mo-field" type="text" value={value} maxLength={maxLength} placeholder={copy.placeholder} aria-label={copy.field} disabled={disabled} spellCheck={false}
-              onChange={(e) => {
-                setValue(e.target.value)
-                const a = actorRef.current
-                if (a) { a.setAttribute('data-typing', ''); window.clearTimeout(timers.current.typing); timers.current.typing = window.setTimeout(() => a.removeAttribute('data-typing'), 300) }
-              }} />
-            <button type="submit" className="mo-send" aria-label={copy.send} data-ready={ready ? '' : undefined} disabled={disabled}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="M5.5 11.5L12 5l6.5 6.5" /></svg>
-            </button>
-          </form>
-          <canvas className="mo-orb" ref={canvasRef} aria-hidden="true" />
-          <div className="mo-pulse" ref={pulseRef} aria-hidden="true" />
+    <div className={`mo-wrap${still ? '' : ' is-on'}`} ref={wrapRef} data-phase={phase}>
+      {/* the question card (our usual card): heading, the pill's slot, the note and what the page puts below */}
+      <section className="card mo-qcard">
+        <label htmlFor="mo-field" className="label">{props.label}</label>
+        <div className="mo-slot" ref={slotRef} />
+        <div className="flex justify-between gap-2 text-xs text-muted"><span>{props.note}</span><span className="shrink-0">{value.length}/{maxLength}</span></div>
+        {props.below}
+      </section>
+      {/* the dark stage: an empty-state sphere and hint; the status words; the answer once it has unfolded */}
+      <section className="mo-root" ref={stageRef} aria-live="polite" aria-busy={phase !== 'idle' && !answered}>
+        <div className="mo-bg" aria-hidden="true" />
+        <div className="mo-halo" ref={haloRef} aria-hidden="true" />
+        <div className="mo-idle" aria-hidden={phase !== 'idle'}>
+          <canvas className="mo-still" ref={stillRef} aria-hidden="true" />
+          <p className="mo-idle-hint">{props.idleHint}</p>
+          {props.idleChips && <div className="mo-idle-chips">{props.idleChips.map((c) => <span key={c}>{c}</span>)}</div>}
         </div>
-      </div>
-      <div className="mo-status" ref={statusRef} aria-hidden="true" style={{ top: ORB_Y + 92 }}>
-        {lbl.prev !== null && <span key={'p' + lbl.n} className="mo-lab mo-out">{labelInner(lbl.prev)}</span>}
-        <span key={'c' + lbl.n} className="mo-lab mo-in">{labelInner(lbl.cur)}</span>
-      </div>
-      {/* the answer: the unfolded card grows into the full answer (in the page flow) */}
-      {answered && (
-        <div className="mo-answer-wrap" style={{ paddingTop: ORB_Y - CARD_H / 2 }}>
-          <div className="mo-answer" ref={answerRef} tabIndex={-1} role="group" aria-label={copy.answerTitle}>
-            <div className="mo-a-head"><i className="mo-a-dot" aria-hidden="true" />{copy.answerTitle}{badge}</div>
-            <div className="mo-a-body">{children}</div>
+        <div className="mo-status" ref={statusRef} aria-hidden="true">
+          {lbl.prev !== null && <span key={'p' + lbl.n} className="mo-lab mo-out">{labelInner(lbl.prev)}</span>}
+          <span key={'c' + lbl.n} className="mo-lab mo-in">{labelInner(lbl.cur)}</span>
+        </div>
+        {answered && (
+          <div className="mo-answer-wrap">
+            <div className="mo-answer" ref={answerRef} tabIndex={-1} role="group" aria-label={copy.answerTitle}>
+              <div className="mo-a-head"><i className="mo-a-dot" aria-hidden="true" />{copy.answerTitle}{badge}</div>
+              <div className="mo-a-body">{children}</div>
+            </div>
+            <button type="button" className="mo-reset" onClick={onReset}>{copy.reset}</button>
           </div>
-          <button type="button" className="mo-reset" onClick={onReset}>{copy.reset}</button>
+        )}
+        <div className="mo-live sr-only" ref={liveRef} role="status" aria-live="polite" />
+      </section>
+      {/* the travelling shape: pill → ball → orb → card; drawn over both columns */}
+      <div className="mo-layer">
+        <div className="mo-mover" ref={moverRef} style={{ visibility: answered ? 'hidden' : undefined }}>
+          {Array.from({ length: 6 }).map((_, i) => <span key={i} className="mo-trail" aria-hidden="true" ref={(el) => { ghostRefs.current[i] = el }} />)}
+          <div className="mo-actor" ref={actorRef}>
+            <div className="mo-underglow" aria-hidden="true" />
+            <div className="mo-halo-green" aria-hidden="true" />
+            <div className="mo-surface" aria-hidden="true"><div className="mo-aurora"><i /><i /><i /><i /></div></div>
+            <div className="mo-ball" aria-hidden="true" />
+            <div className="mo-green" aria-hidden="true" />
+            <div className="mo-card" aria-hidden="true"><div className="mo-a-head"><i className="mo-a-dot" />{copy.answerTitle}</div></div>
+            <div className="mo-ring" aria-hidden="true" />
+            <form className="mo-input" ref={formRef} onSubmit={onSubmit} autoComplete="off">
+              <svg className="mo-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 3.5l1.7 4.8 4.8 1.7-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7L10 3.5z" /><path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" />
+              </svg>
+              <input id="mo-field" ref={inputRef} className="mo-field" type="text" value={value} maxLength={maxLength} placeholder={copy.placeholder} disabled={disabled} spellCheck={false}
+                onChange={(e) => {
+                  setValue(e.target.value)
+                  const a = actorRef.current
+                  if (a) { a.setAttribute('data-typing', ''); window.clearTimeout(timers.current.typing); timers.current.typing = window.setTimeout(() => a.removeAttribute('data-typing'), 300) }
+                }} />
+              <button type="submit" className="mo-send" aria-label={copy.send} data-ready={ready ? '' : undefined} disabled={disabled}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="M5.5 11.5L12 5l6.5 6.5" /></svg>
+              </button>
+            </form>
+            <canvas className="mo-orb" ref={canvasRef} aria-hidden="true" />
+            <div className="mo-pulse" ref={pulseRef} aria-hidden="true" />
+          </div>
         </div>
-      )}
-      <div className="mo-live sr-only" ref={liveRef} role="status" aria-live="polite" />
+      </div>
     </div>
   )
 }

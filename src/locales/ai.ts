@@ -67,6 +67,10 @@ export const ai = {
   'ai.orb.l2': ['กำลังค้นคลังกฎหมาย', '查阅法律资料库', 'Searching the legal records'],
   'ai.orb.l3': ['กำลังวิเคราะห์', '分析中', 'Analyzing'],
   'ai.orb.l4': ['กำลังเรียบเรียง', '整理答案', 'Composing'],
+  'ai.orb.idle': ['พิมพ์คำถาม แล้วคำตอบจะขึ้นที่นี่', '输入问题，答案将显示在这里', 'Ask a question — the answer appears here'],
+  'ai.orb.c1': ['ตอบจากคลังกฎหมาย', '依据法律资料库', 'From the legal records'],
+  'ai.orb.c2': ['แนบแหล่งทางการ', '附官方来源', 'Official sources'],
+  'ai.orb.c3': ['3 ภาษา', '三种语言', '3 languages'],
   'ai.orb.done': ['เสร็จแล้ว', '完成', 'Done'],
   'ai.ask.again': ['ถามคำถามใหม่', '提出新问题', 'Ask another question'],
 } as const satisfies Record<string, Msg>

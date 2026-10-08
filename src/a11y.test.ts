@@ -29,12 +29,12 @@ describe('accessibility audit fixes (WCAG 2.2 A/AA)', () => {
     // the only endless one is the hero's Background Paths light band (owner, Oct 2026): it runs only while .is-on, which the on/off switch in Settings
     // controls (reduce-motion devices start off)
     const endless = [...css.matchAll(/animation:\s*([a-z-]+)[^;}]*infinite/g)].map((m) => m[1])
-    // (ai-scan, ai-spin and mo-dot are busy indicators, shown only while the AI is working; the AI stage's rim and glow (mo-spin,
-    // mo-drift) loop only under .mo-root.is-on, i.e. while the Settings motion switch is on)
-    expect(endless.sort()).toEqual(['ai-scan', 'ai-spin', 'bg-flow', 'bg-sheen', 'bg-sheen-lines', 'mo-dot', 'mo-drift', 'mo-spin', 'mo-spin'])
-    const gated = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{[^}]*animation:\s*mo-(?:spin|drift)[^}]*infinite/g)].map((m) => m[1].trim())
-    expect(gated).toHaveLength(3)
-    for (const sel of gated) expect(sel).toMatch(/^\.mo-root\.is-on /)
+    // (ai-scan, ai-spin and mo-dot are busy indicators, shown only while the AI is working; the AI stage's rim, glow and resting sphere
+    // (mo-spin, mo-drift, mo-breathe) loop only under .mo-wrap.is-on, i.e. while the Settings motion switch is on)
+    expect(endless.sort()).toEqual(['ai-scan', 'ai-spin', 'bg-flow', 'bg-sheen', 'bg-sheen-lines', 'mo-breathe', 'mo-dot', 'mo-drift', 'mo-spin', 'mo-spin'])
+    const gated = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{[^}]*animation:\s*mo-(?:spin|drift|breathe)[^}]*infinite/g)].map((m) => m[1].trim())
+    expect(gated).toHaveLength(4)
+    for (const sel of gated) expect(sel).toMatch(/^\.mo-wrap\.is-on /)
     expect(css).toContain('.bg-paths.is-on .bg-sheen { display: block; animation: bg-sheen')
   })
   it('#13 Chinese inside Thai text (and Thai inside Chinese text) is marked with its own language', () => {

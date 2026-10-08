@@ -103,6 +103,10 @@ export function AskPage() {
     <Page title={t('ai.ask.title')} sub={t('ai.ask.sub')}>
       {!canUse && <Warn tone="info">{t('ai.ask.signin')} {status === 'signedOut' && <NavLink to="login" className="font-semibold text-primary underline underline-offset-4">{t('m.login')}</NavLink>}</Warn>}
       <MorphOrb copy={copy} onSubmit={onSubmit} onReset={() => setRes(null)} disabled={!canUse} maxLength={MAX_QUESTION} lite={lite} preset={preset}
+        label={t('ai.ask.label')} note={t('ai.ask.privacy')} idleHint={t('ai.orb.idle')} idleChips={[t('ai.orb.c1'), t('ai.orb.c2'), t('ai.orb.c3')]}
+        below={<div><p className="text-xs text-muted mb-1.5">{t('ai.ask.try')}</p>
+          <div className="flex flex-col gap-1.5">{(['ex1', 'ex2', 'ex3'] as const).map((k) => (
+            <button key={k} type="button" disabled={!canUse} onClick={() => setPreset((p) => ({ text: t(`ai.ask.${k}`), nonce: (p?.nonce ?? 0) + 1 }))} className="text-left text-sm rounded-lg border border-control px-3 py-2 hover:bg-surface3 disabled:opacity-60">{t(`ai.ask.${k}`)}</button>))}</div></div>}
         badge={ok && <span className={`mo-chip ${grounded ? 'mo-chip-ok' : 'mo-chip-warn'}`}>{t(`ai.ask.g.${ok.result.grounding}`)}</span>}>
         {ok && <>
           <div className="text-[15px] leading-relaxed"><RevealText text={ok.result.answer} lang={lang === 'zh' ? 'zh' : lang} /></div>
@@ -113,12 +117,6 @@ export function AskPage() {
         </>}
       </MorphOrb>
       {res && !res.ok && <Warn tone={res.reason === 'busy' || res.reason === 'error' ? 'danger' : 'info'}>{t(`ai.why.${res.reason}`)}{res.detail && <span className="block text-xs font-mono opacity-70 mt-1 break-words" lang="en">{res.detail}</span>}</Warn>}
-      <section className="space-y-2">
-        <p className="text-xs text-muted">{t('ai.ask.privacy')}</p>
-        <div><p className="text-xs text-muted mb-1.5">{t('ai.ask.try')}</p>
-          <div className="flex flex-wrap gap-2">{(['ex1', 'ex2', 'ex3'] as const).map((k) => (
-            <button key={k} type="button" disabled={!canUse} onClick={() => setPreset((p) => ({ text: t(`ai.ask.${k}`), nonce: (p?.nonce ?? 0) + 1 }))} className="text-left text-sm rounded-full border border-control px-3.5 py-1.5 hover:bg-surface3 disabled:opacity-60">{t(`ai.ask.${k}`)}</button>))}</div></div>
-      </section>
     </Page>
   )
 }
