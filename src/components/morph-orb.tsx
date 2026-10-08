@@ -35,8 +35,8 @@ type Phase = 'idle' | 'launch' | 'assemble' | 'think' | 'resolve' | 'condense' |
 const PILL_H = 60, BALL_SMALL = 60, ORB_D = 150, ORB_R = 66, CANVAS = 220, CARD_H = 64
 /** the working orb is drawn on a 220 canvas shown at this size (radius 66 → 75 px); the resting sphere is smaller (index.css) */
 const ORB_PX = 250
-/** pw: pill width · cw: answer-card width · (sx, sy): where the pill sits, relative to the orb point · lift: how far the card rises while it unfolds */
-interface Geo { pw: number; cw: number; sx: number; sy: number; lift: number; dir: number; ax: number; ay: number; rest: boolean; pop0: number }
+/** pw, ph: pill width and height (from its slot) · cw: answer-card width · (sx, sy): where the pill sits, relative to the orb point · lift: how far the card rises while it unfolds */
+interface Geo { pw: number; ph: number; cw: number; sx: number; sy: number; lift: number; dir: number; ax: number; ay: number; rest: boolean; pop0: number }
 
 /* ─────────── math + easing ─────────── */
 type Ease = (t: number) => number
@@ -79,8 +79,8 @@ const T = (ch: string, from: number, to: number, t0: number, t1: number, ease: E
 /** the pill folds up in place: it narrows into a ball and sinks away (no flight — the orb waits in the chat) */
 const collapseTracks = (g: Geo): Track[] => [
   T('oInput', 1, 0, 0, 160, E.in), T('inScale', 1, 0.6, 0, 160, E.in), T('oGlow', 1, 0, 0, 260, E.out), T('oAur', 1, 0, 0, 260, E.out),
-  T('w', g.pw, BALL_SMALL, 60, 440, E.io), T('oPill', 1, 0, 220, 440, E.out), T('oBall', 0, 1, 220, 440, E.out),
-  T('w', BALL_SMALL, 6, 440, 660, E.in), T('h', PILL_H, 6, 440, 660, E.in), T('oBall', 1, 0, 540, 680, E.out),
+  T('w', g.pw, g.ph, 60, 440, E.io), T('oPill', 1, 0, 220, 440, E.out), T('oBall', 0, 1, 220, 440, E.out),
+  T('w', g.ph, 6, 440, 660, E.in), T('h', g.ph, 6, 440, 660, E.in), T('oBall', 1, 0, 540, 680, E.out),
 ]
 /** the resting sphere comes alive and glides to its place under the question */
 const takeoverTracks = (g: Geo, spin0: number): Track[] => [T('orb.alpha', 0, 1, 0, 220, E.out), T('orb.pop', g.pop0, 1, 120, 720, E.out), T('orb.spin', spin0, 0.9, 0, 800, E.out),
@@ -338,7 +338,7 @@ function createRuntime(env: Env): Runtime {
   const set = (ch: string, v: number) => { vals[ch] = v; dirty.add(ch) }
   const flush = () => { dirty.forEach((ch) => CH[ch]?.(vals[ch])); dirty.clear() }
   const setNow = (ch: string, v: number) => { vals[ch] = v; CH[ch]?.(v) }
-  const resetChannels = () => { fromX = geo.sx; fromY = geo.sy; setNow('w', geo.pw); for (const ch of Object.keys(INIT)) setNow(ch, INIT[ch]) }
+  const resetChannels = () => { fromX = geo.sx; fromY = geo.sy; setNow('w', geo.pw); for (const ch of Object.keys(INIT)) setNow(ch, INIT[ch]); setNow('h', geo.ph) }
 
   const play = (tracks: Track[], sig: AbortSignal) => new Promise<void>((res) => {
     if (sig.aborted) return res()
@@ -515,7 +515,7 @@ function createRuntime(env: Env): Runtime {
     escape() { if (!busy || idling) return; current?.abort(); void toIdle('esc', true) },
     reset() { if (!busy || idling) return; void toIdle('reset') },
     hard,
-    home() { if (busy) return; geo = { ...env.geo(), dir: geo.dir }; fromX = geo.sx; fromY = geo.sy; setNow('w', geo.pw); setNow('u', 0) },
+    home() { if (busy) return; geo = { ...env.geo(), dir: geo.dir }; fromX = geo.sx; fromY = geo.sy; setNow('w', geo.pw); setNow('h', geo.ph); setNow('u', 0) },
     busy: () => busy,
     destroy() { life.abort(); orb.destroy() },
   }
@@ -742,7 +742,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
       }
       mover.style.left = ox + 'px'; mover.style.top = oy + 'px'
       status.style.left = ox + 'px'; status.style.top = oy + orbPx * 0.42 + 'px'
-      return { pw: sl.width, cw, sx: sl.left - w.left + sl.width / 2 - ox, sy: sl.top - w.top + sl.height / 2 - oy, lift, dir: -1, ax: 0, ay: 0, rest, pop0 }
+      return { pw: sl.width, ph: Math.round(sl.height) || PILL_H, cw, sx: sl.left - w.left + sl.width / 2 - ox, sy: sl.top - w.top + sl.height / 2 - oy, lift, dir: -1, ax: 0, ay: 0, rest, pop0 }
     }
     const rt = createRuntime({
       root: wrap, mover, actor, form, ghosts, canvas, pulse, status, geo,

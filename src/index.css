@@ -591,7 +591,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
   .mo-qcard { padding: 10px 12px; gap: .4rem; flex-shrink: 0 }
   .mo-qlabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
   .mo-ex-list { display: none }
-  .mo-slot { height: 60px }
+  .mo-slot { height: 48px }
   .mo-note { font-size: .7rem }
   .mo-ex-card { display: block; padding: 10px 12px; flex-shrink: 0 }
   .mo-ex-row { text-align: left; font-size: .85rem; line-height: 1.35; padding: 8px 12px; border-radius: 10px; border: 1px solid rgb(var(--control-line)) }
@@ -609,7 +609,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-mover { position: absolute; width: 0; height: 0 }
 .mo-actor { position: absolute; left: 0; top: 0; width: var(--w, 560px); height: var(--h, 60px); border-radius: var(--r, 999px); transform: translate(-50%, -50%) }
 .mo-actor[data-shake] { animation: mo-shake .26s ease }
-.mo-underglow { position: absolute; left: 4%; right: 4%; bottom: -22px; height: 40px; opacity: calc(var(--oGlow, 1) * .55); pointer-events: none;
+.mo-underglow { display: none; position: absolute; left: 4%; right: 4%; bottom: -22px; height: 40px; opacity: calc(var(--oGlow, 1) * .55); pointer-events: none;
   background: radial-gradient(closest-side, rgb(52 211 153 / .9), transparent) 0% 50% / 34% 100% no-repeat, radial-gradient(closest-side, rgb(244 114 182 / .9), transparent) 33% 50% / 34% 100% no-repeat,
     radial-gradient(closest-side, rgb(139 92 246 / .9), transparent) 66% 50% / 34% 100% no-repeat, radial-gradient(closest-side, rgb(251 191 36 / .9), transparent) 100% 50% / 34% 100% no-repeat }
 .mo-surface { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; clip-path: inset(0 round var(--r, 999px)); opacity: var(--oPill, 1); background: var(--mo-pill);
@@ -619,7 +619,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: .7 }
 .mo-actor[data-typing] .mo-surface::before { opacity: 1 }
 .mo-aurora { position: absolute; inset: 0; opacity: var(--oAur, 1); pointer-events: none }
-.mo-aurora i { position: absolute; bottom: -70%; width: 40%; height: 140%; opacity: .6 }
+.mo-aurora i { position: absolute; bottom: -62%; width: 40%; height: 90%; opacity: .5 }
 .mo-aurora i:nth-child(1) { left: 0%; background: radial-gradient(closest-side, #10b981, transparent) } .mo-aurora i:nth-child(2) { left: 22%; background: radial-gradient(closest-side, #ec4899, transparent); animation-delay: -2s }
 .mo-aurora i:nth-child(3) { left: 44%; background: radial-gradient(closest-side, #7c3aed, transparent); animation-delay: -4s } .mo-aurora i:nth-child(4) { left: 66%; background: radial-gradient(closest-side, #f59e0b, transparent); animation-delay: -6s }
 .mo-ball { position: absolute; inset: 0; border-radius: 50%; opacity: var(--oBall, 0); background: radial-gradient(circle at 35% 30%, #2a2a31, #0b0b0e 70%); box-shadow: 0 12px 30px rgb(0 0 0 / .4) }
@@ -640,6 +640,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-field:disabled { cursor: not-allowed }
 .mo-send { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; color: rgb(255 255 255 / .6); background: rgb(255 255 255 / .08); transition: background .2s, color .2s }
 .mo-send svg { width: 18px; height: 18px }
+@media (max-width: 1023px) { .mo-send { width: 34px; height: 34px } .mo-send svg { width: 16px; height: 16px } }
 .mo-send[data-ready] { background: #fafafa; color: #0c0c0f }
 .mo-send:focus-visible { outline: 2px solid #6ee7b7; outline-offset: 2px }
 .mo-wrap:has(.mo-field:focus-visible) .mo-surface { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .35), 0 10px 30px rgb(0 0 0 / .35) }
