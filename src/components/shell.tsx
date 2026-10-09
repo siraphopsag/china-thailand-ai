@@ -66,7 +66,7 @@ export function LanguageSwitcher() {
   const cur = LANGS.find((l) => l.id === lang)!
   return (
     <div role="group" aria-label={t('lang.choose')}>
-      <Menu icon="language" label={<span aria-label={t('lang.choose')}>{cur.short}</span>}>
+      <Menu refocus icon="language" label={<span aria-label={t('lang.choose')}>{cur.short}</span>}>
         {(close) => (
           <ul role="menu" aria-label={t('lang.choose')}>
             {LANGS.map((l) => (
@@ -114,7 +114,7 @@ function RoleChip() {
 export function Header(_: { route?: string }) {
   return (
     <header className="bg-header/75 backdrop-blur-xl backdrop-saturate-150 text-onheader sticky top-0 z-40 border-b border-line shadow-[0_1px_0_rgb(255_255_255/.04),0_8px_24px_-16px_rgb(0_0_0/.25)]">
-      <div className="px-3 sm:px-4 h-16 flex items-center gap-2 sm:gap-3">
+      <div className="px-3 sm:px-4 min-h-16 py-2 md:py-0 flex flex-wrap items-center gap-2 sm:gap-3">
         {/* no menu button: the menu capsule is always visible (left on computers and tablets, bottom on phones) */}
         <div className="flex items-center gap-2 shrink-0" lang="en">
           {/* the logo (owner, Oct 2026): the name itself, its C a speech bubble */}

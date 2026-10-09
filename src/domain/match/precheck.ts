@@ -1,7 +1,7 @@
 // "Pre-check before posting" (owner, Oct 2026). SIMULATED: simple rules standing in for a future AI review, which should look
 // for signs of illegal content, missing details and anything odd before a post goes out. The page labels it "simulated AI".
 // Messages say "may … please check" — this is not a legal assessment.
-import { makePost, type PostInput, type Problem } from './logic'
+import { postIssues, type PostInput, type Problem } from './logic'
 import type { Industry, Skill } from './types'
 
 export type Warning = 'noSalary' | 'skillMismatch' | 'shortDetails' | 'discrimination' | 'scamRisk' | 'manyPeople'
@@ -34,9 +34,8 @@ const DISCRIMINATION = /อายุไม่เกิน|อายุ\s*\d+\s*[
 const SCAM = /ค่าสมัคร|ค่ามัดจำ|ค่าหัวคิว|ค่าธรรมเนียม|โอนเงิน|เงินประกันการทำงาน|押金|报名费|手续费|保证金|中介费|\bdeposit\b|\bapplication fee\b|\bpay (a |the )?fee\b|\bprocessing fee\b/i
 
 export function precheck(input: PostInput, at: string): Precheck {
-  const errors: Problem[] = []
-  const made = makePost(input, 'check', 'check', at)
-  if (!made.ok) errors.push(made.problem)
+  // every rule error at once (QA, Oct 2026), each problem listed once
+  const errors: Problem[] = [...new Set(postIssues(input, at).map((x) => x.problem))]
   const warnings: Warning[] = []
   if (input.salary === null) warnings.push('noSalary')
   if (input.skills.length && !input.skills.some((s) => RELATED[input.industry]?.includes(s))) warnings.push('skillMismatch')

@@ -296,7 +296,7 @@ describe('renew and delete on the board (owner, Oct 2026: they seemed to do noth
   it('the post page and my posts ask in the site window (renew, delete, decline, withdraw) and show “saving”', () => {
     for (const p of ['./pages/post.tsx', './pages/hire.tsx', './pages/board.tsx']) expect(src(p), p).not.toContain('window.confirm')
     const post = src('./pages/post.tsx')
-    expect(post).toContain("if (await ask(t('m.em.renew.confirm'), { yes: t('m.em.renew') })) void act(() => renew(p.id), t('m.em.renewed'))")
+    expect(post).toContain("if (!(await ask(t('m.em.renew.confirm'), { yes: t('m.em.renew') }))) return")
     expect(post).toContain('{askDialog}')
     expect(src('./pages/hire.tsx')).toContain("{renewing === x.id ? t('m.ask.busy') : t('m.em.renew')}")
   })
@@ -467,7 +467,7 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
     expect(page.match(/class="chip-check"/g)?.length).toBe(36) // every skill, in groups (owner, Oct 2026: more varied skills)
     expect(page).toMatch(/<input id="seek-skills-0" type="checkbox" class="sr-only"/)
     const m = src('./pages/match.tsx')
-    expect(m).toMatch(/useEffect\(\(\) => \{ if \(err\) document\.getElementById\(err\.focus\)\?\.focus\(\) \}, \[err\]\)/)
+    expect(m).toContain('if (jump.current && errs[0]) { jump.current = false; document.getElementById(errs[0].focus)?.focus() }')
     const hire = src('./pages/hire.tsx') // the employer form moved here (Oct 2026)
     expect(hire).toContain("aria-describedby={fe.describe('emp-company', 'emp-company-hint')}")
     expect(hire).toContain("contact: ['emp-details', 'emp-details']")

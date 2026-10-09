@@ -60,13 +60,13 @@ export function ReportButton({ postId }: { postId: string }) {
   const { st, report } = useMatch()
   const [open, setOpen] = useState(false), [reason, setReason] = useState<ReportReason | null>(null), [note, setNote] = useState('')
   const [busy, setBusy] = useState(false), [err, setErr] = useState(''), [done, setDone] = useState(false)
-  if (st.reports.some((r) => r.postId === postId)) return <p role="status" className="text-sm text-muted flex items-start gap-1.5"><Icon name="ok" size={15} className="text-ok-fg mt-0.5" />{t(done ? 'm.rpt.done' : 'm.rpt.already')}</p>
+  if (st.reports.some((r) => r.postId === postId)) return <p id={`rp-done-${postId}`} tabIndex={-1} role="status" className="text-sm text-muted flex items-start gap-1.5 outline-none"><Icon name="ok" size={15} className="text-ok-fg mt-0.5" />{t(done ? 'm.rpt.done' : 'm.rpt.already')}</p>
   const close = () => { setOpen(false); setErr('') }
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (!reason) { setErr(t('m.rpt.pick')); return }
+    if (!reason) { setErr(t('m.rpt.pick')); requestAnimationFrame(() => document.getElementById('rp-r0')?.focus()); return }
     setBusy(true); const r = await report(postId, reason, note); setBusy(false)
-    if (r.ok) { setDone(true); setOpen(false); setReason(null); setNote(''); return }
+    if (r.ok) { setDone(true); setOpen(false); setReason(null); setNote(''); requestAnimationFrame(() => document.getElementById(`rp-done-${postId}`)?.focus()); return }
     setErr(N.problem(r.problem))
   }
   return (<>
@@ -76,9 +76,9 @@ export function ReportButton({ postId }: { postId: string }) {
         <h2 id={titleId} className="h2">{t('m.rpt.title')}</h2>
         <p className="text-sm text-muted">{t('m.rpt.lead')}</p>
         <fieldset aria-describedby={err ? 'rp-err' : undefined}><legend className="label">{t('m.rpt.reason')}</legend>
-          <div className="space-y-1.5">{REPORT_REASONS.map((k) => (
+          <div className="space-y-1.5">{REPORT_REASONS.map((k, i) => (
             <label key={k} className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer text-sm ${reason === k ? 'border-primary bg-brand text-brandfg' : 'border-control hover:bg-surface3'}`}>
-              <input type="radio" name="rp-reason" className="mt-1" checked={reason === k} onChange={() => { setReason(k); setErr('') }} />
+              <input id={i === 0 ? 'rp-r0' : undefined} type="radio" name="rp-reason" className="mt-1" aria-describedby={i === 0 && err ? 'rp-err' : undefined} checked={reason === k} onChange={() => { setReason(k); setErr('') }} />
               <span><span className="font-medium block">{t(`m.rpt.r.${k}` as never)}</span><span className="text-xs opacity-80">{t(`m.rpt.r.${k}.d` as never)}</span></span>
             </label>))}</div></fieldset>
         <div><label className="block"><span className="label">{t('m.rpt.note')} <span className="font-normal text-muted">({t('m.opt')})</span></span>

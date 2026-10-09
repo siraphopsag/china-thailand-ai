@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { LANGS, useI18n } from '../i18n'
 import { ACCENTS, useTheme } from '../theme'
 import { NavLink } from '../store'
@@ -158,15 +158,24 @@ export function Toast({ msg }: { msg: { tone: 'info' | 'danger'; text: string } 
  * WCAG 3.3.1 / 1.3.1: a form error is shown under the field it belongs to, the field is marked invalid and described by it,
  * and focus moves to that field. `key` names the field group, `focus` the control to focus.
  */
+type FieldErr = { key: string; focus: string; text: string }
+/** several fields can be wrong at once (QA, Oct 2026: the post form showed one problem per try); focus goes to the first */
 export function useFieldError() {
-  const [err, setErr] = useState<{ key: string; focus: string; text: string } | null>(null)
-  useEffect(() => { if (err) document.getElementById(err.focus)?.focus() }, [err])
+  const [errs, setErrs] = useState<FieldErr[]>([])
+  const jump = useRef(false) // focus only when errors are shown, not when one is cleared while typing
+  useEffect(() => { if (jump.current && errs[0]) { jump.current = false; document.getElementById(errs[0].focus)?.focus() } }, [errs])
+  const of = (key: string) => errs.find((e) => e.key === key)
   return {
-    set: (key: string, focus: string, text: string) => setErr({ key, focus, text }),
-    clear: () => setErr(null),
-    invalid: (key: string) => err?.key === key || undefined,
-    describe: (key: string, ...more: string[]) => [err?.key === key ? `${key}-err` : '', ...more].filter(Boolean).join(' ') || undefined,
-    msg: (key: string) => err?.key === key ? <p id={`${key}-err`} className="text-sm text-danger-fg flex items-center gap-1.5 mt-1"><Icon name="alert" size={15} />{err.text}</p> : null,
+    set: (key: string, focus: string, text: string) => { jump.current = true; setErrs([{ key, focus, text }]) },
+    /** one message per field (the first wins), in the order given */
+    setMany: (list: FieldErr[]) => { jump.current = true; setErrs(list.filter((e, i) => list.findIndex((x) => x.key === e.key) === i)) },
+    clear: () => setErrs((xs) => (xs.length ? [] : xs)),
+    /** a field being corrected loses its message; the others stay */
+    clearOne: (key: string) => setErrs((xs) => (xs.some((e) => e.key === key) ? xs.filter((e) => e.key !== key) : xs)),
+    count: errs.length,
+    invalid: (key: string) => !!of(key) || undefined,
+    describe: (key: string, ...more: string[]) => [of(key) ? `${key}-err` : '', ...more].filter(Boolean).join(' ') || undefined,
+    msg: (key: string) => { const e = of(key); return e ? <p id={`${key}-err`} className="text-sm text-danger-fg flex items-center gap-1.5 mt-1"><Icon name="alert" size={15} />{e.text}</p> : null },
   }
 }
 export type FieldError = ReturnType<typeof useFieldError>
@@ -249,7 +258,7 @@ export function SkillPicker({ skills, onChange, idp, fe }: { skills: Skill[]; on
             const on = skills.includes(s)
             return (
             <label key={s} className="chip-check">
-              <input id={s === SKILLS[0] ? `${idp}-0` : undefined} type="checkbox" className="sr-only" aria-invalid={fe.invalid(idp)} checked={on} disabled={!on && skills.length >= MAX_SKILLS} onChange={() => onChange(on ? skills.filter((x) => x !== s) : [...skills, s])} />
+              <input id={s === SKILLS[0] ? `${idp}-0` : undefined} type="checkbox" className="sr-only" aria-invalid={fe.invalid(idp)} aria-describedby={s === SKILLS[0] ? fe.describe(idp) : undefined} checked={on} disabled={!on && skills.length >= MAX_SKILLS} onChange={() => onChange(on ? skills.filter((x) => x !== s) : [...skills, s])} />
               <span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.skill(s)}
             </label>) })}</div></div>))}</div>
       {fe.msg(idp)}
@@ -313,7 +322,7 @@ export function SeekPage() {
   const pq = pinQuota(st, limitNow)
   const pins: MapPin[] = activePins(st.me, limitNow).map((p) => ({ country: p.country, province: p.province, label: N.place(p.country, p.province), tone: 'mine' }))
   const confirmOrigin = async () => {
-    if (isCountry(oc) && op) { await setOrigin({ country: oc, province: op }); setEditOrigin(false); setMsg(null); fe.clear() }
+    if (isCountry(oc) && op) { await setOrigin({ country: oc, province: op }); setEditOrigin(false); setMsg(null); fe.clear(); requestAnimationFrame(() => document.getElementById('s2h')?.focus()) }
     else { setMsg(null); fe.set('origin-prov', oc ? 'origin-prov' : 'origin-prov-c', N.problem('place')) }
   }
   // check the form, then ask before using a pin
@@ -336,7 +345,7 @@ export function SeekPage() {
     else { fe.clear(); setMsg({ tone: 'danger', text: N.problem(r.problem) }) }
   }
   // after "pinned": start the next one, or look at my pins
-  const pinAgain = () => { setPinStage(null); setPinned(null); setDp(null); setSkills([]); requestAnimationFrame(() => document.getElementById('dest-prov')?.focus()) }
+  const pinAgain = (to = 'dest-prov') => { setPinStage(null); setPinned(null); setDp(null); setSkills([]); requestAnimationFrame(() => document.getElementById(to)?.focus()) }
   return (
     <Page title={t('m.seek.title')} fit>
       <MapLayout map={<>
@@ -356,8 +365,8 @@ export function SeekPage() {
       ) : (
         <form className="card space-y-4" onSubmit={submitPin} aria-labelledby="s2h">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="s2h" className="h2">{t('m.seek.s2')}</h2>
-            <p className="text-sm text-muted">{t('m.seek.from', { p: N.place(st.me.origin!.country, st.me.origin!.province) })} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => { setOc(st.me.origin?.country ?? null); setOp(st.me.origin?.province ?? null); setEditOrigin(true) }}>{t('m.edit')}</button></p>
+            <h2 id="s2h" tabIndex={-1} className="h2 outline-none">{t('m.seek.s2')}</h2>
+            <p className="text-sm text-muted">{t('m.seek.from', { p: N.place(st.me.origin!.country, st.me.origin!.province) })} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => { setOc(st.me.origin?.country ?? null); setOp(st.me.origin?.province ?? null); setEditOrigin(true); requestAnimationFrame(() => document.getElementById('origin-prov')?.focus()) }}>{t('m.edit')}</button></p>
           </div>
           <PlaceFields idp="dest-prov" fe={fe} country={dc} province={dp} onCountry={(c) => { setDc(c); setDp(null); fe.clear() }} onProvince={(p) => { setDp(p); fe.clear() }} />
           <p className="text-xs text-muted">{t('m.seek.same')}</p>
@@ -366,7 +375,13 @@ export function SeekPage() {
             <IndustrySelect value={industry} onChange={setIndustry} label={t('m.industry')} />
             <SkillPicker idp="seek-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); fe.clear() }} />
           </div>
-          <button type="submit" className="btn-primary" disabled={saving || pq.left <= 0 || (!!dc && !isCountry(dc))}><Icon name="pin" size={16} />{saving ? t('m.pin.busy') : t('m.pin.go')}</button>
+          {/* QA, Oct 2026: with no pins left the button used to turn off without a word — say why, when they come back, and where to get more */}
+          {pq.left <= 0 && <div id="pin-limit"><Warn>{t('m.err.limit')}{pq.resetAt ? ` · ${t('m.qb.reset', { d: N.dayTime(pq.resetAt) })}` : ''}{' '}
+            <NavLink to="member" className="font-semibold underline underline-offset-2">{t('m.plan.see')}</NavLink></Warn></div>}
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="submit" className="btn-primary" aria-describedby={pq.left <= 0 ? 'pin-limit' : undefined} disabled={saving || pq.left <= 0 || (!!dc && !isCountry(dc))}><Icon name="pin" size={16} />{saving ? t('m.pin.busy') : t('m.pin.go')}</button>
+            {Number.isFinite(pq.limit) && <span className="text-xs text-muted">{t('m.q.count', { n: pq.used, max: pq.limit })}</span>}
+          </div>
         </form>
       )}
       </>)}
@@ -377,15 +392,15 @@ export function SeekPage() {
         <p className="text-xs text-muted">{t('m.pin.cf.quota', { n: pq.used + 1, max: pq.limit === Infinity ? '∞' : pq.limit })}</p>
         <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" disabled={saving} onClick={() => setPinStage(null)}>{t('m.cf.back')}</button>
           <button type="button" className="btn-primary" disabled={saving} onClick={confirmPin}><Icon name="pin" size={16} />{saving ? t('m.pin.busy') : t('m.pin.cf.yes')}</button></div></>)}</Modal>
-      <Modal open={pinStage === 'done'} onClose={pinAgain}>{(id) => pinned && (<>
+      <Modal open={pinStage === 'done'} onClose={() => pinAgain()}>{(id) => pinned && (<>
         <div className="flex items-center gap-3"><span className="glass-drop w-11 h-11 shrink-0"><Icon name="check" size={22} /></span><h2 id={id} className="h2">{t('m.pin.dn.title')}</h2></div>
         <p className="text-sm"><b>{N.place(pinned.country, pinned.province)}</b></p>
         <p className="text-sm text-muted">{t('m.pin.dn.text')}</p>
-        <div className="grid sm:grid-cols-2 gap-2"><button type="button" className="btn-primary" onClick={() => { pinAgain(); setSeekTab('mine') }}><Icon name="pin" size={16} />{t('m.pin.dn.mine')}</button>
-          <button type="button" className="btn-ghost" onClick={pinAgain}><Icon name="plus" size={16} />{t('m.pin.dn.again')}</button></div></>)}</Modal>
+        <div className="grid sm:grid-cols-2 gap-2"><button type="button" className="btn-primary" onClick={() => { pinAgain('pins-h'); setSeekTab('mine') }}><Icon name="pin" size={16} />{t('m.pin.dn.mine')}</button>
+          <button type="button" className="btn-ghost" onClick={() => pinAgain()}><Icon name="plus" size={16} />{t('m.pin.dn.again')}</button></div></>)}</Modal>
       {seekTab === 'mine' && (
       <section className="space-y-2" aria-labelledby="pins-h">
-        <h2 id="pins-h" className="h2">{t('m.pin.active', { n: activePins(st.me, limitNow).length })}</h2>
+        <h2 id="pins-h" tabIndex={-1} className="h2 outline-none">{t('m.pin.active', { n: activePins(st.me, limitNow).length })}</h2>
         <QuotaBar q={pq} kind="pin" />
         <p className="text-xs text-muted">{t('m.pin.why')}</p>
         <PinList onRemove={async (id) => { await unpin(id); setMsg({ tone: 'info', text: t('m.pin.removed') }) }} />

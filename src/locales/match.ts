@@ -155,6 +155,13 @@ export const match = {
   'm.industry': ['สายงานที่หา', '想找的行业', 'Field you are looking for'],
   'm.skills': ['ความสามารถ (เลือกอย่างน้อย 1)', '技能（至少选 1 项）', 'Skills (choose at least one)'],
   'm.pin.go': ['ปักหมุดที่นี่', '在此标记', 'Pin here'],
+  // QA, Oct 2026: local demo — a simulated applicant, so the employer's side can be tried alone
+  'm.em.sim.lead': ['โหมดทดลองในเครื่องนี้: ยังไม่มีผู้หางานจริงมาสมัคร กดปุ่มด้านล่างเพื่อจำลองผู้สมัคร แล้วลองยืนยันหรือไม่รับได้', '本机体验模式：还没有真实求职者申请。点击下方按钮模拟一位申请人，然后试试确认或拒绝', 'Demo on this device: no real job seekers apply here. Add a simulated applicant below, then try confirming or declining'],
+  'm.em.sim.go': ['จำลองผู้สมัคร 1 คน', '模拟一位申请人', 'Add a simulated applicant'],
+  'm.em.sim.done': ['เพิ่มผู้สมัครจำลองแล้ว', '已添加模拟申请人', 'A simulated applicant was added'],
+  'm.em.sim.none': ['ผู้หางานตัวอย่างสมัครครบทุกคนแล้ว', '所有示例求职者都已申请', 'Every sample job seeker has already applied'],
+  // QA, Oct 2026: the post form marks every field that needs fixing at once
+  'm.err.fields': ['กรุณาแก้ไข {n} ช่องที่มีข้อความสีแดงกำกับ', '请修改标有红色提示的 {n} 处', 'Fields to fix, marked in red: {n}'],
   // owner, Oct 2026: confirm before pinning, as employers confirm before posting
   'm.pin.cf.title': ['ยืนยันการปักหมุดนี้ใช่หรือไม่?', '确认添加这个标记吗？', 'Pin this place?'],
   'm.pin.cf.quota': ['จะใช้สิทธิ์ปักหมุดครั้งที่ {n} จาก {max} ในรอบ 7 วันนี้ · หมุดอยู่ได้ 30 วัน', '这将是本周期第 {n} 次标记（共 {max} 次）· 标记保留 30 天', 'This uses pin {n} of {max} in this 7-day cycle · a pin lasts 30 days'],

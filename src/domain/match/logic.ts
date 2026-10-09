@@ -96,21 +96,30 @@ export interface PostInput {
 }
 /** a post for an occupation closed to foreigners in Thailand (e.g. tour guiding) always stays in Thailand */
 export const mustStayDomestic = (i: Pick<PostInput, 'place' | 'position' | 'details'>) => i.place.country === 'TH' && closedToForeigners(i.position) // the title: details may mention such work in passing
+export type PostField = 'place' | 'company' | 'position' | 'details' | 'industry' | 'skills' | 'minYears' | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits'
+/** every problem of a post at once, field by field, in form order (QA, Oct 2026: the form showed them one at a time) */
+export function postIssues(input: PostInput, at: string): { field: PostField; problem: Problem }[] {
+  const out: { field: PostField; problem: Problem }[] = []
+  const add = (field: PostField, problem: Problem | null | false) => { if (problem) out.push({ field, problem }) }
+  add('place', !isPlace(input.place) && 'place')
+  // position: 2 characters minimum, so short titles such as "HR" are accepted (owner, Oct 2026)
+  add('company', text(input.company, 2, 80, 'company')); add('position', text(input.position, 2, 80, 'position')); add('details', text(input.details, 0, 600, 'details'))
+  add('industry', !isIndustry(input.industry) && 'industry')
+  add('skills', !isSkills(input.skills) && 'skills')
+  add('minYears', !intIn(input.minYears, 0, 40) && 'years')
+  add('headcount', !intIn(input.headcount, 1, 99) && 'headcount')
+  add('employment', !oneOf(EMPLOYMENT, input.employment) && 'employment')
+  add('salary', input.salary !== null && (!isSalary(input.salary) || input.salary.min > input.salary.max) && 'salary')
+  add('startDate', !dayWithin(input.startDate, at) && 'startDate')
+  add('languages', (!isLangs(input.languages) || input.languages.length === 0) && 'languages')
+  add('education', !oneOf(EDU, input.education) && 'education')
+  add('benefits', !isBenefits(input.benefits) && 'benefits')
+  return out
+}
 export function makePost(input: PostInput, id: string, employerId: string, at: string): Outcome<Post> {
   if (!isPlace(input.place)) return fail('place')
-  // position: 2 characters minimum, so short titles such as "HR" are accepted (owner, Oct 2026)
-  const t = text(input.company, 2, 80, 'company') ?? text(input.position, 2, 80, 'position') ?? text(input.details, 0, 600, 'details')
-  if (t) return fail(t)
-  if (!isIndustry(input.industry)) return fail('industry')
-  if (!isSkills(input.skills)) return fail('skills')
-  if (!intIn(input.minYears, 0, 40)) return fail('years')
-  if (!intIn(input.headcount, 1, 99)) return fail('headcount')
-  if (!oneOf(EMPLOYMENT, input.employment)) return fail('employment')
-  if (input.salary !== null && (!isSalary(input.salary) || input.salary.min > input.salary.max)) return fail('salary')
-  if (!dayWithin(input.startDate, at)) return fail('startDate')
-  if (!isLangs(input.languages) || input.languages.length === 0) return fail('languages')
-  if (!oneOf(EDU, input.education)) return fail('education')
-  if (!isBenefits(input.benefits)) return fail('benefits')
+  const first = postIssues(input, at)[0]
+  if (first) return fail(first.problem)
   return { ok: true, value: { id, employerId, company: input.company, position: input.position, industry: input.industry, skills: [...input.skills], minYears: input.minYears, details: input.details,
     headcount: input.headcount, employment: input.employment, salary: input.salary ? { ...input.salary } : null, startDate: input.startDate,
     languages: input.languages.map((l) => ({ ...l })), education: input.education, benefits: [...input.benefits],
@@ -203,6 +212,18 @@ export function decide(st: MatchState, accId: string, confirm: boolean, at: stri
   if (a.status !== 'accepted') return fail('state')
   const next = st.acceptances.map((x) => (x.id === accId ? { ...x, status: (confirm ? 'confirmed' : 'rejected') as AppStatus, decidedAt: at } : x))
   return { ok: true, value: promote(next, post, at) }
+}
+/**
+ * Local demo only (QA, Oct 2026: nobody ever applied to the visitor's own posts, so the employer's side — confirm or decline,
+ * the queue, the case — could not be tried): the next sample job seeker who has not applied yet applies to one of my posts
+ * (or joins its queue when it is full). Invented people only; the page labels them simulated.
+ */
+export function sampleApplicant(st: MatchState, postId: string, id: string, at: string): Outcome<Acceptance> {
+  const post = st.posts.find((p) => p.id === postId && p.employerId === MY_EMPLOYER); if (!post) return fail('unknown')
+  const s = st.seekers.find((x) => !st.acceptances.some((a) => a.postId === postId && a.seekerId === x.id)); if (!s) return fail('already')
+  const today = localDay(at)
+  const status: AppStatus = isFull(st.acceptances, post) ? 'reserved' : 'accepted'
+  return { ok: true, value: { id, postId, seekerId: s.id, at, status, intro: '', availableFrom: post.startDate && post.startDate > today ? post.startDate : today } }
 }
 /** the seeker withdraws (an application or a reservation); a freed place goes to the queue */
 export function cancel(st: MatchState, accId: string, at: string): Outcome<Acceptance[]> {

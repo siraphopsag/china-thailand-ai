@@ -261,7 +261,8 @@ describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, st
     expect(a).toContain('lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]'); expect(a).toContain('<div className="grid lg:grid-cols-2 gap-4">')
   })
   it('phones: one step smaller (15 px body), smaller cards and buttons, board cards on their side, pills that scroll sideways', () => {
-    expect(css).toContain('@media (max-width: 639px) { html { font-size: 15px }')
+    // QA, Oct 2026: a share of the visitor's own text size (15 px at the default 16 px), so a larger setting still works
+    expect(css).toContain('@media (max-width: 639px) { html { font-size: 93.75% }')
     expect(css).toMatch(/\.card \{ @apply border border-line rounded-2xl p-4 sm:p-5/)
     expect(css).toMatch(/\.btn \{ @apply [^}]*min-h-\[40px\]/)
     expect(src('./pages/board.tsx')).toContain("const SEG_SCROLL = 'inline-flex flex-nowrap sm:flex-wrap") // the scope and rings share one swipeable line

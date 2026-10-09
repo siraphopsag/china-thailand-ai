@@ -88,7 +88,7 @@ describe('sign-in and navigation', () => {
     expect(h).toContain(T('m.need.title')); expect(h).not.toContain(T('m.profile.change'))
   })
   it('"Edit" where I come from starts from the saved place (it was empty after a refresh)', () => {
-    expect(src('./pages/match.tsx')).toContain('onClick={() => { setOc(st.me.origin?.country ?? null); setOp(st.me.origin?.province ?? null); setEditOrigin(true) }}')
+    expect(src('./pages/match.tsx')).toContain("onClick={() => { setOc(st.me.origin?.country ?? null); setOp(st.me.origin?.province ?? null); setEditOrigin(true); requestAnimationFrame(() => document.getElementById('origin-prov')?.focus()) }}")
   })
 })
 

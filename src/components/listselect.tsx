@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Icon, type IconName } from './icons'
 
 /**
@@ -17,6 +17,11 @@ import { Icon, type IconName } from './icons'
  */
 export interface ListGroup { label?: string; muted?: boolean; dot?: boolean; icon?: IconName; note?: string; badge?: string; itemIcon?: IconName; options: { value: string; label: string }[] }
 const ROW = 40, HEAD = 28, NOTE = 16
+/** the nearest box that scrolls (the page itself on phones) */
+const scrollerOf = (el: HTMLElement): HTMLElement => {
+  for (let p = el.parentElement; p; p = p.parentElement) { const o = getComputedStyle(p).overflowY; if ((o === 'auto' || o === 'scroll') && p.scrollHeight > p.clientHeight) return p }
+  return (document.scrollingElement as HTMLElement | null) ?? document.documentElement
+}
 
 export function ListSelect({ id, labelId, value, onChange, groups, placeholder, disabled, maxRows, invalid, describedBy, required }: {
   id: string; labelId: string; value: string | null; onChange: (v: string) => void; groups: ListGroup[]; placeholder: string
@@ -27,6 +32,7 @@ export function ListSelect({ id, labelId, value, onChange, groups, placeholder, 
   const flat = useMemo(() => groups.flatMap((g, gi) => g.options.map((o) => ({ ...o, gi, muted: !!g.muted }))), [groups])
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
+  const [fitH, setFitH] = useState<number | null>(null) // a shorter list when the screen has no room for the full one
   const box = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLUListElement>(null)
   const typed = useRef({ text: '', at: 0 })
@@ -77,6 +83,30 @@ export function ListSelect({ id, labelId, value, onChange, groups, placeholder, 
   }
   const heads = groups.filter((g) => g.label).length, notes = groups.filter((g) => g.note).length
   const maxHeight = maxRows * ROW + heads * HEAD + notes * NOTE + 12
+  // QA, Oct 2026: on a phone the list ran past the bottom of the screen and under the menu bar (one option visible).
+  // When it opens, the page scrolls up just enough for the list to fit above the bar (never moving the field under the
+  // header); if the screen is still too short, the list gets shorter and scrolls inside (at least 3 rows).
+  useLayoutEffect(() => {
+    if (!open) { setFitH(null); return }
+    const field = box.current, ul = list.current
+    if (!field || !ul) return
+    const viewH = window.visualViewport?.height ?? window.innerHeight
+    const bar = document.querySelector('nav.mn-h')?.getBoundingClientRect() // the phone menu bar (not shown on larger screens)
+    const bottom = (bar && bar.height > 0 ? Math.min(viewH, bar.top) : viewH) - 8
+    const top = (document.querySelector('header')?.getBoundingClientRect().bottom ?? 0) + 8
+    const want = Math.min(maxHeight, ul.scrollHeight)
+    let r = field.getBoundingClientRect()
+    const over = r.bottom + 6 + want - bottom
+    if (over > 0) {
+      // how far the page can scroll without the open list (the list makes it taller only until it is shortened below)
+      const sc = scrollerOf(field)
+      ul.style.display = 'none'; const canScroll = Math.max(0, sc.scrollHeight - sc.clientHeight - sc.scrollTop); ul.style.display = ''
+      const by = Math.min(over, Math.max(0, r.top - top), canScroll)
+      if (by > 0) { sc.scrollBy({ top: by, behavior: 'instant' as ScrollBehavior }); r = field.getBoundingClientRect() }
+      const room = bottom - r.bottom - 6
+      setFitH(room < want ? Math.max(ROW * 3, Math.floor(room)) : null)
+    } else setFitH(null)
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps -- measured once each time it opens
   const badge = selected ? groups[selected.gi]?.badge : undefined
 
   return (
@@ -91,7 +121,7 @@ export function ListSelect({ id, labelId, value, onChange, groups, placeholder, 
           <Icon name={open ? 'up' : 'down'} size={18} className="text-muted" />
         </span>
       </button>
-      <ul ref={list} id={listId} role="listbox" aria-labelledby={labelId} hidden={!open} style={{ maxHeight }}
+      <ul ref={list} id={listId} role="listbox" aria-labelledby={labelId} hidden={!open} style={{ maxHeight: fitH ?? maxHeight }}
         className="list-pop absolute z-30 left-0 right-0 top-full mt-1.5 overflow-y-auto overscroll-contain rounded-xl border border-line p-1">
         {groups.map((g, gi) => {
           const headId = `${uid}-g${gi}`
@@ -99,7 +129,7 @@ export function ListSelect({ id, labelId, value, onChange, groups, placeholder, 
           const rows = items.map(({ o, i }) => (
             <li key={o.value} id={optId(i)} role="option" aria-selected={o.value === value}
               onPointerDown={(e) => e.preventDefault()} onClick={() => pick(i)} onPointerMove={() => active !== i && setActive(i)}
-              className={`flex items-center justify-between gap-2 rounded-lg px-3 cursor-pointer text-sm ${o.muted ? 'text-muted' : 'text-ink'} ${i === active ? 'bg-surface3' : ''} ${o.value === value ? 'font-semibold' : ''}`}
+              className={`flex items-center justify-between gap-2 rounded-lg px-3 cursor-pointer text-sm ${o.muted ? 'text-muted' : 'text-ink'} ${i === active ? 'bg-surface3 ring-2 ring-inset ring-primary' : ''} ${o.value === value ? 'font-semibold' : ''}`}
               style={{ minHeight: ROW }}>
               <span className="truncate">{o.label}</span>
               {o.value === value ? <Icon name="check" size={16} className="shrink-0 text-primary" /> : g.itemIcon && <Icon name={g.itemIcon} size={14} className="shrink-0 text-muted" />}

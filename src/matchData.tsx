@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { addPin, applyTo, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, removePin, renewPost, requestPersonVerify, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
+import { addPin, applyTo, sampleApplicant, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, removePin, renewPost, requestPersonVerify, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
 import { applyCaseAction, submitCase, type CaseAction } from './domain/match/cases'
 import { cleanPhone, cleanRegNo } from './domain/match/verify'
 import { reportPost, type ReportGroup, type ReportReason } from './domain/match/reports'
@@ -80,6 +80,8 @@ interface Ctx {
   deletePost: (id: string) => Promise<boolean>
   /** start the release of my post again (uses one post of the weekly allowance) */
   renew: (id: string) => Promise<Outcome<unknown>>
+  /** local demo: a sample job seeker applies to my post (false: not the local demo, or every sample seeker has applied) */
+  sampleApply: (postId: string) => Promise<boolean>
   /** take a membership plan (simulated: free during the trial, no payment); returns the new end date */
   subscribe: (plan: PlanId) => Promise<string | null>
   /** apply (takes a place) or reserve (the post is full) */
@@ -282,6 +284,12 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         const until = planUntil(st, plan, limitNow) // signed in: from the real time, like the database
         if (local) { setLocal((s) => ({ ...s, member: true, memberUntil: until })); return until }
         return (await profile({ member: true, member_until: until })).ok ? until : null
+      },
+      sampleApply: async (postId) => {
+        if (!local) return false
+        const r = sampleApplicant(st, postId, uid('acc'), at()); if (!r.ok) return false
+        setLocal((s) => ({ ...s, acceptances: [...s.acceptances, r.value] }))
+        return true
       },
       apply: async (postId, input) => {
         const r = applyTo(st, pool, postId, ME, input, uid('acc'), at()); if (!r.ok) return r

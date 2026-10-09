@@ -10,6 +10,10 @@ export const ux = {
   // ---- simplified dashboard
   // ---- strip trailing arrow/link glyphs from action labels (icons are drawn in code)
   // ---- demo / real data separation, recovery
+  // QA, Oct 2026: a lost connection is not broken data
+  'err.net': ['โหลดหน้านี้ไม่สำเร็จ การเชื่อมต่ออินเทอร์เน็ตอาจขัดข้อง', '无法加载此页面，网络连接可能中断', 'This page could not load. The internet connection may have dropped'],
+  'err.netNote': ['ตรวจสอบการเชื่อมต่อแล้วกดลองใหม่ ข้อมูลของคุณยังอยู่ครบ', '请检查网络后重试，您的数据仍然完好', 'Check your connection and try again. Your data is still here'],
+  'err.retry': ['ลองใหม่', '重试', 'Try again'],
   'err.reset': ['ล้างข้อมูลที่บันทึกไว้แล้วเริ่มใหม่', '清除已保存的数据并重新开始', 'Clear saved data and start over'],
   'err.resetNote': ['หากข้อผิดพลาดเกิดซ้ำ อาจเกิดจากข้อมูลเก่าที่บันทึกไว้ในเบราว์เซอร์นี้', '如果错误反复出现，可能是本浏览器中保存的旧数据所致。', 'If this keeps happening, old data saved in this browser may be the cause.'],
   // ---- educational answer (not a refusal, not advice)

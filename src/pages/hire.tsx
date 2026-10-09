@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { canPost, caseBlocksDelete, isCountry, localDay, memberActive, mustStayDomestic, postQuota, type PostInput, type Problem } from '../domain/match/logic'
+import { canPost, caseBlocksDelete, isCountry, localDay, memberActive, mustStayDomestic, postIssues, postQuota, type PostField, type PostInput, type Problem } from '../domain/match/logic'
 import { guessLang } from '../domain/match/postText'
 import { scheduleOf, stageAt, capStage } from '../domain/match/release'
 import { precheck, type Precheck } from '../domain/match/precheck'
@@ -42,6 +42,11 @@ const FIELD: Partial<Record<Problem, [string, string]>> = {
   details: ['emp-details', 'emp-details'], contact: ['emp-details', 'emp-details'], skills: ['emp-skills', 'emp-skills-0'],
   headcount: ['emp-headcount', 'emp-headcount'], belowHeld: ['emp-headcount', 'emp-headcount'], employment: ['emp-employment', 'emp-employment'], salary: ['emp-salary', 'emp-salary-min'],
   startDate: ['emp-start', 'emp-start'], languages: ['emp-langs', 'emp-langs-th'], education: ['emp-edu', 'emp-edu'],
+}
+/** the same by form field (a contact-like text is marked on the field where it was typed) */
+const AT: Record<PostField, [string, string] | undefined> = {
+  place: undefined, company: FIELD.company, position: FIELD.position, details: FIELD.details, industry: undefined, skills: FIELD.skills, minYears: FIELD.years,
+  headcount: FIELD.headcount, employment: FIELD.employment, salary: FIELD.salary, startDate: FIELD.startDate, languages: FIELD.languages, education: FIELD.education, benefits: undefined,
 }
 
 export function HirePage() {
@@ -106,7 +111,7 @@ export function HirePage() {
   if (st.role !== 'employer') return <Page title={t('m.emp.title')}><NeedRole role="employer" /></Page>
   const mine = st.posts.filter((x) => x.employerId === MY_EMPLOYER)
   const q = postQuota(st, limitNow), used = q.used, limit = q.limit
-  const clear = () => fe.clear()
+  const clear = (k: string) => fe.clearOne(k)
   const showProblem = (pr: Problem) => { const f = FIELD[pr]; if (f) fe.set(f[0], f[1], N.problem(pr)); else setMsg({ tone: 'danger', text: N.problem(pr) }) }
 
   const input = (): PostInput | null => {
@@ -120,7 +125,17 @@ export function HirePage() {
     const i = input(); if (!i) { setMsg({ tone: 'danger', text: N.problem('place') }); return }
     if (!editing && !canPost(st, limitNow)) { setStage('package'); return }
     // editing without changing the start date: it is checked against the posting day, so a post whose start has passed can still be fixed
-    const r = precheck(i, editing && editing.startDate && i.startDate === editing.startDate ? editing.createdAt : new Date(now).toISOString())
+    const at = editing && editing.startDate && i.startDate === editing.startDate ? editing.createdAt : new Date(now).toISOString()
+    // QA, Oct 2026: every field problem at once, under its field (it used to take one try per problem); focus goes to the first
+    const issues = postIssues(i, at)
+    if (issues.length) {
+      const marked = issues.flatMap((x) => { const f = AT[x.field]; return f ? [{ key: f[0], focus: f[1], text: N.problem(x.problem) }] : [] })
+      const other = issues.find((x) => !AT[x.field])
+      fe.setMany(marked)
+      setMsg(other ? { tone: 'danger', text: N.problem(other.problem) } : { tone: 'danger', text: t('m.err.fields', { n: new Set(marked.map((x) => x.key)).size }) })
+      return
+    }
+    const r = precheck(i, at)
     setPending(i); setCheck(r); setAiRes(null); setAck(false); setShown(false)
     // rule errors (e.g. a phone number in the details) must be fixed first; otherwise the AI reads the post when it can
     // local development only (?orbdemo): try the AI check without an account or an AI key — not in the built site
@@ -178,7 +193,7 @@ export function HirePage() {
     else if (r.problem === 'quota') setStage('package')
     else setMsg({ tone: 'danger', text: N.problem(r.problem) })
   }
-  const toggleLang = (l: LanguageSkill['lang']) => { setLangs((xs) => (xs.some((x) => x.lang === l) ? xs.filter((x) => x.lang !== l) : [...xs, { lang: l, level: 'conversational' }])); clear() }
+  const toggleLang = (l: LanguageSkill['lang']) => { setLangs((xs) => (xs.some((x) => x.lang === l) ? xs.filter((x) => x.lang !== l) : [...xs, { lang: l, level: 'conversational' }])); clear('emp-langs') }
   const setLevel = (l: LanguageSkill['lang'], level: LanguageSkill['level']) => setLangs((xs) => xs.map((x) => (x.lang === l ? { ...x, level } : x)))
 
   return (
@@ -196,17 +211,17 @@ export function HirePage() {
         <section className="card space-y-3" aria-labelledby="e1h">
           <h2 id="e1h" className="h2">{t('m.emp.s1')}</h2>
           <PlaceFields idp="emp-prov" fe={fe} country={c} province={p} onCountry={(x) => { setC(x); setP(null) }} onProvince={setP} />
-          <button type="button" className="btn-primary" disabled={!isCountry(c) || !p} onClick={() => { setForm(true); setMsg(null) }}><Icon name="posts" size={16} />{t('m.emp.fill')}</button>
+          <button type="button" className="btn-primary" disabled={!isCountry(c) || !p} onClick={() => { setForm(true); setMsg(null); focusHead.current = true }}><Icon name="posts" size={16} />{t('m.emp.fill')}</button>
         </section>
       ) : (
         <form className="card space-y-5" onSubmit={submit} aria-labelledby="e2h" noValidate>
-          <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="e2h" tabIndex={-1} className="h2 outline-none">{t(editing ? 'm.edit.title' : 'm.emp.s2')}</h2><p className="text-sm text-muted">{c && p && N.place(c, p)} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => setForm(false)}>{t('m.edit')}</button></p></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="e2h" tabIndex={-1} className="h2 outline-none">{t(editing ? 'm.edit.title' : 'm.emp.s2')}</h2><p className="text-sm text-muted">{c && p && N.place(c, p)} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => { setForm(false); requestAnimationFrame(() => document.getElementById('emp-prov')?.focus()) }}>{t('m.edit')}</button></p></div>
 
           <div className="space-y-5 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-5 lg:items-start">
           <div className="space-y-5">
           <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="business" size={16} />{t('m.emp.sec.company')}</legend>
             <div className="grid sm:grid-cols-2 gap-3">
-              <div><label className="block"><span className="label">{t('m.emp.company')}<Req /></span><input id="emp-company" className="input" maxLength={80} aria-required="true" aria-invalid={fe.invalid('emp-company')} aria-describedby={fe.describe('emp-company', 'emp-company-hint')} value={company} onChange={(e) => { setCompany(e.target.value); clear() }} /></label>
+              <div><label className="block"><span className="label">{t('m.emp.company')}<Req /></span><input id="emp-company" className="input" maxLength={80} aria-required="true" aria-invalid={fe.invalid('emp-company')} aria-describedby={fe.describe('emp-company', 'emp-company-hint')} value={company} onChange={(e) => { setCompany(e.target.value); clear('emp-company') }} /></label>
                 <span id="emp-company-hint" className="block text-xs text-muted mt-1">{t('m.hint.company')}</span>{fe.msg('emp-company')}</div>
               <IndustrySelect value={industry} onChange={setIndustry} label={t('jb.field.industry')} />
             </div>
@@ -214,13 +229,13 @@ export function HirePage() {
 
           <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="employment" size={16} />{t('m.emp.sec.role')}</legend>
             <div className="grid sm:grid-cols-2 gap-3">
-              <div><label className="block"><span className="label">{t('m.emp.position')}<Req /></span><input id="emp-position" className="input" maxLength={80} aria-required="true" aria-invalid={fe.invalid('emp-position')} aria-describedby={fe.describe('emp-position', 'emp-position-hint')} value={position} onChange={(e) => { setPosition(e.target.value); clear() }} /></label>
+              <div><label className="block"><span className="label">{t('m.emp.position')}<Req /></span><input id="emp-position" className="input" maxLength={80} aria-required="true" aria-invalid={fe.invalid('emp-position')} aria-describedby={fe.describe('emp-position', 'emp-position-hint')} value={position} onChange={(e) => { setPosition(e.target.value); clear('emp-position') }} /></label>
                 <span id="emp-position-hint" className="block text-xs text-muted mt-1">{t('m.hint.position')}</span>{fe.msg('emp-position')}</div>
-              <div><label className="block"><span className="label">{t('m.f.headcount')}<Req /></span><input id="emp-headcount" className="input" type="number" min={1} max={99} step={1} aria-required="true" aria-invalid={fe.invalid('emp-headcount')} aria-describedby={fe.describe('emp-headcount')} value={headcount} onChange={(e) => { setHeadcount(e.target.value); clear() }} /></label>{fe.msg('emp-headcount')}</div>
+              <div><label className="block"><span className="label">{t('m.f.headcount')}<Req /></span><input id="emp-headcount" className="input" type="number" min={1} max={99} step={1} aria-required="true" aria-invalid={fe.invalid('emp-headcount')} aria-describedby={fe.describe('emp-headcount')} value={headcount} onChange={(e) => { setHeadcount(e.target.value); clear('emp-headcount') }} /></label>{fe.msg('emp-headcount')}</div>
               <div><label className="block"><span className="label">{t('m.f.employment')}<Req /></span><select id="emp-employment" className="input" value={employment} onChange={(e) => setEmployment(e.target.value as Employment)}>{EMPLOYMENT.map((x) => <option key={x} value={x}>{N.employment(x)}</option>)}</select></label>{fe.msg('emp-employment')}</div>
-              <div><label className="block"><span className="label">{t('m.emp.years')}</span><input id="emp-years" className="input" type="number" min={0} max={40} step={1} aria-invalid={fe.invalid('emp-years')} aria-describedby={fe.describe('emp-years')} value={years} onChange={(e) => { setYears(e.target.value); clear() }} /></label>{fe.msg('emp-years')}</div>
+              <div><label className="block"><span className="label">{t('m.emp.years')}</span><input id="emp-years" className="input" type="number" min={0} max={40} step={1} aria-invalid={fe.invalid('emp-years')} aria-describedby={fe.describe('emp-years')} value={years} onChange={(e) => { setYears(e.target.value); clear('emp-years') }} /></label>{fe.msg('emp-years')}</div>
             </div>
-            <SkillPicker idp="emp-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); clear() }} />
+            <SkillPicker idp="emp-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); clear('emp-skills') }} />
           </fieldset>
 
           </div>
@@ -228,20 +243,20 @@ export function HirePage() {
           <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="documents" size={16} />{t('m.emp.sec.terms')}</legend>
             <fieldset aria-describedby={fe.describe('emp-salary', 'emp-salary-hint')}><legend className="label">{t('m.f.salary')} <span className="font-normal text-muted">({t('m.opt')})</span></legend>
               <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
-                <MoneyInput id="emp-salary-min" className="input" aria-label={t('m.f.salaryMin')} placeholder={t('m.f.salaryMin')} aria-invalid={fe.invalid('emp-salary')} value={salMin} onValue={(v) => { setSalMin(v); clear() }} />
-                <MoneyInput className="input" aria-label={t('m.f.salaryMax')} placeholder={t('m.f.salaryMax')} aria-invalid={fe.invalid('emp-salary')} value={salMax} onValue={(v) => { setSalMax(v); clear() }} />
+                <MoneyInput id="emp-salary-min" className="input" aria-label={t('m.f.salaryMin')} placeholder={t('m.f.salaryMin')} aria-invalid={fe.invalid('emp-salary')} aria-describedby={fe.describe('emp-salary', 'emp-salary-hint')} value={salMin} onValue={(v) => { setSalMin(v); clear('emp-salary') }} />
+                <MoneyInput className="input" aria-label={t('m.f.salaryMax')} placeholder={t('m.f.salaryMax')} aria-invalid={fe.invalid('emp-salary')} aria-describedby={fe.describe('emp-salary', 'emp-salary-hint')} value={salMax} onValue={(v) => { setSalMax(v); clear('emp-salary') }} />
                 <select className="input !w-auto" aria-label={t('m.f.currency')} value={currency} onChange={(e) => setCurrency(e.target.value as Currency)}>{CURRENCIES.map((x) => <option key={x} value={x}>{t(`m.cur.${x}` as never)}</option>)}</select>
               </div>
               <span id="emp-salary-hint" className="block text-xs text-muted mt-1">{t('m.f.salaryHint')}</span>{fe.msg('emp-salary')}
             </fieldset>
             <div className="grid sm:grid-cols-2 gap-3">
-              <div><label className="block"><span className="label">{t('m.f.start')}<Req /></span><input id="emp-start" className="input" type="date" min={editing?.startDate && editing.startDate < today(now) ? editing.startDate : today(now)} max={plusDays(now, 730)} aria-required="true" aria-invalid={fe.invalid('emp-start')} aria-describedby={fe.describe('emp-start')} value={start} onChange={(e) => { setStart(e.target.value); clear() }} /></label>{fe.msg('emp-start')}</div>
+              <div><label className="block"><span className="label">{t('m.f.start')}<Req /></span><input id="emp-start" className="input" type="date" min={editing?.startDate && editing.startDate < today(now) ? editing.startDate : today(now)} max={plusDays(now, 730)} aria-required="true" aria-invalid={fe.invalid('emp-start')} aria-describedby={fe.describe('emp-start')} value={start} onChange={(e) => { setStart(e.target.value); clear('emp-start') }} /></label>{fe.msg('emp-start')}</div>
               <div><label className="block"><span className="label">{t('m.f.education')} <span className="font-normal text-muted">({t('m.opt')})</span></span><select id="emp-edu" className="input" value={edu} onChange={(e) => setEdu(e.target.value as Edu)}>{EDU.map((x) => <option key={x} value={x}>{N.edu(x)}</option>)}</select></label></div>
             </div>
             <fieldset aria-describedby={fe.describe('emp-langs', 'emp-langs-hint')}><legend className="label">{t('m.f.languages')}<Req /></legend>
               <div className="grid sm:grid-cols-3 gap-2 items-start">{LANGS.map((l) => { const on = langs.find((x) => x.lang === l); return (
                 <div key={l} className="space-y-1.5">
-                  <label className="chip-check chip-auto"><input id={`emp-langs-${l}`} type="checkbox" className="sr-only" aria-invalid={fe.invalid('emp-langs')} checked={!!on} onChange={() => toggleLang(l)} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.lang(l)}</label>
+                  <label className="chip-check chip-auto"><input id={`emp-langs-${l}`} type="checkbox" className="sr-only" aria-invalid={fe.invalid('emp-langs')} aria-describedby={l === LANGS[0] ? fe.describe('emp-langs', 'emp-langs-hint') : undefined} checked={!!on} onChange={() => toggleLang(l)} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.lang(l)}</label>
                   {on && <label className="block"><span className="block text-xs text-muted mb-1">{t('m.f.level')}</span><select className="input" aria-label={`${N.lang(l)} — ${t('m.f.level')}`} value={on.level} onChange={(e) => setLevel(l, e.target.value as LanguageSkill['level'])}>{LANG_LEVELS.map((x) => <option key={x} value={x}>{N.level(x)}</option>)}</select></label>}
                 </div>) })}</div>
               <span id="emp-langs-hint" className="block text-xs text-muted mt-1">{t('m.f.languagesHint')}</span>{fe.msg('emp-langs')}
@@ -260,7 +275,7 @@ export function HirePage() {
           </fieldset>
 
           <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="info" size={16} />{t('m.emp.sec.more')}</legend>
-            <div><label className="block"><span className="label">{t('m.emp.details')}</span><textarea id="emp-details" className="input min-h-[96px]" maxLength={600} aria-invalid={fe.invalid('emp-details')} aria-describedby={fe.describe('emp-details', 'det-hint')} value={details} onChange={(e) => { setDetails(e.target.value); clear() }} /></label>
+            <div><label className="block"><span className="label">{t('m.emp.details')}</span><textarea id="emp-details" className="input min-h-[96px]" maxLength={600} aria-invalid={fe.invalid('emp-details')} aria-describedby={fe.describe('emp-details', 'det-hint')} value={details} onChange={(e) => { setDetails(e.target.value); clear('emp-details') }} /></label>
               <span id="det-hint" className="block text-xs text-muted mt-1">{t('m.emp.detailsHint')}</span>{fe.msg('emp-details')}</div>
           </fieldset>
 
