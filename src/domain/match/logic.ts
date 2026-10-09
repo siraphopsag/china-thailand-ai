@@ -3,7 +3,7 @@
 import { isObj } from '../../profileSchema'
 import { provinces } from '../../locales/provinces'
 import { BENEFITS, COUNTRIES, CURRENCIES, EDU, EMPLOYMENT, EXPIRY_WARN_DAYS, FREE_POSTS_PER_WEEK, HOLDS_PLACE, MEMBER_PINS_PER_WEEK, MEMBER_WARN_DAYS, PLANS, type PlanId, INDUSTRIES, LANGS, LANG_LEVELS, MAX_CLOCK_HOURS, ME, MEMBER_POSTS_PER_WEEK, MY_EMPLOYER,
-  PINS_PER_WEEK, POST_LIFE_DAYS, SKILLS, type Acceptance, type AppStatus, type Benefit, type Country, type Credit, type Edu, type Employment, type Industry, type LanguageSkill, type MatchState,
+  PINS_PER_WEEK, POST_LIFE_DAYS, SKILLS, MAX_SKILLS, type Acceptance, type AppStatus, type Benefit, type Country, type Credit, type Edu, type Employment, type Industry, type LanguageSkill, type MatchState,
   type Pin, type Place, type Post, type Salary, type Seeker, type Skill, type VerifyKind } from './types'
 import { DAY_MS, HOUR_MS, cycleQuota, isExpired, pinActive, reachFor, type PinLike } from './release'
 import { currentStep, lastUpdate, newCase, parseCase, type Case } from './cases'
@@ -32,7 +32,7 @@ export const isCountry = (v: unknown): v is Country => v === 'TH' || v === 'CN'
 export const isProvinceOf = (c: Country, v: unknown): v is string => typeof v === 'string' && v.startsWith(c + '-') && `prov.${v}` in provinces
 export const isPlace = (v: unknown): v is Place => isObj(v) && isCountry(v.country) && isProvinceOf(v.country, v.province)
 const isIndustry = (v: unknown): v is Industry => typeof v === 'string' && (INDUSTRIES as readonly string[]).includes(v)
-const isSkills = (v: unknown): v is Skill[] => Array.isArray(v) && v.length > 0 && v.length <= SKILLS.length && v.every((s) => (SKILLS as readonly string[]).includes(s)) && new Set(v).size === v.length
+const isSkills = (v: unknown): v is Skill[] => Array.isArray(v) && v.length > 0 && v.length <= MAX_SKILLS && v.every((s) => (SKILLS as readonly string[]).includes(s)) && new Set(v).size === v.length
 const isIso = (v: unknown): v is string => typeof v === 'string' && !Number.isNaN(Date.parse(v))
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9:_-]{1,40}$/.test(v)
 
@@ -95,7 +95,7 @@ export interface PostInput {
   translations?: PostTranslations
 }
 /** a post for an occupation closed to foreigners in Thailand (e.g. tour guiding) always stays in Thailand */
-export const mustStayDomestic = (i: Pick<PostInput, 'place' | 'position' | 'details'>) => i.place.country === 'TH' && closedToForeigners(`${i.position} ${i.details}`)
+export const mustStayDomestic = (i: Pick<PostInput, 'place' | 'position' | 'details'>) => i.place.country === 'TH' && closedToForeigners(i.position) // the title: details may mention such work in passing
 export function makePost(input: PostInput, id: string, employerId: string, at: string): Outcome<Post> {
   if (!isPlace(input.place)) return fail('place')
   // position: 2 characters minimum, so short titles such as "HR" are accepted (owner, Oct 2026)

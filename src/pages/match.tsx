@@ -7,7 +7,7 @@ import { useAuth } from '../auth'
 import { provinces } from '../locales/provinces'
 import { activePins, capacityOf, inbox, isCountry, memberActive, pinQuota, type Problem } from '../domain/match/logic'
 import { DAY_MS, reachFor, scheduleOf, stageAt, type Quota, capStage } from '../domain/match/release'
-import { INDUSTRIES, MY_EMPLOYER, PIN_LIFE_DAYS, SKILLS, type Acceptance, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type Level, type Post, type Salary, type Skill } from '../domain/match/types'
+import { INDUSTRIES, MAX_SKILLS, MY_EMPLOYER, PIN_LIFE_DAYS, SKILLS, SKILL_GROUPS, type Acceptance, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type Level, type Post, type Salary, type Skill } from '../domain/match/types'
 import { ACTIVE, GEO, SOON, type GeoCode } from '../geo'
 import capitalsData from '../data/geo/capitals.json'
 import { GeoMap, type MapPin } from '../components/geomap'
@@ -230,12 +230,17 @@ export function SkillPicker({ skills, onChange, idp, fe }: { skills: Skill[]; on
   const { t } = useI18n()
   const N = useNames()
   return (
-    <fieldset aria-describedby={fe.describe(idp)}><legend className="label">{t('m.skills')}</legend>
-      <div className="grid grid-cols-2 auto-rows-fr gap-2">{SKILLS.map((s, i) => (
-        <label key={s} className="chip-check">
-          <input id={i === 0 ? `${idp}-0` : undefined} type="checkbox" className="sr-only" aria-invalid={fe.invalid(idp)} checked={skills.includes(s)} onChange={() => onChange(skills.includes(s) ? skills.filter((x) => x !== s) : [...skills, s])} />
-          <span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.skill(s)}
-        </label>))}</div>
+    <fieldset aria-describedby={fe.describe(idp)}><legend className="label">{t('m.skills')} <span className="font-normal text-muted text-xs">· {t('jb.skills.max', { n: MAX_SKILLS })}</span></legend>
+      {/* grouped (owner, Oct 2026: more varied skills, legal and specialist ones too) */}
+      <div className="space-y-3">{(Object.keys(SKILL_GROUPS) as (keyof typeof SKILL_GROUPS)[]).map((g) => (
+        <div key={g}><p className="text-xs text-muted mb-1.5">{t(`jb.skg.${g}` as never)}</p>
+          <div className="grid grid-cols-2 auto-rows-fr gap-2">{SKILL_GROUPS[g].map((s) => {
+            const on = skills.includes(s)
+            return (
+            <label key={s} className="chip-check">
+              <input id={s === SKILLS[0] ? `${idp}-0` : undefined} type="checkbox" className="sr-only" aria-invalid={fe.invalid(idp)} checked={on} disabled={!on && skills.length >= MAX_SKILLS} onChange={() => onChange(on ? skills.filter((x) => x !== s) : [...skills, s])} />
+              <span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.skill(s)}
+            </label>) })}</div></div>))}</div>
       {fe.msg(idp)}
     </fieldset>
   )

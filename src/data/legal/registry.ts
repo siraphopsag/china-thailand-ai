@@ -9,6 +9,7 @@ export const registry: LegalEntry[] = [
   e({ id: 'th-dbd-reg', country: 'TH', area: 'investment', agencyUrl: 'https://www.dbd.go.th/', watch: false }),
   e({ id: 'th-boi', country: 'TH', area: 'investment', instrument: 'พระราชบัญญัติส่งเสริมการลงทุน พ.ศ. 2520', originalTerm: 'การส่งเสริมการลงทุน', agencyUrl: 'https://www.boi.go.th/', watch: false }),
   e({ id: 'th-labour', country: 'TH', area: 'employment', instrument: 'พระราชกำหนดการบริหารจัดการการทำงานของคนต่างด้าว พ.ศ. 2560', originalTerm: 'ใบอนุญาตทำงาน', agencyUrl: 'https://www.mol.go.th/', watch: false }),
+  e({ id: 'th-closed-jobs', country: 'TH', area: 'employment', instrument: 'ประกาศกระทรวงแรงงาน เรื่อง กำหนดงานที่ห้ามคนต่างด้าวทำ พ.ศ. 2563', originalTerm: 'งานที่ห้ามคนต่างด้าวทำ', agencyUrl: 'https://www.doe.go.th/', watch: false }),
   e({ id: 'th-tax', country: 'TH', area: 'tax', originalTerm: 'Tax residency', agencyUrl: 'https://www.rd.go.th/', watch: false }),
   e({ id: 'th-customs', country: 'TH', area: 'customs', agencyUrl: 'https://www.customs.go.th/', watch: false }),
   e({ id: 'cn-neglist-2024', country: 'CN', area: 'investment', instrument: '外商投资准入特别管理措施（负面清单）（2024年版）', originalTerm: '外商投资准入特别管理措施（负面清单）', agencyUrl: 'https://www.ndrc.gov.cn/', watch: false }),

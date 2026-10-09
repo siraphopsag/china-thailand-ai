@@ -16,6 +16,17 @@ const RELATED: Record<Industry, Skill[]> = {
   education: ['thai_chinese_translation', 'project_management', 'data_analysis'],
   logistics: ['project_management', 'data_analysis', 'accounting_finance', 'thai_chinese_translation'],
   finance: ['accounting_finance', 'data_analysis', 'project_management'],
+  legal_services: ['legal_research', 'contract_drafting', 'labour_law', 'compliance_privacy', 'visa_work_permit', 'intellectual_property', 'legal_translation', 'thai_chinese_translation'],
+  healthcare: ['customer_service', 'thai_chinese_translation', 'data_analysis', 'project_management'],
+  construction: ['civil_engineering', 'electrical_engineering', 'mechanical_engineering', 'project_management', 'welding_cnc', 'electrical_technician'],
+  retail_ecommerce: ['sales_bizdev', 'customer_service', 'cross_border_ecommerce', 'livestream_sales', 'marketing', 'warehouse_operations'],
+  agriculture: ['supply_chain', 'quality_control', 'sales_bizdev', 'customs_brokerage', 'thai_chinese_translation'],
+  automotive_ev: ['mechanical_engineering', 'electrical_engineering', 'quality_control', 'welding_cnc', 'electrical_technician', 'supply_chain'],
+  energy: ['electrical_engineering', 'electrical_technician', 'project_management', 'mechanical_engineering', 'data_analysis'],
+  trade: ['customs_brokerage', 'supply_chain', 'sales_bizdev', 'thai_chinese_translation', 'accounting_finance', 'cross_border_ecommerce'],
+  media_marketing: ['marketing', 'graphic_design', 'video_editing', 'livestream_sales', 'thai_chinese_translation'],
+  real_estate: ['sales_bizdev', 'customer_service', 'contract_drafting', 'marketing', 'thai_chinese_translation'],
+  beauty_wellness: ['customer_service', 'sales_bizdev', 'marketing', 'livestream_sales'],
 }
 /** wording that may exclude people for who they are (age, sex, religion, nationality) — Thai, Chinese and English */
 const DISCRIMINATION = /อายุไม่เกิน|อายุ\s*\d+\s*[-–]\s*\d+|เพศชาย|เพศหญิง|เฉพาะผู้ชาย|เฉพาะผู้หญิง|เฉพาะชาย|เฉพาะหญิง|ศาสนา|เชื้อชาติ|สัญชาติ|年龄|限男|限女|男性|女性|宗教|民族|国籍|\bage\b|\bmale only\b|\bfemale only\b|\breligio|\bnationality\b|\brace\b/i

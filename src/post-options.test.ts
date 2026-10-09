@@ -73,3 +73,21 @@ describe('who can apply (owner, Oct 2026)', () => {
     expect(back.domesticOnly).toBe(true); expect(back.workRight).toBe(true); expect(back.translations?.en?.position).toBe('Chinese interpreter')
   })
 })
+
+describe('more fields and skills (owner, Oct 2026)', () => {
+  it('every skill is in exactly one picker group, and every field, skill and group has a name in 3 languages', async () => {
+    const { INDUSTRIES, SKILLS, SKILL_GROUPS } = await import('./domain/match/types')
+    const { messages } = await import('./locales')
+    const grouped = Object.values(SKILL_GROUPS).flat()
+    expect([...grouped].sort()).toEqual([...SKILLS].sort())
+    expect(new Set(grouped).size).toBe(grouped.length)
+    expect(INDUSTRIES.length).toBeGreaterThanOrEqual(18); expect(SKILLS.length).toBeGreaterThanOrEqual(36)
+    const keys = [...INDUSTRIES.map((i) => `jb.industry.${i}`), ...SKILLS.map((s) => `jb.skill.${s}`), ...Object.keys(SKILL_GROUPS).map((g) => `jb.skg.${g}`)]
+    for (const k of keys) { const v = (messages as Record<string, readonly string[]>)[k]; expect(v, k).toBeDefined(); expect(v.every((x) => x.length > 0), k).toBe(true) }
+  })
+  it('the full list of occupations closed to foreigners is recognised from the job title', () => {
+    for (const t of ['ช่างตัดผม', '美发师', 'Barber', 'เลขานุการ', 'Executive Secretary', 'ทนายความ', '律师', 'พนักงานขับรถ', 'Delivery Driver', 'ช่างแกะสลักไม้', 'Gem cutter']) expect(closedToForeigners(t), t).toBe(true)
+    for (const t of ['Legal assistant', 'นักกฎหมายบริษัท', 'Compliance Officer', 'Software Developer', '合同专员']) expect(closedToForeigners(t), t).toBe(false)
+    expect(mustStayDomestic({ ...base, position: 'ล่ามภาษาจีน', details: 'บริษัทอยู่ใกล้ร้านตัดผม' })).toBe(false) // only the title counts
+  })
+})

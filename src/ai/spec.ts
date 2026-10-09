@@ -95,8 +95,9 @@ Write summary, explanation and suggestion in ${LANG_NAME[lang]}, short and plain
 ALSO translate the post's "position" and "details" into Thai (th), Simplified Chinese (zh) and English (en) for job seekers who read
 another language: faithful and natural, the same meaning and facts, nothing added or left out, company and place names kept as they
 are, no contact details; "details" may be "" when the post has none. Translate the text exactly as written, even if you flagged it.
-closedToForeigners: true only if the workplace is in Thailand and the job is an occupation Thai law closes to foreigners (for example
-tour guiding or Thai massage); otherwise false.
+closedToForeigners: true only if the workplace is in Thailand and the job is an occupation Thai law closes to foreigners (List 1 of the
+Ministry of Labour notification, e.g. hairdressing and beauty, Thai massage, tour guiding, secretarial work, legal or litigation
+services, driving, auctioneering, street vending, Thai handicrafts); otherwise false.
 Reply with ONE JSON object only, exactly this shape:
 {"verdict":"ok"|"review"|"high_risk","summary":string,"flags":[{"category":"scam"|"trafficking"|"labour_law"|"discrimination"|"missing_info"|"other","severity":"high"|"medium"|"low","quote":string,"explanation":string,"suggestion":string,"lawIds":string[]}],"translations":{"th":{"position":string,"details":string},"zh":{"position":string,"details":string},"en":{"position":string,"details":string}},"closedToForeigners":boolean}
 

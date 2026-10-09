@@ -13,10 +13,26 @@ import type { PostText, PostTranslations, UiLang } from './postText'
 export const SKILLS = [
   'software_engineering', 'data_analysis', 'mechanical_engineering', 'electrical_engineering', 'civil_engineering', 'quality_control',
   'project_management', 'accounting_finance', 'marketing', 'hospitality_management', 'culinary_arts', 'thai_chinese_translation',
+  // owner, Oct 2026: more varied, including legal and specialist knowledge
+  'legal_research', 'contract_drafting', 'labour_law', 'compliance_privacy', 'visa_work_permit', 'customs_brokerage', 'intellectual_property', 'legal_translation',
+  'hr_payroll', 'sales_bizdev', 'customer_service', 'supply_chain', 'cross_border_ecommerce', 'livestream_sales',
+  'graphic_design', 'video_editing', 'it_support', 'cybersecurity', 'ai_data_science', 'teaching_chinese', 'teaching_thai',
+  'electrical_technician', 'welding_cnc', 'warehouse_operations',
 ] as const
 export type Skill = (typeof SKILLS)[number]
-export const INDUSTRIES = ['manufacturing', 'technology', 'hospitality', 'food_service', 'education', 'logistics', 'finance'] as const
+export const INDUSTRIES = ['manufacturing', 'technology', 'hospitality', 'food_service', 'education', 'logistics', 'finance',
+  'legal_services', 'healthcare', 'construction', 'retail_ecommerce', 'agriculture', 'automotive_ev', 'energy', 'trade', 'media_marketing', 'real_estate', 'beauty_wellness'] as const
 export type Industry = (typeof INDUSTRIES)[number]
+/** at most this many skills on one post or pin (the database allows 12) */
+export const MAX_SKILLS = 12
+/** the skill picker shows the skills in these groups (every skill exactly once) */
+export const SKILL_GROUPS = {
+  tech: ['software_engineering', 'data_analysis', 'ai_data_science', 'it_support', 'cybersecurity', 'mechanical_engineering', 'electrical_engineering', 'civil_engineering', 'quality_control'],
+  business: ['project_management', 'accounting_finance', 'marketing', 'hr_payroll', 'sales_bizdev', 'customer_service', 'supply_chain', 'cross_border_ecommerce', 'livestream_sales'],
+  legal: ['legal_research', 'contract_drafting', 'labour_law', 'compliance_privacy', 'visa_work_permit', 'customs_brokerage', 'intellectual_property', 'legal_translation'],
+  language: ['thai_chinese_translation', 'teaching_chinese', 'teaching_thai', 'graphic_design', 'video_editing'],
+  trades: ['hospitality_management', 'culinary_arts', 'electrical_technician', 'welding_cnc', 'warehouse_operations'],
+} as const
 export const LANGS = ['th', 'zh', 'en'] as const
 export const LANG_LEVELS = ['basic', 'conversational', 'professional', 'native'] as const
 export interface LanguageSkill { lang: (typeof LANGS)[number]; level: (typeof LANG_LEVELS)[number] }

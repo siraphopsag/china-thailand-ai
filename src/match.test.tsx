@@ -464,7 +464,7 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
     expect(page).toContain(`(${T('m.req')})`)
     expect(page).toMatch(/<button id="dest-prov" type="button" role="combobox"[^>]*aria-required="true"/)
     expect(page).toContain('id="dest-prov-c"') // focus target when no country is chosen yet
-    expect(page.match(/class="chip-check"/g)?.length).toBe(12)
+    expect(page.match(/class="chip-check"/g)?.length).toBe(36) // every skill, in groups (owner, Oct 2026: more varied skills)
     expect(page).toMatch(/<input id="seek-skills-0" type="checkbox" class="sr-only"/)
     const m = src('./pages/match.tsx')
     expect(m).toMatch(/useEffect\(\(\) => \{ if \(err\) document\.getElementById\(err\.focus\)\?\.focus\(\) \}, \[err\]\)/)

@@ -31,6 +31,17 @@ const SKILLS_OF: Record<Industry, Skill[]> = {
   education: ['thai_chinese_translation', 'project_management', 'marketing'],
   logistics: ['project_management', 'data_analysis', 'thai_chinese_translation'],
   finance: ['accounting_finance', 'data_analysis', 'thai_chinese_translation'],
+  legal_services: ['legal_research', 'contract_drafting', 'legal_translation', 'compliance_privacy'],
+  healthcare: ['customer_service', 'thai_chinese_translation', 'data_analysis'],
+  construction: ['civil_engineering', 'project_management', 'welding_cnc'],
+  retail_ecommerce: ['cross_border_ecommerce', 'livestream_sales', 'customer_service'],
+  agriculture: ['supply_chain', 'quality_control', 'customs_brokerage'],
+  automotive_ev: ['electrical_engineering', 'quality_control', 'electrical_technician'],
+  energy: ['electrical_engineering', 'electrical_technician', 'project_management'],
+  trade: ['customs_brokerage', 'supply_chain', 'thai_chinese_translation'],
+  media_marketing: ['marketing', 'graphic_design', 'video_editing'],
+  real_estate: ['sales_bizdev', 'customer_service', 'thai_chinese_translation'],
+  beauty_wellness: ['customer_service', 'marketing', 'sales_bizdev'],
 }
 const POSITIONS: Record<Industry, string[]> = {
   manufacturing: ['Production Supervisor', 'Quality Control Inspector', 'Maintenance Technician', 'CNC Machine Operator', 'Process Engineer', 'Assembly Line Lead', 'Electrical Technician'],
@@ -40,6 +51,17 @@ const POSITIONS: Record<Industry, string[]> = {
   education: ['Thai Language Teacher', 'Chinese Language Teacher', 'English Tutor', 'Teaching Assistant', 'Curriculum Coordinator', 'Kindergarten Assistant'],
   logistics: ['Warehouse Coordinator', 'Forklift Driver', 'Customs Documentation Officer', 'Delivery Driver', 'Inventory Controller', 'Freight Forwarding Assistant'],
   finance: ['Accounting Officer', 'Bilingual Accounts Assistant', 'Payroll Officer', 'Cashier', 'Credit Analyst', 'Bookkeeper'],
+  legal_services: ['Legal Assistant (Thai–Chinese)', 'Contract Coordinator', 'Compliance Officer', 'Work Permit Coordinator', 'Legal Translator', 'Paralegal'],
+  healthcare: ['Chinese-speaking Patient Coordinator', 'Medical Interpreter', 'Clinic Receptionist', 'Health Insurance Officer'],
+  construction: ['Site Engineer', 'Project Coordinator', 'Quantity Surveyor', 'Safety Officer', 'Welder'],
+  retail_ecommerce: ['E-commerce Specialist', 'Livestream Host', 'Store Supervisor', 'Customer Service Agent', 'Marketplace Admin'],
+  agriculture: ['Durian Export Coordinator', 'Quality Inspector (Fruit)', 'Farm Supervisor', 'Purchasing Officer'],
+  automotive_ev: ['EV Battery Technician', 'Production Engineer', 'Quality Engineer', 'Service Advisor'],
+  energy: ['Solar Installation Technician', 'Electrical Engineer', 'Project Engineer', 'Plant Operator'],
+  trade: ['Import-Export Coordinator', 'Customs Broker Assistant', 'Sourcing Officer', 'Trade Sales Executive'],
+  media_marketing: ['Content Creator', 'Social Media Officer', 'Video Editor', 'Graphic Designer'],
+  real_estate: ['Property Consultant', 'Leasing Officer', 'Chinese-speaking Sales Agent'],
+  beauty_wellness: ['Spa Receptionist', 'Wellness Centre Coordinator', 'Beauty Product Sales'],
 }
 const NAMES = ['Golden Reed', 'Jade Harbor', 'Blue Lantern', 'Silver Pine', 'Red Kite', 'Twin River', 'North Star', 'Morning Bay', 'Green Valley', 'Pearl Gate',
   'Bamboo Bridge', 'Cloud Peak', 'Amber Field', 'Crystal Lake', 'Maple Hill', 'Orchid Lane', 'Sunrise Delta', 'Coral Point', 'Willow Creek', 'Stone Garden']
@@ -51,17 +73,36 @@ const KINDS: Record<Industry, string[]> = {
   education: ['Language School', 'Learning Center', 'International School', 'Tutoring'],
   logistics: ['Logistics', 'Freight', 'Cold Chain', 'Express'],
   finance: ['Accounting Services', 'Finance Co., Ltd.', 'Bookkeeping', 'Advisory'],
+  legal_services: ['Legal Advisory', 'Law Office', 'Compliance Services', 'Visa Services'],
+  healthcare: ['International Clinic', 'Hospital', 'Health Centre', 'Medical Group'],
+  construction: ['Construction Co., Ltd.', 'Engineering', 'Builders', 'Infrastructure'],
+  retail_ecommerce: ['Online Store', 'Retail Co., Ltd.', 'Live Commerce', 'Marketplace'],
+  agriculture: ['Fruit Export', 'Agro', 'Farm Co., Ltd.', 'Fresh Produce'],
+  automotive_ev: ['EV Parts', 'Motors', 'Auto Co., Ltd.', 'Battery Works'],
+  energy: ['Solar', 'Power Co., Ltd.', 'Green Energy', 'Grid Services'],
+  trade: ['Trading Co., Ltd.', 'Import Export', 'Sourcing', 'Global Trade'],
+  media_marketing: ['Media Studio', 'Creative Agency', 'Digital Marketing', 'Content House'],
+  real_estate: ['Property', 'Realty', 'Estate Agency', 'Residences'],
+  beauty_wellness: ['Spa & Wellness', 'Beauty Co., Ltd.', 'Wellness Centre', 'Cosmetics'],
 }
 /** monthly pay, per field: Thai baht in Thailand, yuan in China */
 const PAY: Record<Industry, Record<Country, [number, number]>> = {
   manufacturing: { TH: [15000, 32000], CN: [5000, 9500] }, technology: { TH: [25000, 65000], CN: [9000, 22000] },
   hospitality: { TH: [13000, 30000], CN: [4500, 8500] }, food_service: { TH: [12000, 26000], CN: [4500, 8500] },
   education: { TH: [18000, 42000], CN: [6000, 13000] }, logistics: { TH: [13000, 27000], CN: [5000, 9000] }, finance: { TH: [18000, 42000], CN: [6000, 13000] },
+  legal_services: { TH: [20000, 55000], CN: [7000, 16000] }, healthcare: { TH: [18000, 45000], CN: [6000, 14000] }, construction: { TH: [15000, 45000], CN: [5500, 12000] },
+  retail_ecommerce: { TH: [13000, 35000], CN: [4500, 11000] }, agriculture: { TH: [12000, 30000], CN: [4000, 9000] }, automotive_ev: { TH: [18000, 50000], CN: [6500, 15000] },
+  energy: { TH: [18000, 50000], CN: [6500, 15000] }, trade: { TH: [16000, 40000], CN: [5500, 12000] }, media_marketing: { TH: [15000, 40000], CN: [5000, 12000] },
+  real_estate: { TH: [15000, 45000], CN: [5000, 13000] }, beauty_wellness: { TH: [12000, 30000], CN: [4500, 9000] },
 }
 const EDU_OF: Record<Industry, Edu[]> = {
   manufacturing: ['secondary', 'vocational', 'high_vocational', 'bachelor'], technology: ['high_vocational', 'bachelor', 'bachelor', 'master'],
   hospitality: ['secondary', 'vocational', 'bachelor'], food_service: ['none', 'lower_secondary', 'secondary', 'vocational'],
   education: ['bachelor', 'bachelor', 'master'], logistics: ['none', 'secondary', 'vocational', 'high_vocational'], finance: ['high_vocational', 'bachelor', 'bachelor'],
+  legal_services: ['bachelor', 'bachelor', 'master'], healthcare: ['high_vocational', 'bachelor', 'bachelor'], construction: ['vocational', 'high_vocational', 'bachelor'],
+  retail_ecommerce: ['secondary', 'high_vocational', 'bachelor'], agriculture: ['none', 'secondary', 'vocational', 'bachelor'], automotive_ev: ['vocational', 'high_vocational', 'bachelor'],
+  energy: ['vocational', 'high_vocational', 'bachelor'], trade: ['high_vocational', 'bachelor', 'bachelor'], media_marketing: ['high_vocational', 'bachelor', 'bachelor'],
+  real_estate: ['secondary', 'high_vocational', 'bachelor'], beauty_wellness: ['secondary', 'vocational', 'high_vocational'],
 }
 const DETAILS: Record<Industry, string[]> = {
   manufacturing: ['ทำงานเป็นกะ มีพี่เลี้ยงสอนงานช่วงแรก มีรถรับส่งจากหอพัก', 'ดูแลไลน์ผลิตและตรวจคุณภาพชิ้นงานตามมาตรฐานโรงงาน'],
@@ -71,6 +112,17 @@ const DETAILS: Record<Industry, string[]> = {
   education: ['สอนนักเรียนระดับประถมถึงมัธยม มีหลักสูตรและสื่อการสอนให้', 'สอนกลุ่มเล็กช่วงเย็นและวันหยุด มีอบรมก่อนเริ่มสอน'],
   logistics: ['คลังสินค้าขนาดใหญ่ ทำงานกับระบบสแกนบาร์โค้ด', 'ประสานงานเอกสารนำเข้าส่งออกระหว่างไทยกับจีน'],
   finance: ['ทำบัญชีให้ลูกค้าธุรกิจไทยและจีน ใช้โปรแกรมบัญชีมาตรฐาน', 'ดูแลเอกสารการเงินและรายงานประจำเดือน'],
+  legal_services: ['ช่วยงานเอกสารกฎหมายและสัญญาของลูกค้าไทยและจีน มีทนายดูแล', 'ประสานงานใบอนุญาตทำงานและวีซ่าให้พนักงานต่างชาติ'],
+  healthcare: ['ดูแลผู้ป่วยชาวจีนและประสานงานกับแพทย์ ใช้ภาษาจีนในงาน', 'ต้อนรับและนัดหมายผู้ป่วย ทำงานเป็นกะ'],
+  construction: ['คุมงานก่อสร้างโรงงานของบริษัทจีน ทำงานในพื้นที่ไซต์งาน', 'ประสานงานผู้รับเหมาและตรวจความปลอดภัยหน้างาน'],
+  retail_ecommerce: ['ดูแลร้านค้าออนไลน์และตอบลูกค้า ทำงานกับทีมจีน', 'ไลฟ์ขายสินค้าช่วงเย็น มีทีมช่วยเตรียมสินค้า'],
+  agriculture: ['คัดและตรวจคุณภาพผลไม้ส่งออกจีน ทำงานตามฤดูกาล', 'ประสานงานจัดซื้อกับสวนและเอกสารส่งออก'],
+  automotive_ev: ['ทำงานในโรงงานรถยนต์ไฟฟ้า มีการฝึกอบรมก่อนเริ่มงาน', 'ดูแลคุณภาพชิ้นส่วนแบตเตอรี่ ทำงานเป็นกะ'],
+  energy: ['ติดตั้งและดูแลระบบโซลาร์เซลล์ ออกพื้นที่ต่างจังหวัด', 'ดูแลระบบไฟฟ้าในโรงงานพลังงาน มีสวัสดิการครบ'],
+  trade: ['ประสานงานนำเข้าส่งออกไทย–จีน ดูแลเอกสารศุลกากร', 'หาสินค้าและติดต่อซัพพลายเออร์จีน'],
+  media_marketing: ['ทำคอนเทนต์โซเชียลสำหรับลูกค้าไทยและจีน', 'ตัดต่อวิดีโอสั้นและออกแบบกราฟิกให้แบรนด์'],
+  real_estate: ['แนะนำโครงการคอนโดให้ลูกค้าชาวจีน มีค่าคอมมิชชัน', 'ดูแลสัญญาเช่าและประสานงานผู้เช่า'],
+  beauty_wellness: ['ต้อนรับลูกค้าและจัดตารางนัดหมายของสปา', 'ขายผลิตภัณฑ์ความงามและให้คำแนะนำลูกค้า'],
 }
 const HEADS = [1, 1, 1, 2, 2, 3, 3, 4, 5, 6, 8, 10, 12]
 const EMPLOYMENTS: Employment[] = ['permanent', 'permanent', 'permanent', 'contract', 'contract', 'temporary', 'internship']
