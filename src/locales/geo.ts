@@ -1,10 +1,10 @@
 import type { Msg } from './common.js'
 /** Geographic onboarding (globe). Country and city names are standard names; positions come from Natural Earth, never from this file. */
 export const geo = {
-  'geo.loading': ['กำลังโหลดแผนที่โลก…', '正在加载世界地图……', 'Loading the world…'],
+  'geo.loading': ['กำลังโหลดแผนที่โลก…', '正在加载世界地图……', 'Loading the world map…'],
   'geo.error': ['ไม่สามารถโหลดแผนที่แบบโต้ตอบได้ กรุณาลองใหม่', '无法加载交互式地图，请重试。', 'We couldn’t load the interactive map. Please try again.'],
   'geo.soon': ['เร็ว ๆ นี้', '即将推出', 'Coming soon'],
-  'geo.soon.t': ['C.A.L.L. มีแผนขยายการสนับสนุนด้านธุรกิจและกฎหมายข้ามพรมแดนให้ครอบคลุมภูมิภาคอาเซียน ประเทศนี้อยู่ในแผนการขยายนั้น', 'C.A.L.L. 计划将跨境商业与法律支持扩展至整个东盟，此国家属于该扩展计划。', 'C.A.L.L. is planned to expand its cross-border business and legal support across ASEAN. This country is part of that plan.'],
+  'geo.soon.t': ['C.A.L.L. มีแผนขยายการสนับสนุนด้านธุรกิจและกฎหมายข้ามพรมแดนให้ครอบคลุมภูมิภาคอาเซียน ประเทศนี้อยู่ในแผนการขยายนั้น', 'C.A.L.L. 计划将跨境商业与法律支持扩展至整个东盟，此国家属于该扩展计划。', 'C.A.L.L. plans to expand its cross-border business and legal support across ASEAN. This country is part of that plan.'],
   'geo.soon.now': ['ตอนนี้ C.A.L.L. รองรับเส้นทางไทย ↔ จีน', '目前 C.A.L.L. 支持泰国 ↔ 中国路线。', 'Today C.A.L.L. supports the Thailand ↔ China route.'],
   'geo.capital': ['เมืองหลวง', '首都', 'Capital'],
   'geo.introGo': ['ดูแผนที่', '查看地图', 'Show the map'],

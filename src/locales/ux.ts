@@ -17,16 +17,14 @@ export const ux = {
   // ---- honesty about what is simulated
   // ---- ownership editor
   // ---- stale documents
-  'c.loading': ['กำลังโหลด...', '加载中…', 'Loading…'],
-  // ---- plain status words (codes stay in tooltips / details)
+  'c.loading': ['กำลังโหลด…', '加载中…', 'Loading…'],
+  // ---- plain status words (codes stay in tooltips / details); verify.VERIFIED and verify.NO_SOURCE are in legal.ts
   'level.LOW': ['เรียบร้อย', '没问题', 'Looks fine'],
   'level.MEDIUM': ['ควรตรวจสอบ', '建议核查', 'Worth checking'],
   'level.NEEDS_REVIEW': ['ควรตรวจสอบ', '建议核查', 'Worth checking'],
   'level.HIGH': ['ควรหยุดก่อน', '建议先暂停', 'Pause first'],
-  'verify.VERIFIED': ['ตรวจสอบแล้ว', '已核实', 'Verified'],
   'verify.PARTIAL': ['ตรวจสอบบางส่วน', '部分核实', 'Partly verified'],
   'verify.NEED_INFO': ['ต้องการข้อมูลเพิ่ม', '需补充信息', 'Needs more information'],
-  'verify.NO_SOURCE': ['ไม่พบแหล่งข้อมูล', '未找到来源', 'Source not found'],
   'verify.EXPERT': ['ผู้เชี่ยวชาญยังไม่ได้ตรวจ', '专家尚未核查', 'Not yet reviewed by an expert'],
   // ---- landing: one clear starting point
   // ---- quick start / resume

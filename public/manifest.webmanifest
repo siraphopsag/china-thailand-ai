@@ -1,6 +1,7 @@
 {
   "name": "C.A.L.L. — Cross ASEAN Language Legal",
   "short_name": "C.A.L.L.",
+  "description": "เชื่อมนายจ้างกับผู้หางาน ข้ามภาษา วัฒนธรรม และกฎหมาย",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#141233",

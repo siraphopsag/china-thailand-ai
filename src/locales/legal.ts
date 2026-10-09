@@ -1,5 +1,5 @@
 import type { Msg } from './common.js'
-/** Legal-information trust layer: status words, citation labels, guard replies, admin copy. Loaded last, so it overrides earlier keys. */
+/** Legal-information trust layer: status words, citation labels, guard replies, admin copy. Spread after common, pages and ux in locales/index.ts and not redefined later, so its verify.* words are the ones shown. */
 export const legal = {
   // ---- status chips (only "verified" means a named person checked it against the official text and nothing changed since)
   'verify.VERIFIED': ['ผู้เชี่ยวชาญตรวจแล้ว', '专家已核实', 'Reviewed by an expert'],
@@ -17,13 +17,13 @@ export const legal = {
   'trust.r.monitor-stale': ['ระบบเฝ้าระวังการเปลี่ยนแปลงไม่มีข้อมูลใหม่เกิน {n} วัน', '变更监测已超过 {n} 天没有新数据', 'The change monitor has produced no data for more than {n} days'],
   'trust.r.gap': ['ระบบรู้จักชื่อกฎหมายนี้ แต่ยังไม่มีเนื้อหาสรุปที่ตรวจแล้ว', '系统只知道该法规的名称，尚无经核实的内容摘要', 'The app knows this law by name only and has no reviewed summary of it'],
   'trust.r.no-entry': ['ไม่พบระเบียนนี้ในทะเบียนแหล่งข้อมูล', '来源登记册中没有此记录', 'This record is not in the source registry'],
-  'cite.whyNot': ['ทำไมยังไม่ขึ้น “ตรวจแล้ว”', '为什么尚未显示“已核实”', 'Why this is not shown as reviewed'],
+  'cite.whyNot': ['ทำไมยังไม่ขึ้น “ผู้เชี่ยวชาญตรวจแล้ว”', '为什么尚未显示“专家已核实”', 'Why this is not shown as “Reviewed by an expert”'],
   // ---- citation labels
   'cite.instrument': ['ตัวบท', '法规文本', 'Instrument'],
   'cite.provisions': ['มาตรา/ข้อ', '条款', 'Provisions'],
   'cite.unspecified': ['ยังไม่ระบุ (รอผู้ตรวจ)', '未注明（待核查人填写）', 'Not stated (awaiting a reviewer)'],
   'cite.textLink': ['เปิดตัวบทฉบับทางการ', '打开官方文本', 'Open the official text'],
-  'cite.agencyOnly': ['เว็บไซต์หน่วยงาน (ยังไม่มีลิงก์ตัวบท)', '主管机关网站（尚无官方文本链接）', 'Agency website (no link to the legal text yet)'],
+  'cite.agencyOnly': ['เว็บไซต์หน่วยงาน (ยังไม่มีลิงก์ตัวบท)', '官方机构网站（尚无官方文本链接）', 'Agency website (no link to the legal text yet)'],
   'cite.monitored': ['เฝ้าระวังการเปลี่ยนแปลงอัตโนมัติ', '自动监测变更', 'Change monitoring on'],
   'cite.notMonitored': ['ยังไม่มีการเฝ้าระวังการเปลี่ยนแปลง', '尚未监测变更', 'No change monitoring yet'],
   // ---- notices on AI answers

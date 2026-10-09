@@ -114,7 +114,7 @@ describe('C. confirm → posted', () => {
     expect(h).toMatch(/const another = \(\) => \{[^}]*setForm\(false\); setC\(null\); setP\(null\)/) // Post another → back to choosing the country
     expect(src('./App.tsx')).toContain('post: <PostPage />')
     expect(src('./components/modal.tsx')).toContain('d.showModal()')
-    expect(T('m.cf.title')).toBe('ต้องการโพสต์ประกาศนี้ใช่หรือไม่?'); expect(T('m.dn.title')).toBe('โพสต์ของคุณเรียบร้อยแล้ว')
+    expect(T('m.cf.title')).toBe('ต้องการโพสต์ประกาศนี้ใช่หรือไม่?'); expect(T('m.dn.title')).toBe('ลงประกาศเรียบร้อยแล้ว')
   })
 })
 

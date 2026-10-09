@@ -34,7 +34,7 @@ describe('AI on screen', () => {
     expect(out).toContain('Remove the fee.')
     expect(out).toContain('ใบอนุญาตทำงานของคนต่างด้าวในประเทศไทย') // the record's title, linked to its agency
     expect(out).toContain('https://www.mol.go.th/')
-    expect(out).toContain('ยังไม่ได้ตรวจโดยนักกฎหมาย')
+    expect(out).toContain('ยังไม่ได้ตรวจโดยผู้เชี่ยวชาญ')
     expect(out).toContain('ไม่ใช่คำปรึกษาทางกฎหมาย')
     expect(out).toContain('วันนี้ใช้ AI ได้อีก 7 ครั้ง')
     expect(out.indexOf('สูง')).toBeLessThan(out.indexOf('ต่ำ'))

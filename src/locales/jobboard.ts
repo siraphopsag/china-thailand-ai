@@ -24,7 +24,7 @@ export const jobboard = {
   'jb.lang.th': ['ภาษาไทย', '泰语', 'Thai'],
   'jb.lang.zh': ['ภาษาจีน', '中文', 'Chinese'],
   'jb.lang.en': ['ภาษาอังกฤษ', '英语', 'English'],
-  'jb.level.none': ['ไม่ระบุ', '未填写', 'Not stated'],
+  'jb.level.none': ['ไม่ระบุ', '未注明', 'Not stated'],
   'jb.level.basic': ['พื้นฐาน', '基础', 'Basic'],
   'jb.level.conversational': ['สื่อสารได้', '可日常交流', 'Conversational'],
   'jb.level.professional': ['ใช้ในงานได้', '可用于工作', 'Professional'],
