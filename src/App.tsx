@@ -86,9 +86,12 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
 }
 
 /** accounts are set up but cannot be reached right now: the site runs on local demo data — say so on every page */
+/** the backup demo copy for visitors who cannot open the main site (e.g. in mainland China): Cloudflare Pages or Netlify, or a build flagged as one */
+const isMirror = () => import.meta.env.VITE_DEMO_MIRROR === '1' || (typeof location !== 'undefined' && /\.(pages\.dev|netlify\.app)$/.test(location.hostname))
 function DemoNotice() {
   const { t } = useI18n()
   const { status, online } = useAuth()
+  if (status === 'off' && isMirror()) return <p role="status" className="mb-4 rounded-xl border border-info-line bg-info-bg text-info-fg px-4 py-2.5 text-sm flex items-start gap-2"><Icon name="info" size={16} className="shrink-0 mt-0.5" />{t('m.demo.mirror')}</p>
   const bad = status === 'off' && CONFIG_PROBLEM
   if (!bad && (status === 'off' || online !== false)) return null
   return <p role="status" className="mb-4 rounded-xl border border-warn-line bg-warn-bg text-warn-fg px-4 py-2.5 text-sm flex items-start gap-2"><Icon name="warn" size={16} className="shrink-0 mt-0.5" />{t(bad ? 'm.demo.config' : 'm.demo.banner')}</p>

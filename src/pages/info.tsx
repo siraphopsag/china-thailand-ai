@@ -57,10 +57,19 @@ export function SourcesPage() {
       <Disclaimer /></div>
   )
 }
+const PRI = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'] as const
+const MAIL = 'c.a.l.l.project00@gmail.com'
+/** the contact address inside a sentence becomes a mail link */
+const withMail = (s: string) => { const i = s.indexOf(MAIL); return i < 0 ? s : <>{s.slice(0, i)}<a className="text-primary underline underline-offset-2 break-all" href={`mailto:${MAIL}`}>{MAIL}</a>{s.slice(i + MAIL.length)}</> }
 export function PrivacyPage() {
   const { t } = useI18n()
   return (
     <div className="space-y-5 max-w-3xl"><PageHead title={t('pri.title')} sub={t('pri.sub')} />
-      <div className="card space-y-3 text-sm">{(['1', '2', '3', '4', '5'] as const).map((k) => <p key={k}><b>{tk('pri', k + '.h')}:</b> {tk('pri', k + '.t')}</p>)}</div><Disclaimer /></div>
+      {/* PDPA notice (owner, 10 Oct 2026): each part a heading; the points of a part one per line */}
+      <div className="card space-y-5 text-sm">{PRI.map((k, i) => (
+        <section key={k} aria-labelledby={`pri-${k}`} className="space-y-1.5">
+          <h2 id={`pri-${k}`} className="font-semibold text-base">{i + 1}. {tk('pri', k + '.h')}</h2>
+          <ul className="list-disc pl-5 space-y-1 text-muted">{tk('pri', k + '.t').split(' · ').map((x) => <li key={x}>{withMail(x)}</li>)}</ul>
+        </section>))}</div><Disclaimer /></div>
   )
 }
