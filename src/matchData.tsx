@@ -10,6 +10,8 @@ import { simPinRow, simPostRow, type SimPin, type SimPost } from './domain/match
 import { HOLDS_PLACE, MAX_CLOCK_HOURS, ME, MY_EMPLOYER, type Acceptance, type Country, type Industry, type MatchState, type PlanId, type Place, type Post, type Role, type Skill, type VerifyKind } from './domain/match/types'
 import { buildState, dbProblem, postToRow, rowToAcceptance, rowToPost, statsByProvince, statsToGroups, statsToPool, verifyOf, type AcceptanceRow, type AdminStats, type CaseRow, type PinStatRow, type PostRow, type ProfileRow, type ReportRow, reportQueue } from './domain/match/remote'
 import { getClient, takeNext, useAuth } from './auth'
+import { useI18n } from './i18n'
+import { localizePost } from './domain/match/postText'
 import { go } from './store'
 
 /**
@@ -196,6 +198,9 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
   const now = nowWith(raw.clockHours)
   // posts past their 6 months are gone (the database removes them too)
   const st = useMemo(() => withoutExpired(raw, now), [raw, now])
+  // what the pages show: posts written in another language appear in the AI's translation (the employer's words stay in orig)
+  const { lang } = useI18n()
+  const stView = useMemo(() => ({ ...st, posts: st.posts.map((p) => localizePost(p, lang)) }), [st, lang])
   const pool = useMemo<PinLike[]>(() => (mode === 'remote' ? [...st.me.pins, ...statsToPool(remotePool)] : poolOf(st)), [mode, st, remotePool])
   const pinsByProvince = useMemo(() => {
     if (mode === 'remote') return statsByProvince(remotePool.filter((r) => Date.parse(r.hour) > now - 30 * 24 * HOUR_MS))
@@ -230,7 +235,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     // signed in: limits are checked at the real time, like the database does
     const limitAt = () => (local ? at() : new Date().toISOString())
     return {
-      st, now, limitNow, mode, pool, pinsByProvince, pinGroups, counts, stats: local ? null : stats, pendingVerifications, agency: local || admin, reports: local ? [] : reportQueue(reportRows),
+      st: stView, now, limitNow, mode, pool, pinsByProvince, pinGroups, counts, stats: local ? null : stats, pendingVerifications, agency: local || admin, reports: local ? [] : reportQueue(reportRows),
       setRole: async (role) => { if (local) setLocal((s) => ({ ...s, role })); else await profile({ user_type: role }) },
       setOrigin: async (origin) => { if (local) setLocal((s) => ({ ...s, me: { ...s.me, origin } })); else await profile({ origin_country: origin?.country ?? null, origin_province: origin?.province ?? null }) },
       pin: async (input) => {
@@ -385,7 +390,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       resetClock: () => { if (local) setLocal((s) => clampFuture(s, Date.now())); else setClock(0) },
       reset: () => { if (local) { const fresh = seedState(); setLocal((s) => ({ ...fresh, role: s.role })) } else setClock(0) },
     }
-  }, [st, now, limitNow, mode, pool, pinsByProvince, pinGroups, counts, stats, at, refresh, userId, admin, people, reportRows])
+  }, [st, stView, now, limitNow, mode, pool, pinsByProvince, pinGroups, counts, stats, at, refresh, userId, admin, people, reportRows])
   return <C.Provider value={value}>{children}</C.Provider>
 }
 export const useMatch = () => { const c = useContext(C); if (!c) throw new Error('match'); return c }

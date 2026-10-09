@@ -13,7 +13,7 @@ import { Icon } from '../components/icons'
 import { MoneyInput } from '../components/money-input'
 import { Drawer } from '../components/drawer'
 import { Pager, useFit, usePaged } from '../components/pager'
-import { Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
+import { Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, TranslatedNote, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
 import { ReportButton } from './safety'
 import { MarketPanel } from './market'
 
@@ -296,6 +296,7 @@ function PostPanel({ titleId, post, level, reached, applied, viewer }: { titleId
     <PostFacts post={post} />
     <p className="text-sm">{post.skills.map(N.skill).join(' · ')}</p>
     {post.details && <p className="text-sm text-muted border-t border-line pt-3">{post.details}</p>}
+    <TranslatedNote post={post} />
     <div className="rounded-xl overflow-hidden border border-line">
       <GeoMap className="h-[220px]" label={t('m.bd.where', { p: N.place(post.country, post.province) })} country={post.country} province={post.province}
         pins={[{ country: post.country, province: post.province, label: post.position, tone: 'post' }]} onPickCountry={() => {}} onPickProvince={() => {}} />

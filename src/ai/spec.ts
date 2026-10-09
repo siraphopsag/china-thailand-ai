@@ -6,6 +6,7 @@
  * Neither is legal advice; the pages say so. The browser shows the text as plain text (React escapes it).
  */
 import { registry } from '../data/legal/registry.js'
+import { cleanTranslations, hasTranslations, type PostTranslations } from '../domain/match/postText.js'
 import { assess } from '../data/legal/trust.js'
 import { data } from '../locales/data.js'
 import type { PostInput } from '../domain/match/logic.js'
@@ -32,7 +33,9 @@ export type Severity = 'high' | 'medium' | 'low'
 export const FLAG_CATEGORIES: FlagCategory[] = ['scam', 'trafficking', 'labour_law', 'discrimination', 'missing_info', 'other']
 export const SEVERITIES: Severity[] = ['high', 'medium', 'low']
 export interface AiFlag { category: FlagCategory; severity: Severity; quote: string; explanation: string; suggestion: string; lawIds: string[] }
-export interface AiCheck { verdict: 'ok' | 'review' | 'high_risk'; summary: string; flags: AiFlag[] }
+/** translations: the job title and details in all three languages (owner, Oct 2026 — shown to readers of another language);
+ *  closedToForeigners: the job is an occupation Thai law closes to foreigners (the post then stays in Thailand) */
+export interface AiCheck { verdict: 'ok' | 'review' | 'high_risk'; summary: string; flags: AiFlag[]; translations?: PostTranslations; closedToForeigners?: boolean }
 
 /** the post as the AI reads it: what a job seeker would see (no account data) */
 export function postForAi(i: PostInput) {
@@ -89,8 +92,13 @@ concrete suggestion for rewording, and related LEGAL RECORDS ids (often none). v
 when something should be checked, "high_risk" only for clear scam or trafficking signs. Do not flag normal things (a salary range,
 a language requirement that the job needs, a probation period with pay).
 Write summary, explanation and suggestion in ${LANG_NAME[lang]}, short and plain. Keep quote in the post's own language.
+ALSO translate the post's "position" and "details" into Thai (th), Simplified Chinese (zh) and English (en) for job seekers who read
+another language: faithful and natural, the same meaning and facts, nothing added or left out, company and place names kept as they
+are, no contact details; "details" may be "" when the post has none. Translate the text exactly as written, even if you flagged it.
+closedToForeigners: true only if the workplace is in Thailand and the job is an occupation Thai law closes to foreigners (for example
+tour guiding or Thai massage); otherwise false.
 Reply with ONE JSON object only, exactly this shape:
-{"verdict":"ok"|"review"|"high_risk","summary":string,"flags":[{"category":"scam"|"trafficking"|"labour_law"|"discrimination"|"missing_info"|"other","severity":"high"|"medium"|"low","quote":string,"explanation":string,"suggestion":string,"lawIds":string[]}]}
+{"verdict":"ok"|"review"|"high_risk","summary":string,"flags":[{"category":"scam"|"trafficking"|"labour_law"|"discrimination"|"missing_info"|"other","severity":"high"|"medium"|"low","quote":string,"explanation":string,"suggestion":string,"lawIds":string[]}],"translations":{"th":{"position":string,"details":string},"zh":{"position":string,"details":string},"en":{"position":string,"details":string}},"closedToForeigners":boolean}
 
 LEGAL RECORDS:
 ${legalContext()}`
@@ -99,7 +107,7 @@ ${legalContext()}`
 export function askSystem(lang: AiLang): string {
   return `${COMMON}
 
-TASK: answer ONE question about working, hiring or doing business across the Thailand–China border, using ONLY the LEGAL RECORDS
+TASK: answer ONE question about working, hiring or doing business between Thailand and China, using ONLY the LEGAL RECORDS
 below. Rules:
 - grounding "grounded": the records cover the question; "partial": they cover part of it — say clearly what is not covered;
   "out_of_scope": they do not cover it (or it is not about Thai–Chinese cross-border work) — say so briefly and do not answer from
@@ -143,7 +151,8 @@ export function cleanCheck(raw: unknown): AiCheck {
   }).filter((f) => f.explanation).sort((a, b) => order(a.severity) - order(b.severity))
   let verdict = oneOf(r.verdict, ['ok', 'review', 'high_risk'] as const, flags.length ? 'review' : 'ok')
   if (verdict === 'ok' && flags.length) verdict = 'review' // never "ok" with something listed
-  return { verdict, summary: str(r.summary, 600), flags }
+  const translations = cleanTranslations(r.translations)
+  return { verdict, summary: str(r.summary, 600), flags, ...(hasTranslations(translations) ? { translations } : {}), ...(r.closedToForeigners === true ? { closedToForeigners: true } : {}) }
 }
 export function cleanAnswer(raw: unknown): AiAnswer {
   const r = (raw ?? {}) as Record<string, unknown>

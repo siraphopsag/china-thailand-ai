@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { canPost, caseBlocksDelete, isCountry, localDay, memberActive, postQuota, type PostInput, type Problem } from '../domain/match/logic'
+import { canPost, caseBlocksDelete, isCountry, localDay, memberActive, mustStayDomestic, postQuota, type PostInput, type Problem } from '../domain/match/logic'
+import { guessLang } from '../domain/match/postText'
 import { scheduleOf, stageAt, capStage } from '../domain/match/release'
 import { precheck, type Precheck } from '../domain/match/precheck'
 import { useAuth } from '../auth'
@@ -64,6 +65,8 @@ export function HirePage() {
   const [headcount, setHeadcount] = useState('1'), [employment, setEmployment] = useState<Employment>('permanent')
   const [salMin, setSalMin] = useState(''), [salMax, setSalMax] = useState(''), [currency, setCurrency] = useState<Currency>('THB')
   const [start, setStart] = useState(''), [langs, setLangs] = useState<LanguageSkill[]>([]), [edu, setEdu] = useState<Edu>('none'), [benefits, setBenefits] = useState<Benefit[]>([])
+  // owner, Oct 2026: keep the post in this country · only people who already have the right to work here
+  const [domestic, setDomestic] = useState(false), [workRight, setWorkRight] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   const [stage, setStage] = useState<Stage>(null)
   const [check, setCheck] = useState<Precheck | null>(null)
@@ -84,7 +87,7 @@ export function HirePage() {
     setEditing(x); setC(i.place.country); setP(i.place.province); setCompany(i.company); setPosition(i.position); setIndustry(i.industry); setSkills(i.skills)
     setYears(String(i.minYears)); setDetails(i.details); setHeadcount(String(i.headcount)); setEmployment(i.employment)
     setSalMin(i.salary ? String(i.salary.min) : ''); setSalMax(i.salary ? String(i.salary.max) : ''); setCurrency(i.salary?.currency ?? 'THB')
-    setStart(i.startDate); setLangs(i.languages); setEdu(i.education); setBenefits(i.benefits); setForm(true); setMsg(null); fe.clear()
+    setStart(i.startDate); setLangs(i.languages); setEdu(i.education); setBenefits(i.benefits); setDomestic(!!i.domesticOnly); setWorkRight(!!i.workRight); setForm(true); setMsg(null); fe.clear()
     window.scrollTo(0, 0); focusHead.current = true
   }
   // move focus to the form heading after the edit form has rendered
@@ -110,7 +113,7 @@ export function HirePage() {
     if (!isCountry(c) || !p) return null
     const hasSalary = salMin.trim() !== '' || salMax.trim() !== ''
     return { place: { country: c, province: p }, company: company.trim(), position: position.trim(), industry, skills, minYears: Number(years), details: details.trim(),
-      headcount: Number(headcount), employment, salary: hasSalary ? { min: Number(salMin), max: Number(salMax), currency } : null, startDate: start, languages: langs, education: edu, benefits }
+      headcount: Number(headcount), employment, salary: hasSalary ? { min: Number(salMin), max: Number(salMax), currency } : null, startDate: start, languages: langs, education: edu, benefits, domesticOnly: domestic, workRight }
   }
   const submit = async (e: FormEvent) => {
     e.preventDefault(); setMsg(null); fe.clear()
@@ -134,10 +137,17 @@ export function HirePage() {
   const closeCheck = () => { aiRun.current++; setStage(null); if (check?.errors[0]) showProblem(check.errors[0]) }
   const aiOk = aiRes && aiRes !== 'busy' && aiRes.ok && shown ? aiRes : null
   const orbOn = aiRes === 'busy' || (aiRes !== null && aiRes.ok && !shown) // still reading, or turning green
+  // what is saved: the AI's translations (or none — an edit without them clears the old ones) and the in-country rule
+  const finalInput = (i: PostInput): PostInput => {
+    const ai = aiOk?.result
+    return { ...i, domesticOnly: !!i.domesticOnly || !!ai?.closedToForeigners || mustStayDomestic(i),
+      translations: ai?.translations ? { ...ai.translations, src: guessLang(`${i.position} ${i.details}`) } : {} }
+  }
   const confirm = async () => {
     if (!pending || saving) return
     setSaving(true)
-    const r = editing ? await editPost(editing.id, pending) : await post(pending)
+    const out = finalInput(pending)
+    const r = editing ? await editPost(editing.id, out) : await post(out)
     setSaving(false)
     if (r.ok) { setPosted(r.value); setStage('done'); return }
     if (r.problem === 'quota') { setStage('package'); return }
@@ -145,7 +155,7 @@ export function HirePage() {
   }
   const another = () => {
     setStage(null); setPosted(null); setPending(null); setCheck(null); setAiRes(null); setEditing(null)
-    setPosition(''); setSkills([]); setDetails(''); setYears('0'); setHeadcount('1'); setEmployment('permanent'); setSalMin(''); setSalMax(''); setStart(''); setLangs([]); setEdu('none'); setBenefits([])
+    setPosition(''); setSkills([]); setDetails(''); setYears('0'); setHeadcount('1'); setEmployment('permanent'); setSalMin(''); setSalMax(''); setStart(''); setLangs([]); setEdu('none'); setBenefits([]); setDomestic(false); setWorkRight(false)
     setForm(false); setC(null); setP(null)
     // the form unmounts, so keyboard focus would fall back to the page: put it on the country field to start the next post
     requestAnimationFrame(() => document.getElementById('emp-prov-c')?.focus())
@@ -240,6 +250,13 @@ export function HirePage() {
               <div className="grid grid-cols-2 auto-rows-fr gap-2">{BENEFITS.map((b) => (
                 <label key={b} className="chip-check"><input type="checkbox" className="sr-only" checked={benefits.includes(b)} onChange={() => setBenefits((xs) => (xs.includes(b) ? xs.filter((x) => x !== b) : [...xs, b]))} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.benefit(b)}</label>))}</div>
             </fieldset>
+            <fieldset className="space-y-2"><legend className="label">{t('m.f.who')} <span className="font-normal text-muted">({t('m.opt')})</span></legend>
+              {(() => { const locked = isCountry(c) && mustStayDomestic({ place: { country: c, province: p ?? '' }, position, details }); return (
+                <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-1" checked={domestic || locked} disabled={locked} onChange={(e) => setDomestic(e.target.checked)} />
+                  <span><span className="font-medium">{t('m.f.domestic')}</span><span className="block text-xs text-muted">{t(locked ? 'm.f.domestic.locked' : 'm.f.domestic.d')}</span></span></label>) })()}
+              <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-1" checked={workRight} onChange={(e) => setWorkRight(e.target.checked)} />
+                <span><span className="font-medium">{t('m.f.workRight')}</span><span className="block text-xs text-muted">{t('m.f.workRight.d')}</span></span></label>
+            </fieldset>
           </fieldset>
 
           <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="info" size={16} />{t('m.emp.sec.more')}</legend>
@@ -299,6 +316,10 @@ export function HirePage() {
         {aiOk ? (aiOk.result.verdict === 'ok' && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('ai.chk.v.ok')} <span className="text-muted">({t('ai.chk.by')})</span></p>)
           : check && check.warnings.length === 0 && check.errors.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')} <span className="text-muted">({t('m.chk.sim')})</span></p>}
         <div className="card-i space-y-1 text-sm"><p className="font-semibold">{pending.position} · {pending.company}</p><p className="text-muted">{N.place(pending.place.country, pending.place.province)} · {t('m.people', { n: pending.headcount })} · {N.employment(pending.employment)}</p></div>
+        {(() => { const f = finalInput(pending); return <>
+          {f.domesticOnly && <p className="text-sm flex items-start gap-1.5"><Icon name="home" size={16} className="mt-0.5 shrink-0 text-primary" />{t('m.cf.domestic')}</p>}
+          {f.translations && Object.keys(f.translations).some((k) => k !== 'src') && <p className="text-sm flex items-start gap-1.5"><Icon name="language" size={16} className="mt-0.5 shrink-0 text-primary" />{t('m.cf.translated')}</p>}
+        </> })()}
         <p className="text-xs text-muted">{editing ? t('m.edit.note') : t('m.cf.quota', { n: used + 1, max: limit })}</p>
         <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setStage(null)}>{t('m.cf.back')}</button><button type="button" className="btn-primary" disabled={saving} onClick={confirm}><Icon name="send" size={16} />{t(editing ? 'm.edit.cf.yes' : 'm.cf.yes')}</button></div></>)}</Modal>
 

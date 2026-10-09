@@ -2,6 +2,7 @@
 // and rules in logic.ts work the same with the database as with the local demo data. Pure: no network, no React.
 import { isObj } from '../../profileSchema'
 import type { PostInput } from './logic'
+import { cleanTranslations, hasTranslations } from './postText'
 import type { PinLike } from './release'
 import type { PinGroup } from './market'
 import { APPOINTMENTS, CASE_STEPS, DOCS, PERMITS, TESTS, type Case, type CaseStep } from './cases'
@@ -24,6 +25,10 @@ export interface PostRow {
   hidden?: boolean | null
   /** how the employer was verified (0007): 'company' or 'person'; missing → a company */
   verify_kind?: string | null
+  /** 0010: kept in its own country · only people with the right to work there · the AI's translations */
+  domestic_only?: boolean | null
+  work_right?: boolean | null
+  translations?: unknown
 }
 export interface ReportRow { id: string; post_id: string; reporter_id: string; reason: string; note: string | null; status: string; created_at: string }
 export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string; dates?: unknown }
@@ -55,7 +60,9 @@ export const rowToPost = (r: PostRow, uid: string): Post => ({
   headcount: r.headcount, employment: one(EMPLOYMENT, r.employment),
   salary: r.salary_min !== null && r.salary_max !== null && (r.salary_currency === 'THB' || r.salary_currency === 'CNY') ? { min: r.salary_min, max: r.salary_max, currency: r.salary_currency } : null,
   startDate: r.start_date, languages: toLanguages(r.languages), education: one(EDU, r.education) ?? 'none', benefits: many(BENEFITS, r.benefits),
-  country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, ...((r.verified ?? r.is_sample) ? { verifiedAs: r.verify_kind === 'person' ? 'person' as const : 'company' as const } : {}), ...(r.hidden ? { hidden: true } : {}), ...(r.is_sample ? { sample: true } : {}), synthetic: true,
+  country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, ...((r.verified ?? r.is_sample) ? { verifiedAs: r.verify_kind === 'person' ? 'person' as const : 'company' as const } : {}), ...(r.hidden ? { hidden: true } : {}), ...(r.is_sample ? { sample: true } : {}),
+  ...(r.domestic_only ? { domesticOnly: true } : {}), ...(r.work_right ? { workRight: true } : {}),
+  ...(hasTranslations(cleanTranslations(r.translations)) ? { translations: cleanTranslations(r.translations) } : {}), synthetic: true,
 })
 export function toLanguages(v: unknown): LanguageSkill[] {
   if (!Array.isArray(v)) return []
@@ -68,12 +75,17 @@ export const postToRow = (i: PostInput) => ({
   salary_min: i.salary?.min ?? null, salary_max: i.salary?.max ?? null, salary_currency: i.salary?.currency ?? null,
   start_date: i.startDate, languages: i.languages.map((l) => ({ lang: l.lang, level: l.level })), education: i.education, benefits: [...i.benefits],
   country: i.place.country, province: i.place.province,
+  // 0010 — always written, so an edit without a new AI check clears translations of text that has changed
+  domestic_only: !!i.domesticOnly, work_right: !!i.workRight, translations: cleanTranslations(i.translations),
 })
 /** a post back into the form's input (for editing) */
 export const postToInput = (p: Post): PostInput => ({
   place: { country: p.country, province: p.province }, company: p.company, position: p.position, industry: p.industry, skills: [...p.skills], minYears: p.minYears,
   details: p.details, headcount: p.headcount ?? 1, employment: (p.employment ?? 'permanent') as Employment, salary: p.salary ? { ...p.salary } : null,
   startDate: p.startDate ?? '', languages: p.languages.map((l) => ({ ...l })), education: p.education as Edu, benefits: [...p.benefits] as Benefit[],
+  // a translated view shows the employer's own words in orig: edit those
+  ...(p.orig ? { position: p.orig.position, details: p.orig.details } : {}),
+  domesticOnly: !!p.domesticOnly, workRight: !!p.workRight,
 })
 
 export const rowToPin = (r: PinRow): Pin => ({ id: r.id, country: country(r.country) ?? 'TH', province: r.province, industry: (one(INDUSTRIES, r.industry) ?? 'manufacturing') as Industry, skills: many(SKILLS, r.skills) as Skill[], at: iso(r.created_at), ...(r.is_sample ? { sample: true } : {}) })

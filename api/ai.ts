@@ -26,6 +26,9 @@ const CheckSchema = z.object({
     category: z.enum(FLAG_CATEGORIES as [string, ...string[]]), severity: z.enum(SEVERITIES as [string, ...string[]]),
     quote: z.string(), explanation: z.string(), suggestion: z.string(), lawIds: z.array(z.string()),
   })),
+  // owner, Oct 2026: the title and details in the three languages, and whether the job is closed to foreigners in Thailand
+  translations: z.object({ th: z.object({ position: z.string(), details: z.string() }), zh: z.object({ position: z.string(), details: z.string() }), en: z.object({ position: z.string(), details: z.string() }) }),
+  closedToForeigners: z.boolean(),
 })
 const AskSchema = z.object({ answer: z.string(), lawIds: z.array(z.string()), grounding: z.enum(['grounded', 'partial', 'out_of_scope']), nextStep: z.string() })
 

@@ -174,6 +174,11 @@ Supabase แบบฟรีส่งอีเมลได้แค่คนใ�
    - `https://china-thailand-ai.vercel.app/api/google`
    - `https://china-thailand-ai-git-poc-board-boss-608c.vercel.app/api/google`
 
+## 20. คำแปลประกาศ + ตัวเลือก "ใครสมัครได้" (ทำครั้งเดียว)
+Supabase → **SQL Editor** → **New query** → วางไฟล์ [`supabase/migrations/0010_post_options.sql`](../supabase/migrations/0010_post_options.sql) ทั้งไฟล์ → **Run** → ต้องขึ้น **Success** (รันซ้ำได้)
+- เพิ่ม 3 ช่องในประกาศ: เผยแพร่เฉพาะในประเทศ · รับเฉพาะผู้มีสิทธิทำงานในประเทศนี้ · คำแปลชื่อตำแหน่งและรายละเอียดที่ AI แปลตอนตรวจประกาศ
+- ต้องรัน **ก่อน** ใช้เว็บรุ่นใหม่ (ไม่รัน = โพสต์ประกาศไม่ได้) · รันแล้วเว็บรุ่นเดิมยังใช้ได้ตามปกติ
+
 ---
 
 ## ✅ เช็กลิสต์ก่อนวันส่งงาน (14)

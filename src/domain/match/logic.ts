@@ -9,6 +9,7 @@ import { DAY_MS, HOUR_MS, cycleQuota, isExpired, pinActive, reachFor, type PinLi
 import { currentStep, lastUpdate, newCase, parseCase, type Case } from './cases'
 import { parseReports, reportedIds } from './reports'
 import { isMobile, isRegNo, phoneLast4 } from './verify'
+import { cleanTranslations, closedToForeigners, hasTranslations, type PostTranslations } from './postText'
 
 export { DAY_MS, HOUR_MS }
 /**
@@ -86,7 +87,15 @@ export const removePin = (s: Seeker, id: string): Seeker => ({ ...s, pins: s.pin
 export interface PostInput {
   place: Place; company: string; position: string; industry: Industry; skills: Skill[]; minYears: number; details: string
   headcount: number; employment: Employment; salary: Salary | null; startDate: string; languages: LanguageSkill[]; education: Edu; benefits: Benefit[]
+  /** owner, Oct 2026: keep the post in its own country (level 4 at most) */
+  domesticOnly?: boolean
+  /** only people who already have the right to work in this country */
+  workRight?: boolean
+  /** the AI's translations of the title and details (from the check before posting) */
+  translations?: PostTranslations
 }
+/** a post for an occupation closed to foreigners in Thailand (e.g. tour guiding) always stays in Thailand */
+export const mustStayDomestic = (i: Pick<PostInput, 'place' | 'position' | 'details'>) => i.place.country === 'TH' && closedToForeigners(`${i.position} ${i.details}`)
 export function makePost(input: PostInput, id: string, employerId: string, at: string): Outcome<Post> {
   if (!isPlace(input.place)) return fail('place')
   // position: 2 characters minimum, so short titles such as "HR" are accepted (owner, Oct 2026)
@@ -105,7 +114,9 @@ export function makePost(input: PostInput, id: string, employerId: string, at: s
   return { ok: true, value: { id, employerId, company: input.company, position: input.position, industry: input.industry, skills: [...input.skills], minYears: input.minYears, details: input.details,
     headcount: input.headcount, employment: input.employment, salary: input.salary ? { ...input.salary } : null, startDate: input.startDate,
     languages: input.languages.map((l) => ({ ...l })), education: input.education, benefits: [...input.benefits],
-    country: input.place.country, province: input.place.province, createdAt: at, releasedAt: at, verified: false, synthetic: true } }
+    country: input.place.country, province: input.place.province, createdAt: at, releasedAt: at, verified: false,
+    ...(input.domesticOnly || mustStayDomestic(input) ? { domesticOnly: true } : {}), ...(input.workRight ? { workRight: true } : {}),
+    ...(hasTranslations(cleanTranslations(input.translations)) ? { translations: cleanTranslations(input.translations) } : {}), synthetic: true } }
 }
 /** renewing uses one post from the weekly allowance and starts the release again at level 1, with a fresh 6 months */
 export function renewPost(st: MatchState, postId: string, at: string): Outcome<Post> {
@@ -253,7 +264,7 @@ export function parseState(input: unknown): MatchState | null {
     .filter((s, i, all) => all.findIndex((x) => x.id === s.id) === i)
   // data saved before Oct 2026: posts without the new details
   // posts saved before verification existed: samples count as verified, my own as not yet
-  const posts = (Array.isArray(raw.posts) ? raw.posts.map((p) => (isObj(p) ? { ...withLegacy(p), verified: typeof p.verified === 'boolean' ? p.verified : p.employerId !== MY_EMPLOYER, verifiedAs: oneOf(VERIFY_KINDS, p.verifiedAs) ? p.verifiedAs : undefined, sample: p.employerId !== MY_EMPLOYER } : p)) : []).filter(isPost)
+  const posts = (Array.isArray(raw.posts) ? raw.posts.map((p) => (isObj(p) ? { ...withLegacy(p), verified: typeof p.verified === 'boolean' ? p.verified : p.employerId !== MY_EMPLOYER, verifiedAs: oneOf(VERIFY_KINDS, p.verifiedAs) ? p.verifiedAs : undefined, sample: p.employerId !== MY_EMPLOYER, ...(p.translations !== undefined ? { translations: cleanTranslations(p.translations) } : {}) } : p)) : []).filter(isPost)
     .filter((p, i, all) => all.findIndex((x) => x.id === p.id) === i)
   const postIds = new Set(posts.map((p) => p.id)), people = new Set([ME, ...seekers.map((s) => s.id)])
   const seen = new Set<string>()

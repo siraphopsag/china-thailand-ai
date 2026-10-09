@@ -8,6 +8,7 @@
  */
 import type { Case } from './cases'
 import type { Report } from './reports'
+import type { PostText, PostTranslations, UiLang } from './postText'
 /* fields, skills and languages (came with the first job-board prototype, which was removed in Oct 2026) */
 export const SKILLS = [
   'software_engineering', 'data_analysis', 'mechanical_engineering', 'electrical_engineering', 'civil_engineering', 'quality_control',
@@ -99,6 +100,15 @@ export interface Post extends Place {
   hidden?: boolean
   /** a sample post made for the prototype, not a real employer (shown with a "Sample" badge) */
   sample?: boolean
+  /** owner, Oct 2026 (0010): the employer keeps the post in its own country — the release stops at level 4, never abroad */
+  domesticOnly?: boolean
+  /** only people who already have the right to work in the post's country (the employer will not apply for a work permit) */
+  workRight?: boolean
+  /** the title and details translated by the AI when the post was checked (0010) */
+  translations?: PostTranslations
+  /** set by localizePost when a translation is shown: the employer's own words and the language they were written in */
+  orig?: PostText
+  translatedFrom?: UiLang
   synthetic: true
 }
 /**

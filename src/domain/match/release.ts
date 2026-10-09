@@ -60,9 +60,13 @@ export const isExpired = (post: Post, now: number) => now >= Date.parse(post.rel
 
 export interface Reach { level: Level; stage: Level | 'expired'; visible: boolean; /** when it opens for this seeker (null = already open, or not before a later level) */ opensAt: number | null }
 /** how far a post may go (owner, Oct 2026): a verified company all five levels, a verified private person up to level 3,
- *  an employer not yet verified levels 1 and 2 only */
-export const levelCap = (post: Pick<Post, 'verified' | 'verifiedAs'>): Level => (!post.verified ? 2 : post.verifiedAs === 'person' ? 3 : 5)
-export const capStage = (stage: Level | 'expired', post: Pick<Post, 'verified' | 'verifiedAs'>): Level | 'expired' => (stage !== 'expired' && stage > levelCap(post) ? levelCap(post) : stage)
+ *  an employer not yet verified levels 1 and 2 only; a post the employer keeps in its own country stops at level 4 */
+type CapOf = Pick<Post, 'verified' | 'verifiedAs'> & { domesticOnly?: boolean }
+export const levelCap = (post: CapOf): Level => {
+  const byTrust: Level = !post.verified ? 2 : post.verifiedAs === 'person' ? 3 : 5
+  return post.domesticOnly && byTrust > 4 ? 4 : byTrust
+}
+export const capStage = (stage: Level | 'expired', post: CapOf): Level | 'expired' => (stage !== 'expired' && stage > levelCap(post) ? levelCap(post) : stage)
 /** the level a post has reached now, with the cap for unverified employers */
 export const stageOf = (post: Post, pool: PinLike[], now: number) => capStage(stageAt(scheduleOf(post, pool, now), now), post)
 /** can this seeker (their own pins) see the post now, and at which level does it reach them */

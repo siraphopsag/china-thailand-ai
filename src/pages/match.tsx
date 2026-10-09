@@ -81,10 +81,27 @@ export function PostFacts({ post, compact }: { post: Post; compact?: boolean }) 
     ['culture', t('m.f.education'), N.edu(post.education)],
     ['ok', t('m.f.benefits'), post.benefits.length ? post.benefits.map(N.benefit).join(' · ') : ns],
   ]
+  // who can apply: shown only when the employer set a limit
+  const who = [post.domesticOnly && t('m.badge.domestic'), post.workRight && t('m.badge.workRight')].filter(Boolean).join(' · ')
+  if (who) rows.push(['globe', t('m.f.who'), who])
   if (compact) return <p className="text-sm text-muted">{rows.filter(([, , v]) => v !== ns).map(([, , v]) => v).join(' · ') || ns}</p>
   return (
     <dl className="grid sm:grid-cols-2 gap-x-5 gap-y-2.5 text-sm">{rows.map(([icon, k, v]) => (
       <div key={k} className="flex items-start gap-2.5"><Icon name={icon} size={16} className="text-primary mt-0.5 shrink-0" /><div><dt className="text-muted text-xs">{k}</dt><dd className="font-medium">{v}</dd></div></div>))}</dl>
+  )
+}
+/** under a post's details: the words were translated by the AI from another language — with the employer's original on request */
+export function TranslatedNote({ post }: { post: Pick<Post, 'orig' | 'translatedFrom'> }) {
+  const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+  if (!post.orig) return null
+  const from = post.translatedFrom ? t(`m.tr.lang.${post.translatedFrom}` as never) : '—'
+  return (
+    <div className="text-xs text-muted space-y-1.5">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1"><Icon name="language" size={14} className="shrink-0" />{t('m.tr.note', { l: from })}
+        <button type="button" className="font-medium text-primary underline underline-offset-2 min-h-[24px]" aria-expanded={open} onClick={() => setOpen((x) => !x)}>{t(open ? 'm.tr.hideOrig' : 'm.tr.showOrig')}</button></p>
+      {open && <div className="card-i !p-3 text-sm text-fg" lang={post.translatedFrom}><p className="text-xs text-muted mb-1">{t('m.tr.orig')}</p><p className="font-medium">{post.orig.position}</p>{post.orig.details && <p className="mt-1 whitespace-pre-line">{post.orig.details}</p>}</div>}
+    </div>
   )
 }
 export function Page({ title, sub, actions, fit, body, children }: { title: string; sub?: ReactNode; actions?: ReactNode; fit?: boolean; body?: string; children: ReactNode }) {

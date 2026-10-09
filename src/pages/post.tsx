@@ -11,7 +11,7 @@ import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { CaseLink } from './case'
 import { ReportButton, ScamNote } from './safety'
-import { AgencyLinks, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
+import { AgencyLinks, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, TranslatedNote, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 
 /**
  * One post (owner, Oct 2026): details, the five release levels with their times, who else is looking at it right now, and —
@@ -181,6 +181,7 @@ export function PostPage() {
           <p className="text-sm">{t('jb.minYearsShort', { n: p.minYears })} · {p.skills.map(N.skill).join(', ')}</p>
           <PostFacts post={p} />
           {p.details && <p className="text-sm text-muted border-t border-line pt-3">{p.details}</p>}
+          <TranslatedNote post={p} />
           {!mine && st.role !== 'employer' && <div className="border-t border-line pt-3"><ReportButton postId={p.id} /></div>}
         </section>
       </div>
