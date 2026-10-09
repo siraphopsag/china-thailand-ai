@@ -13,7 +13,7 @@ import { Icon } from '../components/icons'
 import { MoneyInput } from '../components/money-input'
 import { Drawer } from '../components/drawer'
 import { Pager, useFit, usePaged } from '../components/pager'
-import { Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, TranslatedNote, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
+import { DemoBadge, Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, TranslatedNote, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
 import { ReportButton } from './safety'
 import { MarketPanel } from './market'
 
@@ -246,7 +246,7 @@ function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Po
         {/* the ring: in short on phones and computers, in full on tablets (the full words are in the title and for screen readers) */}
         <span className={`chip rar rar-${level} !px-1.5 sm:!px-2 text-[11px] sm:text-xs sm:hidden fit:inline-flex min-w-0`} title={ring}><ReachRings level={level} size={11} /><span className="sr-only">{t('m.lv.ring', { n: level })} · {ring}</span><span aria-hidden className="truncate">{t(`m.lv.${level}` as never)}</span></span>
         <span className="hidden sm:contents fit:hidden"><LevelBadge level={level} reached={reached} /></span>
-        {post.sample && <SampleBadge className="!px-1.5 sm:!px-2 text-[11px] sm:text-xs shrink-0" />}
+        {post.sample && <SampleBadge className="!px-1.5 sm:!px-2 text-[11px] sm:text-xs shrink-0" />}{post.demo && <DemoBadge className="!px-1.5 sm:!px-2 text-[11px] sm:text-xs shrink-0" />}
       </div>
       <p className="text-xs text-muted bd-opt hidden sm:block fit:col-span-2 fit:mt-1">{N.place(post.country, post.province)} · {ago(post.releasedAt)}</p>
       {/* places: on the right on phones, one line on computers, two figures on tablets */}
@@ -285,7 +285,7 @@ function PostPanel({ titleId, post, level, reached, applied, viewer }: { titleId
       <p className="text-xs text-muted flex flex-wrap justify-center gap-x-3 gap-y-1"><span className="inline-flex items-center gap-1"><Icon name="pin" size={13} />{N.place(post.country, post.province)}</span><span className="inline-flex items-center gap-1"><Icon name="business" size={13} />{N.industry(post.industry)}</span><span className="inline-flex items-center gap-1"><Icon name="clock" size={13} />{ago(post.releasedAt)}</span></p>
       <div className="flex flex-wrap justify-center gap-1.5"><LevelBadge level={level} reached={reached} />
         <UnverifiedChip post={post} />
-        {post.sample && <SampleBadge />}</div>
+        {post.sample && <SampleBadge />}{post.demo && <DemoBadge />}</div>
     </div>
     <dl className="grid grid-cols-3 gap-2 text-center">
       {([[`${c.held}/${cap}`, 'm.bd.places'], [c.reserved, 'm.bd.queue'], [`${post.minYears}+`, 'm.bd.years']] as const).map(([v, k]) => (

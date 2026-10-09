@@ -11,7 +11,7 @@ import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { CaseLink } from './case'
 import { ReportButton, ScamNote } from './safety'
-import { AgencyLinks, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, TranslatedNote, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
+import { AgencyLinks, DemoBadge, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, TranslatedNote, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 
 /**
  * One post (owner, Oct 2026): details, the five release levels with their times, who else is looking at it right now, and —
@@ -80,7 +80,7 @@ export function PostPage() {
         {c.reserved > 0 && <span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ticket" size={12} />{t('m.cnt.reserved', { n: c.reserved })}</span>}
         {state !== 'open' && <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(state === 'waiting' ? 'm.state.waiting' : 'm.state.closed')}</span>}
         <UnverifiedChip post={p} />
-        {p.sample && <SampleBadge />}
+        {p.sample && <SampleBadge />}{p.demo && <DemoBadge />}
       </div>
       {/* real people only: others who have this post open now, and how many are filling in the form (database mode) */}
       <div role="status" aria-live="polite" className="space-y-1 shrink-0 empty:hidden">

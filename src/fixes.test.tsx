@@ -20,7 +20,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const T = (k: MsgKey, v?: Record<string, string | number>) => esc(tr(k, v, 'th'))
 const ok = async () => 'ok' as const
 const state = (o: Partial<AuthCtx>): AuthCtx => ({ status: 'signedOut', user: null, isAdmin: false, online: true, recovery: false,
-  signInGoogle: ok, signInGoogleToken: ok, signInEmail: ok, signUp: ok, sendReset: ok, updatePassword: ok, signOut: async () => {}, deleteAccount: async () => true, ...o })
+  signInGoogle: ok, signInGoogleToken: ok, signInDemo: ok, signInEmail: ok, signUp: ok, sendReset: ok, updatePassword: ok, signOut: async () => {}, deleteAccount: async () => true, ...o })
 const html = (node: ReactNode, auth: AuthCtx) => {
   const g = globalThis as { document?: unknown }
   const had = 'document' in g, prev = g.document

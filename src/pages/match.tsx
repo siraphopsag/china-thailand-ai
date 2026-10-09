@@ -3,7 +3,7 @@ import { LANGS, useI18n } from '../i18n'
 import { ACCENTS, useTheme } from '../theme'
 import { NavLink } from '../store'
 import { useMatch } from '../matchData'
-import { useAuth } from '../auth'
+import { useAuth , demoNumber } from '../auth'
 import { provinces } from '../locales/provinces'
 import { activePins, capacityOf, inbox, isCountry, memberActive, pinQuota, type Problem } from '../domain/match/logic'
 import { DAY_MS, reachFor, scheduleOf, stageAt, type Quota, capStage } from '../domain/match/release'
@@ -130,6 +130,16 @@ export function UnverifiedChip({ post }: { post: Pick<Post, 'verified'> }) {
  * "ข้อมูลจำลอง" label on every simulated post — the samples, the administrator's generator and anything an administrator posts.
  * Posts without it come from real users.
  */
+/** a demo account's name in the reader's language (บัญชีทดลอง 007 → 体验账号 007 / Demo account 007); other names as they are */
+export function useShowName() {
+  const { t } = useI18n()
+  return (name: string) => { const n = demoNumber(name); return n ? t('m.demo.name', { n }) : name }
+}
+/** on a post from a demo account (SQL 0011) */
+export function DemoBadge({ className = '' }: { className?: string }) {
+  const { t } = useI18n()
+  return <span className={`chip bg-surface3 text-muted border-line font-semibold ${className}`} title={t('m.demo.badge.d')}><Icon name="user" size={12} />{t('m.demo.badge')}</span>
+}
 export function SampleBadge({ className = '' }: { className?: string }) {
   const { t } = useI18n()
   return <span className={`chip bg-warn-bg text-warn-fg border-warn-line font-semibold ${className}`} title={t('m.sample.d')}><Icon name="sim" size={12} />{t('m.sample.badge')}</span>
@@ -406,7 +416,7 @@ export function PostCard({ post, level, reached, children }: { post: Post; level
         {c.reserved > 0 && <span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ticket" size={12} />{t('m.cnt.reserved', { n: c.reserved })}</span>}
         {state !== 'open' && <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(state === 'waiting' ? 'm.state.waiting' : 'm.state.closed')}</span>}
         <UnverifiedChip post={post} />
-        {post.sample && <SampleBadge />}
+        {post.sample && <SampleBadge />}{post.demo && <DemoBadge />}
       </p>
       {children}
     </li>
@@ -484,7 +494,8 @@ export function ClockControls() {
 /** the name an employer sees for an applicant (sample seekers in the demo, the copied name in the database) */
 export function useApplicantName() {
   const { st } = useMatch()
-  return (a: Acceptance) => a.seekerName ?? st.seekers.find((s) => s.id === a.seekerId)?.name ?? '—'
+  const show = useShowName()
+  return (a: Acceptance) => show(a.seekerName ?? st.seekers.find((s) => s.id === a.seekerId)?.name ?? '—')
 }
 function NoteItem({ icon, title, text, to, tone }: { icon: IconName; title: string; text?: string; to: string; tone?: 'warn' }) {
   return (
@@ -598,6 +609,7 @@ export function MePage() {
 /** signed-in account: name, e-mail, role, and "delete my account" (PDPA right to erasure); hidden when sign-in is not set up */
 function AccountSection() {
   const { t } = useI18n()
+  const showName = useShowName()
   const { status, user, isAdmin, deleteAccount } = useAuth()
   const [msg, setMsg] = useState<'done' | 'fail' | null>(null)
   const [ask, askDialog] = useConfirm()
@@ -607,7 +619,8 @@ function AccountSection() {
     <section className="glass-card p-5 space-y-2" aria-labelledby="account-h">
       <h2 id="account-h" className="h2">{t('m.auth.account')}</h2>
       {user ? (<>
-        <p className="font-medium">{user.name} <span className="text-sm text-muted">· {user.email}</span></p>
+        <p className="font-medium">{showName(user.name)} {user.email && <span className="text-sm text-muted">· {user.email}</span>}</p>
+        {user.demo && <p className="text-sm text-muted">{t('m.demo.profile')}</p>}
         {isAdmin && <p className="text-sm inline-flex items-center gap-1.5 text-primary"><Icon name="shield" size={15} />{t('m.auth.admin')}</p>}
         <div><button type="button" className="btn-ghost text-danger-fg" disabled={busy} onClick={async () => { if (!(await ask(t('m.auth.delete.confirm'), { yes: t('m.auth.delete'), danger: true }))) return; setBusy(true); setMsg((await deleteAccount()) ? 'done' : 'fail'); setBusy(false) }}>{busy ? t('m.ask.busy') : t('m.auth.delete')}</button></div>
       </>) : <p className="text-sm text-muted">{t('m.auth.signedOut')} · {t('m.auth.optional')}</p>}

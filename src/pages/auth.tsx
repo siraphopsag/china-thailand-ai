@@ -61,6 +61,22 @@ function Field({ id, label, icon, value, onChange, fe, type = 'text', autoComple
   )
 }
 
+/** owner, Oct 2026: judges and visitors try everything with a numbered demo account — no e-mail, no password */
+function DemoButton() {
+  const { t } = useI18n()
+  const { signInDemo } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<AuthResult | null>(null)
+  return (
+    <div className="rounded-2xl border border-dashed border-line p-3 space-y-1.5">
+      <button type="button" className="btn-ghost w-full justify-center" disabled={busy}
+        onClick={async () => { setBusy(true); setErr(null); rememberNext('choose-role'); const r = await signInDemo(); if (r !== 'ok') { setErr(r); setBusy(false) } }}>
+        <Icon name="user" size={17} />{busy ? t('m.demo.busy') : t('m.demo.try')}</button>
+      <p className="text-xs text-muted text-center">{t('m.demo.tryNote')}</p>
+      <div role="status">{err && <p className="text-sm text-danger-fg text-center">{t(err === 'demoOff' ? 'm.demo.off' : err === 'unavailable' ? 'm.auth.fail' : 'm.lg.err.error')}</p>}</div>
+    </div>
+  )
+}
 let gisHandled = false
 function GoogleButton({ next }: { next: string }) {
   const { t, lang } = useI18n()
@@ -153,6 +169,7 @@ export function LoginPage() {
           <button type="submit" className="cta-core w-full justify-center" disabled={busy}>{busy ? t('m.lg.busy') : t('m.lg.go')}</button>
         </form>
         <GoogleButton next={next} />
+        <DemoButton />
         <p className="text-sm text-center">{t('m.lg.noAccount')} <NavLink to={next ? `register?next=${next}` : 'register'} className="font-semibold text-primary underline underline-offset-4">{t('m.lg.register')}</NavLink></p>
       </>)}
     </AuthShell>

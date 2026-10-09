@@ -12,9 +12,12 @@ import type { AuthError, Session, SupabaseClient } from '@supabase/supabase-js'
  */
 
 export type AuthStatus = 'off' | 'loading' | 'signedOut' | 'signedIn'
-export interface AuthUser { id: string; email: string; name: string; avatar: string | null }
+/** demo: a "try it without signing up" account (Supabase anonymous; named บัญชีทดลอง 001… by the database, SQL 0011) */
+export interface AuthUser { id: string; email: string; name: string; avatar: string | null; demo?: boolean }
+/** the running number of a demo account's name (บัญชีทดลอง 007 → '007'), or null — the pages show it in the reader's language */
+export const demoNumber = (name: string | null | undefined) => { const m = /^บัญชีทดลอง (\d{3,})$/.exec(name ?? ''); return m ? m[1] : null }
 /** what an account action came back with; anything but 'ok' is shown as a message */
-export type AuthResult = 'ok' | 'checkMail' | 'invalid' | 'unconfirmed' | 'exists' | 'weak' | 'email' | 'rate' | 'mailRate' | 'unavailable' | 'error'
+export type AuthResult = 'ok' | 'checkMail' | 'invalid' | 'unconfirmed' | 'exists' | 'weak' | 'email' | 'rate' | 'mailRate' | 'unavailable' | 'demoOff' | 'error'
 interface Ctx {
   status: AuthStatus
   user: AuthUser | null
@@ -24,6 +27,8 @@ interface Ctx {
   /** the visitor arrived from a "reset password" e-mail and may now set a new password */
   recovery: boolean
   signInGoogle: () => Promise<AuthResult>
+  /** owner, Oct 2026: a demo account for judges and visitors — no e-mail, no password */
+  signInDemo: () => Promise<AuthResult>
   /** Google's own button gave an ID token (components/google-signin.tsx): Supabase signs in with it, no redirect */
   signInGoogleToken: (token: string, nonce: string) => Promise<AuthResult>
   signInEmail: (email: string, password: string) => Promise<AuthResult>
@@ -66,7 +71,7 @@ export function toUser(s: Session | null): AuthUser | null {
   const m = (u.user_metadata ?? {}) as Record<string, unknown>
   const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : '')
   const avatar = str(m.avatar_url) || str(m.picture)
-  return { id: u.id, email: u.email ?? '', name: str(m.full_name) || str(m.name) || (u.email ?? '').split('@')[0], avatar: /^https:\/\//.test(avatar) ? avatar : null }
+  return { id: u.id, email: u.email ?? '', name: str(m.full_name) || str(m.name) || (u.email ?? '').split('@')[0], avatar: /^https:\/\//.test(avatar) ? avatar : null, ...(u.is_anonymous ? { demo: true } : {}) }
 }
 
 /** Supabase error → a message we can show (never the raw text) */
@@ -149,8 +154,10 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
     if (!u) { setAdmin(false); return }
     try {
       const sb = await getClient()
-      const { data } = await sb.from('profiles').select('role').eq('id', u.id).maybeSingle()
+      const { data } = await sb.from('profiles').select('role, full_name').eq('id', u.id).maybeSingle()
       if (alive.current) setAdmin(data?.role === 'admin')
+      // a demo account's name (its running number) is made by the database
+      if (alive.current && u.demo && data?.full_name) setUser((cur) => (cur && cur.id === u.id ? { ...cur, name: data.full_name as string } : cur))
     } catch { if (alive.current) setAdmin(false) }
   }, [])
 
@@ -196,6 +203,11 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
         if (error) { lastDetail = [error.status, error.code, error.message].filter(Boolean).join(' · '); console.warn('Google sign-in:', lastDetail) }
         return authResult(error)
       } catch (e) { lastDetail = e instanceof Error ? e.message : String(e); throw e }
+    }),
+    signInDemo: () => guard(async (sb) => {
+      if (!(await reachable())) return 'unavailable'
+      const { error } = await sb.auth.signInAnonymously()
+      return error && /anonymous/i.test(`${error.code ?? ''} ${error.message}`) ? 'demoOff' : authResult(error)
     }),
     signInEmail: (email, password) => guard(async (sb) => authResult((await sb.auth.signInWithPassword({ email: email.trim(), password })).error)),
     signUp: (name, email, password) => guard(async (sb) => {

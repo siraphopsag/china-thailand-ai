@@ -508,6 +508,15 @@ export const match = {
   'm.ask.yes': ['ยืนยัน', '确认', 'Confirm'],
   'm.ask.no': ['ยกเลิก', '取消', 'Cancel'],
   'm.ask.busy': ['กำลังบันทึก…', '正在保存…', 'Saving…'],
+  // owner, Oct 2026: demo accounts — "try it without signing up", numbered so people trying at the same time can tell them apart
+  'm.demo.try': ['ทดลองใช้โดยไม่ต้องสมัคร', '无需注册，立即体验', 'Try it without signing up'],
+  'm.demo.tryNote': ['ได้บัญชีทดลองหมายเลขของคุณเอง ใช้ได้ทุกอย่างเหมือนบัญชีจริง · ไม่ต้องใช้อีเมล · ข้อมูลถูกลบหลัง 7 วัน', '获得一个带编号的体验账号，可使用全部功能 · 无需邮箱 · 数据 7 天后删除', 'You get your own numbered demo account with every feature · no email needed · data is deleted after 7 days'],
+  'm.demo.busy': ['กำลังสร้างบัญชีทดลอง…', '正在创建体验账号…', 'Creating a demo account…'],
+  'm.demo.off': ['ยังไม่ได้เปิดระบบบัญชีทดลอง — ใช้อีเมลเข้าสู่ระบบแทน', '体验账号尚未开放——请改用邮箱登录', 'Demo accounts are not switched on yet — sign in with email instead'],
+  'm.demo.name': ['บัญชีทดลอง {n}', '体验账号 {n}', 'Demo account {n}'],
+  'm.demo.badge': ['บัญชีทดลอง', '体验账号', 'Demo account'],
+  'm.demo.badge.d': ['ประกาศนี้มาจากบัญชีทดลอง ไม่ใช่นายจ้างจริง', '这条招聘信息来自体验账号，并非真实雇主', 'This post comes from a demo account, not a real employer'],
+  'm.demo.profile': ['บัญชีทดลอง — ไม่มีอีเมล ข้อมูลทั้งหมดถูกลบหลัง 7 วัน หรือเมื่อออกจากระบบแล้วจะกลับเข้าบัญชีนี้ไม่ได้', '体验账号——没有邮箱，所有数据 7 天后删除；退出登录后无法再回到此账号', 'Demo account — no email; all data is deleted after 7 days, and once you sign out you cannot return to it'],
   // owner, Oct 2026: who can apply, and the AI's translations of the employer's own words
   'm.f.who': ['ใครสมัครได้', '谁可以申请', 'Who can apply'],
   'm.f.domestic': ['เผยแพร่เฉพาะในประเทศ', '仅在本国发布', 'Keep this post in this country'],

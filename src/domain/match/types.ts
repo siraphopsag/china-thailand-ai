@@ -116,6 +116,8 @@ export interface Post extends Place {
   hidden?: boolean
   /** a sample post made for the prototype, not a real employer (shown with a "Sample" badge) */
   sample?: boolean
+  /** made by a demo account (SQL 0011) — shown with a "demo account" label */
+  demo?: boolean
   /** owner, Oct 2026 (0010): the employer keeps the post in its own country — the release stops at level 4, never abroad */
   domesticOnly?: boolean
   /** only people who already have the right to work in the post's country (the employer will not apply for a work permit) */

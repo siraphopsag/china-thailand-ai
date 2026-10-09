@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go } from '../store'
 import { useMatch } from '../matchData'
-import { useAuth } from '../auth'
+import { useAuth , demoNumber } from '../auth'
 import { inbox } from '../domain/match/logic'
 import { Icon, type IconName } from './icons'
 import { Meniscus, type Hue, type Slot } from './meniscus'
@@ -130,7 +130,7 @@ export function LoginButton() {
           {user.avatar ? <img src={user.avatar} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : <span aria-hidden>{user.name.slice(0, 1).toUpperCase()}</span>}
         </button>
         <div ref={list} id="account-menu" hidden={!menu} className="glass-pop absolute right-0 top-12 z-50 w-64 rounded-2xl p-1.5">
-          <div className="px-3 py-2"><p className="font-semibold truncate">{user.name}</p><p className="text-xs text-muted truncate">{user.email}</p>
+          <div className="px-3 py-2"><p className="font-semibold truncate">{demoNumber(user.name) ? t('m.demo.name', { n: demoNumber(user.name)! }) : user.name}</p>{user.email && <p className="text-xs text-muted truncate">{user.email}</p>}
             {isAdmin && <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary"><Icon name="shield" size={13} />{t('m.auth.admin')}</p>}</div>
           <NavLink to="me" className={item} onNavigate={() => setMenu(false)}><Icon name="profile" size={17} />{t('m.profile')}</NavLink>
           {isAdmin && <NavLink to="backoffice" className={item} onNavigate={() => setMenu(false)}><Icon name="shield" size={17} />{t('m.admin')}</NavLink>}
