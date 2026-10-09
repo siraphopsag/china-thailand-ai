@@ -30,3 +30,15 @@ describe('demo accounts (owner, Oct 2026: numbered so people trying at the same 
     expect(sql).toContain("delete from auth.users where is_anonymous and created_at <= now() - interval '7 days'")
   })
 })
+
+describe('seeker pins confirm first (owner, Oct 2026: it sent at once and jumped back to step 2 while saving)', () => {
+  it('asks before pinning, shows it is saving, then a "pinned" step', () => {
+    const m = src('./pages/match.tsx')
+    expect(m).toContain("fe.clear(); setPinStage('confirm')")
+    expect(m).toContain("<Modal open={pinStage === 'confirm'}")
+    expect(m).toContain("if (r.ok) { setPinned({ country: dc, province: dp }); setPinStage('done'); return }")
+    expect(m).toContain("{saving ? t('m.pin.busy') : t('m.pin.go')}")
+    const [th] = messages['m.pin.cf.title'] as readonly string[]
+    expect(th).toBe('ยืนยันการปักหมุดนี้ใช่หรือไม่?')
+  })
+})

@@ -4,6 +4,7 @@ import { ACCENTS, useTheme } from '../theme'
 import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { useAuth , demoNumber } from '../auth'
+import { Modal } from '../components/modal'
 import { provinces } from '../locales/provinces'
 import { activePins, capacityOf, inbox, isCountry, memberActive, pinQuota, type Problem } from '../domain/match/logic'
 import { DAY_MS, reachFor, scheduleOf, stageAt, type Quota, capStage } from '../domain/match/release'
@@ -301,6 +302,9 @@ export function SeekPage() {
   const [industry, setIndustry] = useState<Industry>('manufacturing')
   const [skills, setSkills] = useState<Skill[]>([])
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
+  // confirm → saving → pinned (owner, Oct 2026: it used to send at once, and the form jumped back to step 2 while saving)
+  const [pinStage, setPinStage] = useState<'confirm' | 'done' | null>(null), [saving, setSaving] = useState(false)
+  const [pinned, setPinned] = useState<{ country: Country; province: string } | null>(null)
   const fe = useFieldError()
   const gate = useGate('seek')
   if (gate) return <Page title={t('m.seek.title')}>{gate}</Page>
@@ -312,16 +316,27 @@ export function SeekPage() {
     if (isCountry(oc) && op) { await setOrigin({ country: oc, province: op }); setEditOrigin(false); setMsg(null); fe.clear() }
     else { setMsg(null); fe.set('origin-prov', oc ? 'origin-prov' : 'origin-prov-c', N.problem('place')) }
   }
-  const submitPin = async (e: FormEvent) => {
+  // check the form, then ask before using a pin
+  const submitPin = (e: FormEvent) => {
     e.preventDefault()
     setMsg(null)
     if (!isCountry(dc) || !dp) { fe.set('dest-prov', isCountry(dc) ? 'dest-prov' : 'dest-prov-c', N.problem('place')); return }
+    if (skills.length === 0) { fe.set('seek-skills', 'seek-skills-0', N.problem('skills')); return }
+    fe.clear(); setPinStage('confirm')
+  }
+  const confirmPin = async () => {
+    if (!isCountry(dc) || !dp || saving) return
+    setSaving(true)
     const r = await pin({ place: { country: dc, province: dp }, industry, skills })
-    if (r.ok) { fe.clear(); setMsg({ tone: 'info', text: t('m.pin.done', { p: N.place(dc, dp) }) }); setDp(null); setSkills([]); return }
+    setSaving(false)
+    if (r.ok) { setPinned({ country: dc, province: dp }); setPinStage('done'); return }
+    setPinStage(null)
     if (r.problem === 'place' || r.problem === 'duplicate') fe.set('dest-prov', 'dest-prov', N.problem(r.problem))
     else if (r.problem === 'skills') fe.set('seek-skills', 'seek-skills-0', N.problem(r.problem))
     else { fe.clear(); setMsg({ tone: 'danger', text: N.problem(r.problem) }) }
   }
+  // after "pinned": start the next one, or look at my pins
+  const pinAgain = () => { setPinStage(null); setPinned(null); setDp(null); setSkills([]); requestAnimationFrame(() => document.getElementById('dest-prov')?.focus()) }
   return (
     <Page title={t('m.seek.title')} fit>
       <MapLayout map={<>
@@ -351,10 +366,23 @@ export function SeekPage() {
             <IndustrySelect value={industry} onChange={setIndustry} label={t('m.industry')} />
             <SkillPicker idp="seek-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); fe.clear() }} />
           </div>
-          <button type="submit" className="btn-primary" disabled={pq.left <= 0 || (!!dc && !isCountry(dc))}><Icon name="pin" size={16} />{t('m.pin.go')}</button>
+          <button type="submit" className="btn-primary" disabled={saving || pq.left <= 0 || (!!dc && !isCountry(dc))}><Icon name="pin" size={16} />{saving ? t('m.pin.busy') : t('m.pin.go')}</button>
         </form>
       )}
       </>)}
+      <Modal open={pinStage === 'confirm'} onClose={() => { if (!saving) setPinStage(null) }}>{(id) => isCountry(dc) && dp && (<>
+        <h2 id={id} className="h2">{t('m.pin.cf.title')}</h2>
+        <div className="card-i space-y-1 text-sm"><p className="font-semibold flex items-center gap-1.5"><Icon name="pin" size={16} className="text-primary" />{N.place(dc, dp)}</p>
+          <p className="text-muted">{N.industry(industry)} · {skills.map(N.skill).join(', ')}</p></div>
+        <p className="text-xs text-muted">{t('m.pin.cf.quota', { n: pq.used + 1, max: pq.limit === Infinity ? '∞' : pq.limit })}</p>
+        <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" disabled={saving} onClick={() => setPinStage(null)}>{t('m.cf.back')}</button>
+          <button type="button" className="btn-primary" disabled={saving} onClick={confirmPin}><Icon name="pin" size={16} />{saving ? t('m.pin.busy') : t('m.pin.cf.yes')}</button></div></>)}</Modal>
+      <Modal open={pinStage === 'done'} onClose={pinAgain}>{(id) => pinned && (<>
+        <div className="flex items-center gap-3"><span className="glass-drop w-11 h-11 shrink-0"><Icon name="check" size={22} /></span><h2 id={id} className="h2">{t('m.pin.dn.title')}</h2></div>
+        <p className="text-sm"><b>{N.place(pinned.country, pinned.province)}</b></p>
+        <p className="text-sm text-muted">{t('m.pin.dn.text')}</p>
+        <div className="grid sm:grid-cols-2 gap-2"><button type="button" className="btn-primary" onClick={() => { pinAgain(); setSeekTab('mine') }}><Icon name="pin" size={16} />{t('m.pin.dn.mine')}</button>
+          <button type="button" className="btn-ghost" onClick={pinAgain}><Icon name="plus" size={16} />{t('m.pin.dn.again')}</button></div></>)}</Modal>
       {seekTab === 'mine' && (
       <section className="space-y-2" aria-labelledby="pins-h">
         <h2 id="pins-h" className="h2">{t('m.pin.active', { n: activePins(st.me, limitNow).length })}</h2>

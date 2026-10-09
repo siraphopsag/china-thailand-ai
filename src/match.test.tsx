@@ -696,7 +696,7 @@ describe('map review 2 (owner, Oct 2026): lean, upright labels, all ASEAN countr
     const m = src('./pages/match.tsx')
     expect(m).toContain('disabled={!open}') // no provinces for a planned country
     expect(m).toContain('disabled={!!oc && !isCountry(oc)} onClick={confirmOrigin}')
-    expect(m).toContain("disabled={pq.left <= 0 || (!!dc && !isCountry(dc))}")
+    expect(m).toContain("disabled={saving || pq.left <= 0 || (!!dc && !isCountry(dc))}")
     expect(src('./pages/hire.tsx')).toContain('disabled={!isCountry(c) || !p}')
   })
   it('7–9 capitals: Bangkok and Beijing on the overview, otherwise the chosen country; names in 3 languages', () => {
