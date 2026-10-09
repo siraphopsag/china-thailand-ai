@@ -81,7 +81,7 @@ function useLight() {
  * Renders Google's button; `onToken` gets the ID token and the raw nonce. Until the button is ready (and for good if it cannot be),
  * `fallback` is shown — the old redirect button.
  */
-export function GoogleIdButton({ lang, onBefore, onToken, fallback }: { lang: 'th' | 'zh' | 'en'; onBefore: () => void; onToken: (token: string, nonce: string) => void; fallback: ReactNode }) {
+export function GoogleIdButton({ lang, onBefore, onToken, fallback, alt }: { lang: 'th' | 'zh' | 'en'; onBefore: () => void; onToken: (token: string, nonce: string) => void; fallback: ReactNode; alt?: ReactNode }) {
   const box = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'off'>(() => (gisOn() ? 'loading' : 'off'))
   const light = useLight()
@@ -116,6 +116,7 @@ export function GoogleIdButton({ lang, onBefore, onToken, fallback }: { lang: 't
     <>
       {state !== 'ready' && fallback}
       <div ref={box} style={{ colorScheme: 'light' }} className={state === 'ready' ? 'flex justify-center min-h-[44px]' : 'hidden'} aria-hidden={state !== 'ready' || undefined} />
+      {state === 'ready' && alt}
     </>
   )
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { GoogleIdButton, googleClientOk } from './components/google-signin'
-import { POST, readGooglePost } from '../api/google'
+import { GET, POST, readGooglePost } from '../api/google'
 
 describe('phones: back from Google\'s page (api/google.ts)', () => {
   const jwt = 'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl'
@@ -19,6 +19,7 @@ describe('phones: back from Google\'s page (api/google.ts)', () => {
     expect(ok.status).toBe(303); expect(ok.headers.get('location')).toBe('/login#gcred=' + jwt); expect(ok.headers.get('cache-control')).toBe('no-store')
     const bad = await POST(new Request('https://x.test/api/google', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'credential=nope' }))
     expect(bad.headers.get('location')).toBe('/login?gerr=1')
+    expect(GET().headers.get('location')).toBe('/login?gerr=1') // a plain visit instead of Google's form: the page says why
   })
 })
 

@@ -94,7 +94,9 @@ function GoogleButton({ next }: { next: string }) {
           setBusy(true); const r = await signInGoogleToken(token, nonce); setBusy(false)
           if (r !== 'ok') { setErr(r); setDetail(authDetail()); setTokenFailed(true) } // and offer the old way below
         }}
-        fallback={redirectButton} />
+        fallback={redirectButton}
+        alt={!tokenFailed && <p className="text-center"><button type="button" className="text-xs text-muted underline underline-offset-2 hover:text-primary min-h-[24px]" disabled={busy}
+          onClick={async () => { setBusy(true); setErr(null); setDetail(''); rememberNext(next); const r = await signInGoogle(); if (r !== 'ok') { setErr(r); setBusy(false) } }}>{t('m.auth.googleAlt')}</button></p>} />
       {tokenFailed && redirectButton}
       {busy && <p className="text-sm text-muted" role="status">{t('m.lg.busy')}</p>}
       <p className="text-xs text-muted">{t('m.auth.china')}</p>

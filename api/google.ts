@@ -29,4 +29,4 @@ export async function POST(request: Request) {
   return token ? back('/login#gcred=' + token) : back('/login?gerr=1')
 }
 
-export function GET() { return back('/login') }
+export function GET() { return back('/login?gerr=1') }

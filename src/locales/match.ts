@@ -16,6 +16,7 @@ export const match = {
   'm.login': ['เข้าสู่ระบบ', '登录', 'Log in'],
   'm.logout': ['ออกจากระบบ', '退出登录', 'Log out'],
   'm.auth.google': ['เข้าสู่ระบบด้วย Google', '使用 Google 登录', 'Sign in with Google'],
+  'm.auth.googleAlt': ['เข้าสู่ระบบด้วย Google ไม่ได้? ลองอีกวิธี', '无法用 Google 登录？试试另一种方式', "Can't sign in with Google? Try the other way"],
   'm.auth.d': ['เราเก็บชื่อ อีเมล (และรูปโปรไฟล์ถ้าใช้ Google) กับประกาศ หมุด และการรับงานที่คุณทำ เพื่อให้ระบบจับคู่งานทำงานได้ ไม่ขายหรือส่งต่อให้ใคร รหัสผ่านถูกเข้ารหัสโดยผู้ให้บริการ เราไม่เห็น และลบบัญชีได้ทุกเมื่อที่หน้าโปรไฟล์', '我们保存您的姓名、邮箱（使用 Google 时还有头像）以及您发布的招聘、图钉和接受的工作，以便匹配功能运行；不会出售或转让。密码由服务商加密保存，我们看不到；您可随时在个人资料页删除账号。', 'We keep your name, e-mail (and profile picture if you use Google) and the posts, pins and accepted jobs you create, so matching can work. Nothing is sold or shared; passwords are stored encrypted by the provider and we never see them; you can delete your account at any time from your profile.'],
   'm.auth.optional': ['ตอนนี้ใช้งานเว็บได้โดยไม่ต้องเข้าสู่ระบบ', '目前无需登录即可使用网站', 'You can use the site without signing in for now'],
   'm.auth.china': ['ในจีนแผ่นดินใหญ่อาจเข้าถึง Google ไม่ได้ — วิธีเข้าสู่ระบบแบบอื่นจะตามมา', '中国大陆可能无法访问 Google——其他登录方式即将推出', 'Google may be unavailable in mainland China — other ways to sign in will follow'],
