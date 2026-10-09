@@ -33,7 +33,7 @@ export function CasePage() {
   if (gate) return <Page title={t('m.cs.title')}>{gate}</Page>
   const c = st.cases.find((x) => x.id === id)
   const p = c && st.posts.find((x) => x.id === c.postId)
-  if (!c || !p) return <Page title={t('m.cs.title')}><Empty icon="bell" text={t('m.cs.notFound')} to="notifications" action={t('m.notif.title')} /></Page>
+  if (!c || !p) return <Page title={t('m.cs.nfTitle')}><Empty icon="bell" text={t('m.cs.notFound')} to="notifications" action={t('m.notif.title')} /></Page>
 
   const isSeeker = c.seekerId === ME, isEmployer = p.employerId === MY_EMPLOYER
   const acc = st.acceptances.find((a) => a.id === c.accId)
@@ -102,7 +102,7 @@ function CaseInfo({ c }: { c: Case }) {
   return (
     <section className="glass-card p-4 space-y-3" aria-label={t('m.cs.lists')}>
       <div role="tablist" aria-label={t('m.cs.lists')} className="flex flex-wrap gap-1 rounded-xl border border-line bg-surface p-1">
-        {(['lists', 'appt', 'legal'] as const).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`min-h-[34px] px-3 rounded-lg text-xs sm:text-sm ${tab === k ? 'bg-primary text-onprimary font-semibold' : 'hover:bg-surface3'}`}>{t(k === 'lists' ? 'm.cs.lists' : k === 'appt' ? 'm.cs.appt' : 'm.cs.legal.h')}</button>)}
+        {(['lists', 'appt', 'legal'] as const).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`min-h-[34px] px-3 rounded-lg text-xs sm:text-sm ${tab === k ? 'seg-on' : 'hover:bg-surface3'}`}>{t(k === 'lists' ? 'm.cs.lists' : k === 'appt' ? 'm.cs.appt' : 'm.cs.legal.h')}</button>)}
       </div>
       <div role="tabpanel" className="space-y-3">
         {tab === 'lists' && (<>
@@ -165,7 +165,7 @@ function AgencyPanel({ c, run, busy }: { c: Case; run: (a: CaseAction, done?: st
       <h2 id="cs-ag" className="h2 flex items-center gap-2"><Icon name="shield" size={18} className="text-primary" />{t('m.cs.ag.title')}</h2>
       <p className="text-xs text-muted">{t(mode === 'local' ? 'm.cs.ag.demo' : 'm.cs.ag.admin')}</p>
       <div role="tablist" aria-label={t('m.cs.ag.title')} className="flex flex-wrap gap-1 rounded-xl border border-line bg-surface p-1">
-        {tabs.map((k) => <button key={k} type="button" role="tab" aria-selected={shown === k} onClick={() => setTab(k)} className={`min-h-[34px] px-3 rounded-lg text-xs sm:text-sm ${shown === k ? 'bg-primary text-onprimary font-semibold' : 'hover:bg-surface3'}`}>{t(`m.cs.ag.tab.${k}` as never)}</button>)}
+        {tabs.map((k) => <button key={k} type="button" role="tab" aria-selected={shown === k} onClick={() => setTab(k)} className={`min-h-[34px] px-3 rounded-lg text-xs sm:text-sm ${shown === k ? 'seg-on' : 'hover:bg-surface3'}`}>{t(`m.cs.ag.tab.${k}` as never)}</button>)}
       </div>
       <div role="tabpanel" className="space-y-3">
       {shown === 'step' && (<>

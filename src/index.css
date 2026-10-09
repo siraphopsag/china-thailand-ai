@@ -88,11 +88,14 @@ h1[tabindex="-1"]:focus { outline: none }
   .card-hover:hover { box-shadow: var(--elev-hi), var(--elev-3) }
   /* inset well for secondary content inside a card */
   .card-i { @apply border border-line rounded-xl p-3; background: rgb(var(--surface3) / .5); box-shadow: inset 0 1px 2px rgb(0 0 0 / .05) }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 sm:px-4 py-2 font-medium min-h-[40px] transition duration-150 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-transparent px-3.5 sm:px-4 py-2 font-medium leading-[1.375rem] min-h-[40px] transition duration-150 active:scale-[.98] disabled:cursor-not-allowed disabled:active:scale-100 }
   .btn-primary { @apply btn text-onprimary hover:-translate-y-px; background: linear-gradient(180deg, rgb(255 255 255 / .14), transparent 60%), rgb(var(--primary));
     box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 1px 2px rgb(0 0 0 / .2), 0 8px 20px -10px rgb(var(--primary) / .8) }
   .btn-accent { @apply btn bg-accent text-onaccent hover:opacity-90 font-semibold }
   .btn-ghost { @apply btn border border-control text-ink hover:bg-surface3; background: rgb(var(--surface)); box-shadow: var(--elev-hi), var(--elev-1) }
+  /* the second step of emphasis (QA, Oct 2026): a tinted button for actions repeated on many cards, so each view keeps one solid button */
+  .btn-soft { @apply btn font-semibold; background: rgb(var(--brand)); color: rgb(var(--brandfg)); border-color: rgb(var(--primary) / .35) }
+  .btn-soft:hover { border-color: rgb(var(--primary)) }
   .input { @apply w-full rounded-xl border border-control px-3 py-2 min-h-[40px] text-ink placeholder:text-muted focus:border-primary transition-colors;
     background: rgb(var(--surface)); box-shadow: inset 0 1px 2px rgb(0 0 0 / .06) }
   .label { @apply block text-sm font-medium text-muted mb-1 }
@@ -102,7 +105,7 @@ h1[tabindex="-1"]:focus { outline: none }
   .eyebrow { @apply text-xs font-semibold uppercase tracking-wider text-primary }
   .chip { @apply inline-flex items-center gap-1 border rounded-full px-2.5 py-0.5 text-xs font-semibold max-w-full }
   .tab { @apply px-4 py-2 rounded-lg border border-control bg-surface text-ink whitespace-nowrap min-h-[44px] transition hover:bg-surface3 }
-  .tab-on { @apply bg-primary text-onprimary border-primary hover:bg-primary }
+  .tab-on { @apply border-primary; background: rgb(var(--brand)); color: rgb(var(--brandfg)); font-weight: 600 }
   .ai-panel { @apply rounded-xl border border-line bg-brand text-ink p-4 }
 }
 
@@ -326,6 +329,16 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .chip-check:hover { background: rgb(var(--surface3)) }
 .chip-check:has(input:checked) { border-color: rgb(var(--primary)); background: rgb(var(--brand)); color: rgb(var(--brandfg)); font-weight: 600 }
 .chip-check:has(input:focus-visible) { outline: 3px solid rgb(var(--primary)); outline-offset: 2px }
+/* QA, Oct 2026: the chosen tab, pill or segment looks the same everywhere — a light tint, an outline and bold text — so the solid
+   primary colour is left for the one main button of a view */
+.seg-on { background: rgb(var(--brand)); color: rgb(var(--brandfg)); font-weight: 600; box-shadow: inset 0 0 0 1.5px rgb(var(--primary)) }
+/* disabled buttons stay readable (they were faded to 1.7:1): grey plate, secondary text, no lift */
+.btn:disabled { color: rgb(var(--muted)) }
+.btn-primary:disabled, .btn-accent:disabled, .btn-soft:disabled { background: rgb(var(--surface3)); border-color: rgb(var(--line)); box-shadow: none }
+.btn-primary:disabled:hover { transform: none }
+.btn-ghost:disabled { background: rgb(var(--surface2)) }
+/* the main button answers the pointer: a little brighter */
+.btn-primary:not(:disabled):hover { filter: brightness(1.08) }
 /* QA, Oct 2026: a field with an error is outlined in red too */
 .input[aria-invalid="true"] { border-color: rgb(var(--danger-fg)); box-shadow: inset 0 0 0 1px rgb(var(--danger-fg)) }
 .chip-check:has(input[aria-invalid="true"]):not(:has(input:checked)) { border-color: rgb(var(--danger-fg)) }
@@ -639,7 +652,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-input[inert] { pointer-events: none }
 .mo-spark { width: 18px; height: 18px; flex-shrink: 0; color: rgb(255 255 255 / .55) }
 .mo-field { flex: 1; min-width: 0; height: 100%; background: transparent; border: 0; outline: none; color: #fafafa; font-size: 1rem }
-.mo-field::placeholder { color: rgb(255 255 255 / .45) }
+.mo-field::placeholder { color: rgb(255 255 255 / .62) }
 .mo-field:disabled { cursor: not-allowed }
 .mo-send { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; color: rgb(255 255 255 / .6); background: rgb(255 255 255 / .08); transition: background .2s, color .2s }
 .mo-send svg { width: 18px; height: 18px }
@@ -703,7 +716,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .mo-wrap.is-light .mo-surface { background: #ffffff; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1), 0 8px 24px rgb(0 0 0 / .08) }
 .mo-wrap.is-light .mo-aurora i { opacity: .28 }
 .mo-wrap.is-light .mo-spark { color: rgb(0 0 0 / .45) }
-.mo-wrap.is-light .mo-field { color: #18181b } .mo-wrap.is-light .mo-field::placeholder { color: rgb(0 0 0 / .45) }
+.mo-wrap.is-light .mo-field { color: #18181b } .mo-wrap.is-light .mo-field::placeholder { color: rgb(0 0 0 / .6) }
 .mo-wrap.is-light .mo-send { background: rgb(0 0 0 / .06); color: rgb(0 0 0 / .55) } .mo-wrap.is-light .mo-send[data-ready] { background: #18181b; color: #fff }
 .mo-wrap.is-light .mo-green { box-shadow: 0 0 30px rgb(5 150 105 / .35) }
 .mo-wrap.is-light .mo-trail { opacity: 0 !important }

@@ -92,14 +92,14 @@ export function PostFacts({ post, compact }: { post: Post; compact?: boolean }) 
   )
 }
 /** under a post's details: the words were translated by the AI from another language — with the employer's original on request */
-export function TranslatedNote({ post }: { post: Pick<Post, 'orig' | 'translatedFrom'> }) {
+export function TranslatedNote({ post }: { post: Pick<Post, 'orig' | 'translatedFrom' | 'sample'> }) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   if (!post.orig) return null
   const from = post.translatedFrom ? t(`m.tr.lang.${post.translatedFrom}` as never) : '—'
   return (
     <div className="text-xs text-muted space-y-1.5">
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1"><Icon name="language" size={14} className="shrink-0" />{t('m.tr.note', { l: from })}
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1"><Icon name="language" size={14} className="shrink-0" />{t(post.sample ? 'm.tr.noteSample' : 'm.tr.note', { l: from })}
         <button type="button" className="font-medium text-primary underline underline-offset-2 min-h-[24px]" aria-expanded={open} onClick={() => setOpen((x) => !x)}>{t(open ? 'm.tr.hideOrig' : 'm.tr.showOrig')}</button></p>
       {open && <div className="card-i !p-3 text-sm text-fg" lang={post.translatedFrom}><p className="text-xs text-muted mb-1">{t('m.tr.orig')}</p><p className="font-medium">{post.orig.position}</p>{post.orig.details && <p className="mt-1 whitespace-pre-line">{post.orig.details}</p>}</div>}
     </div>
@@ -185,12 +185,13 @@ export function Req() {
   return <span className="font-normal text-muted"> ({t('m.req')})</span>
 }
 /** nothing to show yet: say why and offer the next step, so no page is a dead end */
-export function Empty({ icon, text, to, action }: { icon: 'bell' | 'pin' | 'posts'; text: string; to?: string; action?: string }) {
+export function Empty({ icon, text, to, action, onAction }: { icon: 'bell' | 'pin' | 'posts'; text: string; to?: string; action?: string; onAction?: () => void }) {
   return (
     <div className="glass-card p-5 flex flex-col items-center text-center gap-3 !py-8">
       <span className="w-12 h-12 rounded-2xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={22} /></span>
       <p className="text-muted max-w-sm">{text}</p>
       {to && action && <NavLink to={to} className="btn-primary">{action}<Icon name="next" size={16} /></NavLink>}
+      {!to && action && onAction && <button type="button" className="btn-ghost" onClick={onAction}>{action}</button>}
     </div>
   )
 }
@@ -204,7 +205,9 @@ export function useGate(here: string): ReactNode | null {
 }
 export function NeedRole({ role }: { role: 'seeker' | 'employer' }) {
   const { t } = useI18n()
-  return <div className="glass-card p-5 space-y-3"><p>{t('m.profile.none')}</p><NavLink to="choose-role" className="btn-primary inline-flex">{t(role === 'seeker' ? 'm.role.seeker' : 'm.role.employer')}<Icon name="next" size={16} /></NavLink></div>
+  const { st } = useMatch()
+  const other = st.role && st.role !== role
+  return <div className="glass-card p-5 space-y-3"><p>{other ? t(role === 'seeker' ? 'm.role.onlySeeker' : 'm.role.onlyEmployer') : t('m.profile.none')}</p><NavLink to="choose-role" className="btn-primary inline-flex">{t(role === 'seeker' ? 'm.role.seeker' : 'm.role.employer')}<Icon name="next" size={16} /></NavLink></div>
 }
 
 /** country buttons + province list, shown next to the map */
@@ -291,10 +294,18 @@ export function MapLayout({ map, children, hideMap }: { map: ReactNode; children
 }
 /** tabs above a panel (owner, Oct 2026: split long pages instead of scrolling) */
 export function PanelTabs<K extends string>({ tabs, value, onChange, label }: { tabs: { k: K; text: string; n?: number }[]; value: K; onChange: (k: K) => void; label: string }) {
+  // ← → Home End move between the tabs; Tab leaves the row (QA, Oct 2026)
+  const onKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const i = tabs.findIndex((x) => x.k === value), n = tabs.length
+    const j = e.key === 'ArrowRight' ? (i + 1) % n : e.key === 'ArrowLeft' ? (i - 1 + n) % n : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1
+    if (j < 0) return
+    e.preventDefault(); onChange(tabs[j].k)
+    const box = e.currentTarget; requestAnimationFrame(() => box.querySelectorAll<HTMLElement>('[role=tab]')[j]?.focus())
+  }
   return (
-    <div role="tablist" aria-label={label} className="flex flex-wrap gap-1 rounded-2xl border border-line bg-surface p-1 shrink-0">
-      {tabs.map((x) => <button key={x.k} type="button" role="tab" aria-selected={value === x.k} onClick={() => onChange(x.k)}
-        className={`min-h-[38px] px-3.5 rounded-xl text-sm inline-flex items-center gap-1.5 ${value === x.k ? 'bg-primary text-onprimary font-semibold' : 'hover:bg-surface3'}`}>{x.text}{x.n !== undefined && <span className="text-xs opacity-75">{x.n}</span>}</button>)}
+    <div role="tablist" aria-label={label} onKeyDown={onKey} className="flex flex-wrap gap-1 rounded-2xl border border-line bg-surface p-1 shrink-0">
+      {tabs.map((x) => <button key={x.k} type="button" role="tab" aria-selected={value === x.k} tabIndex={value === x.k ? 0 : -1} onClick={() => onChange(x.k)}
+        className={`min-h-[38px] px-3.5 rounded-xl text-sm inline-flex items-center gap-1.5 ${value === x.k ? 'seg-on' : 'hover:bg-surface3'}`}>{x.text}{x.n !== undefined && <span className="text-xs opacity-75">{x.n}</span>}</button>)}
     </div>
   )
 }
@@ -403,7 +414,7 @@ export function SeekPage() {
         <h2 id="pins-h" tabIndex={-1} className="h2 outline-none">{t('m.pin.active', { n: activePins(st.me, limitNow).length })}</h2>
         <QuotaBar q={pq} kind="pin" />
         <p className="text-xs text-muted">{t('m.pin.why')}</p>
-        <PinList onRemove={async (id) => { await unpin(id); setMsg({ tone: 'info', text: t('m.pin.removed') }) }} />
+        <PinList onRemove={async (id) => { await unpin(id); setMsg({ tone: 'info', text: t('m.pin.removed') }) }} onNew={() => setSeekTab('new')} />
       </section>)}
       </MapLayout>
     </Page>
@@ -466,10 +477,10 @@ export function PostCard({ post, level, reached, children }: { post: Post; level
   )
 }
 /** newest first ↔ oldest first; the visible words are part of the button's name */
-export function SortToggle({ order, onChange }: { order: 'new' | 'old'; onChange: (o: 'new' | 'old') => void }) {
+export function SortToggle({ order, onChange, className = '' }: { order: 'new' | 'old'; onChange: (o: 'new' | 'old') => void; className?: string }) {
   const { t } = useI18n()
   return (
-    <button type="button" className="btn-ghost text-sm !px-3 sm:!px-4" onClick={() => onChange(order === 'new' ? 'old' : 'new')} title={t('m.sort.switch')}>
+    <button type="button" className={`btn-ghost text-sm !px-3 sm:!px-4 ${className}`} onClick={() => onChange(order === 'new' ? 'old' : 'new')} title={t('m.sort.switch')}>
       <Icon name={order === 'new' ? 'sortNew' : 'sortOld'} size={16} /><span className="sr-only sm:not-sr-only">{t(order === 'new' ? 'm.sort.new' : 'm.sort.old')}</span>
     </button>
   )
@@ -489,14 +500,14 @@ export function QuotaBar({ q, kind }: { q: Quota; kind: 'pin' | 'post' }) {
   )
 }
 /** my active pins: newest or oldest first, "new" for pins of the last 7 days, and how long each one still lasts */
-export function PinList({ onRemove }: { onRemove?: (id: string) => void }) {
+export function PinList({ onRemove, onNew }: { onRemove?: (id: string) => void; onNew?: () => void }) {
   const { t } = useI18n()
   const N = useNames()
   const { ago, until } = useRel()
   const { st, limitNow } = useMatch()
   const [order, setOrder] = useState<'new' | 'old'>('new')
   const pins = activePins(st.me, limitNow).sort((a, b) => (order === 'new' ? b.at.localeCompare(a.at) : a.at.localeCompare(b.at)))
-  if (!pins.length) return <div className="glass-card p-5 text-muted">{t('m.pin.none')}</div>
+  if (!pins.length) return onNew ? <Empty icon="pin" text={t('m.pin.none')} action={t('m.pin.tab.new')} onAction={onNew} /> : <Empty icon="pin" text={t('m.pin.none')} to="seek" action={t('m.pin.tab.new')} />
   return (
     <div className="space-y-2">
       <SortToggle order={order} onChange={setOrder} />
@@ -705,8 +716,9 @@ export function SettingsPage() {
           <p id="accent-hint" className="text-xs text-muted mt-1">{t('m.settings.accent.d')}</p>
           <p role="status" className="text-sm font-medium text-primary mt-1">{accentMsg}</p>
           {/* a small preview in the chosen colour (decoration; the whole site changes with it) */}
-          <div aria-hidden className="mt-2 rounded-xl border border-line p-3 flex flex-wrap items-center gap-3" style={{ background: 'rgb(var(--page))' }}>
-            <span className="btn-primary text-sm pointer-events-none">{t('m.settings.preview.btn')}</span>
+          <div aria-hidden className="mt-2 rounded-xl border border-dashed border-line p-3 flex flex-wrap items-center gap-3" style={{ background: 'rgb(var(--page))' }}>
+            <span className="w-full text-xs text-muted">{t('m.settings.preview.label')}</span>
+            <span className="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium bg-primary text-onprimary pointer-events-none select-none">{t('m.settings.preview.btn')}</span>
             <span className="chip bg-brand text-brandfg border-primary/40">{t('m.settings.preview.chip')}</span>
             <span className="flex-1 min-w-[80px] h-2 rounded-full bg-surface3 overflow-hidden"><span className="block h-full w-2/3 bg-primary rounded-full" /></span>
           </div></fieldset>
@@ -785,7 +797,7 @@ export function BackofficePage() {
       <div role="tablist" aria-label={t('m.adm.tabs')} onKeyDown={keys} className="shrink-0 flex flex-wrap gap-1 rounded-2xl border border-line bg-surface p-1">
         {ADMIN_TABS.map(({ k, icon }) => (
           <button key={k} id={`adm-tab-${k}`} type="button" role="tab" aria-selected={tab === k} aria-controls="adm-panel" tabIndex={tab === k ? 0 : -1} onClick={() => setTab(k)}
-            className={`min-h-[40px] px-3.5 rounded-xl text-sm inline-flex items-center gap-2 ${tab === k ? 'bg-primary text-onprimary font-semibold' : 'hover:bg-surface3'}`}>
+            className={`min-h-[40px] px-3.5 rounded-xl text-sm inline-flex items-center gap-2 ${tab === k ? 'seg-on' : 'hover:bg-surface3'}`}>
             <Icon name={icon} size={15} />{t(`m.adm.tab.${k}` as never)}
             {count[k] > 0 && k !== 'overview' && <span className={`min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold grid place-items-center ${tab === k ? 'bg-onprimary text-primary' : (k === 'verify' || k === 'reports') ? 'bg-danger-fg text-page' : 'bg-surface3 text-muted'}`}>{count[k]}</span>}
           </button>))}

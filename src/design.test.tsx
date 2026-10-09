@@ -94,7 +94,8 @@ describe('B. the board as cards', () => {
     const h = html(<BoardPage />, seeker())
     expect(h).toMatch(/<h1 class="h1">[^<]*<\/h1>.*class="btn-primary !rounded-full"/s)
     expect(h).toContain('bd-card relative p-3 sm:p-5 fit:p-3.5 flex flex-row sm:flex-col items-center text-left sm:text-center'); // a row on phones (option ก), centred on tablets, a compact card on computers (owner, Oct 2026) expect(h).toContain('rar-avatar'); expect(h).toContain('class="fill-bar mt-1"')
-    expect(h).toContain(`>${T('m.bd.details')}</button>`); expect(h).toContain(T('m.bd.apply'))
+    // QA, Oct 2026: one tinted action per card (the title opens the details); the page's one solid button is "+ Post"
+    expect(h).not.toContain(`>${T('m.bd.details')}</button>`); expect(h).toContain('class="btn-soft text-sm'); expect(h).toContain(T('m.bd.apply'))
     expect(h).toContain(T('m.bd.view.cards')); expect(h).toContain(T('m.bd.view.map'))
     expect(h).not.toContain('id="bd-map"') // the map shows when you switch to it
     expect(h).toContain(`aria-controls="bd-more"`) // more filters fold away

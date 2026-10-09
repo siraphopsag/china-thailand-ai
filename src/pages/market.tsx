@@ -9,7 +9,7 @@ import { useNames } from './match'
  * supply per field. Both countries together or one; a tap on a province narrows everything to it. Counts only.
  */
 const SEG = 'inline-flex flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1'
-const pill = (on: boolean) => `min-h-[32px] px-3 rounded-full text-sm inline-flex items-center gap-1.5 whitespace-nowrap ${on ? 'bg-primary text-onprimary font-semibold' : 'text-ink hover:bg-surface3'}`
+const pill = (on: boolean) => `min-h-[32px] px-3 rounded-full text-sm inline-flex items-center gap-1.5 whitespace-nowrap ${on ? 'seg-on' : 'text-ink hover:bg-surface3'}`
 
 export function MarketPanel({ m, scope, province, onScope, onAll }: { m: Market; scope: Scope; province: string | null; onScope: (s: Scope) => void; onAll: () => void }) {
   const { t } = useI18n()

@@ -95,5 +95,5 @@ export function cycleQuota(uses: string[], now: number, limit: number): Quota {
     if (start === null || t >= start + CYCLE_DAYS * DAY_MS) { start = t; n = 1 } else n++
   }
   if (start === null || now >= start + CYCLE_DAYS * DAY_MS) return { used: 0, limit, left: limit, resetAt: null }
-  return { used: n, limit, left: Math.max(0, limit - n), resetAt: start + CYCLE_DAYS * DAY_MS }
+  return { used: Math.min(n, limit), limit, left: Math.max(0, limit - n), resetAt: start + CYCLE_DAYS * DAY_MS }
 }

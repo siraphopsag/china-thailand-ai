@@ -20,7 +20,7 @@ import { useConfirm } from '../components/confirm'
 import { Icon } from '../components/icons'
 import { MoneyInput } from '../components/money-input'
 import { Warn } from '../components/ui'
-import { IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PanelTabs, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
+import { Empty, IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PanelTabs, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
 import { VerifyCard } from './case'
 import { useFit } from '../components/pager'
 import { postToInput } from '../domain/match/remote'
@@ -72,7 +72,9 @@ export function HirePage() {
   const [start, setStart] = useState(''), [langs, setLangs] = useState<LanguageSkill[]>([]), [edu, setEdu] = useState<Edu>('none'), [benefits, setBenefits] = useState<Benefit[]>([])
   // owner, Oct 2026: keep the post in this country · only people who already have the right to work here
   const [domestic, setDomestic] = useState(false), [workRight, setWorkRight] = useState(false)
-  const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
+  const deletedAsked = useSearchParam('deleted') === '1' // the post page deleted a post and came back here
+  const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(() => (deletedAsked ? { tone: 'info', text: t('m.post.deleted') } : null))
+  useEffect(() => { if (deletedAsked) go('hire?tab=mine', { replace: true }) }, [deletedAsked])
   const [stage, setStage] = useState<Stage>(null)
   const [check, setCheck] = useState<Precheck | null>(null)
   // the AI check (null = not asked; 'busy' = waiting); a high-risk result needs the employer's tick before posting
@@ -172,6 +174,7 @@ export function HirePage() {
     setStage(null); setPosted(null); setPending(null); setCheck(null); setAiRes(null); setEditing(null)
     setPosition(''); setSkills([]); setDetails(''); setYears('0'); setHeadcount('1'); setEmployment('permanent'); setSalMin(''); setSalMax(''); setStart(''); setLangs([]); setEdu('none'); setBenefits([]); setDomestic(false); setWorkRight(false)
     setForm(false); setC(null); setP(null)
+    if (editId) go('hire', { replace: true })
     // the form unmounts, so keyboard focus would fall back to the page: put it on the country field to start the next post
     requestAnimationFrame(() => document.getElementById('emp-prov-c')?.focus())
   }
@@ -293,7 +296,7 @@ export function HirePage() {
       <section className="space-y-2" aria-labelledby="myposts-h">
         <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="myposts-h" className="h2">{t('m.posts')}</h2><NavLink to="board" className="text-sm font-medium text-primary inline-flex items-center gap-1 min-h-[24px]">{t('m.board')}<Icon name="next" size={14} /></NavLink></div>
         <QuotaBar q={q} kind="post" />
-        {!mine.length ? <div className="glass-card p-5 text-muted">{t('m.posts.none')}</div> : (
+        {!mine.length ? <Empty icon="posts" text={t('m.posts.none')} action={t('m.emp.tab.new')} onAction={() => setSide('new')} /> : (
           <ul className="space-y-2">{mine.map((x) => { const sc = scheduleOf(x, pool, now), stage = capStage(stageAt(sc, now), x); return stage === 'expired' ? null : (
             <PostCard key={x.id} post={x} level={stage} reached>
               {now >= sc.warnAt && <p className="text-sm text-warn-fg flex items-center gap-1.5"><Icon name="hourglass" size={15} />{t('m.em.expiring', { t: until(sc.expiresAt) })}</p>}

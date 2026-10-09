@@ -151,7 +151,7 @@ export function PostPage() {
                   if (caseBlocksDelete(st, p.id)) { setMsg({ tone: 'danger', text: problemText('caseStarted') }); return }
                   if (!(await ask(t('m.post.delete.confirm'), { yes: t('m.post.delete'), danger: true }))) return
                   setBusy(true); const ok = await deletePost(p.id); setBusy(false)
-                  if (ok) go('hire'); else setMsg({ tone: 'danger', text: t('m.post.delete.fail') })
+                  if (ok) go('hire?tab=mine&deleted=1'); else setMsg({ tone: 'danger', text: t('m.post.delete.fail') })
                 }}><Icon name="trash" size={15} />{t('m.post.delete')}</button>
               </div>
               {noPosts && <div id="renew-none" tabIndex={-1} className="outline-none"><Warn tone="danger">{t('m.err.quota')} · <NavLink to="member" className="font-semibold underline underline-offset-2">{t('m.plan.see')}</NavLink></Warn></div>}

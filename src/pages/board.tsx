@@ -27,7 +27,7 @@ import { MarketPanel } from './market'
  */
 interface Filter { q: string; country: '' | 'TH' | 'CN'; province: string; skill: '' | Skill; salary: string; currency: Currency }
 const NO_FILTER: Filter = { q: '', country: '', province: '', skill: '', salary: '', currency: 'THB' }
-const pill = (on: boolean) => `min-h-[34px] px-3 sm:px-3.5 rounded-full text-sm inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors ${on ? 'bg-primary text-onprimary font-semibold shadow-sm' : 'text-ink hover:bg-surface3'}`
+const pill = (on: boolean) => `min-h-[34px] px-3 sm:px-3.5 rounded-full text-sm inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors ${on ? 'seg-on' : 'text-ink hover:bg-surface3'}`
 const SEG = 'inline-flex flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1'
 // phones: the scope and the rings share one swipeable line (the line scrolls, not each group)
 const SEG_SCROLL = 'inline-flex flex-nowrap sm:flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1 shrink-0 sm:shrink'
@@ -132,7 +132,7 @@ export function BoardPage() {
           <label className="block flex-1 min-w-[160px]"><span className="sr-only">{t('m.board.search')}</span>
             <span className="relative block"><Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><input type="search" className="input pl-9 !rounded-full" value={f.q} onChange={(e) => set({ q: e.target.value })} placeholder={t('m.board.searchHint')} /></span></label>
           <button type="button" className="btn-ghost text-sm !rounded-full" aria-expanded={more} aria-controls="bd-more" onClick={() => setMore((x) => !x)}><Icon name="filter" size={15} /><span className="sr-only sm:not-sr-only">{t(more ? 'm.bd.fewer' : 'm.bd.more')}</span></button>
-          <SortToggle order={order} onChange={setOrder} />
+          <SortToggle order={order} onChange={setOrder} className="!rounded-full" />
         </form>
         </div>
         <div id="bd-more" className={`${more ? 'grid' : 'hidden'} shrink-0 card sm:grid-cols-2 lg:grid-cols-4 gap-3`}>
@@ -147,7 +147,8 @@ export function BoardPage() {
           {filtering && <div className="sm:col-span-2 lg:col-span-4"><button type="button" className="btn-ghost text-sm" onClick={() => setF(NO_FILTER)}><Icon name="close" size={15} />{t('m.board.clear')}</button></div>}
         </div>
 
-        {!shown.length ? <Empty icon={seeker ? 'pin' : 'posts'} text={t(items.length ? 'm.board.noneFound' : seeker ? 'm.board.noneSeeker' : 'm.board.noneEmployer')} to={items.length ? undefined : seeker ? 'seek' : 'hire'} action={items.length ? undefined : t(seeker ? 'm.pin.go' : 'm.emp.post')} /> : (
+        {!shown.length ? <Empty icon={seeker ? 'pin' : 'posts'} text={t(items.length ? 'm.board.noneFound' : seeker ? 'm.board.noneSeeker' : 'm.board.noneEmployer')} to={items.length ? undefined : seeker ? 'seek' : 'hire'}
+            action={items.length ? t('m.board.clearAll') : t(seeker ? 'm.pin.go' : 'm.emp.post')} onAction={() => { setF(NO_FILTER); setTab('all'); setScope('all') }} /> : (
           <CardGrid shown={shown} fit={fit} gridRef={gridRef} label={t(seeker ? 'm.board.shop' : 'm.bd.listEmployer')}
             card={({ post, level }) => <BoardCard key={post.id} post={post} level={level} reached={!seeker} applied={mineApplied.has(post.id)} viewer={st.role!} onOpen={() => setOpen(post.id)} />} />)}
       </>)}
@@ -259,9 +260,9 @@ function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Po
         <p className="flex justify-between text-xs text-muted"><span>{t('m.bd.fill')}</span><span>{pct}%</span></p>
         <div className="fill-bar mt-1" role="img" aria-label={`${t('m.bd.fill')} ${pct}%`}><span style={{ width: `${pct}%` }} /></div>
       </div>
-      <div className="hidden sm:grid grid-cols-2 gap-2 w-full mt-auto sm:pt-1 fit:pt-1.5 fit:col-span-2">
-        <button type="button" className="btn-ghost text-sm justify-center !rounded-full fit:!min-h-[36px]" onClick={onOpen} aria-label={`${t('m.bd.details')}: ${post.position}`}>{t('m.bd.details')}</button>
-        <NavLink to={`post?id=${post.id}`} className="btn-primary text-sm justify-center !rounded-full fit:!min-h-[36px]" aria-label={`${act}: ${post.position}`}>{act}</NavLink>
+      {/* QA, Oct 2026: one button per card (the title opens the details), tinted — the page's one solid button is "+ Post" */}
+      <div className="hidden sm:grid w-full mt-auto sm:pt-1 fit:pt-1.5 fit:col-span-2">
+        <NavLink to={`post?id=${post.id}`} className="btn-soft text-sm justify-center !rounded-full fit:!min-h-[36px]" aria-label={`${act}: ${post.position}`}>{act}</NavLink>
       </div>
       </div>
       <p className="sm:hidden shrink-0 text-right leading-tight" aria-hidden><span className="block text-base font-bold">{c.held}/{cap}</span><span className="text-[11px] text-muted inline-flex items-center">{t('m.bd.placesShort')}<Icon name="right" size={13} /></span></p>

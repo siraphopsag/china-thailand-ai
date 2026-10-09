@@ -78,7 +78,7 @@ export function AnalyticsPage() {
     <Page title={t('m.an.title')} sub={t('m.an.sub')} fit body="flex flex-col gap-3"
       actions={<>
         <div className="flex gap-1 rounded-full border border-line p-1 bg-surface" role="group" aria-label={t('m.an.range')}>
-          {RANGES.map((r) => <button key={r} type="button" aria-pressed={range === r} onClick={() => setRange(r)} className={`min-h-[34px] px-3 rounded-full text-sm ${range === r ? 'bg-primary text-onprimary font-semibold' : 'hover:bg-surface3'}`}>{t('m.an.days', { n: r })}</button>)}
+          {RANGES.map((r) => <button key={r} type="button" aria-pressed={range === r} onClick={() => setRange(r)} className={`min-h-[34px] px-3 rounded-full text-sm ${range === r ? 'seg-on' : 'hover:bg-surface3'}`}>{t('m.an.days', { n: r })}</button>)}
         </div>
         <button type="button" className="btn-ghost text-sm !rounded-full" onClick={csv} disabled={!data}><Icon name="download" size={15} />{t('m.an.csv')}</button>
         <NavLink to="backoffice" className="btn-ghost text-sm !rounded-full"><Icon name="shield" size={15} />{t('m.admin')}</NavLink>

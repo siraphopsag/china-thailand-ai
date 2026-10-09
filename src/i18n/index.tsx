@@ -16,6 +16,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   setCurrentLang(lang) // set during render so children/engines compute with the right language
   useEffect(() => {
     document.documentElement.lang = LANGS.find((l) => l.id === lang)!.html
+    document.querySelector('meta[name="description"]')?.setAttribute('content', tr('app.desc', undefined, lang))
     try { localStorage.setItem(KEY, lang) } catch { /* ignore */ }
   }, [lang])
   const setLang = useCallback((l: Lang) => setLangState(l), [])

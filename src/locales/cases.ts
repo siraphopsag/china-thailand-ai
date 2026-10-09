@@ -3,6 +3,7 @@ import type { Msg } from './common.js'
 export const cases = {
   // ---------- the case page
   'm.cs.title': ['เคสการจ้างงาน', '雇佣个案', 'Hiring case'],
+  'm.cs.nfTitle': ['ไม่พบเคส', '找不到个案', 'Case not found'],
   'm.cs.notFound': ['ไม่พบเคสนี้ หรือคุณไม่มีสิทธิ์ดู', '找不到此个案，或您无权查看', 'This case was not found, or you do not have permission to view it'],
   'm.cs.open': ['ดูเคส', '查看个案', 'Open the case'],
   'm.cs.follow': ['ติดตามเคส (เสร็จ {n} จาก 9 ขั้น)', '跟进个案（已完成 9 步中的 {n} 步）', 'Follow the case ({n} of 9 steps done)'],

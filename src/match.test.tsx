@@ -316,8 +316,8 @@ describe('the board (owner, Oct 2026)', () => {
     const page = html(<BoardPage />, st)
     for (const l of [1, 2, 3, 4, 5] as const) { expect(page, `ring ${l}`).toContain(T('m.lv.ring', { n: l })); expect(page, `name ${l}`).toContain(T(`m.lv.${l}` as never)) }
     expect(page).toContain('role="search"'); expect(page).toContain(T('m.board.searchHint'))
-    expect(page).toContain('Quality Control Engineer') // level 1 for my pin
-    expect(page).toContain('Warehouse Coordinator') // level 5: over a month old, open to everyone
+    expect(page).toContain('วิศวกรควบคุมคุณภาพ') // level 1 for my pin (Quality Control Engineer, shown in Thai)
+    expect(page).toContain('ผู้ประสานงานคลังสินค้า') // level 5: over a month old, open to everyone
     expect(page).not.toContain('Front Office Manager') // Shanghai: not for me yet
     // ring 1: the centre of the rings only (the other four faint), then the ring in words for screen readers
     expect(page).toMatch(/class="chip rar rar-1"><svg[^>]*><circle[^>]*><\/circle>(<circle[^>]*opacity="0.22"><\/circle>){4}<\/svg><span class="sr-only">/)
@@ -331,7 +331,7 @@ describe('the board (owner, Oct 2026)', () => {
     st.posts = st.posts.map((p) => (p.id === 'post-s1' ? { ...p, employerId: MY_EMPLOYER } : p))
     st.credits = [{ kind: 'post', at: real(-1.2) }]
     const page = html(<BoardPage />, st)
-    expect(page).toContain('Front Office Manager'); expect(page).toContain('Warehouse Coordinator') // other employers' posts too (owner, Oct 2026)
+    expect(page).toContain('ผู้จัดการแผนกต้อนรับ'); expect(page).toContain('ผู้ประสานงานคลังสินค้า') // other employers' posts too (owner, Oct 2026)
     expect(page).toContain(`>${T('m.bd.manage')}</a>`); expect(page).toContain(`>${T('m.bd.view')}</a>`) // mine → manage · others' → view
     expect(page).toContain(T('m.lv.reached', { l: T('m.lv.to.2' as never) })) // "Reaches: the same field"
     expect(page).toContain('<p class="text-base sm:text-lg font-bold">1/2</p>'); expect(page).toContain(T('m.bd.places')) // places taken on the card
@@ -456,7 +456,7 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
   it('#5 job titles on notifications and in the back office are headings', () => {
     const st = seedState(NOW); st.role = 'seeker'
     st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(-5) }])
-    expect(html(<NotificationsPage />, st)).toMatch(/<h3 class="[^"]*"><a href="\/post\?id=post-s2"[^>]*>Quality Control Engineer<\/a><\/h3>/)
+    expect(html(<NotificationsPage />, st)).toMatch(/<h3 class="[^"]*"><a href="\/post\?id=post-s2"[^>]*>วิศวกรควบคุมคุณภาพ<\/a><\/h3>/)
     expect(src('./pages/match.tsx')).toMatch(/<h3 className="font-semibold">\{p\.position\} · \{p\.company\}/)
   })
   it('#6 #8 the pin form marks required fields, offers tick chips and ties errors to their field', () => {
@@ -523,7 +523,7 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
     expect(css).toMatch(/radial-gradient\(42vw 38vh at 8% 55%, rgb\(var\(--glow-a\) \/ calc\(var\(--orb-a\) \* \.8\)\), transparent 72%\)/)
     // forms keep solid cards; their lists and empty states are glass
     const seek = html(<SeekPage />, { ...seedState(NOW), role: 'seeker', me: seeker([]) })
-    expect(seek).toMatch(/<form class="card space-y-4"/); expect(src('./pages/match.tsx')).toContain('<div className="glass-card p-5 text-muted">') // the pin list (its own tab now)
+    expect(seek).toMatch(/<form class="card space-y-4"/); expect(src('./pages/match.tsx')).toContain(`<Empty icon="pin" text={t('m.pin.none')}`) // the pin list (its own tab now); Empty is a glass card
   })
   it('glass on the other short-reading cards (roles, prepare, notifications, lists, profile, help, empty states); settings stays solid; footer band reaches both edges', () => {
     expect(html(<ChooseRolePage />).match(/<li class="glass-card role-card/g)?.length).toBe(2)

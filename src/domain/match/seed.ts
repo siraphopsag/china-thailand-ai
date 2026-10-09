@@ -29,15 +29,18 @@ export function seedState(now = Date.now()): MatchState {
     posts: [
       post({ id: 'post-s1', employerId: 'employer:sample-1', company: 'Sample Riverside Hotels', position: 'Front Office Manager', industry: 'hospitality', skills: ['hospitality_management'], minYears: 3,
         details: 'Sample post for the prototype. Thai and Chinese guests; shift work.', country: 'CN', province: 'CN-SH', createdAt: iso(now - DAY_MS * 1.2),
+        translations: { src: 'en', th: { position: 'ผู้จัดการแผนกต้อนรับ', details: 'ประกาศตัวอย่างสำหรับต้นแบบ ดูแลแขกชาวไทยและจีน ทำงานเป็นกะ' }, zh: { position: '前台经理', details: '原型示例招聘信息。接待泰国和中国客人，轮班工作。' } },
         headcount: 2, employment: 'permanent', salary: { min: 9000, max: 12000, currency: 'CNY' }, startDate: day(now + DAY_MS * 30),
         languages: [{ lang: 'zh', level: 'professional' }, { lang: 'th', level: 'native' }], education: 'bachelor', benefits: ['housing', 'meals', 'insurance'] }),
       post({ id: 'post-s2', employerId: 'employer:sample-2', company: 'Example Precision Parts', position: 'Quality Control Engineer', industry: 'manufacturing', skills: ['quality_control'], minYears: 2,
         details: 'Sample post for the prototype. Automotive parts line.', country: 'CN', province: 'CN-JS', createdAt: iso(now - HOUR_MS * 0.5),
+        translations: { src: 'en', th: { position: 'วิศวกรควบคุมคุณภาพ', details: 'ประกาศตัวอย่างสำหรับต้นแบบ สายการผลิตชิ้นส่วนยานยนต์' }, zh: { position: '质量控制工程师', details: '原型示例招聘信息。汽车零部件生产线。' } },
         headcount: 3, employment: 'contract', salary: null, startDate: day(now + DAY_MS * 45),
         languages: [{ lang: 'zh', level: 'conversational' }], education: 'vocational', benefits: ['housing', 'workDocs'] }, false), // not verified yet: stops at level 2, with a warning
       // nobody took it for over a month: it has reached level 5 (international) and sinks under newer posts
       post({ id: 'post-s3', employerId: 'employer:sample-3', company: 'Sample Eastern Logistics', position: 'Warehouse Coordinator', industry: 'logistics', skills: ['project_management'], minYears: 1,
         details: 'Sample post for the prototype. Cross-border shipments.', country: 'TH', province: 'TH-20', createdAt: iso(now - DAY_MS * 40),
+        translations: { src: 'en', th: { position: 'ผู้ประสานงานคลังสินค้า', details: 'ประกาศตัวอย่างสำหรับต้นแบบ ดูแลการขนส่งข้ามพรมแดน' }, zh: { position: '仓库协调员', details: '原型示例招聘信息。负责跨境货运。' } },
         headcount: 1, employment: 'permanent', salary: { min: 18000, max: 25000, currency: 'THB' }, startDate: day(now + DAY_MS * 20),
         languages: [{ lang: 'th', level: 'conversational' }, { lang: 'zh', level: 'basic' }], education: 'secondary', benefits: ['insurance'] }),
     ],

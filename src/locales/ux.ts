@@ -10,6 +10,8 @@ export const ux = {
   // ---- simplified dashboard
   // ---- strip trailing arrow/link glyphs from action labels (icons are drawn in code)
   // ---- demo / real data separation, recovery
+  // QA, Oct 2026: the page description in the visitor's language
+  'app.desc': ['C.A.L.L. — เชื่อมนายจ้างกับผู้หางานระหว่างไทยและจีน ข้ามภาษา วัฒนธรรม และกฎหมาย (ต้นแบบสำหรับสาธิต)', 'C.A.L.L. — 跨越语言、文化与法律，连接中泰两国的雇主与求职者（演示原型）', 'C.A.L.L. — connecting employers and job seekers between Thailand and China across language, culture and law (demo prototype)'],
   // QA, Oct 2026: a lost connection is not broken data
   'err.net': ['โหลดหน้านี้ไม่สำเร็จ การเชื่อมต่ออินเทอร์เน็ตอาจขัดข้อง', '无法加载此页面，网络连接可能中断', 'This page could not load. The internet connection may have dropped'],
   'err.netNote': ['ตรวจสอบการเชื่อมต่อแล้วกดลองใหม่ ข้อมูลของคุณยังอยู่ครบ', '请检查网络后重试，您的数据仍然完好', 'Check your connection and try again. Your data is still here'],

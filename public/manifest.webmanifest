@@ -1,7 +1,7 @@
 {
   "name": "C.A.L.L. — Cross ASEAN Language Legal",
   "short_name": "C.A.L.L.",
-  "description": "เชื่อมนายจ้างกับผู้หางาน ข้ามภาษา วัฒนธรรม และกฎหมาย",
+  "description": "เชื่อมนายจ้างกับผู้หางานระหว่างไทยและจีน ข้ามภาษา วัฒนธรรม และกฎหมาย · Thailand–China job matching across language, culture and law",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#141233",
@@ -17,6 +17,12 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/favicon.svg",

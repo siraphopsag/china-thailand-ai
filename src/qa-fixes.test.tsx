@@ -86,3 +86,48 @@ describe('QA round, Oct 2026 — group 3: the demo and errors', () => {
     expect(th).toContain('การเชื่อมต่อ')
   })
 })
+
+describe('QA round, Oct 2026 — group 4: one main button, one chosen look, readable disabled buttons', () => {
+  it('chosen tabs and pills use the tint, not the solid primary; cards carry one tinted action', () => {
+    for (const f of ['./pages/board.tsx', './pages/market.tsx', './pages/analytics.tsx', './pages/case.tsx', './pages/match.tsx'])
+      expect(src(f), f).not.toMatch(/\? 'bg-primary text-onprimary font-semibold/)
+    const css = src('./index.css')
+    expect(css).toContain('.seg-on {')
+    expect(css).toContain('.btn-soft {')
+    expect(css).not.toContain('disabled:opacity-50')
+    expect(css).toContain('.btn-primary:disabled, .btn-accent:disabled, .btn-soft:disabled { background: rgb(var(--surface3))')
+    expect(src('./pages/board.tsx')).toContain('className="btn-soft text-sm justify-center !rounded-full')
+  })
+  it('panel tabs move with the arrow keys', () => {
+    const m = src('./pages/match.tsx')
+    expect(m).toContain("tabIndex={value === x.k ? 0 : -1}")
+    expect(m).toContain("e.key === 'ArrowRight' ? (i + 1) % n")
+  })
+})
+
+describe('QA round, Oct 2026 — groups 5–6: ready to share, design rules', () => {
+  it('the page describes itself in English as well, with sharing details and a maskable icon', () => {
+    const page = src('../index.html')
+    expect(page).toContain('Thailand and China')
+    expect(page).toContain('<meta property="og:url"')
+    expect(page).toContain('<meta property="og:locale:alternate" content="zh_CN" />')
+    expect(page).toContain('<div id="root"><p class="boot">C.A.L.L.</p></div>')
+    expect(src('../public/manifest.webmanifest')).toContain('"purpose": "maskable"')
+    const [, zh, en] = messages['app.desc'] as readonly string[]
+    expect(zh).toContain('中泰'); expect(en).toContain('Thailand and China')
+  })
+  it('sample posts read in the visitor\'s language, labelled as sample text', () => {
+    const st = seedState(Date.parse(AT))
+    expect(st.posts.every((p) => p.translations?.th && p.translations?.zh && p.translations.src === 'en')).toBe(true)
+    expect(src('./pages/match.tsx')).toContain("t(post.sample ? 'm.tr.noteSample' : 'm.tr.note'")
+  })
+  it('the allowance never reads more than its limit; one word for applying', () => {
+    expect(src('./domain/match/release.ts')).toContain('used: Math.min(n, limit)')
+    expect((messages['m.ap.go'] as readonly string[])[0]).toBe('สมัครงาน')
+  })
+  it('DESIGN.md holds the rules and the named sizes exist', () => {
+    const d = src('../DESIGN.md')
+    for (const w of ['btn-primary', 'btn-soft', 'seg-on', 'rounded-control', 'min-h-touch', 'setMany']) expect(d, w).toContain(w)
+    expect(src('../tailwind.config.js')).toContain("borderRadius: { control: '0.75rem', card: '1rem', panel: '1.5rem' }")
+  })
+})
