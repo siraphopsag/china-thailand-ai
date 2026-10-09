@@ -38,3 +38,11 @@ describe('backup demo for mainland China (owner, 10 Oct 2026)', () => {
     expect(src('../docs/setup-china-mirror.md')).toContain('NODE_VERSION')
   })
 })
+
+describe('after the competition (owner, 10 Oct 2026: keep the site as a portfolio piece)', () => {
+  it('only the users\' data is deleted when sign-ups close; the site may stay in demo mode', () => {
+    const [th, , en] = tri('pri.7.t')
+    expect(th).toContain('ทีมจะลบข้อมูลของผู้ใช้ทั้งหมด'); expect(th).not.toContain('ลบฐานข้อมูลทั้งหมด')
+    expect(en).toContain('portfolio piece in demo mode')
+  })
+})
