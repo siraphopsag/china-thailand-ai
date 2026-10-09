@@ -113,7 +113,7 @@ describe('3–4. the board: a small allowance chip, the card/map switch before t
 describe('5. fewer effects for older phones', () => {
   it('on by itself for a low-end device (before the first paint), or chosen in Settings; the map turns flat', () => {
     const init = src('../public/theme-init.js')
-    expect(init).toContain("if (lite === 'on' || (lite !== 'off' && ((n && n <= 4) || (m && m <= 4) || localStorage.getItem('cnth-lite-auto') === 'on'))) document.documentElement.setAttribute('data-lite', '')")
+    expect(init).toContain("if (lite === 'on' || (lite !== 'off' && ((!apple && ((n && n <= 4) || (m && m <= 4))) || localStorage.getItem('cnth-lite-auto') === 'on'))) document.documentElement.setAttribute('data-lite', '')") // iPhones: judged by frame rate, not core count
     expect(src('./components/geomap.tsx')).toContain('const tilt = useTween(lite ? 0 :')
     expect(css).toContain('[data-lite] *, [data-lite] *::before, [data-lite] *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important }')
     expect(css).toContain('[data-lite] .mn-glow, [data-lite] .cta-ring::before { display: none }')

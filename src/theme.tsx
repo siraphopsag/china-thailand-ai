@@ -10,8 +10,10 @@ export type WeekStart = 0 | 1
 const KEY = 'cnth-theme', ACCENT_KEY = 'cnth-accent', WEEK_KEY = 'cnth-week', LITE_KEY = 'cnth-lite'
 /** fewer effects for older phones (owner, Oct 2026): 'auto' = on for a low-end device (4 CPU cores or fewer, or ≤ 4 GB of memory) */
 export type LiteMode = 'auto' | 'on' | 'off'
+/** an iPhone or iPad (iPadOS says "MacIntel" but has touch): Safari reports a capped core count and no memory size */
+export const appleMobile = () => typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
 export const lowEndDevice = () => {
-  if (typeof navigator === 'undefined') return false
+  if (typeof navigator === 'undefined' || appleMobile()) return false // judged by how smoothly the page draws instead (src/lite.ts)
   const n = navigator.hardwareConcurrency, m = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
   return (!!n && n <= 4) || (!!m && m <= 4)
 }

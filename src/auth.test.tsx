@@ -228,9 +228,9 @@ describe('database rules', () => {
 })
 
 describe('keep-alive and security header', () => {
-  it('the free project is pinged twice a day; no secrets → no-op', () => {
+  it('the free project is pinged twice a day; missing secrets or a bad answer fail loudly (owner, Oct 2026)', () => {
     const w = src('../.github/workflows/supabase-keepalive.yml')
-    expect(w).toContain("cron: '23 1,13 * * *'"); expect(w).toContain('$SUPABASE_URL/rest/v1/rpc/ping'); expect(w).not.toMatch(/service_role/i); expect(w).toContain('nothing to ping.')
+    expect(w).toContain("cron: '23 1,13 * * *'"); expect(w).toContain('$url/rest/v1/rpc/ping'); expect(w).not.toMatch(/service_role/i); expect(w).toContain('are not set'); expect(w).toContain('s#/rest/v1$##')
   })
   it('the browser may talk to Supabase, show Google profile pictures and use Google\'s sign-in button — nothing else is added', () => {
     const v = JSON.parse(src('../vercel.json')) as { headers: { headers: { key: string; value: string }[] }[] }

@@ -22,12 +22,17 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
+          # owner, Oct 2026: a missing secret must not pass silently (the database would pause unnoticed) → fail, GitHub e-mails the owner
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "Supabase secrets are not set yet; nothing to ping."
-            exit 0
+            echo "::error::The secrets SUPABASE_URL and SUPABASE_ANON_KEY are not set (Settings → Secrets and variables → Actions)."
+            exit 1
           fi
-          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SUPABASE_URL/rest/v1/rpc/ping" \
-            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" -H "Content-Type: application/json" -d '{}')
+          # tidy the values like the website does: spaces, quotes, a trailing slash or /rest/v1 pasted along (every run since 7 Oct got 404)
+          url=$(printf '%s' "$SUPABASE_URL" | tr -d '[:space:]"'"'"'' | sed -E 's#/+$##; s#/rest/v1$##; s#/+$##')
+          key=$(printf '%s' "$SUPABASE_ANON_KEY" | tr -d '[:space:]"'"'"'')
+          case "$url" in https://*.supabase.co) ;; *) echo "::error::SUPABASE_URL should look like https://<project>.supabase.co"; exit 1 ;; esac
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$url/rest/v1/rpc/ping" \
+            -H "apikey: $key" -H "Authorization: Bearer $key" -H "Content-Type: application/json" -d '{}')
           echo "ping → HTTP $code"
           if [ "$code" != "200" ]; then
             echo "::warning::Supabase did not answer (HTTP $code). If the project is paused, open the Supabase dashboard and press Resume."

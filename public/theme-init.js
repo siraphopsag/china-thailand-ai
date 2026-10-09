@@ -9,7 +9,9 @@
     // fewer effects (owner, Oct 2026): chosen in Settings, else on by itself for a low-end device (4 cores or fewer, or ≤ 4 GB),
     // or one judged earlier by src/lite.ts (budget graphics chip, or the page drew slowly — e.g. a Redmi 13C)
     var lite = localStorage.getItem('cnth-lite'), n = navigator.hardwareConcurrency, m = navigator.deviceMemory
-    if (lite === 'on' || (lite !== 'off' && ((n && n <= 4) || (m && m <= 4) || localStorage.getItem('cnth-lite-auto') === 'on'))) document.documentElement.setAttribute('data-lite', '')
+    // iPhones and iPads report a capped core count: not counted (src/lite.ts judges them by how smoothly the page draws)
+    var apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    if (lite === 'on' || (lite !== 'off' && ((!apple && ((n && n <= 4) || (m && m <= 4))) || localStorage.getItem('cnth-lite-auto') === 'on'))) document.documentElement.setAttribute('data-lite', '')
     var lang = localStorage.getItem('cnth-lang')
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang === 'en' ? 'en' : 'th'
   } catch (e) { document.documentElement.setAttribute('data-theme', 'light') }
