@@ -15,6 +15,7 @@ import { getReg, regText } from '../data/regulations'
 import { aiAsk } from '../ai/client'
 import { useLite } from '../theme'
 import MorphChat, { RevealText, type ChatTurn, type OrbCopy } from '../components/morph-orb'
+import { takeAskPrefill } from '../prepare'
 import { MAX_HISTORY, MAX_QUESTION, type AiAnswer, type AiCheck, type AiResponse, type AskTurn } from '../ai/spec'
 import { Page } from './match'
 
@@ -87,6 +88,7 @@ export function AskPage() {
   const { status, online } = useAuth()
   const lite = useLite()
   const [turns, setTurns] = useState<ChatTurn<Res>[]>([])
+  const [prefill] = useState(takeAskPrefill) // a question typed on the Prepare hub
   const turnsRef = useRef(turns)
   turnsRef.current = turns
   const nextId = useRef(1)
@@ -130,7 +132,7 @@ export function AskPage() {
       <MorphChat<Res> copy={copy} turns={turns} onAsk={onAsk} renderAnswer={renderAnswer} disabled={!canUse} maxLength={MAX_QUESTION} lite={lite}
         label={t('ai.ask.label')} note={t('ai.ask.privacy')} idleHint={t('ai.orb.idle')} idleChips={[t('ai.orb.c1'), t('ai.orb.c2'), t('ai.orb.c3')]}
         examples={[t('ai.ask.ex1'), t('ai.ask.ex2'), t('ai.ask.ex3')]} examplesTitle={t('ai.ask.try')}
-        meta={leftN !== null ? t('ai.left', { n: leftN }) : undefined} />
+        meta={leftN !== null ? t('ai.left', { n: leftN }) : undefined} initialValue={prefill} />
     </Page>
   )
 }

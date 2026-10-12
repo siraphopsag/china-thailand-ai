@@ -674,6 +674,8 @@ export interface MorphChatProps<R> {
   maxLength?: number
   minThinkMs?: number
   lite?: boolean
+  /** a question to start with in the box (from the Prepare hub); not sent until the visitor presses send */
+  initialValue?: string
 }
 
 export default function MorphChat<R>(props: MorphChatProps<R>) {
@@ -683,7 +685,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
   const [resting, setResting] = useState(false) // the first question was sent: the resting sphere stays until the orb takes over
   const [fading, setFading] = useState(false) // …and fades as the live orb appears on top of it
   const empty = turns.length === 0
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(() => props.initialValue ?? '')
   const [still] = useState(() => typeof window === 'undefined' || motionOff())
   const light = useLightTheme()
   const [lbl, setLbl] = useState<{ cur: string; prev: string | null; n: number }>({ cur: copy.labels[0], prev: null, n: 0 })

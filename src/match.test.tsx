@@ -528,7 +528,7 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
   it('glass on the other short-reading cards (roles, prepare, notifications, lists, profile, help, empty states); settings stays solid; footer band reaches both edges', () => {
     expect(html(<ChooseRolePage />).match(/<li class="glass-card role-card/g)?.length).toBe(2)
     const m = src('./pages/match.tsx')
-    for (const s of ['className="glass-card p-5 flex gap-4 items-start h-full"', '<li key={a.id} className="glass-card p-4 space-y-2">', '<section className="glass-card p-5 space-y-3 text-sm">', '<div className="glass-card p-5 flex flex-col items-center'])
+    for (const s of ['<li key={a.id} className="glass-card p-4 space-y-2">', '<section className="glass-card p-5 space-y-3 text-sm">', '<div className="glass-card p-5 flex flex-col items-center'])
       expect(m, s).toContain(s)
     expect(m).toContain(`<section className="card space-y-4" aria-label={t('m.settings.look')}>`) // settings (two cards side by side)
     const app = src('./App.tsx')

@@ -4,9 +4,9 @@ import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { useTheme } from '../theme'
 import { localDay } from '../domain/match/logic'
-import { EVENT_KINDS, calendarEvents, monthGrid, toIcs, type CalEvent, type EventKind } from '../domain/match/calendar'
+import { KINDS_FOR, calendarEvents, monthGrid, toIcs, type CalEvent, type EventKind } from '../domain/match/calendar'
 import { Icon, type IconName } from '../components/icons'
-import { Empty, Page, useGate } from './match'
+import { Empty, Page, useGate, useNames } from './match'
 
 /**
  * The calendar (owner, Oct 2026): a month with each appointment as a coloured label (icon + words, never colour alone), the
@@ -14,14 +14,20 @@ import { Empty, Page, useGate } from './match'
  * first working day; employers the same for the workers they took on, plus when their posts end; the agency sees every case.
  * Days are set by the agency on the case page.
  */
-const ICON: Record<EventKind, IconName> = { training: 'culture', test: 'plan', documents: 'documents', departure: 'plane', start: 'employment', expiry: 'hourglass' }
+const ICON: Record<EventKind, IconName> = { training: 'culture', test: 'plan', documents: 'documents', departure: 'plane', start: 'employment', expiry: 'hourglass',
+  expiring: 'warn', postQuota: 'renew', pinEnd: 'pin', pinQuota: 'renew', memberEnd: 'crown' }
 const locale = (l: string) => (l === 'zh' ? 'zh-CN' : l === 'th' ? 'th-TH' : 'en-GB')
 const ymOf = (day: string) => ({ y: Number(day.slice(0, 4)), m: Number(day.slice(5, 7)) - 1 })
 
 export function useEventTitle() {
   const { t } = useI18n()
   const { st } = useMatch()
+  const N = useNames()
   return (e: CalEvent) => {
+    // the person's own days: allowances back, a pin ending, the membership ending (no post or case)
+    if (e.kind === 'postQuota' || e.kind === 'pinQuota') { const s = t('m.cal.full', { n: e.what }); return { what: t(`m.cal.k.${e.kind}` as never), post: s, sub: s } }
+    if (e.kind === 'pinEnd' && e.pin) { const s = `${N.place(e.pin.country as never, e.pin.province)} · ${N.industry(e.pin.industry)}`; return { what: t('m.cal.k.pinEnd'), post: s, sub: s } }
+    if (e.kind === 'memberEnd') return { what: t('m.cal.k.memberEnd'), post: t('m.cal.memberSub'), sub: t('m.cal.memberSub') }
     const post = st.posts.find((p) => p.id === e.postId)
     const what = e.kind === 'training' ? (e.what.startsWith('@') ? t(`m.tr.${e.what.slice(1)}` as never) : e.what)
       : e.kind === 'test' ? t(`m.cs.test.${e.what}` as never) : t(`m.cal.k.${e.kind}` as never)
@@ -33,7 +39,7 @@ export function useEventTitle() {
 
 export function CalendarPage() {
   const { t, lang } = useI18n()
-  const { st, now, agency, mode } = useMatch()
+  const { st, now, limitNow, agency, mode } = useMatch()
   const { weekStart } = useTheme()
   const title = useEventTitle()
   const today = localDay(new Date(now).toISOString())
@@ -44,7 +50,7 @@ export function CalendarPage() {
   if (!st.role && !agency) return <Page title={t('m.cal.title')}><Empty icon="bell" text={t('m.profile.none')} to="choose-role" action={t('hero.cta')} /></Page>
 
   // the local demo has no administrators: the agency's view would show the sample case to everyone, so follow the role there
-  const events = calendarEvents(st, agency && mode !== 'local')
+  const events = calendarEvents(st, agency && mode !== 'local', limitNow)
   const byDay = events.reduce<Record<string, CalEvent[]>>((m, e) => ({ ...m, [e.day]: [...(m[e.day] ?? []), e] }), {})
   const weeks = monthGrid(ym.y, ym.m, weekStart)
   const fmt = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale(lang), o)
@@ -61,7 +67,7 @@ export function CalendarPage() {
     a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' })); a.download = 'call-calendar.ics'
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
-  const link = (e: CalEvent) => (e.caseId ? `case?id=${e.caseId}` : `post?id=${e.postId}`)
+  const link = (e: CalEvent) => e.to ?? (e.caseId ? `case?id=${e.caseId}` : `post?id=${e.postId}`)
   const Item = ({ e }: { e: CalEvent }) => { const x = title(e); return (
     <li><NavLink to={link(e)} className={`cal-ev cal-${e.kind} flex items-start gap-2 rounded-xl border px-3 py-2 hover:opacity-90`}>
       <Icon name={ICON[e.kind]} size={16} className="mt-0.5 shrink-0" /><span className="min-w-0"><span className="block font-medium text-sm">{x.what}</span><span className="block text-xs opacity-85">{x.sub}</span></span>
@@ -97,7 +103,7 @@ export function CalendarPage() {
                   </div>)
               })}</div>))}
           </div>
-          <ul className="shrink-0 flex flex-wrap gap-x-4 gap-y-1.5 pt-2 border-t border-line text-xs" aria-label={t('m.cal.legend')}>{EVENT_KINDS.filter((k) => k !== 'expiry' || st.role === 'employer').map((k) => (
+          <ul className="shrink-0 flex flex-wrap gap-x-4 gap-y-1.5 pt-2 border-t border-line text-xs" aria-label={t('m.cal.legend')}>{(st.role === 'employer' ? KINDS_FOR.employer : KINDS_FOR.seeker).map((k) => (
             <li key={k} className="inline-flex items-center gap-1.5"><span className={`cal-dot cal-${k}`} aria-hidden /><Icon name={ICON[k]} size={13} />{t(`m.cal.k.${k}` as never)}</li>))}</ul>
         </section>
 

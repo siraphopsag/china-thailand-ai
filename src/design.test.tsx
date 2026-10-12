@@ -144,7 +144,7 @@ describe('C. the calendar', () => {
     expect(mine.every((e) => e.caseId === 'case-s1')).toBe(true)
     const emp = seedState(NOW); emp.role = 'employer'
     emp.posts = emp.posts.map((p) => (p.id === 'post-s1' ? { ...p, employerId: MY_EMPLOYER } : p))
-    expect(calendarEvents(emp, false).map((e) => e.kind)).toEqual(['expiry']) // not the seeker's case
+    expect(calendarEvents(emp, false).map((e) => e.kind)).toEqual(['expiring', 'expiry']) // not the seeker's case (owner, 13 Oct 2026: a warning a week before the end too)
     expect(calendarEvents(emp, true).filter((e) => e.caseId).length).toBe(3) // the agency sees every case
     const done = { ...st, cases: st.cases.map((c) => ({ ...c, steps: { ...c.steps, training: at(0), permit: at(0), departure: at(0), arrived: at(0) } })) }
     expect(calendarEvents(done, false)).toEqual([]) // a finished case leaves the calendar

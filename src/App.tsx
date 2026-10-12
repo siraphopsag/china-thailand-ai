@@ -7,6 +7,7 @@ import { AuthProvider, CONFIG_PROBLEM, useAuth } from './auth'
 import { trackVisit } from './visit'
 import { SideNav } from './components/sidenav'
 import { ErrorBoundary } from './ErrorBoundary'
+import { markPrepSeen } from './prepare'
 import { BRAND } from './brand'
 import { pageTitle } from './utils/labels'
 import { BackButton, Header } from './components/shell'
@@ -99,6 +100,7 @@ function DemoNotice() {
 
 function Router() {
   const r = useRoute()
+  useEffect(() => { markPrepSeen(r) }, [r])
   const { t } = useI18n()
   const { status } = useAuth()
   useEffect(() => { if (status !== 'off' && status !== 'loading') trackVisit() }, [status]) // one anonymous visit per browser per day

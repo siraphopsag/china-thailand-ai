@@ -42,8 +42,8 @@ export const design = {
   // ---------- C. calendar
   'm.cal': ['ปฏิทิน', '日历', 'Calendar'],
   'm.cal.title': ['ปฏิทินนัดหมาย', '日程安排', 'Calendar'],
-  'm.cal.subSeeker': ['วันอบรม วันทดสอบ วันเดินทาง และวันเริ่มงานของคุณ', '您的培训、测试、出发和入职日期', 'Your courses, tests, departure and first working day'],
-  'm.cal.subEmployer': ['นัดของแรงงานที่คุณรับไว้ และวันที่ประกาศของคุณจะหมดอายุ', '您录用工人的日程，以及您的招聘信息到期日', 'Appointments of the workers you took on, and when your posts end'],
+  'm.cal.subSeeker': ['วันอบรม วันทดสอบ วันเดินทาง วันเริ่มงาน วันที่หมุดหมดอายุ และวันที่สิทธิ์ปักหมุดกลับมาครบ', '您的培训、测试、出发和入职日期，标记到期日，以及标记次数恢复的日期', 'Your courses, tests, departure and first working day, when pins end, and when your pins come back'],
+  'm.cal.subEmployer': ['นัดของแรงงานที่คุณรับไว้ วันที่ประกาศใกล้หมดอายุและหมดอายุ และวันที่สิทธิ์โพสต์กลับมาครบ', '您录用工人的日程、招聘信息即将到期和到期的日期，以及发布次数恢复的日期', 'Appointments of the workers you took on, when your posts are about to end and end, and when your posts come back'],
   'm.cal.subAgency': ['นัดของทุกเคส (มุมมองหน่วยงาน)', '所有个案的日程（机构视图）', 'Every case’s appointments (agency view)'],
   'm.cal.prev': ['เดือนก่อน', '上个月', 'Previous month'],
   'm.cal.next': ['เดือนถัดไป', '下个月', 'Next month'],
@@ -63,6 +63,14 @@ export const design = {
   'm.cal.k.departure': ['เดินทาง', '出发', 'Departure'],
   'm.cal.k.start': ['เริ่มงานวันแรก', '入职第一天', 'First working day'],
   'm.cal.k.expiry': ['ประกาศหมดอายุ', '招聘信息到期', 'Post ends'],
+  // owner, 13 Oct 2026: the days people plan around
+  'm.cal.k.expiring': ['ประกาศใกล้หมดอายุ (อีก 7 วัน)', '招聘信息即将到期（还剩 7 天）', 'Post ends in 7 days'],
+  'm.cal.k.postQuota': ['สิทธิ์โพสต์กลับมาครบ', '发布次数恢复', 'Posts come back'],
+  'm.cal.k.pinEnd': ['หมุดหมดอายุ', '标记到期', 'Pin ends'],
+  'm.cal.k.pinQuota': ['สิทธิ์ปักหมุดกลับมาครบ', '标记次数恢复', 'Pins come back'],
+  'm.cal.k.memberEnd': ['สมาชิกหมดอายุ', '会员到期', 'Membership ends'],
+  'm.cal.full': ['ใช้ได้ครบ {n} ครั้งอีกครั้ง', '再次可用 {n} 次', 'All {n} available again'],
+  'm.cal.memberSub': ['ต่ออายุได้ที่หน้าสมาชิก', '可在会员页续期', 'Renew on the membership page'],
   // appointments on the case page
   'm.cs.appt': ['นัดหมาย', '日程安排', 'Appointments'],
   'm.cs.appt.d': ['วันที่ตั้งไว้จะขึ้นในปฏิทินของทั้งสองฝ่าย', '设定的日期会显示在双方的日历中', 'Days set here appear on both sides’ calendars'],

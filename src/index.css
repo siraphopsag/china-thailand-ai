@@ -475,6 +475,18 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .quota-ring { width: 18px; height: 18px; border-radius: 9999px; flex-shrink: 0;
   background: conic-gradient(rgb(var(--primary)) var(--p, 0%), rgb(var(--surface3)) 0);
   -webkit-mask: radial-gradient(circle at center, transparent 5px, #000 5.5px); mask: radial-gradient(circle at center, transparent 5px, #000 5.5px) }
+/* the Prepare hub (owner, 13 Oct 2026): a raised card per tool with its own tint; the recommended one has a primary outline */
+.prep-card { background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 1.25rem; box-shadow: var(--elev-hi), var(--elev-1); transition: box-shadow .18s ease, border-color .18s ease }
+.prep-card:hover { box-shadow: var(--elev-hi), var(--elev-2) }
+.prep-rec { border-color: rgb(var(--primary) / .55); box-shadow: inset 0 0 0 1px rgb(var(--primary) / .35), var(--elev-hi), var(--elev-1) }
+.prep-ai { background: linear-gradient(180deg, rgb(var(--brand) / .55), rgb(var(--surface)) 70%) }
+.prep-ai .prep-icon { background: rgb(var(--primary)); color: rgb(var(--onprimary)) }
+.prep-warn .prep-icon { background: rgb(var(--warn-bg)); color: rgb(var(--warn-fg)); box-shadow: inset 0 0 0 1px rgb(var(--warn-line)) }
+.prep-info .prep-icon { background: rgb(var(--info-bg)); color: rgb(var(--info-fg)); box-shadow: inset 0 0 0 1px rgb(var(--info-line)) }
+.prep-ok .prep-icon { background: rgb(var(--ok-bg)); color: rgb(var(--ok-fg)); box-shadow: inset 0 0 0 1px rgb(var(--ok-line)) }
+.prep-chip { border: 1px solid rgb(var(--control-line)); border-radius: 9999px; padding: .4rem .85rem; min-height: 36px; background: rgb(var(--surface)); color: rgb(var(--ink)); transition: background-color .15s ease }
+.prep-chip:hover { background: rgb(var(--surface3)) }
+@media (prefers-reduced-motion: reduce) { .prep-card { transition: none } }
 /* calendar labels (owner, Oct 2026): every kind has its own colour, always with an icon or words (never colour alone); text ≥ 4.5:1 */
 .cal-ev { background: rgb(var(--cal-bg)); color: rgb(var(--cal-fg)); border-color: rgb(var(--cal-line)) }
 .cal-dot { display: inline-block; width: .5rem; height: .5rem; border-radius: 9999px; background: rgb(var(--cal-line)) }
@@ -484,6 +496,11 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .cal-departure { --cal-bg: var(--ok-bg); --cal-fg: var(--ok-fg); --cal-line: var(--ok-line) }
 .cal-start { --cal-bg: var(--brand); --cal-fg: var(--brandfg); --cal-line: var(--primary) }
 .cal-expiry { --cal-bg: var(--danger-bg); --cal-fg: var(--danger-fg); --cal-line: var(--danger-line) }
+/* owner, 13 Oct 2026: the days people plan around */
+.cal-expiring { --cal-bg: var(--review-bg); --cal-fg: var(--review-fg); --cal-line: var(--review-line) }
+.cal-postQuota, .cal-pinQuota { --cal-bg: var(--ok-bg); --cal-fg: var(--ok-fg); --cal-line: var(--ok-line) }
+.cal-pinEnd { --cal-bg: var(--warn-bg); --cal-fg: var(--warn-fg); --cal-line: var(--warn-line) }
+.cal-memberEnd { --cal-bg: var(--surface3); --cal-fg: var(--ink); --cal-line: var(--control-line) }
 /* ── admin charts (owner, Oct 2026): one accent hue per series, the period before dashed in muted ink, recessive grid ── */
 .viz-line { fill: none; stroke: rgb(var(--primary)); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round }
 .viz-area { fill: rgb(var(--primary) / .14) }
