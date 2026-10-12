@@ -31,10 +31,11 @@ describe('accessibility audit fixes (WCAG 2.2 A/AA)', () => {
     const endless = [...css.matchAll(/animation:\s*([a-z-]+)[^;}]*infinite/g)].map((m) => m[1])
     // (ai-scan, ai-spin and mo-dot are busy indicators, shown only while the AI is working; the AI stage's rim and glow (mo-spin,
     // mo-drift) loop only under .mo-wrap.is-on, i.e. while the Settings motion switch is on — so does the resting sphere's slow turn (JS))
-    expect(endless.sort()).toEqual(['ai-scan', 'ai-spin', 'bg-flow', 'bg-sheen', 'bg-sheen-lines', 'mo-dot', 'mo-drift', 'mo-spin', 'mo-spin'])
+    // (owner, 13 Oct 2026: the Prepare hub reuses the chat pill, gated the same way under .mo-hub.is-on)
+    expect(endless.sort()).toEqual(['ai-scan', 'ai-spin', 'bg-flow', 'bg-sheen', 'bg-sheen-lines', 'mo-dot', 'mo-drift', 'mo-drift', 'mo-spin', 'mo-spin', 'mo-spin'])
     const gated = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{[^}]*animation:\s*mo-(?:spin|drift)[^}]*infinite/g)].map((m) => m[1].trim())
-    expect(gated).toHaveLength(3)
-    for (const sel of gated) expect(sel).toMatch(/^\.mo-wrap\.is-on /)
+    expect(gated).toHaveLength(5)
+    for (const sel of gated) expect(sel).toMatch(/^\.mo-(wrap|hub)\.is-on /)
     expect(css).toContain('.bg-paths.is-on .bg-sheen { display: block; animation: bg-sheen')
   })
   it('#13 Chinese inside Thai text (and Thai inside Chinese text) is marked with its own language', () => {

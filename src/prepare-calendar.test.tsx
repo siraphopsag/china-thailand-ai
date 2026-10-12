@@ -30,7 +30,9 @@ describe('Prepare hub (owner, 13 Oct 2026: it looked like a filing cabinet, so p
     const page = html(<PreparePage />, { ...seedState(), role: 'seeker' })
     expect(page).toContain('id="prep-ai-h"')
     expect(page).toContain('href="/ask"') // still a plain link for people who do not want to type
-    expect(page.match(/class="btn-primary/g)?.length).toBe(1) // one solid button: "Ask the AI"
+    // round 2 (owner, 13 Oct 2026): the AI page's own pill, only longer — its send button is the one main action
+    expect(page).toContain('class="mo-hub-pill"'); expect(page).toContain('class="mo-field"'); expect(page).toContain('class="mo-send"')
+    expect(page).not.toContain('class="btn-primary')
     expect(page).toContain(th('ai.ask.ex1'))
     expect(page).toContain(th('m.prep.ai.meta').replace('{n}', String(registry.length)))
   })
@@ -39,15 +41,17 @@ describe('Prepare hub (owner, 13 Oct 2026: it looked like a filing cabinet, so p
     for (const k of ['1', '2', '3']) expect(page).toContain(th(`m.sc.f${k}.h`))
     expect(page).toContain('href="tel:1694"')
     expect(page).toContain(th('m.prep.cu.term'))
-    expect(page).toContain(`>${registry.length}</p>`)
+    expect(page).toContain('href="/language?sit=0"') // the real situations, each opens its own tab
+    expect(page).toContain(th('m.prep.lg.h').replace('{n}', String(registry.length)))
     for (const to of ['safety', 'language', 'sources']) expect(page).toContain(`href="/${to}"`)
   })
   it('the card that matters most for your role is marked and comes first', () => {
     const seeker = html(<PreparePage />, { ...seedState(), role: 'seeker' })
     const employer = html(<PreparePage />, { ...seedState(), role: 'employer' })
-    const first = (p: string) => p.slice(p.indexOf('<ul class="grid md:grid-cols-3')).match(/prep-card prep-(\w+)/)?.[1]
-    expect(first(seeker)).toBe('warn') // how to spot a job scam
-    expect(first(employer)).toBe('ok') // the legal information
+    // the first card's label colour: warning = how to spot a job scam, ok = the legal information
+    const first = (p: string) => p.slice(p.indexOf('<ul class="grid md:grid-cols-3 gap-3 items-stretch')).match(/<span class="(text-[a-z]+-fg)">/)?.[1]
+    expect(first(seeker)).toBe('text-warn-fg')
+    expect(first(employer)).toBe('text-ok-fg')
     expect(seeker).toContain(th('m.prep.rec'))
   })
   it('the checklist and the question carried to the AI page live in the browser only (never the address)', () => {

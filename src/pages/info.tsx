@@ -1,6 +1,7 @@
 // Reference pages the matching prototype links to: language & culture and legal sources (from "Prepare") and privacy (footer).
 // They came from the first business-planning tool, which was removed in Oct 2026.
 import { useState } from 'react'
+import { useSearchParam } from '../store'
 import { Disclaimer, Disclosure, PageHead, SourceCard, TabBar, Warn } from '../components/ui'
 import { Icon } from '../components/icons'
 import { situations, situationPoints, terms } from '../data/culture'
@@ -10,7 +11,8 @@ import { tk, useI18n } from '../i18n'
 /* ================= LANGUAGE & CULTURE ================= */
 function CultureSituations() {
   const { t } = useI18n()
-  const [i, setI] = useState(0)
+  const asked = Number(useSearchParam('sit')) // from the Prepare hub
+  const [i, setI] = useState(() => (situations.includes(asked) ? asked : 0))
   return (
     <div className="mt-3">
       <div className="mb-3"><TabBar label={t('cul.pick')} value={String(i)} onChange={(id) => setI(Number(id))} items={situations.map((k) => ({ id: String(k), label: tk('sit', `${k}.t`) }))} /></div>

@@ -479,13 +479,34 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .prep-card { background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 1.25rem; box-shadow: var(--elev-hi), var(--elev-1); transition: box-shadow .18s ease, border-color .18s ease }
 .prep-card:hover { box-shadow: var(--elev-hi), var(--elev-2) }
 .prep-rec { border-color: rgb(var(--primary) / .55); box-shadow: inset 0 0 0 1px rgb(var(--primary) / .35), var(--elev-hi), var(--elev-1) }
-.prep-ai { background: linear-gradient(180deg, rgb(var(--brand) / .55), rgb(var(--surface)) 70%) }
-.prep-ai .prep-icon { background: rgb(var(--primary)); color: rgb(var(--onprimary)) }
-.prep-warn .prep-icon { background: rgb(var(--warn-bg)); color: rgb(var(--warn-fg)); box-shadow: inset 0 0 0 1px rgb(var(--warn-line)) }
-.prep-info .prep-icon { background: rgb(var(--info-bg)); color: rgb(var(--info-fg)); box-shadow: inset 0 0 0 1px rgb(var(--info-line)) }
-.prep-ok .prep-icon { background: rgb(var(--ok-bg)); color: rgb(var(--ok-fg)); box-shadow: inset 0 0 0 1px rgb(var(--ok-line)) }
-.prep-chip { border: 1px solid rgb(var(--control-line)); border-radius: 9999px; padding: .4rem .85rem; min-height: 36px; background: rgb(var(--surface)); color: rgb(var(--ink)); transition: background-color .15s ease }
-.prep-chip:hover { background: rgb(var(--surface3)) }
+.prep-card { display: flex; flex-direction: column; overflow: hidden }
+.prep-h { font-size: 1.25rem; line-height: 1.3; font-weight: 700; color: rgb(var(--ink)) }
+@media (min-width: 640px) { .prep-h { font-size: 1.375rem } }
+.prep-num { font-size: 1.75rem; line-height: 1; font-weight: 800; width: 1.4rem; flex-shrink: 0; font-variant-numeric: tabular-nums }
+.prep-row { display: flex; align-items: center; gap: .75rem; min-height: 48px; padding: .4rem 0 }
+a.prep-row:hover span.flex-1 { text-decoration: underline; text-underline-offset: 4px }
+.prep-badge { width: 1.6rem; height: 1.6rem; flex-shrink: 0; display: grid; place-items: center; border-radius: 9999px; font-size: .8rem; font-weight: 700; background: rgb(var(--info-bg)); color: rgb(var(--info-fg)); box-shadow: inset 0 0 0 1px rgb(var(--info-line)) }
+.prep-more { display: inline-flex; align-items: center; gap: .3rem; min-height: 24px; font-size: .9rem; font-weight: 600; color: rgb(var(--primary)); text-decoration: underline; text-decoration-color: rgb(var(--primary) / .4); text-underline-offset: 4px }
+.prep-more:hover { text-decoration-color: currentColor }
+/* the strip at the foot of a card: a full-width band (the hotline strip is one big tap target) */
+.prep-strip { margin-top: auto; display: flex; align-items: center; gap: .75rem; min-height: 52px; padding: .65rem 1.25rem; border-top: 1px solid }
+.prep-strip-warn { background: rgb(var(--warn-bg)); color: rgb(var(--warn-fg)); border-color: rgb(var(--warn-line)) }
+a.prep-strip-warn:hover { filter: brightness(.97) }
+.prep-strip-info { background: rgb(var(--info-bg)); color: rgb(var(--info-fg)); border-color: rgb(var(--info-line)) }
+.prep-strip-ok { background: rgb(var(--ok-bg)); color: rgb(var(--ok-fg)); border-color: rgb(var(--ok-line)); font-size: .875rem }
+/* the AI question card on the hub: the chat's own pill, only longer */
+.mo-hub { --mo-pill: color-mix(in srgb, rgb(var(--surface)) 70%, #06060b); position: relative }
+.mo-hub-pill { position: relative; height: 60px; border-radius: 999px }
+.mo-hub-pill:focus-within .mo-surface::before { opacity: 1 }
+.mo-hub.is-on .mo-surface::before { animation: mo-spin 6s linear infinite }
+.mo-hub.is-on .mo-aurora i { animation: mo-drift 7s ease-in-out infinite alternate }
+.mo-hub.is-light .mo-surface { background: #ffffff; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1), 0 8px 24px rgb(0 0 0 / .08) }
+.mo-hub.is-light .mo-aurora i { opacity: .28 }
+.mo-hub.is-light .mo-spark { color: rgb(0 0 0 / .45) }
+.mo-hub.is-light .mo-field { color: #18181b } .mo-hub.is-light .mo-field::placeholder { color: rgb(0 0 0 / .6) }
+.mo-hub.is-light .mo-send { background: rgb(0 0 0 / .06); color: rgb(0 0 0 / .55) } .mo-hub.is-light .mo-send[data-ready] { background: #18181b; color: #fff }
+.mo-hub.is-light:has(.mo-field:focus-visible) .mo-surface { box-shadow: inset 0 0 0 1px rgb(0 0 0 / .35), 0 8px 24px rgb(0 0 0 / .08) }
+@media (max-width: 1023px) { .mo-qcard.prep-ai { padding: 1rem; gap: .6rem } .mo-hub-pill { height: 52px } }
 @media (prefers-reduced-motion: reduce) { .prep-card { transition: none } }
 /* calendar labels (owner, Oct 2026): every kind has its own colour, always with an icon or words (never colour alone); text ≥ 4.5:1 */
 .cal-ev { background: rgb(var(--cal-bg)); color: rgb(var(--cal-fg)); border-color: rgb(var(--cal-line)) }

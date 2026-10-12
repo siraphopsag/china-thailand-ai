@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { LANGS, useI18n } from '../i18n'
+import { LANGS, tk, useI18n } from '../i18n'
 import { ACCENTS, useTheme } from '../theme'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
@@ -26,7 +26,8 @@ import { SimTools } from './simtools'
 import { PREP, dayPick, prepSeen, setAskPrefill, type PrepKey } from '../prepare'
 import { situations, terms } from '../data/culture'
 import { registry } from '../data/legal/registry'
-import { assess } from '../data/legal/trust'
+import { assess, localText } from '../data/legal/trust'
+import { FLAGS } from '../components/flags'
 
 /**
  * Pages of the matching prototype. Data stay in this browser or the project's database (see matchData.tsx); after a match the
@@ -689,48 +690,63 @@ function AccountSection() {
   )
 }
 /**
- * "Prepare before you go" (owner, 13 Oct 2026: reviewers said it looked like a filing cabinet, so people skipped it): a toolkit
- * that shows what each tool holds before you open it — the AI assistant as the main tool with its question box right here,
- * then three cards with real content (the first warning signs + a call button, today's word, the legal registry in numbers),
- * a checklist of what you have opened, and the card that matters most for your role marked "recommended" and put first.
+ * "Prepare before you go" (owner, 13 Oct 2026: reviewers said it looked like a filing cabinet, so people skipped it). Round 2
+ * (owner: "less like an AI template"): the question box is the AI page's own pill (same parts and colours, only longer); the three
+ * tools lead with their content under a large heading — the first warning signs with the 1694 hotline strip, the real-life
+ * situations with today's term, and named laws with their country flag — each with one text link to read on.
  */
 const FLAG_KEYS = ['1', '2', '3', '4', '5', '6', '7'] as const
+const HUB_LAWS = ['th-labour', 'th-closed-jobs', 'cn-immigration'] as const
 export function PreparePage() {
   const { t } = useI18n()
   const { st, now } = useMatch()
   const [seen] = useState(prepSeen)
   const [q, setQ] = useState('')
+  const light = useTheme().theme === 'light'
+  const [still] = useState(() => typeof window === 'undefined' || motionOff())
   const recommended: PrepKey = st.role === 'employer' ? 'sources' : 'safety'
   const askNow = (text: string) => { setAskPrefill(text.trim()); go('ask') }
   const done = PREP.filter((k) => seen.has(k)).length
   const term = terms[dayPick(terms.length, now)]
   const word = term.orig.split(' (')[0]
-  const th = registry.filter((x) => x.country === 'TH').length, verified = registry.filter((x) => assess(x.id).trust === 'VERIFIED').length
-  const Seen = ({ k }: { k: PrepKey }) => (seen.has(k) ? <span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name="check" size={12} />{t('m.prep.seen')}</span> : null)
-  const Rec = ({ k }: { k: PrepKey }) => (k === recommended ? <span className="chip bg-brand text-brandfg border-primary/40"><Icon name="star" size={12} />{t('m.prep.rec')}</span> : null)
-  const card = (k: PrepKey, tone: string, icon: IconName, title: string, meta: string, body: ReactNode, actions: ReactNode) => (
-    <li key={k} className={`prep-card prep-${tone} ${k === recommended ? 'prep-rec' : ''} flex flex-col gap-3 p-4 sm:p-5`}>
-      <div className="flex items-start gap-3">
-        <span className="prep-icon w-10 h-10 shrink-0 rounded-xl grid place-items-center" aria-hidden><Icon name={icon} size={20} /></span>
-        <div className="min-w-0 flex-1"><h2 className="font-semibold text-base sm:text-lg leading-snug">{title}</h2><p className="text-xs text-muted">{meta}</p></div>
-      </div>
-      <div className="flex flex-wrap gap-1.5 empty:hidden"><Rec k={k} /><Seen k={k} /></div>
-      <div className="text-sm flex-1">{body}</div>
-      <div className="flex flex-wrap gap-2">{actions}</div>
-    </li>)
+  const gaps = registry.filter((x) => assess(x.id).trust === 'GAP').length
+  const verified = registry.filter((x) => assess(x.id).trust === 'VERIFIED').length
+  /** above a heading: what the tool is, and "recommended" / "opened" in words */
+  const Over = ({ k, tone, text }: { k: PrepKey; tone: string; text: string }) => (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-semibold">
+      <span className={tone}>{text}</span>
+      {k === recommended && <span className="text-primary inline-flex items-center gap-1">· <Icon name="star" size={12} />{t('m.prep.rec')}</span>}
+      {seen.has(k) && <span className="text-ok-fg inline-flex items-center gap-1">· <Icon name="check" size={12} />{t('m.prep.seen')}</span>}
+    </p>)
+  const More = ({ to, text }: { to: string; text: string }) => <NavLink to={to} className="prep-more">{text}<Icon name="next" size={15} /></NavLink>
   const tools = {
-    safety: card('safety', 'warn', 'shield', t('m.sc.prepare'), t('m.prep.sc.meta', { n: FLAG_KEYS.length }),
-      <ul className="space-y-1.5">{FLAG_KEYS.slice(0, 3).map((k) => <li key={k} className="flex items-start gap-2"><Icon name="warn" size={15} className="text-warn-fg mt-0.5 shrink-0" />{t(`m.sc.f${k}.h` as never)}</li>)}</ul>,
-      <><NavLink to="safety" className="btn-soft text-sm flex-1">{t('m.prep.sc.go', { n: FLAG_KEYS.length })}<Icon name="next" size={15} /></NavLink>
-        <a href="tel:1694" className="btn-ghost text-sm"><Icon name="phone" size={15} />{t('m.prep.sc.call')}</a></>),
-    language: card('language', 'info', 'language', t('m.prepare.lang'), t('m.prep.cu.meta', { s: situations.length, n: terms.length }),
-      <div className="card-i !p-3"><p className="text-xs text-muted">{t('m.prep.cu.term')}</p><p className="text-lg font-semibold leading-snug" lang={/[\u4e00-\u9fff]/.test(word) ? 'zh' : 'th'}>{word}</p><p className="text-sm">{t(`term.${term.n}.n` as never)}</p></div>,
-      <NavLink to="language" className="btn-soft text-sm flex-1">{t('m.prep.cu.go')}<Icon name="next" size={15} /></NavLink>),
-    sources: card('sources', 'ok', 'legal', t('m.prepare.legal'), t('m.prep.lg.meta'),
-      <div className="grid grid-cols-2 gap-2">
-        <div className="card-i !p-3"><p className="text-xl font-bold">{registry.length}</p><p className="text-xs text-muted">{t('m.prep.lg.records', { th, cn: registry.length - th })}</p></div>
-        <div className="card-i !p-3"><p className="text-xl font-bold">{verified}/{registry.length}</p><p className="text-xs text-muted">{t('m.prep.lg.verified')}</p></div></div>,
-      <NavLink to="sources" className="btn-soft text-sm flex-1">{t('m.prep.lg.go')}<Icon name="next" size={15} /></NavLink>),
+    safety: (
+      <li key="safety" className={`prep-card ${recommended === 'safety' ? 'prep-rec' : ''}`}>
+        <div className="p-5 pb-3 space-y-1"><Over k="safety" tone="text-warn-fg" text={t('m.prep.sc.over')} /><h2 className="prep-h">{t('m.prep.sc.h')}</h2></div>
+        <ol className="px-5 space-y-3">{FLAG_KEYS.slice(0, 3).map((k, i) => (
+          <li key={k} className="flex gap-3"><span className="prep-num text-warn-fg" aria-hidden>{i + 1}</span>
+            <span className="min-w-0"><span className="block font-semibold">{t(`m.sc.f${k}.h` as never)}</span><span className="block text-sm text-muted line-clamp-2">{t(`m.sc.f${k}.t` as never)}</span></span></li>))}</ol>
+        <div className="px-5 pt-3 pb-4"><More to="safety" text={t('m.prep.sc.go', { n: FLAG_KEYS.length })} /></div>
+        <a href="tel:1694" className="prep-strip prep-strip-warn"><Icon name="phone" size={18} /><span className="flex-1">{t('m.prep.sc.line')}</span><span className="text-xl font-bold tabular-nums">1694</span></a>
+      </li>),
+    language: (
+      <li key="language" className="prep-card">
+        <div className="p-5 pb-3 space-y-1"><Over k="language" tone="text-info-fg" text={t('m.prep.cu.over')} /><h2 className="prep-h">{t('m.prep.cu.h')}</h2></div>
+        <ul className="px-5 divide-y divide-line">{situations.map((k, i) => (
+          <li key={k}><NavLink to={`language?sit=${k}`} className="prep-row"><span className="prep-badge" aria-hidden>{i + 1}</span><span className="flex-1 min-w-0 font-medium">{tk('sit', `${k}.t`)}</span><Icon name="right" size={16} className="text-muted shrink-0" /></NavLink></li>))}</ul>
+        <div className="px-5 pt-3 pb-4"><More to="language" text={t('m.prep.cu.go')} /></div>
+        <div className="prep-strip prep-strip-info"><span className="text-xs font-semibold shrink-0">{t('m.prep.cu.term')}</span>
+          <span className="flex-1 min-w-0 flex flex-wrap items-baseline gap-x-2"><b className="text-base" lang={/[一-鿿]/.test(word) ? 'zh' : 'th'}>{word}</b><span className="text-sm">{t(`term.${term.n}.n` as never)}</span></span></div>
+      </li>),
+    sources: (
+      <li key="sources" className={`prep-card ${recommended === 'sources' ? 'prep-rec' : ''}`}>
+        <div className="p-5 pb-3 space-y-1"><Over k="sources" tone="text-ok-fg" text={t('m.prep.lg.over')} /><h2 className="prep-h">{t('m.prep.lg.h', { n: registry.length })}</h2>
+          <p className="text-sm text-muted">{t('m.prep.lg.gaps', { n: gaps })}</p></div>
+        <ul className="px-5 divide-y divide-line">{HUB_LAWS.map((id) => { const c = registry.find((x) => x.id === id)?.country ?? 'TH'; return (
+          <li key={id} className="prep-row"><img src={FLAGS[c]} alt={t(`geo.c.${c}` as never)} className="w-6 h-[18px] rounded-[3px] shrink-0 ring-1 ring-line object-cover" /><span className="flex-1 min-w-0 font-medium">{localText(id, 'topic')}</span></li>) })}</ul>
+        <div className="px-5 pt-3 pb-4"><More to="sources" text={t('m.prep.lg.go', { n: registry.length })} /></div>
+        <p className="prep-strip prep-strip-ok"><Icon name="legal" size={18} /><span className="flex-1">{t('m.prep.lg.verified', { n: verified, max: registry.length })}</span></p>
+      </li>),
   }
   const order: ('safety' | 'language' | 'sources')[] = recommended === 'sources' ? ['sources', 'safety', 'language'] : ['safety', 'language', 'sources']
   return (
@@ -738,24 +754,33 @@ export function PreparePage() {
       actions={<div className="min-w-[200px]" role="group" aria-label={t('m.prep.progress')}>
         <p className="flex justify-between gap-3 text-xs text-muted"><span>{t('m.prep.progress')}</span><span className="font-semibold text-ink">{t('m.prep.done', { n: done, max: PREP.length })}</span></p>
         <div className="h-1.5 mt-1 rounded-full bg-surface3 ring-1 ring-inset ring-control/40 overflow-hidden" aria-hidden><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(done / PREP.length) * 100}%` }} /></div></div>}>
-      {/* the main tool: ask right here (the question is carried to the AI page, not sent yet) */}
-      <section className="prep-card prep-ai prep-rec p-4 sm:p-6 space-y-4" aria-labelledby="prep-ai-h">
-        <div className="flex items-start gap-3">
-          <span className="prep-icon w-12 h-12 shrink-0 rounded-2xl grid place-items-center" aria-hidden><Icon name="ai" size={24} /></span>
-          <div className="min-w-0 flex-1"><h2 id="prep-ai-h" className="text-lg sm:text-xl font-bold leading-snug">{t('ai.ask.title')}</h2><p className="text-sm text-muted">{t('m.prep.ai.meta', { n: registry.length })}</p></div>
-          <div className="flex flex-col items-end gap-1.5 shrink-0"><span className="hidden sm:inline-flex"><Seen k="ask" /></span>
-            <NavLink to="ask" className="text-sm font-medium text-primary underline underline-offset-4 inline-flex items-center gap-1 min-h-[24px]">{t('m.prep.ai.open')}<Icon name="next" size={14} /></NavLink></div>
+      {/* the AI question card: the AI page's own pill (only longer); the question is carried over, not sent yet */}
+      <section className="card mo-qcard prep-ai" aria-labelledby="prep-ai-h">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+          <div className="min-w-0 space-y-1"><Over k="ask" tone="text-primary" text={t('ai.ask.title')} /><h2 id="prep-ai-h" className="prep-h">{t('m.prep.ai.h')}</h2><p className="text-sm text-muted">{t('m.prep.ai.meta', { n: registry.length })}</p></div>
+          <NavLink to="ask" className="prep-more shrink-0">{t('m.prep.ai.open')}<Icon name="next" size={15} /></NavLink>
         </div>
-        <form className="flex flex-col sm:flex-row gap-2" onSubmit={(e) => { e.preventDefault(); askNow(q) }}>
-          <label className="flex-1"><span className="sr-only">{t('m.prep.ai.label')}</span>
-            <input className="input !min-h-[48px] text-base" maxLength={600} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('m.prep.ai.ph')} /></label>
-          <button type="submit" className="btn-primary !min-h-[48px] sm:!px-6"><Icon name="ai" size={16} />{t('m.prep.ai.go')}<Icon name="next" size={16} /></button>
-        </form>
+        <label htmlFor="prep-field" className="label mo-qlabel !mb-0">{t('ai.ask.label')}</label>
+        <div className={`mo-hub${still ? '' : ' is-on'}${light ? ' is-light' : ''}`}>
+          <div className="mo-hub-pill">
+            <div className="mo-surface" aria-hidden="true"><div className="mo-aurora"><i /><i /><i /><i /></div></div>
+            <form className="mo-input" onSubmit={(e) => { e.preventDefault(); askNow(q) }} autoComplete="off">
+              <svg className="mo-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 3.5l1.7 4.8 4.8 1.7-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7L10 3.5z" /><path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" />
+              </svg>
+              <input id="prep-field" className="mo-field" type="text" value={q} maxLength={600} placeholder={t('ai.orb.ph')} spellCheck={false} enterKeyHint="send" onChange={(e) => setQ(e.target.value)} />
+              <button type="submit" className="mo-send" aria-label={t('m.prep.ai.go')} data-ready={q.trim() ? '' : undefined}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="M5.5 11.5L12 5l6.5 6.5" /></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+        <div className="mo-note"><span>{t('ai.ask.privacy')}</span><span className="shrink-0">{q.length}/600</span></div>
         <div><p className="text-xs text-muted mb-1.5">{t('ai.ask.try')}</p>
-          <ul className="flex flex-wrap gap-2">{(['ai.ask.ex1', 'ai.ask.ex2', 'ai.ask.ex3'] as const).map((k) => (
-            <li key={k}><button type="button" className="prep-chip text-left text-sm" onClick={() => askNow(t(k))}>{t(k)}</button></li>))}</ul></div>
+          <ul className="grid md:grid-cols-3 gap-1.5">{(['ai.ask.ex1', 'ai.ask.ex2', 'ai.ask.ex3'] as const).map((k) => (
+            <li key={k} className="flex"><button type="button" className="w-full text-left text-sm rounded-lg border border-control px-3 py-2 hover:bg-surface3" onClick={() => askNow(t(k))}>{t(k)}</button></li>))}</ul></div>
       </section>
-      <ul className="grid md:grid-cols-3 gap-3">{order.map((k) => tools[k])}</ul>
+      <ul className="grid md:grid-cols-3 gap-3 items-stretch">{order.map((k) => tools[k])}</ul>
     </Page>
   )
 }
