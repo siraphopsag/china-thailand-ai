@@ -122,3 +122,14 @@ describe('Prepare hub on phones (owner, 13 Oct 2026: easy to scan, easy to use, 
     expect(th('m.prep.ai.noteShort')).toContain('อย่าใส่ข้อมูลส่วนตัว')
   })
 })
+
+describe('Prepare hub on computers (owner, 13 Oct 2026: no scrolling on a computer)', () => {
+  it('is a "fit" page whose tool cards take the rest of the screen, giving way on shorter screens', () => {
+    const m = src('./pages/match.tsx'), css = src('./index.css')
+    expect(m).toContain('actions={progress} fit body="space-y-4 fit:space-y-0 fit:flex fit:flex-col fit:gap-3"')
+    expect(m).toContain('items-stretch fit:flex-1 fit:min-h-0 fit:content-start')
+    expect(css).toContain('@media (min-width: 1024px) and (min-height: 600px) and (max-height: 900px)')
+    expect(css).toContain('@media (min-width: 1024px) and (min-height: 600px) and (max-height: 780px)')
+    expect(css).toContain('.prep-laws li:nth-child(3), .prep-sits li:nth-child(4) { display: none }')
+  })
+})

@@ -501,6 +501,34 @@ a.prep-strip-warn:hover { filter: brightness(.97) }
 .prep-chev { width: 2.25rem; height: 2.25rem; flex-shrink: 0; display: grid; place-items: center; border-radius: 9999px; border: 1px solid rgb(var(--control-line)); color: rgb(var(--ink)) }
 .prep-iconlink { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 9999px; border: 1px solid rgb(var(--control-line)); color: rgb(var(--primary)) }
 @media (max-width: 767px) { .prep-strip { min-height: 48px; padding: .55rem 1rem } .prep-ai .prep-h { font-size: 1.125rem } .prep-more { min-height: 44px } .mo-hub .mo-send { width: 44px; height: 44px } }
+/* computers (the "fit" screens): the hub fits the screen without scrolling — tighter spacing first, then the least needed lines go */
+@media (min-width: 1024px) and (min-height: 600px) {
+  .mo-qcard.prep-ai { padding: 1rem 1.25rem; gap: .5rem }
+  .prep-card .p-5 { padding: 1rem 1.25rem .5rem }
+  .prep-card .pt-3.pb-4 { padding-top: .5rem; padding-bottom: .75rem }
+  .prep-row { min-height: 40px; padding: .25rem 0 }
+  .prep-strip { min-height: 44px; padding: .5rem 1.25rem }
+}
+@media (min-width: 1024px) and (min-height: 600px) and (max-height: 900px) {
+  .prep-ai .prep-meta, .prep-ai .prep-exlabel { display: none }
+  .prep-card .prep-desc { -webkit-line-clamp: 1 }
+  .prep-card ol { gap: 0 } .prep-card ol > li + li { margin-top: .5rem }
+}
+@media (min-width: 1024px) and (min-height: 600px) and (max-height: 780px) {
+  .prep-card .prep-desc, .prep-card .prep-gaps { display: none }
+  .prep-ai .prep-h, .prep-card .prep-h { font-size: 1.2rem }
+  .mo-hub-pill { height: 52px }
+  .prep-sub { display: none }
+  .mo-qcard.prep-ai { padding: .85rem 1.25rem; gap: .4rem }
+  .prep-card .p-5 { padding: .85rem 1.25rem .35rem }
+  .prep-row { min-height: 36px; padding: .15rem 0 }
+  .prep-card .pt-3.pb-4 { padding-top: .35rem; padding-bottom: .5rem }
+  .prep-strip { min-height: 40px; padding: .4rem 1.25rem }
+  .prep-num { font-size: 1.5rem }
+  .prep-ai ul button { min-height: 38px; padding-block: .3rem }
+}
+/* short and narrower computer screens: two laws and three situations (all of them are one link away) */
+@media (min-width: 1024px) and (max-width: 1279px) and (min-height: 600px) and (max-height: 780px) { .prep-laws li:nth-child(3), .prep-sits li:nth-child(4) { display: none } .prep-card .prep-h { font-size: 1.1rem } .prep-card .prep-strip { min-height: 36px; padding-block: .3rem } .prep-card .prep-strip-info > span.flex-1 { flex-wrap: nowrap; white-space: nowrap; overflow: hidden } .prep-card .prep-row { min-height: 32px } }
 /* the AI question card on the hub: the chat's own pill, only longer */
 .mo-hub { --mo-pill: color-mix(in srgb, rgb(var(--surface)) 70%, #06060b); position: relative }
 .mo-hub-pill { position: relative; height: 60px; border-radius: 999px }

@@ -755,17 +755,17 @@ export function PreparePage() {
     safety: tool('safety', 'text-warn-fg', t('m.prep.sc.over'), t('m.prep.sc.h'), null,
       <ol className="px-4 md:px-5 space-y-2 md:space-y-3">{FLAG_KEYS.slice(0, 3).map((k, i) => (
         <li key={k} className="flex gap-3 items-center md:items-start"><span className="prep-num text-warn-fg" aria-hidden>{i + 1}</span>
-          <span className="min-w-0"><span className="block font-semibold">{t(`m.sc.f${k}.h` as never)}</span><span className="hidden md:block text-sm text-muted line-clamp-2">{t(`m.sc.f${k}.t` as never)}</span></span></li>))}</ol>,
+          <span className="min-w-0"><span className="block font-semibold">{t(`m.sc.f${k}.h` as never)}</span><span className="prep-desc hidden md:line-clamp-2 text-sm text-muted">{t(`m.sc.f${k}.t` as never)}</span></span></li>))}</ol>,
       <More to="safety" text={t('m.prep.sc.go', { n: FLAG_KEYS.length })} />,
       <a href="tel:1694" className="prep-strip prep-strip-warn"><Icon name="phone" size={18} /><span className="flex-1">{t('m.prep.sc.line')}</span><span className="text-xl font-bold tabular-nums">1694</span></a>, true),
     language: tool('language', 'text-info-fg', t('m.prep.cu.over'), t('m.prep.cu.h'), null,
-      <ul className="px-4 md:px-5 divide-y divide-line">{situations.map((k, i) => (
+      <ul className="prep-sits px-4 md:px-5 divide-y divide-line">{situations.map((k, i) => (
         <li key={k}><NavLink to={`language?sit=${k}`} className="prep-row"><span className="prep-badge" aria-hidden>{i + 1}</span><span className="flex-1 min-w-0 font-medium">{tk('sit', `${k}.t`)}</span><Icon name="right" size={16} className="text-muted shrink-0" /></NavLink></li>))}</ul>,
       <More to="language" text={t('m.prep.cu.go')} />,
       <div className="prep-strip prep-strip-info"><span className="text-xs font-semibold shrink-0">{t('m.prep.cu.term')}</span>
         <span className="flex-1 min-w-0 flex flex-wrap items-baseline gap-x-2"><b className="text-base" lang={/[一-鿿]/.test(word) ? 'zh' : 'th'}>{word}</b><span className="text-sm">{t(`term.${term.n}.n` as never)}</span></span></div>),
-    sources: tool('sources', 'text-ok-fg', t('m.prep.lg.over'), t('m.prep.lg.h', { n: registry.length }), <p className="text-sm text-muted">{t('m.prep.lg.gaps', { n: gaps })}</p>,
-      <ul className="px-4 md:px-5 divide-y divide-line">{HUB_LAWS.map((id) => { const c = registry.find((x) => x.id === id)?.country ?? 'TH'; return (
+    sources: tool('sources', 'text-ok-fg', t('m.prep.lg.over'), t('m.prep.lg.h', { n: registry.length }), <p className="prep-gaps text-sm text-muted">{t('m.prep.lg.gaps', { n: gaps })}</p>,
+      <ul className="prep-laws px-4 md:px-5 divide-y divide-line">{HUB_LAWS.map((id) => { const c = registry.find((x) => x.id === id)?.country ?? 'TH'; return (
         <li key={id} className="prep-row"><img src={FLAGS[c]} alt={t(`geo.c.${c}` as never)} className="w-6 h-[18px] rounded-[3px] shrink-0 ring-1 ring-line object-cover" /><span className="flex-1 min-w-0 font-medium">{localText(id, 'topic')}</span></li>) })}</ul>,
       <More to="sources" text={t('m.prep.lg.go', { n: registry.length })} />,
       <p className="prep-strip prep-strip-ok"><Icon name="legal" size={18} /><span className="flex-1">{t('m.prep.lg.verified', { n: verified, max: registry.length })}</span></p>),
@@ -777,11 +777,11 @@ export function PreparePage() {
         <p className="flex justify-between gap-3 text-xs text-muted"><span>{t('m.prep.progress')}</span><span className="font-semibold text-ink">{t('m.prep.done', { n: done, max: PREP.length })}</span></p>
         <div className="h-1.5 mt-1 rounded-full bg-surface3 ring-1 ring-inset ring-control/40 overflow-hidden" aria-hidden><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(done / PREP.length) * 100}%` }} /></div></div>
   return (
-    <Page title={t('m.prepare.title')} sub={narrow ? undefined : t('m.prep.sub')} actions={progress}>
+    <Page title={t('m.prepare.title')} sub={narrow ? undefined : <span className="prep-sub">{t('m.prep.sub')}</span>} actions={progress} fit body="space-y-4 fit:space-y-0 fit:flex fit:flex-col fit:gap-3">
       {/* the AI question card: the AI page's own pill (only longer); the question is carried over, not sent yet */}
       <section className="card mo-qcard prep-ai" aria-labelledby="prep-ai-h">
         <div className="flex items-start justify-between gap-x-4 gap-y-1">
-          <div className="min-w-0 space-y-1"><Over k="ask" tone="text-primary" text={t('ai.ask.title')} /><h2 id="prep-ai-h" className="prep-h">{t('m.prep.ai.h')}</h2><p className="hidden md:block text-sm text-muted">{t('m.prep.ai.meta', { n: registry.length })}</p></div>
+          <div className="min-w-0 space-y-1"><Over k="ask" tone="text-primary" text={t('ai.ask.title')} /><h2 id="prep-ai-h" className="prep-h">{t('m.prep.ai.h')}</h2><p className="prep-meta hidden md:block text-sm text-muted">{t('m.prep.ai.meta', { n: registry.length })}</p></div>
           {narrow
             ? <NavLink to="ask" className="prep-iconlink shrink-0" aria-label={t('m.prep.ai.open')}><Icon name="next" size={18} /></NavLink>
             : <NavLink to="ask" className="prep-more shrink-0">{t('m.prep.ai.open')}<Icon name="next" size={15} /></NavLink>}
@@ -803,11 +803,11 @@ export function PreparePage() {
         </div>
         <div className="mo-note"><span>{t(narrow ? 'm.prep.ai.noteShort' : 'ai.ask.privacy')}</span><span className="shrink-0">{q.length}/600</span></div>
         {/* examples: three in a row on computers; one sideways-scrolling line on phones */}
-        <div><p className="sr-only md:not-sr-only text-xs text-muted md:mb-1.5">{t('ai.ask.try')}</p>
+        <div><p className="prep-exlabel sr-only md:not-sr-only text-xs text-muted md:mb-1.5">{t('ai.ask.try')}</p>
           <ul className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4 snap-x md:grid md:grid-cols-3 md:overflow-visible md:mx-0 md:px-0" aria-label={t('ai.ask.try')}>{(['ai.ask.ex1', 'ai.ask.ex2', 'ai.ask.ex3'] as const).map((k) => (
             <li key={k} className="flex shrink-0 snap-start md:shrink"><button type="button" className="w-full text-left text-sm border border-control px-3 py-2 min-h-[44px] hover:bg-surface3 whitespace-nowrap rounded-full md:whitespace-normal md:rounded-lg" onClick={() => askNow(t(k))}>{t(k)}</button></li>))}</ul></div>
       </section>
-      <ul className="grid md:grid-cols-3 gap-2 md:gap-3 items-stretch">{order.map((k) => tools[k])}</ul>
+      <ul className="grid md:grid-cols-3 gap-2 md:gap-3 items-stretch fit:flex-1 fit:min-h-0 fit:content-start">{order.map((k) => tools[k])}</ul>
     </Page>
   )
 }
