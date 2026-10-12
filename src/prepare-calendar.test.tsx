@@ -49,7 +49,7 @@ describe('Prepare hub (owner, 13 Oct 2026: it looked like a filing cabinet, so p
     const seeker = html(<PreparePage />, { ...seedState(), role: 'seeker' })
     const employer = html(<PreparePage />, { ...seedState(), role: 'employer' })
     // the first card's label colour: warning = how to spot a job scam, ok = the legal information
-    const first = (p: string) => p.slice(p.indexOf('<ul class="grid md:grid-cols-3 gap-3 items-stretch')).match(/<span class="(text-[a-z]+-fg)">/)?.[1]
+    const first = (p: string) => p.slice(p.indexOf('<ul class="grid md:grid-cols-3 gap-2 md:gap-3 items-stretch')).match(/<span class="(text-[a-z]+-fg)">/)?.[1]
     expect(first(seeker)).toBe('text-warn-fg')
     expect(first(employer)).toBe('text-ok-fg')
     expect(seeker).toContain(th('m.prep.rec'))
@@ -103,5 +103,22 @@ describe('Calendar: the days people plan around (owner, 13 Oct 2026)', () => {
       expect(v.length, k).toBe(3)
       expect(src('./index.css'), k).toContain(`.cal-${k}`)
     }
+  })
+})
+
+describe('Prepare hub on phones (owner, 13 Oct 2026: easy to scan, easy to use, little scrolling)', () => {
+  it('tool cards fold to one-row headings (an accordion; the recommended one starts open; the hotline stays visible)', () => {
+    const m = src('./pages/match.tsx')
+    expect(m).toContain("const m = window.matchMedia('(max-width: 767px)')")
+    expect(m).toContain('aria-expanded={open} aria-controls={`prep-${k}-body`}')
+    expect(m).toContain('const openTool = openState === undefined ? recommended : openState')
+    expect(m).toContain('{(open || stripAlways) && strip}')
+    expect(src('./index.css')).toContain('.prep-toggle { width: 100%; display: flex; align-items: center; gap: .75rem; min-height: 56px')
+  })
+  it('the AI card keeps the pill and the examples (one sideways line), with a short privacy note', () => {
+    const m = src('./pages/match.tsx')
+    expect(m).toContain("t(narrow ? 'm.prep.ai.noteShort' : 'ai.ask.privacy')")
+    expect(m).toContain('flex gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4 snap-x md:grid')
+    expect(th('m.prep.ai.noteShort')).toContain('อย่าใส่ข้อมูลส่วนตัว')
   })
 })

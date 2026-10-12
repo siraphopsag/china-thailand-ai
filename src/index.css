@@ -494,6 +494,13 @@ a.prep-row:hover span.flex-1 { text-decoration: underline; text-underline-offset
 a.prep-strip-warn:hover { filter: brightness(.97) }
 .prep-strip-info { background: rgb(var(--info-bg)); color: rgb(var(--info-fg)); border-color: rgb(var(--info-line)) }
 .prep-strip-ok { background: rgb(var(--ok-bg)); color: rgb(var(--ok-fg)); border-color: rgb(var(--ok-line)); font-size: .875rem }
+/* phones: a tool card folds to one row; the whole row is the button (≥ 56 px tall) */
+.prep-toggle { width: 100%; display: flex; align-items: center; gap: .75rem; min-height: 56px; padding: .85rem 1rem; text-align: left }
+.prep-toggle .prep-h { font-size: 1.125rem }
+.prep-toggle:focus-visible { outline-offset: -3px }
+.prep-chev { width: 2.25rem; height: 2.25rem; flex-shrink: 0; display: grid; place-items: center; border-radius: 9999px; border: 1px solid rgb(var(--control-line)); color: rgb(var(--ink)) }
+.prep-iconlink { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 9999px; border: 1px solid rgb(var(--control-line)); color: rgb(var(--primary)) }
+@media (max-width: 767px) { .prep-strip { min-height: 48px; padding: .55rem 1rem } .prep-ai .prep-h { font-size: 1.125rem } .prep-more { min-height: 44px } .mo-hub .mo-send { width: 44px; height: 44px } }
 /* the AI question card on the hub: the chat's own pill, only longer */
 .mo-hub { --mo-pill: color-mix(in srgb, rgb(var(--surface)) 70%, #06060b); position: relative }
 .mo-hub-pill { position: relative; height: 60px; border-radius: 999px }

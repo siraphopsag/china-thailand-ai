@@ -224,6 +224,7 @@ export const match = {
   'm.prep.ai.ph': ['พิมพ์คำถามเรื่องใบอนุญาตทำงาน วีซ่า หรือการจ้างงานข้ามชาติ', '输入关于工作许可、签证或跨国雇佣的问题', 'Ask about work permits, visas or hiring across borders'],
   'm.prep.ai.open': ['เปิดหน้าผู้ช่วย', '打开助手', 'Open the assistant'],
   'm.prep.ai.go': ['ถาม AI', '问 AI', 'Ask the AI'],
+  'm.prep.ai.noteShort': ['คำถามส่งไปให้ AI ภายนอก อย่าใส่ข้อมูลส่วนตัว', '问题会发送给外部 AI，请勿填写个人信息', 'Questions go to an outside AI — no personal data'],
   // round 2 (owner, 13 Oct 2026): headings that say what you get
   'm.prep.ai.h': ['มีคำถามเรื่องใบอนุญาตหรือวีซ่า ถามได้เลย', '有关于工作许可或签证的问题？直接问吧', 'Questions about permits or visas? Ask here'],
   'm.prep.sc.over': ['ก่อนรับงาน', '接受工作之前', 'Before you take a job'],
