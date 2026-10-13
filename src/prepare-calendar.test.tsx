@@ -141,6 +141,6 @@ describe('AI chat on phones (owner, 13 Oct 2026: the orb covered the messages)',
     expect(m).toContain('if (th) th.scrollTop = th.scrollHeight') // one instant scroll before measuring
     expect(m).toContain('if (!launching.current && (phaseRef.current') // no smooth scroll racing the take-off
     expect(m).toContain('top = 72, bottom = window.innerHeight - 104') // between the header and the menu bar
-    expect(src('./index.css')).toContain('.mo-wrap:not(.is-empty) .mo-ex-card { display: none }')
+    expect(src('./index.css')).toContain('.mo-wrap:not(.is-empty) .mo-ex-card > div { flex-direction: row; overflow-x: auto') // the examples stay, as one sideways line
   })
 })

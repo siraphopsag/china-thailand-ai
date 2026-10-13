@@ -744,7 +744,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
         pop0 = still!.width / orbPx
       }
       mover.style.left = ox + 'px'; mover.style.top = oy + 'px'
-      status.style.left = ox + 'px'; status.style.top = oy + orbPx * 0.42 + 'px'
+      status.style.left = ox + 'px'; status.style.top = oy + orbPx * (phone ? 0.36 : 0.42) + 'px' // phones: the words sit closer under the smaller orb
       return { pw: sl.width, ph: Math.round(sl.height) || PILL_H, cw, sx: sl.left - w.left + sl.width / 2 - ox, sy: sl.top - w.top + sl.height / 2 - oy, lift, dir: -1, ax: 0, ay: 0, rest, pop0 }
     }
     const rt = createRuntime({
