@@ -65,6 +65,13 @@ export const ai = {
   'ai.ask.official': ['เว็บไซต์หน่วยงาน', '官方机构网站', 'Agency website'],
   'ai.ask.note': ['คำตอบจาก AI อาจผิดพลาดได้ และไม่ใช่คำปรึกษาทางกฎหมาย โปรดตรวจกับหน่วยงานหรือทนายความก่อนตัดสินใจ', 'AI 的回答可能有误，且并非法律意见。做决定前请向相关机构或律师核实。', 'AI answers can be wrong and are not legal advice. Check with the authority or a lawyer before you decide.'],
   'ai.ask.signin': ['เข้าสู่ระบบเพื่อใช้ผู้ช่วย AI (ฟรี วันละ 20 คำถาม)', '登录后即可使用 AI 助手（免费，每天 20 个问题）', 'Sign in to use the AI assistant (free, 20 questions a day)'],
+  // sending while the AI cannot answer (owner, 13 Oct 2026: signed out, the box looked frozen)
+  'ai.gate.h': ['เข้าสู่ระบบก่อนใช้ผู้ช่วย AI', '请先登录再使用 AI 助手', 'Sign in first to use the AI assistant'],
+  'ai.gate.p': ['ฟรี วันละ 20 คำถาม คำถามที่พิมพ์ไว้จะรออยู่หลังเข้าสู่ระบบ', '免费，每天 20 个问题。登录后，你输入的问题仍会保留。', 'Free, 20 questions a day. The question you typed will be waiting after you sign in.'],
+  'ai.gate.ph': ['พิมพ์คำถามไว้ได้เลย แล้วเข้าสู่ระบบตอนส่ง', '可以先输入问题，发送时再登录', 'Type your question — you sign in when you send it'],
+  'ai.gate.off': ['ผู้ช่วย AI ใช้ได้เฉพาะเว็บหลักที่มีระบบบัญชี ส่วนอื่นของเวอร์ชันนี้ใช้งานได้ตามปกติ', 'AI 助手仅在设有账号系统的主站可用；本版本的其他功能可正常使用。', 'The AI assistant works only on the main site, which has accounts. Everything else here works as usual.'],
+  'ai.gate.down': ['ผู้ช่วย AI ใช้ไม่ได้ชั่วคราว เพราะระบบบัญชีไม่ตอบ ลองใหม่ภายหลัง ส่วนอื่นของเว็บใช้งานได้ตามปกติ', 'AI 助手暂时无法使用（账号服务无响应），请稍后再试。网站其他功能可正常使用。', 'The AI assistant is unavailable for now because sign-in is not responding — please try again later. The rest of the site works as usual.'],
+  'ai.gate.hub': ['ต้องเข้าสู่ระบบก่อนส่งคำถาม (ฟรี วันละ 20 คำถาม)', '发送问题前需先登录（免费，每天 20 个问题）', 'Sign in before sending a question (free, 20 a day)'],
   // the thinking orb (owner, Oct 2026): the status words while the AI works
   'ai.orb.ph': ['ถามเรื่องกฎหมายการทำงานไทย–จีน…', '询问在泰中两国间工作的法律问题…', 'Ask about working between Thailand and China…'],
   'ai.orb.l1': ['กำลังคิด', '思考中', 'Thinking'],

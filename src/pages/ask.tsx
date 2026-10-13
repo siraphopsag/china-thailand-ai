@@ -4,10 +4,10 @@
  *  B) AskPage: the legal Q&A assistant — one question, an answer grounded in the site's legal records, the records it used, a next step.
  * AI text is shown as plain text (React escapes it). Every AI result says it can be wrong and is not legal advice.
  */
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { messages } from '../locales'
-import { useAuth } from '../auth'
+import { useAuth, type AuthResult } from '../auth'
 import { NavLink } from '../store'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
@@ -15,7 +15,7 @@ import { getReg, regText } from '../data/regulations'
 import { aiAsk } from '../ai/client'
 import { useLite } from '../theme'
 import MorphChat, { RevealText, type ChatTurn, type OrbCopy } from '../components/morph-orb'
-import { takeAskPrefill } from '../prepare'
+import { setAskPrefill, takeAskPrefill } from '../prepare'
 import { MAX_HISTORY, MAX_QUESTION, type AiAnswer, type AiCheck, type AiResponse, type AskTurn } from '../ai/spec'
 import { Page } from './match'
 
@@ -83,6 +83,36 @@ function StageLawRef({ id }: { id: string }) {
  */
 type Res = AiResponse<AiAnswer>
 const DEMO_ANSWER: AiAnswer = { grounding: 'grounded', lawIds: ['th-labour', 'cn-immigration'], nextStep: 'ตรวจกับกรมการจัดหางาน หรือสายด่วน 1694', answer: 'คนจีนที่จะทำงานในไทยต้องได้รับอนุญาตให้ทำงาน (Work Permit) และมีสถานะการเข้าเมืองที่ตรงกับงาน\n• นายจ้างเป็นผู้ยื่นขอใบอนุญาตทำงาน\n• บางอาชีพสงวนไว้สำหรับคนไทย\nข้อมูลนี้ยังไม่ได้ตรวจโดยนักกฎหมาย' }
+/** sending while the AI cannot answer: why, and the way in — the question you typed waits for you after signing in (owner, 13 Oct 2026) */
+function AskGate({ why, question, focus }: { why: 'signin' | 'off' | 'down'; question: string; focus: boolean }) {
+  const { t } = useI18n()
+  const { signInDemo } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<AuthResult | null>(null)
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    // phones: the whole box above the menu bar (short screens put its buttons under it)
+    if (window.matchMedia('(max-width: 1023px)').matches) { const d = el.getBoundingClientRect().bottom - (window.innerHeight - 104); if (d > 0) window.scrollBy({ top: d + 8, behavior: 'instant' as ScrollBehavior }) }
+    if (focus) el.querySelector<HTMLElement>('a, button')?.focus({ preventScroll: true })
+  }, [focus])
+  if (why !== 'signin') return <div role="alert" className="mo-gate" ref={box}><p className="flex gap-2"><Icon name="info" size={16} className="shrink-0 mt-0.5" />{t(why === 'off' ? 'ai.gate.off' : 'ai.gate.down')}</p></div>
+  return (
+    <div role="alert" className="mo-gate" ref={box}>
+      <p className="mo-gate-h"><Icon name="lock" size={16} className="shrink-0" />{t('ai.gate.h')}</p>
+      <p>{t('ai.gate.p')}</p>
+      <div className="flex flex-wrap gap-2">
+        <NavLink to="login?next=ask" onNavigate={() => setAskPrefill(question)} className="btn-primary !min-h-[44px]"><Icon name="login" size={16} />{t('m.login')}</NavLink>
+        <button type="button" className="btn-ghost !min-h-[44px]" disabled={busy}
+          onClick={async () => { setBusy(true); setErr(null); const r = await signInDemo(); if (r !== 'ok') { setErr(r); setBusy(false) } }}>
+          <Icon name="user" size={16} />{busy ? t('m.demo.busy') : t('m.demo.try')}</button>
+      </div>
+      {err && <p className="text-danger-fg">{t(err === 'demoOff' ? 'm.demo.off' : err === 'unavailable' ? 'm.auth.fail' : 'm.lg.err.error')}</p>}
+    </div>
+  )
+}
+
 export function AskPage() {
   const { t, lang } = useI18n()
   const { status, online } = useAuth()
@@ -95,10 +125,20 @@ export function AskPage() {
   // local development only (?orbdemo, or ?orbdemo=fail): try the chat without an account or an AI key — not in the built site
   const demo = import.meta.env.DEV && typeof location !== 'undefined' ? new URLSearchParams(location.search).get('orbdemo') : null
   const canUse = (status === 'signedIn' && online !== false) || demo !== null
+  // why it cannot answer (owner, 13 Oct 2026: signed out, the box just froze): you can still type, and sending says why, right
+  // under the pill — sign in (the question waits for you), try a demo account, or the reason there is nothing to do here
+  const why = canUse || status === 'loading' ? null : status === 'off' ? 'off' : online === false ? 'down' : 'signin'
+  const [tried, setTried] = useState(0)
+  const [typed, setTyped] = useState('')
+  const [sent, setSent] = useState(false) // the gate takes the focus only after a real send (not when it opens on arrival)
+  const opened = useRef(false)
+  useEffect(() => { // came from the Prepare hub with a question while signed out: show the way in at once
+    if (why === 'signin' && prefill && !opened.current) { opened.current = true; setTyped(prefill); setTried(1) }
+  }, [why, prefill])
   const copy: OrbCopy = useMemo(() => ({
-    placeholder: t('ai.orb.ph'), field: t('ai.orb.more'), send: t('ai.ask.send'), answerTitle: t('ai.ask.answer'), reset: t('ai.ask.again'), done: t('ai.orb.done'),
+    placeholder: t(why === 'signin' ? 'ai.gate.ph' : 'ai.orb.ph'), field: t('ai.orb.more'), send: t('ai.ask.send'), answerTitle: t('ai.ask.answer'), reset: t('ai.ask.again'), done: t('ai.orb.done'),
     labels: [t('ai.orb.l1'), t('ai.orb.l2'), t('ai.orb.l3'), t('ai.orb.l4')],
-  }), [t])
+  }), [t, why])
   const onAsk = async (text: string) => {
     const id = nextId.current++
     const history: AskTurn[] = turnsRef.current.filter((x) => x.res?.ok).slice(-MAX_HISTORY).map((x) => ({ q: x.q, a: x.res && x.res.ok ? x.res.result.answer : '' }))
@@ -128,8 +168,10 @@ export function AskPage() {
   }
   return (
     <Page title={t('ai.ask.title')} sub={t('ai.ask.sub')}>
-      {!canUse && <Warn tone="info">{t('ai.ask.signin')} {status === 'signedOut' && <NavLink to="login" className="font-semibold text-primary underline underline-offset-4">{t('m.login')}</NavLink>}</Warn>}
-      <MorphChat<Res> copy={copy} turns={turns} onAsk={onAsk} renderAnswer={renderAnswer} disabled={!canUse} maxLength={MAX_QUESTION} lite={lite}
+      {why && <Warn tone="info">{t(why === 'signin' ? 'ai.ask.signin' : why === 'off' ? 'ai.gate.off' : 'ai.gate.down')} {why === 'signin' && <NavLink to="login?next=ask" onNavigate={() => setAskPrefill(typed)} className="font-semibold text-primary underline underline-offset-4">{t('m.login')}</NavLink>}</Warn>}
+      <MorphChat<Res> copy={copy} turns={turns} onAsk={onAsk} renderAnswer={renderAnswer} disabled={status === 'loading' && demo === null} maxLength={MAX_QUESTION} lite={lite}
+        onBlocked={why ? (text) => { setTyped(text); setSent(true); setTried((n) => n + 1) } : undefined}
+        gate={why && tried > 0 ? <AskGate key={tried} why={why} question={typed} focus={sent} /> : undefined}
         label={t('ai.ask.label')} note={t('ai.ask.privacy')} idleHint={t('ai.orb.idle')} idleChips={[t('ai.orb.c1'), t('ai.orb.c2'), t('ai.orb.c3')]}
         examples={[t('ai.ask.ex1'), t('ai.ask.ex2'), t('ai.ask.ex3')]} examplesTitle={t('ai.ask.try')}
         meta={leftN !== null ? t('ai.left', { n: leftN }) : undefined} initialValue={prefill} />

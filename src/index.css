@@ -675,6 +675,12 @@ a.prep-strip-warn:hover { filter: brightness(.97) }
 /* the question card */
 .mo-qcard { display: flex; flex-direction: column; gap: .6rem; min-width: 0 }
 .mo-slot { height: 60px; flex-shrink: 0 }
+/* sending while the AI cannot answer: why, and the way in, right under the pill (owner, 13 Oct 2026) */
+.mo-gate { display: flex; flex-direction: column; gap: .5rem; padding: .7rem .85rem; border: 1px solid rgb(var(--info-line)); border-radius: .85rem; background: rgb(var(--info-bg)); color: rgb(var(--info-fg)); font-size: .875rem; line-height: 1.45; animation: mo-gate-in .32s ease-out }
+.mo-gate-h { display: flex; align-items: center; gap: .5rem; font-weight: 600; font-size: .95rem }
+@keyframes mo-gate-in { 0% { transform: translateX(0) } 25% { transform: translateX(-5px) } 55% { transform: translateX(4px) } 100% { transform: translateX(0) } }
+@media (prefers-reduced-motion: reduce) { .mo-gate { animation: none } }
+.prep-gate { display: flex; gap: .35rem; font-weight: 600; color: rgb(var(--info-fg)) }
 .mo-note { display: flex; justify-content: space-between; gap: 8px; font-size: .75rem; color: rgb(var(--muted)) }
 .mo-ex-card { display: none }
 @media (max-width: 1023px) {
@@ -685,11 +691,13 @@ a.prep-strip-warn:hover { filter: brightness(.97) }
   .mo-note { font-size: .7rem }
   .mo-ex-card { display: block; padding: 10px 12px; flex-shrink: 0 }
   /* owner, 13 Oct 2026: once chatting, the examples stay but fold to one sideways-scrolling line, leaving room for the orb */
-  .mo-wrap:not(.is-empty) .mo-ex-card { padding: 6px 10px }
-  .mo-wrap:not(.is-empty) .mo-ex-card > p { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
-  .mo-wrap:not(.is-empty) .mo-ex-card > div { flex-direction: row; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity }
-  .mo-wrap:not(.is-empty) .mo-ex-card > div::-webkit-scrollbar { display: none }
-  .mo-wrap:not(.is-empty) .mo-ex-row { flex-shrink: 0; white-space: nowrap; border-radius: 9999px; min-height: 40px; scroll-snap-align: start }
+  /* …and the same while the sign-in box shows under the pill, so the stage keeps its room */
+  .mo-wrap:not(.is-empty) .mo-ex-card, .mo-wrap.has-gate .mo-ex-card { padding: 6px 10px }
+  .mo-wrap.has-gate .mo-root { min-height: 168px }
+  .mo-wrap:not(.is-empty) .mo-ex-card > p, .mo-wrap.has-gate .mo-ex-card > p { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+  .mo-wrap:not(.is-empty) .mo-ex-card > div, .mo-wrap.has-gate .mo-ex-card > div { flex-direction: row; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity }
+  .mo-wrap:not(.is-empty) .mo-ex-card > div::-webkit-scrollbar, .mo-wrap.has-gate .mo-ex-card > div::-webkit-scrollbar { display: none }
+  .mo-wrap:not(.is-empty) .mo-ex-row, .mo-wrap.has-gate .mo-ex-row { flex-shrink: 0; white-space: nowrap; border-radius: 9999px; min-height: 40px; scroll-snap-align: start }
   .mo-ex-row { text-align: left; font-size: .85rem; line-height: 1.35; padding: 8px 12px; border-radius: 10px; border: 1px solid rgb(var(--control-line)) }
   .mo-ex-row:active { background: rgb(var(--surface3)) }
   .mo-ex-row:disabled { opacity: .6 }

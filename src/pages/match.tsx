@@ -716,6 +716,7 @@ export function PreparePage() {
   const light = useTheme().theme === 'light'
   const [still] = useState(() => typeof window === 'undefined' || motionOff())
   const recommended: PrepKey = st.role === 'employer' ? 'sources' : 'safety'
+  const { status } = useAuth()
   const askNow = (text: string) => { setAskPrefill(text.trim()); go('ask') }
   const narrow = useNarrow()
   // phones: which tool card is open (undefined = the one recommended for your role; null = all closed)
@@ -801,7 +802,10 @@ export function PreparePage() {
             </form>
           </div>
         </div>
-        <div className="mo-note"><span>{t(narrow ? 'm.prep.ai.noteShort' : 'ai.ask.privacy')}</span><span className="shrink-0">{q.length}/600</span></div>
+        {/* signed out (owner, 13 Oct 2026): say so before anyone sends — in place of the privacy line, which the AI page shows again */}
+        <div className="mo-note">{status === 'signedOut' || status === 'off'
+          ? <span className="prep-gate"><Icon name="lock" size={13} className="shrink-0 mt-px" />{t(status === 'off' ? 'ai.gate.off' : 'ai.gate.hub')}</span>
+          : <span>{t(narrow ? 'm.prep.ai.noteShort' : 'ai.ask.privacy')}</span>}<span className="shrink-0">{q.length}/600</span></div>
         {/* examples: three in a row on computers; one sideways-scrolling line on phones */}
         <div><p className="prep-exlabel sr-only md:not-sr-only text-xs text-muted md:mb-1.5">{t('ai.ask.try')}</p>
           <ul className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4 snap-x md:grid md:grid-cols-3 md:overflow-visible md:mx-0 md:px-0" aria-label={t('ai.ask.try')}>{(['ai.ask.ex1', 'ai.ask.ex2', 'ai.ask.ex3'] as const).map((k) => (

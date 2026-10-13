@@ -5,7 +5,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { LanguageProvider } from './i18n'
 import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
-import { AuthProvider } from './auth'
+import { AuthContext, AuthProvider, type AuthCtx } from './auth'
+import { AskPage } from './pages/ask'
 import { PreparePage } from './pages/match'
 import { calendarEvents, KINDS_FOR } from './domain/match/calendar'
 import { seedState } from './domain/match/seed'
@@ -141,6 +142,40 @@ describe('AI chat on phones (owner, 13 Oct 2026: the orb covered the messages)',
     expect(m).toContain('if (th) th.scrollTop = th.scrollHeight') // one instant scroll before measuring
     expect(m).toContain('if (!launching.current && (phaseRef.current') // no smooth scroll racing the take-off
     expect(m).toContain('top = 72, bottom = window.innerHeight - 104') // between the header and the menu bar
-    expect(src('./index.css')).toContain('.mo-wrap:not(.is-empty) .mo-ex-card > div { flex-direction: row; overflow-x: auto') // the examples stay, as one sideways line
+    expect(src('./index.css')).toContain('.mo-wrap:not(.is-empty) .mo-ex-card > div, .mo-wrap.has-gate .mo-ex-card > div { flex-direction: row; overflow-x: auto') // the examples stay, as one sideways line (also while the sign-in box shows)
+  })
+})
+
+describe('AI chat when signed out (owner, 13 Oct 2026: it looked frozen, nothing said to sign in)', () => {
+  const ok = async () => 'ok' as const
+  const state = (o: Partial<AuthCtx>): AuthCtx => ({ status: 'signedOut', user: null, isAdmin: false, online: true, recovery: false,
+    signInGoogle: ok, signInGoogleToken: ok, signInDemo: ok, signInEmail: ok, signUp: ok, sendReset: ok, updatePassword: ok, signOut: async () => {}, deleteAccount: async () => true, ...o })
+  const page = (auth: AuthCtx, node: ReactNode = <AskPage />) => {
+    const g = globalThis as { document?: unknown }
+    const had = 'document' in g, prev = g.document
+    g.document = { documentElement: { getAttribute: () => null, setAttribute: () => {}, removeAttribute: () => {}, lang: 'th' } }
+    try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><AuthContext.Provider value={auth}><MatchProvider initial={{ ...seedState(), role: 'seeker' }}>{node}</MatchProvider></AuthContext.Provider></LanguageProvider></ThemeProvider>) }
+    finally { if (had) g.document = prev; else delete g.document }
+  }
+  it('the box still takes a question (not greyed out), says so in its placeholder, and the notice links to sign-in and back', () => {
+    const p = page(state({}))
+    expect(p).toContain(`placeholder="${th('ai.gate.ph')}"`)
+    expect(p).not.toMatch(/id="mo-field"[^>]*disabled/)
+    expect(p).toContain('href="/login?next=ask"')
+    expect(page(state({ status: 'signedIn', user: { id: 'u', email: 'a@example.com', name: 'A', avatar: null } }))).not.toContain(th('ai.ask.signin'))
+  })
+  it('sending shows why right under the pill — sign in (the question waits) or a demo account; other cases say what is wrong', () => {
+    const a = src('./pages/ask.tsx'), m = src('./components/morph-orb.tsx')
+    expect(m).toContain('if (propsRef.current.onBlocked) { propsRef.current.onBlocked(text); return }') // no flight, no silent nothing
+    expect(m).toContain('{props.gate}')
+    expect(a).toContain('onNavigate={() => setAskPrefill(question)}') // the typed question is back after signing in
+    expect(a).toContain("const why = canUse || status === 'loading' ? null : status === 'off' ? 'off' : online === false ? 'down' : 'signin'")
+    expect(page(state({ status: 'off', online: false }))).toContain(th('ai.gate.off'))
+    expect(page(state({ online: false }))).toContain(th('ai.gate.down'))
+    for (const k of ['h', 'p', 'ph', 'off', 'down', 'hub']) expect((messages[`ai.gate.${k}` as keyof typeof messages] as readonly string[]).length, k).toBe(3)
+  })
+  it('the Prepare hub says it before anyone sends', () => {
+    expect(page(state({}), <PreparePage />)).toContain(th('ai.gate.hub'))
+    expect(page(state({ status: 'signedIn', user: { id: 'u', email: 'a@example.com', name: 'A', avatar: null } }), <PreparePage />)).not.toContain(th('ai.gate.hub'))
   })
 })

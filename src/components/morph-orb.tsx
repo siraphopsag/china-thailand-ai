@@ -676,6 +676,10 @@ export interface MorphChatProps<R> {
   lite?: boolean
   /** a question to start with in the box (from the Prepare hub); not sent until the visitor presses send */
   initialValue?: string
+  /** the chat cannot answer yet (e.g. signed out): the box still takes a question, and sending calls this instead of flying */
+  onBlocked?: (text: string) => void
+  /** what to do about it, shown right under the pill (e.g. sign in) */
+  gate?: ReactNode
 }
 
 export default function MorphChat<R>(props: MorphChatProps<R>) {
@@ -805,6 +809,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
   const ask = (text: string) => {
     const rt = rtRef.current
     if (!rt || rt.busy() || phaseRef.current !== 'idle' || propsRef.current.disabled) return
+    if (propsRef.current.onBlocked) { propsRef.current.onBlocked(text); return }
     const id = nextId.current++
     setFlight(id)
     launching.current = true
@@ -846,7 +851,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
   const exampleButtons = (cls: string) => props.examples.map((q) => <button key={q} type="button" disabled={disabled} onClick={() => pick(q)} className={cls}>{q}</button>)
 
   return (
-    <div className={`mo-wrap${still ? '' : ' is-on'}${light ? ' is-light' : ''}${empty ? ' is-empty' : ''}`} ref={wrapRef} data-phase={phase}>
+    <div className={`mo-wrap${still ? '' : ' is-on'}${light ? ' is-light' : ''}${empty ? ' is-empty' : ''}${props.gate ? ' has-gate' : ''}`} ref={wrapRef} data-phase={phase}>
       {/* the conversation */}
       <section className="mo-root" aria-label={props.label}>
         <div className="mo-bg" aria-hidden="true" />
@@ -871,6 +876,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
       <section className="card mo-qcard">
         <label htmlFor="mo-field" className="label mo-qlabel">{props.label}</label>
         <div className="mo-slot" ref={slotRef} />
+        {props.gate}
         <div className="mo-note"><span>{props.note}</span><span className="shrink-0">{value.length}/{maxLength}</span></div>
         <div className="mo-ex-list"><p className="text-xs text-muted mb-1.5">{props.examplesTitle}</p>
           <div className="flex flex-col gap-1.5">{exampleButtons('text-left text-sm rounded-lg border border-control px-3 py-2 hover:bg-surface3 disabled:opacity-60')}</div></div>

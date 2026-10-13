@@ -39,11 +39,11 @@ describe('AI on screen', () => {
     expect(out).toContain('วันนี้ใช้ AI ได้อีก 7 ครั้ง')
     expect(out.indexOf('สูง')).toBeLessThan(out.indexOf('ต่ำ'))
   })
-  it('the assistant asks visitors to sign in and keeps the box closed until then', () => {
+  it('without accounts (local demo, the China mirror) the assistant says it works on the main site; the box is not greyed out (owner, 13 Oct 2026)', () => {
     const out = html(<AskPage />)
     expect(out).toContain('ผู้ช่วยกฎหมาย AI')
-    expect(out).toContain('เข้าสู่ระบบเพื่อใช้ผู้ช่วย AI')
-    expect(out).toMatch(/<input[^>]*class="mo-field"[^>]*disabled/) // the pill of the thinking-orb stage
+    expect(out).toContain('ผู้ช่วย AI ใช้ได้เฉพาะเว็บหลัก')
+    expect(out).not.toMatch(/<input[^>]*class="mo-field"[^>]*disabled/) // the pill of the thinking-orb stage: sending explains why
     expect(out).toContain('mo-root') // the conversation stage
     expect(out).toContain('ถามเรื่องกฎหมายการทำงานไทย') // the empty-chat hint and placeholder
     expect(out).toContain('คนจีนจะมาทำงานในไทยต้องมีใบอนุญาตอะไรบ้าง') // the examples
