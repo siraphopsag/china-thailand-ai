@@ -734,7 +734,8 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
         cw = Math.max(220, t.width - 32)
       } else { ox = w.width / 2; oy = 200 }
       const orbPx = canvas.getBoundingClientRect().width || ORB_PX // the working orb's size on screen (smaller on phones)
-      const rest = !!still && still.width > 0 && !!pend
+      const phone = window.matchMedia('(max-width: 1023px)').matches
+      const rest = !phone && !!still && still.width > 0 && !!pend
       let pop0 = 1
       if (rest && pend) {
         const p = pend.getBoundingClientRect()
@@ -790,7 +791,7 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
       if (!w) return
       if (!window.matchMedia('(max-width: 1023px)').matches) { w.style.height = ''; return }
       const top = w.getBoundingClientRect().top + window.scrollY
-      w.style.height = Math.max(560, Math.round(window.innerHeight - top - 104)) + 'px'
+      w.style.height = Math.max(460, Math.round(window.innerHeight - top - 104)) + 'px' // short phones: a lower minimum, so the stage can sit above the menu bar (owner, 13 Oct 2026)
     }
     fit()
     window.addEventListener('resize', fit)
@@ -798,19 +799,30 @@ export default function MorphChat<R>(props: MorphChatProps<R>) {
   }, [])
   // keep the newest message in view
   const scrollEnd = (smooth: boolean) => { const th = threadRef.current; if (th) th.scrollTo({ top: th.scrollHeight, behavior: smooth && !reducedRef.current ? 'smooth' : 'auto' }) }
-  useEffect(() => { if (phaseRef.current === 'idle' || phaseRef.current === 'reset' || phaseRef.current === 'answered') scrollEnd(true) }, [turns])
+  const launching = useRef(false)
+  useEffect(() => { if (!launching.current && (phaseRef.current === 'idle' || phaseRef.current === 'reset' || phaseRef.current === 'answered')) scrollEnd(true) }, [turns])
 
   const ask = (text: string) => {
     const rt = rtRef.current
     if (!rt || rt.busy() || phaseRef.current !== 'idle' || propsRef.current.disabled) return
     const id = nextId.current++
     setFlight(id)
-    if (propsRef.current.turns.length === 0) setResting(true)
+    launching.current = true
+    if (propsRef.current.turns.length === 0 && !window.matchMedia('(max-width: 1023px)').matches) setResting(true) // phones: no resting sphere hand-off
     const done = propsRef.current.onAsk(text)
     // wait for the new question bubble and the waiting place to be drawn, scroll to them, then fly
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      scrollEnd(false)
-      rt.start(text, () => done, propsRef.current.minThinkMs ?? 2600)
+      // phones: bring the chat into view between the header and the menu bar (the whole chat if it fits, else the stage), so the
+      // orb and its words are not under the menu bar
+      const wrap = wrapRef.current, stage = wrap?.querySelector('.mo-root')
+      if (wrap && stage && window.matchMedia('(max-width: 1023px)').matches) {
+        const w = wrap.getBoundingClientRect(), s = stage.getBoundingClientRect(), top = 72, bottom = window.innerHeight - 104
+        const d = Math.min((w.height <= bottom - top ? w.bottom : s.bottom) - bottom, s.top - top)
+        if (Math.abs(d) > 2) window.scrollBy({ top: d, behavior: 'instant' as ScrollBehavior })
+      }
+      const th = threadRef.current
+      if (th) th.scrollTop = th.scrollHeight // at once (a smooth scroll could still be moving when the chat freezes)
+      requestAnimationFrame(() => { launching.current = false; rt.start(text, () => done, propsRef.current.minThinkMs ?? 2600) })
     }))
   }
   const shake = () => {

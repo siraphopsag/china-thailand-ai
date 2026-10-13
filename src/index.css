@@ -683,6 +683,7 @@ a.prep-strip-warn:hover { filter: brightness(.97) }
   .mo-slot { height: 48px }
   .mo-note { font-size: .7rem }
   .mo-ex-card { display: block; padding: 10px 12px; flex-shrink: 0 }
+  .mo-wrap:not(.is-empty) .mo-ex-card { display: none } /* owner, 13 Oct 2026: room for the orb under the question */
   .mo-ex-row { text-align: left; font-size: .85rem; line-height: 1.35; padding: 8px 12px; border-radius: 10px; border: 1px solid rgb(var(--control-line)) }
   .mo-ex-row:active { background: rgb(var(--surface3)) }
   .mo-ex-row:disabled { opacity: .6 }

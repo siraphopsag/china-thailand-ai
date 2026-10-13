@@ -133,3 +133,14 @@ describe('Prepare hub on computers (owner, 13 Oct 2026: no scrolling on a comput
     expect(css).toContain('.prep-laws li:nth-child(3), .prep-sits li:nth-child(4) { display: none }')
   })
 })
+
+describe('AI chat on phones (owner, 13 Oct 2026: the orb covered the messages)', () => {
+  it('the orb takes its own place under the newest question, the chat scrolls there at once, and stays above the menu bar', () => {
+    const m = src('./components/morph-orb.tsx')
+    expect(m).toContain('const rest = !phone && !!still && still.width > 0 && !!pend') // phones: no hand-off in the middle of a short stage
+    expect(m).toContain('if (th) th.scrollTop = th.scrollHeight') // one instant scroll before measuring
+    expect(m).toContain('if (!launching.current && (phaseRef.current') // no smooth scroll racing the take-off
+    expect(m).toContain('top = 72, bottom = window.innerHeight - 104') // between the header and the menu bar
+    expect(src('./index.css')).toContain('.mo-wrap:not(.is-empty) .mo-ex-card { display: none }')
+  })
+})
