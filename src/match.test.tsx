@@ -345,10 +345,10 @@ describe('the board (owner, Oct 2026)', () => {
 })
 
 describe('admin gate', () => {
-  it('without an administrator account signed in, the back office stays closed (Google sign-in + database role, see auth.test)', () => {
-    const page = html(<BackofficePage />)
-    expect(page).toContain(T('m.adm.gate'))
-    expect(page).not.toContain('Sample Riverside Hotels')
+  it('the demo build without accounts opens the back office on sample data, saying so (owner, 18 Oct 2026); with accounts it needs an administrator (see auth.test)', () => {
+    const page = html(<BackofficePage />) // AuthProvider enabled={false}: no accounts at all
+    expect(page).not.toContain(T('m.adm.gate'))
+    expect(page).toContain(T('m.adm.demo'))
   })
 })
 

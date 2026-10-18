@@ -269,6 +269,7 @@ export const match = {
   'm.adm.title': ['ระบบหลังบ้าน (ต้นแบบ)', '后台管理（原型）', 'Back office (prototype)'],
   'm.adm.sub': ['ดูว่าประกาศแต่ละรายการถึงวงไหน ใครได้รับแจ้งแล้ว ใครรอวงถัดไป ผู้สมัครและสถานะ แล้วส่งต่อเคสที่นายจ้างยืนยันให้หน่วยงานจัดหางาน (จำลอง)', '查看每条招聘信息到了哪一圈、已通知谁、谁在等待下一圈、申请人及状态，并把雇主确认的申请转交职业介绍机构（模拟）', 'See which ring each post has reached, who has been reached and who waits for the next ring, the applicants and their status, and forward cases the employer confirmed to the employment agency (simulated)'],
   'm.adm.gate': ['หน้านี้สำหรับผู้ดูแลระบบ กรุณาเข้าสู่ระบบด้วยบัญชี Google ที่เป็นผู้ดูแลระบบ', '此页面仅限管理员，请使用管理员的 Google 账号登录', 'This page is for administrators — please sign in with an administrator Google account'],
+  'm.adm.demo': ['โหมดสาธิต: ระบบหลังบ้านนี้ใช้ข้อมูลจำลองในเบราว์เซอร์นี้เท่านั้น ไม่มีบัญชีหรือข้อมูลของผู้ใช้จริง', '演示模式：此后台只使用本浏览器中的模拟数据，不含真实用户的账号或资料', 'Demo mode: this back office uses only the sample data in this browser — no real accounts or user data'],
   'm.adm.reached': ['ผู้หางานที่ได้รับแจ้ง', '已通知的求职者', 'Job seekers reached'],
   'm.adm.waiting': ['รอวงถัดไป', '等待下一圈', 'Waiting for the next ring'],
   'm.adm.none': ['ยังไม่มีใคร', '暂无', 'Nobody yet'],

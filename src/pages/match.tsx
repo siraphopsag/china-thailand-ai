@@ -880,13 +880,16 @@ export function BackofficePage() {
   const { t } = useI18n()
   const N = useNames()
   const { st, now, pool, deletePost, stats, mode, pendingVerifications, decideVerification, reports, moderate } = useMatch()
-  const { isAdmin } = useAuth()
+  const { isAdmin, status } = useAuth()
+  // owner, 18 Oct 2026: the demo build without accounts (local preview, sample data only) shows the back office so it can be
+  // demonstrated; wherever accounts exist (the live site, also when it is offline) it stays administrators-only
+  const demo = !isAdmin && status === 'off'
   const nameOf = useApplicantName()
   const [tab, setTab] = useState<AdminTab>('overview')
   const [postOpen, setPostOpen] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   const [ask, askDialog] = useConfirm()
-  if (!isAdmin) return <Page title={t('m.adm.title')}><Warn>{t('m.adm.gate')}</Warn></Page>
+  if (!isAdmin && !demo) return <Page title={t('m.adm.title')}><Warn>{t('m.adm.gate')}</Warn></Page>
   const people = [{ ...st.me, name: t('m.adm.you') }, ...st.seekers]
   const openCases = st.cases.filter((c) => currentStep(c) !== null)
   const count: Record<AdminTab, number> = { overview: 0, verify: pendingVerifications.length, reports: reports.length, cases: openCases.length, posts: st.posts.length, sim: 0 }
@@ -915,6 +918,7 @@ export function BackofficePage() {
       actions={<NavLink to="analytics" className="btn-ghost text-sm !rounded-full"><Icon name="chart" size={15} />{t('m.an.title')}</NavLink>}>
       <Toast msg={msg} />
       {askDialog}
+      {demo && <div className="shrink-0"><Warn tone="info">{t('m.adm.demo')}</Warn></div>}
       <div role="tablist" aria-label={t('m.adm.tabs')} onKeyDown={keys} className="shrink-0 flex flex-wrap gap-1 rounded-2xl border border-line bg-surface p-1">
         {ADMIN_TABS.map(({ k, icon }) => (
           <button key={k} id={`adm-tab-${k}`} type="button" role="tab" aria-selected={tab === k} aria-controls="adm-panel" tabIndex={tab === k ? 0 : -1} onClick={() => setTab(k)}

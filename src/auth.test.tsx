@@ -150,7 +150,10 @@ describe('header account control', () => {
 describe('administrators come from the database, not from the browser', () => {
   it('the back office opens only for an administrator account', () => {
     expect(html(<BackofficePage />, state({ status: 'signedIn', user: ann }))).toContain(T('m.adm.gate'))
-    expect(html(<BackofficePage />, state({ status: 'signedIn', user: ann, isAdmin: true }))).not.toContain(T('m.adm.gate'))
+    expect(html(<BackofficePage />, state({ status: 'signedOut' }))).toContain(T('m.adm.gate'))
+    expect(html(<BackofficePage />, state({ status: 'signedIn', user: ann, online: false }))).toContain(T('m.adm.gate')) // offline falls back to sample data but stays closed
+    const admin = html(<BackofficePage />, state({ status: 'signedIn', user: ann, isAdmin: true }))
+    expect(admin).not.toContain(T('m.adm.gate')); expect(admin).not.toContain(T('m.adm.demo'))
   })
   it('the old prototype password is gone from the code', () => {
     for (const f of ['./matchData.tsx', './components/sidenav.tsx', './auth.tsx', './pages/match.tsx']) { const s = src(f); expect(s, f).not.toContain('AdminCALL'); expect(s, f).not.toContain('checkAdmin') }
