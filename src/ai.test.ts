@@ -2,7 +2,7 @@
 // network, no cost.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { registry } from './data/legal/registry'
-import { askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, cleanHistory, legalContext, MAX_QUESTION, postForAi } from './ai/spec'
+import { answerIn, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, cleanHistory, legalContext, MAX_QUESTION, postForAi } from './ai/spec'
 import type { PostInput } from './domain/match/logic'
 
 const parse = vi.fn()
@@ -68,6 +68,15 @@ describe('cleaning what the AI returns', () => {
   it('survives nonsense', () => {
     expect(cleanCheck(null)).toEqual({ verdict: 'ok', summary: '', flags: [] })
     expect(cleanAnswer({ answer: 5, grounding: 'sure', lawIds: ['cn-immigration', 'x'] })).toEqual({ answer: '', lawIds: ['cn-immigration'], grounding: 'partial', nextStep: '' })
+  })
+  it('the answer comes in the three languages, and the site shows the one it is in (owner, 19 Oct 2026)', () => {
+    expect(askSystem('zh')).toContain('"translations":{"th":{"answer":string')
+    const a = cleanAnswer({ answer: '要工作许可', grounding: 'grounded', lawIds: [], nextStep: '问劳工部', translations: {
+      th: { answer: 'ต้องมีใบอนุญาตทำงาน', nextStep: 'ถามกรมการจัดหางาน' }, en: { answer: 'You need a work permit', nextStep: 5 }, zh: { answer: '' }, xx: { answer: 'no' } } })
+    expect(a.translations).toEqual({ th: { answer: 'ต้องมีใบอนุญาตทำงาน', nextStep: 'ถามกรมการจัดหางาน' }, en: { answer: 'You need a work permit', nextStep: '' } })
+    expect(answerIn(a, 'th')).toEqual({ answer: 'ต้องมีใบอนุญาตทำงาน', nextStep: 'ถามกรมการจัดหางาน' })
+    expect(answerIn(a, 'en')).toEqual({ answer: 'You need a work permit', nextStep: '问劳工部' }) // no next step there: the asked one
+    expect(answerIn(a, 'zh')).toEqual({ answer: '要工作许可', nextStep: '问劳工部' }) // none given: as it was asked
   })
 })
 

@@ -349,6 +349,14 @@ describe('admin gate', () => {
     const page = html(<BackofficePage />) // AuthProvider enabled={false}: no accounts at all
     expect(page).not.toContain(T('m.adm.gate'))
     expect(page).toContain(T('m.adm.demo'))
+    // owner, 19 Oct 2026: the same overview figures as the live site, counted from the sample data
+    expect(page).toContain(T('m.adm.stats')); expect(page).toContain(T('m.adm.st.users')); expect(page).toContain(T('m.adm.st.acc'))
+  })
+})
+
+describe('post form', () => {
+  it('no form history under the fields: what was typed in earlier posts does not pop up (owner, 19 Oct 2026)', () => {
+    expect(src('./pages/hire.tsx')).toContain('onSubmit={submit} aria-labelledby="e2h" noValidate autoComplete="off"')
   })
 })
 

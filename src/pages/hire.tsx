@@ -217,7 +217,8 @@ export function HirePage() {
           <button type="button" className="btn-primary" disabled={!isCountry(c) || !p} onClick={() => { setForm(true); setMsg(null); focusHead.current = true }}><Icon name="posts" size={16} />{t('m.emp.fill')}</button>
         </section>
       ) : (
-        <form className="card space-y-5" onSubmit={submit} aria-labelledby="e2h" noValidate>
+        <form className="card space-y-5" onSubmit={submit} aria-labelledby="e2h" noValidate autoComplete="off">
+          {/* owner, 19 Oct 2026: autoComplete off — no list of what was typed in earlier posts under the fields (form history) */}
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="e2h" tabIndex={-1} className="h2 outline-none">{t(editing ? 'm.edit.title' : 'm.emp.s2')}</h2><p className="text-sm text-muted">{c && p && N.place(c, p)} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => { setForm(false); requestAnimationFrame(() => document.getElementById('emp-prov')?.focus()) }}>{t('m.edit')}</button></p></div>
 
           <div className="space-y-5 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-5 lg:items-start">

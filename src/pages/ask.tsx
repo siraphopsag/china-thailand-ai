@@ -16,7 +16,7 @@ import { aiAsk } from '../ai/client'
 import { useLite } from '../theme'
 import MorphChat, { RevealText, type ChatTurn, type OrbCopy } from '../components/morph-orb'
 import { setAskPrefill, takeAskPrefill } from '../prepare'
-import { MAX_HISTORY, MAX_QUESTION, type AiAnswer, type AiCheck, type AiResponse, type AskTurn } from '../ai/spec'
+import { MAX_HISTORY, MAX_QUESTION, answerIn, type AiAnswer, type AiCheck, type AiResponse, type AskTurn } from '../ai/spec'
 import { Page } from './match'
 
 /** a legal record the AI relied on: its title (or the instrument's name), its agency link and whether a lawyer has checked it */
@@ -152,14 +152,14 @@ export function AskPage() {
   const renderAnswer = (x: ChatTurn<Res>) => {
     const r = x.res!
     if (!r.ok) return <div className="mo-err"><Icon name="warn" size={16} className="shrink-0 mt-0.5" /><span>{t(`ai.why.${r.reason}`)}{r.detail && <span className="block text-xs font-mono opacity-70 mt-1 break-words" lang="en">{r.detail}</span>}</span></div>
-    const a = r.result, grounded = a.grounding === 'grounded'
+    const a = r.result, grounded = a.grounding === 'grounded', shown = answerIn(a, lang)
     return (
       <div className="mo-answer" role="group" aria-label={t('ai.ask.answer')}>
         <div className="mo-a-head"><i className="mo-a-dot" aria-hidden="true" />{t('ai.ask.answer')}<span className={`mo-chip ${grounded ? 'mo-chip-ok' : 'mo-chip-warn'}`}>{t(`ai.ask.g.${a.grounding}`)}</span></div>
         <div className="mo-a-body">
-          <div className="text-[15px] leading-relaxed"><RevealText text={a.answer} lang={lang === 'zh' ? 'zh' : lang} /></div>
+          <div className="text-[15px] leading-relaxed"><RevealText key={lang} text={shown.answer} lang={lang === 'zh' ? 'zh' : lang} /></div>
           {a.lawIds.length > 0 && <div className="mt-4"><h3 className="mo-sub">{t('ai.ask.sources')}</h3><ul className="space-y-1">{a.lawIds.map((id) => <StageLawRef key={id} id={id} />)}</ul></div>}
-          {a.nextStep && <p className="mo-next"><Icon name="next" size={16} className="mt-0.5 shrink-0" /><span><b>{t('ai.ask.next')}:</b> {a.nextStep}</span></p>}
+          {shown.nextStep && <p className="mo-next"><Icon name="next" size={16} className="mt-0.5 shrink-0" /><span><b>{t('ai.ask.next')}:</b> {shown.nextStep}</span></p>}
           <p className="mo-fine">{t('ai.ask.note')}</p>
           {r.detail && <p className="mo-fine font-mono break-words" lang="en">{r.detail}</p>}
         </div>

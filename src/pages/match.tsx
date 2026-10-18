@@ -893,6 +893,10 @@ export function BackofficePage() {
   const people = [{ ...st.me, name: t('m.adm.you') }, ...st.seekers]
   const openCases = st.cases.filter((c) => currentStep(c) !== null)
   const count: Record<AdminTab, number> = { overview: 0, verify: pendingVerifications.length, reports: reports.length, cases: openCases.length, posts: st.posts.length, sim: 0 }
+  // owner, 19 Oct 2026: the demo build shows the same overview figures as the live site, counted from its sample data
+  const employers = new Set(st.posts.map((p) => p.employerId)).size, seekers = st.seekers.length + 1
+  const figures = mode === 'remote' ? stats : demo ? { users: employers + seekers, employers, seekers, posts: st.posts.length,
+    posts_7d: st.posts.filter((p) => now - Date.parse(p.createdAt) < 7 * 86_400_000).length, acceptances: st.acceptances.length } : null
   const decideR = async (postId: string, action: 'dismiss' | 'remove' | 'suspend') => {
     if (action !== 'dismiss' && !(await ask(t(action === 'remove' ? 'm.adm.remove.confirm' : 'm.adm.suspend.confirm'), { yes: t(action === 'remove' ? 'm.adm.remove' : 'm.adm.suspend'), danger: true }))) return
     const r = await moderate(postId, action)
@@ -939,9 +943,9 @@ export function BackofficePage() {
               <span className="block text-3xl font-bold">{count[k]}</span>
               <span className="block text-xs text-muted">{t(`m.adm.attn.${k}` as never)}</span>
             </button></li>))}</ul>
-          {mode === 'remote' && stats && (
+          {figures && (
             <div className="space-y-2"><h2 className="text-base font-semibold">{t('m.adm.stats')}</h2>
-              <dl className="grid grid-cols-3 lg:grid-cols-6 gap-2">{([['m.adm.st.users', stats.users], ['m.adm.st.employers', stats.employers], ['m.adm.st.seekers', stats.seekers], ['m.adm.st.posts', stats.posts], ['m.adm.st.posts7', stats.posts_7d], ['m.adm.st.acc', stats.acceptances]] as const).map(([k, v]) => (
+              <dl className="grid grid-cols-3 lg:grid-cols-6 gap-2">{([['m.adm.st.users', figures.users], ['m.adm.st.employers', figures.employers], ['m.adm.st.seekers', figures.seekers], ['m.adm.st.posts', figures.posts], ['m.adm.st.posts7', figures.posts_7d], ['m.adm.st.acc', figures.acceptances]] as const).map(([k, v]) => (
                 <div key={k} className={ROW}><dt className="text-xs text-muted">{t(k)}</dt><dd className="text-xl font-bold">{v}</dd></div>))}</dl></div>)}
           <div className={`${ROW} space-y-2`}><p className="font-medium">{t('m.adm.demoClock')}</p><ClockControls /></div>
           <p className="text-xs text-muted">{t('m.adm.ai')}</p>

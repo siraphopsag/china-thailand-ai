@@ -30,7 +30,10 @@ const CheckSchema = z.object({
   translations: z.object({ th: z.object({ position: z.string(), details: z.string() }), zh: z.object({ position: z.string(), details: z.string() }), en: z.object({ position: z.string(), details: z.string() }) }),
   closedToForeigners: z.boolean(),
 })
-const AskSchema = z.object({ answer: z.string(), lawIds: z.array(z.string()), grounding: z.enum(['grounded', 'partial', 'out_of_scope']), nextStep: z.string() })
+// owner, 19 Oct 2026: the answer in the three languages too (switching the site's language switches the answer)
+const AnswerIn = z.object({ answer: z.string(), nextStep: z.string() })
+const AskSchema = z.object({ answer: z.string(), lawIds: z.array(z.string()), grounding: z.enum(['grounded', 'partial', 'out_of_scope']), nextStep: z.string(),
+  translations: z.object({ th: AnswerIn, zh: AnswerIn, en: AnswerIn }) })
 
 /** count this use in the database as the signed-in person (their own token): false = not signed in; otherwise the verdict */
 async function take(token: string, kind: AiKind): Promise<{ ok: boolean; reason?: 'limit' | 'site'; left: number | null } | false> {
