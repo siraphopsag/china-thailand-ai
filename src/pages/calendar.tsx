@@ -75,8 +75,10 @@ export function CalendarPage() {
 
   return (
     <Page title={t('m.cal.title')} sub={t(agency && mode !== 'local' ? 'm.cal.subAgency' : st.role === 'employer' ? 'm.cal.subEmployer' : 'm.cal.subSeeker')} fit>
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start fit:h-full fit:items-stretch">
-        <section className="card !p-4 space-y-3 fit:flex fit:flex-col fit:min-h-0" aria-labelledby="cal-month">
+      {/* owner, 19 Oct 2026: on tall screens the month no longer stretches to the window's height (tall, empty days); it stops at
+          about the size it has on a laptop, and the side column keeps its own height */}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start fit:h-full">
+        <section className="card !p-4 space-y-3 fit:flex fit:flex-col fit:min-h-0 fit:h-full fit:max-h-[680px]" aria-labelledby="cal-month">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="cal-month" className="h2" aria-live="polite">{monthName}</h2>
             <div className="flex items-center gap-1.5">
@@ -107,7 +109,7 @@ export function CalendarPage() {
             <li key={k} className="inline-flex items-center gap-1.5"><span className={`cal-dot cal-${k}`} aria-hidden /><Icon name={ICON[k]} size={13} />{t(`m.cal.k.${k}` as never)}</li>))}</ul>
         </section>
 
-        <aside className="space-y-3 min-w-0 fit:min-h-0 fit:overflow-y-auto" aria-label={t('m.cal.side')}>
+        <aside className="space-y-3 min-w-0 fit:min-h-0 fit:max-h-full fit:overflow-y-auto" aria-label={t('m.cal.side')}>
           <section className="glass-card p-4 space-y-2" aria-labelledby="cal-day">
             <p className="text-xs font-semibold text-primary uppercase">{sel === today ? t('m.cal.todayIs', { d: fmt({ weekday: 'long' }).format(dayDate(sel)) }) : fmt({ weekday: 'long' }).format(dayDate(sel))}</p>
             <h2 id="cal-day" className="h2">{fmt({ day: 'numeric', month: 'long' }).format(dayDate(sel))}</h2>

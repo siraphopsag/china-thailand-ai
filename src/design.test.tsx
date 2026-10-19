@@ -251,6 +251,8 @@ describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, st
     for (const [file, mark] of [['./pages/board.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/calendar.tsx', ' fit>'], ['./pages/case.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/analytics.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/hire.tsx', ' fit>'], ['./pages/post.tsx', 'fit body="flex flex-col gap-3"']] as const)
       expect(src(file), file).toContain(mark)
     expect(m).toContain('fit body="flex flex-col gap-3"') // the back office
+    // owner, 19 Oct 2026: the month stops growing on tall screens (rows about 100 px at 1920×1080, as on a laptop)
+    expect(src('./pages/calendar.tsx')).toContain('fit:h-full fit:max-h-[680px]')
     const p = src('./components/pager.tsx')
     expect(p).toContain("export const FIT_QUERY = '(min-width: 1024px) and (min-height: 600px)'"); expect(p).toContain('export function PagedList')
     // the footer only on the Lobby and reading pages; "Back" moves into the header on computers
