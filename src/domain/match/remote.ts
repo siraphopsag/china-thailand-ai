@@ -1,7 +1,7 @@
 // Mapping between the database rows (supabase/migrations/0002_matching.sql, 0003_board.sql) and the matching prototype's own types, so the pages
 // and rules in logic.ts work the same with the database as with the local demo data. Pure: no network, no React.
 import { isObj } from '../../profileSchema'
-import type { PostInput } from './logic'
+import { clampFuture, type PostInput } from './logic'
 import { cleanTranslations, hasTranslations } from './postText'
 import type { PinLike } from './release'
 import type { PinGroup } from './market'
@@ -114,6 +114,14 @@ export const statsToGroups = (rows: PinStatRow[]): PinGroup[] => rows.flatMap((r
   const c = country(r.country), ind = one(INDUSTRIES, r.industry)
   return c && ind ? [{ country: c, province: r.province, industry: ind, at: iso(r.hour), n: Math.max(0, Number(r.n) || 0), sample: Math.max(0, Number(r.sample) || 0) }] : []
 })
+/**
+ * The database stamps rows with the server's clock; the site compares them with this device's clock. A device running behind
+ * (35 s while recording the demo, 18 Oct 2026) saw the pin it had just made as made in the future: not active, not counted in
+ * x/5, missing from My pins until its clock caught up, even after a reload. So a time later than this device's now counts as now
+ * (only rows made within the clock difference move, by that many seconds).
+ */
+export const fromServer = (st: MatchState, now: number): MatchState => clampFuture(st, now)
+export const statsUpTo = (rows: PinStatRow[], now: number): PinStatRow[] => rows.map((r) => (Date.parse(r.hour) > now ? { ...r, hour: new Date(now).toISOString() } : r))
 /** pins per province, for the board map */
 export const statsByProvince = (rows: PinStatRow[]) => rows.reduce<Record<string, number>>((m, r) => ({ ...m, [r.province]: (m[r.province] ?? 0) + Number(r.n) }), {})
 

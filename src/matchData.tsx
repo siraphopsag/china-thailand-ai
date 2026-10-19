@@ -8,7 +8,7 @@ import { seedState } from './domain/match/seed'
 import type { PinGroup } from './domain/match/market'
 import { simPinRow, simPostRow, type SimPin, type SimPost } from './domain/match/simulate'
 import { HOLDS_PLACE, MAX_CLOCK_HOURS, ME, MY_EMPLOYER, type Acceptance, type Country, type Industry, type MatchState, type PlanId, type Place, type Post, type Role, type Skill, type VerifyKind } from './domain/match/types'
-import { buildState, dbProblem, postToRow, rowToAcceptance, rowToPost, statsByProvince, statsToGroups, statsToPool, verifyOf, type AcceptanceRow, type AdminStats, type CaseRow, type PinStatRow, type PostRow, type ProfileRow, type ReportRow, reportQueue } from './domain/match/remote'
+import { buildState, dbProblem, fromServer, postToRow, rowToAcceptance, rowToPost, statsByProvince, statsToGroups, statsToPool, statsUpTo, verifyOf, type AcceptanceRow, type AdminStats, type CaseRow, type PinStatRow, type PostRow, type ProfileRow, type ReportRow, reportQueue } from './domain/match/remote'
 import { getClient, takeNext, useAuth } from './auth'
 import { useI18n } from './i18n'
 import { localizePost } from './domain/match/postText'
@@ -62,6 +62,8 @@ interface Ctx {
    *  because the database keeps its own real time (bug hunt, Oct 2026: the two disagreed) */
   limitNow: number
   mode: DataMode
+  /** signed in: a change was sent and the fresh data has not arrived yet (lists say "Loading…" instead of "nothing yet") */
+  syncing: boolean
   /** every active pin as the release needs it (others' pins: anonymous in database mode) */
   pool: PinLike[]
   /** active pins per province (board map) */
@@ -165,11 +167,13 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         sb.from('reports').select('*').order('created_at'), // mine (everyone's for administrators); missing before 0005 → none
       ])
       if (seq !== loadSeq.current) return // a newer load started meanwhile
-      setRemote(buildState({ admin, uid: userId, name: userName, profile: prof.data ?? null, posts: (posts.data ?? []) as PostRow[], pins: pins.data ?? [], acceptances: accs.data ?? [],
-        clockHours: 0, credits: uses.data ?? [], people: people.data ?? [], allPins: allPins.data ?? [], cases: (cases.data ?? []) as CaseRow[], reports: (reps.data ?? []) as ReportRow[] }))
+      // server times later than this device's clock count as now (a device running behind hid the pin it had just made)
+      const real = Date.now()
+      setRemote(fromServer(buildState({ admin, uid: userId, name: userName, profile: prof.data ?? null, posts: (posts.data ?? []) as PostRow[], pins: pins.data ?? [], acceptances: accs.data ?? [],
+        clockHours: 0, credits: uses.data ?? [], people: people.data ?? [], allPins: allPins.data ?? [], cases: (cases.data ?? []) as CaseRow[], reports: (reps.data ?? []) as ReportRow[] }), real))
       setPeople((people.data ?? []) as ProfileRow[])
       setReportRows(admin ? (reps.data ?? []) as ReportRow[] : [])
-      setPool(Array.isArray(pinStats.data) ? pinStats.data as PinStatRow[] : [])
+      setPool(Array.isArray(pinStats.data) ? statsUpTo(pinStats.data as PinStatRow[], real) : [])
       setCounts(Array.isArray(counts.data) ? Object.fromEntries((counts.data as { post_id: string; held: number; pending: number; reserved: number }[]).map((r) => [r.post_id, { held: Number(r.held), pending: Number(r.pending), reserved: Number(r.reserved) }])) : null)
       const s = Array.isArray(st.data) ? st.data[0] : st.data
       setStats(s ? Object.fromEntries(Object.entries(s).map(([k, v]) => [k, Number(v)])) as unknown as AdminStats : null)
@@ -215,18 +219,20 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
   const counts = useMemo(() => (mode === 'remote' && remoteCounts ? remoteCounts : countsFrom(st.acceptances)), [mode, remoteCounts, st.acceptances])
   const at = useCallback(() => new Date(nowWith(raw.clockHours)).toISOString(), [raw.clockHours])
   const limitNow = mode === 'remote' ? Date.now() : now
+  const [writing, setWriting] = useState(0) // database writes still waiting for their reload
 
   const value = useMemo<Ctx>(() => {
     const local = mode === 'local' // nothing is written while signed out or still checking
     // a database write: run it, map a refusal to a problem, then reload what everyone sees
     const write = async <T,>(run: (sb: Db) => PromiseLike<{ data?: unknown; error: { message?: string; code?: string } | null }>, ok: (data: unknown) => T): Promise<Outcome<T>> => {
       if (!userId) return fail('network')
+      setWriting((n) => n + 1)
       try {
         const sb = await getClient()
         const { data, error } = await run(sb)
         if (error) return { ok: false, problem: dbProblem(error) }
         await refresh(); return { ok: true, value: ok(data) }
-      } catch { return fail('network') }
+      } catch { return fail('network') } finally { setWriting((n) => n - 1) }
     }
     const profile = (patch: Record<string, unknown>) => write((sb) => sb.from('profiles').update(patch).eq('id', userId!), () => null)
     const mineAcc = (accId: string) => st.acceptances.find((a) => a.id === accId)
@@ -237,7 +243,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     // signed in: limits are checked at the real time, like the database does
     const limitAt = () => (local ? at() : new Date().toISOString())
     return {
-      st: stView, now, limitNow, mode, pool, pinsByProvince, pinGroups, counts, stats: local ? null : stats, pendingVerifications, agency: local || admin, reports: local ? [] : reportQueue(reportRows),
+      st: stView, now, limitNow, mode, syncing: writing > 0, pool, pinsByProvince, pinGroups, counts, stats: local ? null : stats, pendingVerifications, agency: local || admin, reports: local ? [] : reportQueue(reportRows),
       setRole: async (role) => { if (local) setLocal((s) => ({ ...s, role })); else await profile({ user_type: role }) },
       setOrigin: async (origin) => { if (local) setLocal((s) => ({ ...s, me: { ...s.me, origin } })); else await profile({ origin_country: origin?.country ?? null, origin_province: origin?.province ?? null }) },
       pin: async (input) => {
@@ -398,7 +404,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       resetClock: () => { if (local) setLocal((s) => clampFuture(s, Date.now())); else setClock(0) },
       reset: () => { if (local) { const fresh = seedState(); setLocal((s) => ({ ...fresh, role: s.role })) } else setClock(0) },
     }
-  }, [st, stView, now, limitNow, mode, pool, pinsByProvince, pinGroups, counts, stats, at, refresh, userId, admin, people, reportRows])
+  }, [st, stView, now, limitNow, mode, writing, pool, pinsByProvince, pinGroups, counts, stats, at, refresh, userId, admin, people, reportRows])
   return <C.Provider value={value}>{children}</C.Provider>
 }
 export const useMatch = () => { const c = useContext(C); if (!c) throw new Error('match'); return c }

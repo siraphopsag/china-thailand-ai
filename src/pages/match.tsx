@@ -510,9 +510,11 @@ export function PinList({ onRemove, onNew }: { onRemove?: (id: string) => void; 
   const { t } = useI18n()
   const N = useNames()
   const { ago, until } = useRel()
-  const { st, limitNow } = useMatch()
+  const { st, limitNow, syncing } = useMatch()
   const [order, setOrder] = useState<'new' | 'old'>('new')
   const pins = activePins(st.me, limitNow).sort((a, b) => (order === 'new' ? b.at.localeCompare(a.at) : a.at.localeCompare(b.at)))
+  // a pin just sent is still on its way: say so instead of "no pins yet"
+  if (!pins.length && syncing) return <p className="text-muted py-10 text-center" role="status">{t('c.loading')}</p>
   if (!pins.length) return onNew ? <Empty icon="pin" text={t('m.pin.none')} action={t('m.pin.tab.new')} onAction={onNew} /> : <Empty icon="pin" text={t('m.pin.none')} to="seek" action={t('m.pin.tab.new')} />
   return (
     <div className="space-y-2">
