@@ -13,7 +13,7 @@ export const legal = {
   'trust.r.no-source-hash': ['บันทึกการตรวจไม่ผูกกับเวอร์ชันของตัวบท', '核查记录未绑定原文版本', 'The review is not tied to a version of the official text'],
   'trust.r.summary-edited': ['ข้อความสรุปถูกแก้ไขหลังการตรวจ ต้องตรวจซ้ำ', '摘要在核查后被修改，须重新核查', 'The summary was edited after the review and must be reviewed again'],
   'trust.r.source-changed': ['ตัวบทต้นฉบับเปลี่ยนไปจากฉบับที่ผู้ตรวจรับรอง', '官方原文已与核查时的版本不同', 'The official text differs from the version the reviewer approved'],
-  'trust.r.review-old': ['การตรวจครั้งล่าสุดเกิน {n} วัน', '最近一次核查已超过 {n} 天', 'The last review is more than {n} days old'],
+  'trust.r.review-old': ['การตรวจครั้งล่าสุดผ่านมาเกิน {n} วันแล้ว', '最近一次核查已超过 {n} 天', 'The last review is more than {n} days old'],
   'trust.r.monitor-stale': ['ระบบเฝ้าระวังการเปลี่ยนแปลงไม่มีข้อมูลใหม่เกิน {n} วัน', '变更监测已超过 {n} 天没有新数据', 'The change monitor has produced no data for more than {n} days'],
   'trust.r.gap': ['ระบบรู้จักชื่อกฎหมายนี้ แต่ยังไม่มีเนื้อหาสรุปที่ตรวจแล้ว', '系统只知道该法规的名称，尚无经核实的内容摘要', 'The app knows this law by name only and has no reviewed summary of it'],
   'trust.r.no-entry': ['ไม่พบระเบียนนี้ในทะเบียนแหล่งข้อมูล', '来源登记册中没有此记录', 'This record is not in the source registry'],
@@ -23,7 +23,7 @@ export const legal = {
   'cite.provisions': ['มาตรา/ข้อ', '条款', 'Provisions'],
   'cite.unspecified': ['ยังไม่ระบุ (รอผู้ตรวจ)', '未注明（待核查人填写）', 'Not stated (awaiting a reviewer)'],
   'cite.textLink': ['เปิดตัวบทฉบับทางการ', '打开官方文本', 'Open the official text'],
-  'cite.agencyOnly': ['เว็บไซต์หน่วยงาน (ยังไม่มีลิงก์ตัวบท)', '官方机构网站（尚无官方文本链接）', 'Agency website (no link to the legal text yet)'],
+  'cite.agencyOnly': ['เว็บไซต์หน่วยงาน (ยังไม่มีลิงก์ตัวบท)', '官方机构网站（尚无官方文本链接）', 'Agency website (no link to the official text yet)'],
   'cite.monitored': ['เฝ้าระวังการเปลี่ยนแปลงอัตโนมัติ', '自动监测变更', 'Change monitoring on'],
   'cite.notMonitored': ['ยังไม่มีการเฝ้าระวังการเปลี่ยนแปลง', '尚未监测变更', 'No change monitoring yet'],
   // ---- notices on AI answers

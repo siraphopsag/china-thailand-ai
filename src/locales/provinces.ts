@@ -27,7 +27,7 @@ export const provinces = {
   'prov.CN-SD': ["ซานตง", "山东省", "Shandong"],
   'prov.CN-SH': ["เซี่ยงไฮ้", "上海市", "Shanghai"],
   'prov.CN-SN': ["ส่านซี", "陕西省", "Shaanxi"],
-  'prov.CN-SX': ["ชานซี", "山西省", "Shanxi"],
+  'prov.CN-SX': ["ซานซี", "山西省", "Shanxi"],
   'prov.CN-TJ': ["เทียนจิน", "天津市", "Tianjin"],
   'prov.CN-XJ': ["ซินเจียง", "新疆维吾尔自治区", "Xinjiang"],
   'prov.CN-XZ': ["ทิเบต (ซีจ้าง)", "西藏自治区", "Tibet (Xizang)"],

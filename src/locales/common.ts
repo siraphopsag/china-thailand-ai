@@ -23,7 +23,7 @@ export const common = {
   'err.notFound': ['ไม่พบหน้าที่ต้องการ', '未找到该页面', 'Page not found'],
   'err.home': ['กลับหน้าแรก', '返回首页', 'Back to home'],
   // ---- footer
-  'foot.note': ['Prototype สำหรับสาธิต — ข้อมูลกฎหมายเป็นข้อมูลตัวอย่าง ไม่ใช่ข้อมูลเรียลไทม์', '演示原型——法规数据为示例，并非实时数据', 'Demo prototype — regulatory data is sample data, not real-time'],
+  'foot.note': ['ต้นแบบสำหรับสาธิต — ข้อมูลกฎหมายเป็นข้อมูลตัวอย่าง ไม่ใช่ข้อมูลเรียลไทม์', '演示原型——法规数据为示例，并非实时数据', 'Demo prototype — regulatory data is sample data, not real-time'],
   // ---- business context bar / AI labels
   // ---- tour
 } as const satisfies Record<string, Msg>
