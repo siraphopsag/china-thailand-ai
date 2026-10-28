@@ -47,10 +47,11 @@ function html(node: ReactNode, st: MatchState, search = ''): string {
   try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><AuthProvider enabled={false}><MatchProvider initial={st}>{node}</MatchProvider></AuthProvider></LanguageProvider></ThemeProvider>) }
   finally { if (hadD) g.document = prevD; else delete g.document; if (search) { if (hadW) g.window = prevW; else delete g.window } }
 }
-/** a job seeker with a pin that reaches the sample posts in Jiangsu */
-const seekerState = (): MatchState => {
-  const st = seedState(NOW); st.role = 'seeker'
-  st.me = { id: ME, name: 'you', origin: { country: 'TH', province: 'TH-10' }, pins: [{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(-5) }], synthetic: true } satisfies Seeker
+/** a job seeker with a pin that reaches the sample posts in Jiangsu; pages run on the real clock, so they need `Date.now()`
+ *  (a state dated 3 Oct 2026 has its 30-day pin expired once the real date passes 28 Oct) */
+const seekerState = (now = NOW): MatchState => {
+  const st = seedState(now); st.role = 'seeker'
+  st.me = { id: ME, name: 'you', origin: { country: 'TH', province: 'TH-10' }, pins: [{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: new Date(now - 5 * DAY_MS).toISOString() }], synthetic: true } satisfies Seeker
   return st
 }
 
@@ -128,7 +129,7 @@ describe('pages', () => {
     expect(src('./App.tsx')).toContain('safety: <SafetyPage />')
   })
   it('the post page: a free-to-apply warning, and a report link (not on my own post)', () => {
-    const st = seekerState()
+    const st = seekerState(Date.now())
     const h = html(<PostPage />, st, '?id=post-s2')
     expect(h).toContain(T('m.sc.note.apply')); expect(h).toContain(`${T('m.rpt.button')}</button>`)
     const reported = html(<PostPage />, { ...st, reports: [{ id: 'r', postId: 'post-s2', reason: 'fee', note: '', at: at(0) }] }, '?id=post-s2')

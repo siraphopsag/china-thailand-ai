@@ -93,6 +93,8 @@ export interface PostInput {
   workRight?: boolean
   /** the AI's translations of the title and details (from the check before posting) */
   translations?: PostTranslations
+  /** owner, Oct 2026: the AI rated it high risk — saved, but held (hidden) until an administrator releases it */
+  held?: boolean
 }
 /** a post for an occupation closed to foreigners in Thailand (e.g. tour guiding) always stays in Thailand */
 export const mustStayDomestic = (i: Pick<PostInput, 'place' | 'position' | 'details'>) => i.place.country === 'TH' && closedToForeigners(i.position) // the title: details may mention such work in passing
@@ -124,7 +126,7 @@ export function makePost(input: PostInput, id: string, employerId: string, at: s
     headcount: input.headcount, employment: input.employment, salary: input.salary ? { ...input.salary } : null, startDate: input.startDate,
     languages: input.languages.map((l) => ({ ...l })), education: input.education, benefits: [...input.benefits],
     country: input.place.country, province: input.place.province, createdAt: at, releasedAt: at, verified: false,
-    ...(input.domesticOnly || mustStayDomestic(input) ? { domesticOnly: true } : {}), ...(input.workRight ? { workRight: true } : {}),
+    ...(input.domesticOnly || mustStayDomestic(input) ? { domesticOnly: true } : {}), ...(input.workRight ? { workRight: true } : {}), ...(input.held ? { held: true, hidden: true } : {}),
     ...(hasTranslations(cleanTranslations(input.translations)) ? { translations: cleanTranslations(input.translations) } : {}), synthetic: true } }
 }
 /** renewing uses one post from the weekly allowance and starts the release again at level 1, with a fresh 6 months */
@@ -141,6 +143,9 @@ export const poolOf = (st: MatchState): PinLike[] => [...st.me.pins, ...st.seeke
 export const offersFor = (st: MatchState, pool: PinLike[], now: number) => { const reported = reportedIds(st); return st.posts
   .filter((p) => p.employerId !== MY_EMPLOYER && !reported.has(p.id) && reachFor(p, st.me.pins, pool, now).visible)
   .sort((a, b) => b.releasedAt.localeCompare(a.releasedAt)) }
+/** an administrator's "No problem" on a held post: shown and open again (local demo; the database: moderate_post, 0012) */
+export const releaseHeld = (st: MatchState, postId: string): MatchState =>
+  ({ ...st, posts: st.posts.map((p) => { if (p.id !== postId) return p; const { held: _h, hidden: _d, ...shown } = p; return shown }) })
 /** what a post still shows after its 6 months: nothing (the post and its applications are removed) */
 export const hasOpenCase = (st: MatchState, postId: string) => st.cases.some((c) => c.postId === postId && currentStep(c) !== null)
 export const withoutExpired = (st: MatchState, now: number): MatchState => {
@@ -188,7 +193,8 @@ export function applyTo(st: MatchState, pool: PinLike[], postId: string, seekerI
   const post = st.posts.find((p) => p.id === postId)
   const s = seekerId === ME ? st.me : st.seekers.find((x) => x.id === seekerId)
   if (!post || !s) return fail('unknown')
-  if ((seekerId === ME && post.employerId === MY_EMPLOYER) || !reachFor(post, s.pins, pool, Date.parse(at)).visible) return fail('notOpen')
+  // a hidden post (reported, or held for review) takes no applications, as in the database (0005)
+  if ((seekerId === ME && post.employerId === MY_EMPLOYER) || post.hidden || !reachFor(post, s.pins, pool, Date.parse(at)).visible) return fail('notOpen')
   if (st.acceptances.some((a) => a.postId === postId && a.seekerId === seekerId)) return fail('already')
   const t = text(input.intro, 0, 300, 'intro'); if (t) return fail(t)
   if (!dayWithin(input.availableFrom, at)) return fail('available')
@@ -220,6 +226,7 @@ export function decide(st: MatchState, accId: string, confirm: boolean, at: stri
  */
 export function sampleApplicant(st: MatchState, postId: string, id: string, at: string): Outcome<Acceptance> {
   const post = st.posts.find((p) => p.id === postId && p.employerId === MY_EMPLOYER); if (!post) return fail('unknown')
+  if (post.hidden) return fail('notOpen') // held for review: nobody sees it yet
   const s = st.seekers.find((x) => !st.acceptances.some((a) => a.postId === postId && a.seekerId === x.id)); if (!s) return fail('already')
   const today = localDay(at)
   const status: AppStatus = isFull(st.acceptances, post) ? 'reserved' : 'accepted'
@@ -285,7 +292,9 @@ export function parseState(input: unknown): MatchState | null {
     .filter((s, i, all) => all.findIndex((x) => x.id === s.id) === i)
   // data saved before Oct 2026: posts without the new details
   // posts saved before verification existed: samples count as verified, my own as not yet
-  const posts = (Array.isArray(raw.posts) ? raw.posts.map((p) => (isObj(p) ? { ...withLegacy(p), verified: typeof p.verified === 'boolean' ? p.verified : p.employerId !== MY_EMPLOYER, verifiedAs: oneOf(VERIFY_KINDS, p.verifiedAs) ? p.verifiedAs : undefined, sample: p.employerId !== MY_EMPLOYER, ...(p.translations !== undefined ? { translations: cleanTranslations(p.translations) } : {}) } : p)) : []).filter(isPost)
+  const posts = (Array.isArray(raw.posts) ? raw.posts.map((p) => (isObj(p) ? { ...withLegacy(p), verified: typeof p.verified === 'boolean' ? p.verified : p.employerId !== MY_EMPLOYER, verifiedAs: oneOf(VERIFY_KINDS, p.verifiedAs) ? p.verifiedAs : undefined, sample: p.employerId !== MY_EMPLOYER, ...(p.translations !== undefined ? { translations: cleanTranslations(p.translations) } : {}),
+    // held for review (owner, Oct 2026): only my own posts, and held always means hidden
+    held: p.held === true && p.employerId === MY_EMPLOYER ? true : undefined, hidden: p.held === true && p.employerId === MY_EMPLOYER ? true : undefined } : p)) : []).filter(isPost)
     .filter((p, i, all) => all.findIndex((x) => x.id === p.id) === i)
   const postIds = new Set(posts.map((p) => p.id)), people = new Set([ME, ...seekers.map((s) => s.id)])
   const seen = new Set<string>()

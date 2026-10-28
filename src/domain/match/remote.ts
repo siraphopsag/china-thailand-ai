@@ -31,6 +31,8 @@ export interface PostRow {
   translations?: unknown
   /** 0011: posted by a demo account */
   is_demo?: boolean | null
+  /** 0012: held for review (the AI rated it high risk); missing before 0012 → not held */
+  held?: boolean | null
 }
 export interface ReportRow { id: string; post_id: string; reporter_id: string; reason: string; note: string | null; status: string; created_at: string }
 export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string; dates?: unknown }
@@ -62,7 +64,7 @@ export const rowToPost = (r: PostRow, uid: string): Post => ({
   headcount: r.headcount, employment: one(EMPLOYMENT, r.employment),
   salary: r.salary_min !== null && r.salary_max !== null && (r.salary_currency === 'THB' || r.salary_currency === 'CNY') ? { min: r.salary_min, max: r.salary_max, currency: r.salary_currency } : null,
   startDate: r.start_date, languages: toLanguages(r.languages), education: one(EDU, r.education) ?? 'none', benefits: many(BENEFITS, r.benefits),
-  country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, ...((r.verified ?? r.is_sample) ? { verifiedAs: r.verify_kind === 'person' ? 'person' as const : 'company' as const } : {}), ...(r.hidden ? { hidden: true } : {}), ...(r.is_sample ? { sample: true } : {}),
+  country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, ...((r.verified ?? r.is_sample) ? { verifiedAs: r.verify_kind === 'person' ? 'person' as const : 'company' as const } : {}), ...(r.hidden ? { hidden: true } : {}), ...(r.held ? { held: true } : {}), ...(r.is_sample ? { sample: true } : {}),
   ...(r.is_demo ? { demo: true } : {}), ...(r.domestic_only ? { domesticOnly: true } : {}), ...(r.work_right ? { workRight: true } : {}),
   ...(hasTranslations(cleanTranslations(r.translations)) ? { translations: cleanTranslations(r.translations) } : {}), synthetic: true,
 })
@@ -79,6 +81,8 @@ export const postToRow = (i: PostInput) => ({
   country: i.place.country, province: i.place.province,
   // 0010 — always written, so an edit without a new AI check clears translations of text that has changed
   domestic_only: !!i.domesticOnly, work_right: !!i.workRight, translations: cleanTranslations(i.translations),
+  // 0012 — sent only to hold a post (the database never lets the website release one); a post that is not held works without 0012
+  ...(i.held ? { held: true } : {}),
 })
 /** a post back into the form's input (for editing) */
 export const postToInput = (p: Post): PostInput => ({

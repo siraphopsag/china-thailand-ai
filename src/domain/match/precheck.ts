@@ -30,8 +30,9 @@ const RELATED: Record<Industry, Skill[]> = {
 }
 /** wording that may exclude people for who they are (age, sex, religion, nationality) — Thai, Chinese and English */
 const DISCRIMINATION = /อายุไม่เกิน|อายุ\s*\d+\s*[-–]\s*\d+|เพศชาย|เพศหญิง|เฉพาะผู้ชาย|เฉพาะผู้หญิง|เฉพาะชาย|เฉพาะหญิง|ศาสนา|เชื้อชาติ|สัญชาติ|年龄|限男|限女|男性|女性|宗教|民族|国籍|\bage\b|\bmale only\b|\bfemale only\b|\breligio|\bnationality\b|\brace\b/i
-/** wording often seen in job scams: fees or deposits asked from the job seeker */
-const SCAM = /ค่าสมัคร|ค่ามัดจำ|ค่าหัวคิว|ค่าธรรมเนียม|โอนเงิน|เงินประกันการทำงาน|押金|报名费|手续费|保证金|中介费|\bdeposit\b|\bapplication fee\b|\bpay (a |the )?fee\b|\bprocessing fee\b/i
+/** wording often seen in job scams: fees or deposits asked from the job seeker (registration fees added Oct 2026: an AI evaluation
+ *  found "Pay the 990 baht registration fee" passed the rules) */
+const SCAM = /ค่าสมัคร|ค่ามัดจำ|ค่าหัวคิว|ค่าธรรมเนียม|ค่าลงทะเบียน|โอนเงิน|เงินประกันการทำงาน|押金|报名费|注册费|手续费|保证金|中介费|\bdeposit\b|\bapplication fee\b|\bregistration fee\b|\bpay (a |the )?fee\b|\bprocessing fee\b/i
 
 export function precheck(input: PostInput, at: string): Precheck {
   // every rule error at once (QA, Oct 2026), each problem listed once

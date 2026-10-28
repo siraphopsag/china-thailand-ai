@@ -57,6 +57,14 @@ export const safety = {
   'm.rpt.already': ['คุณรายงานประกาศนี้แล้ว — ประกาศนี้ไม่แสดงบนบอร์ดของคุณ', '您已举报此招聘信息——它不会显示在您的招聘板上', 'You reported this post — it does not show on your board'],
   'm.rpt.hiddenOwner': ['ประกาศนี้ถูกซ่อนชั่วคราว เพราะมีผู้ใช้รายงานหลายคน — ผู้ดูแลระบบกำลังตรวจ ระหว่างนี้ไม่มีใครเห็นหรือสมัครได้', '此招聘信息因多名用户举报而被暂时隐藏——管理员正在审核，期间无人可见或申请', 'This post is hidden for now because several people reported it — an administrator is checking; meanwhile nobody can see or apply'],
   'm.rpt.suspended': ['บัญชีนายจ้างของคุณถูกระงับหลังการตรวจรายงาน — โพสต์ใหม่หรือต่ออายุไม่ได้ และประกาศทั้งหมดถูกซ่อน เคสที่หน่วยงานรับไว้แล้วยังดำเนินต่อ', '您的雇主账号在举报审核后被停用——不能发布或续期，所有招聘信息已隐藏；机构已受理的个案将继续办理', 'Your employer account was suspended after a report review — no new posts or renewals, and all your posts are hidden; cases an agency has already accepted will continue'],
+  // ---------- held by the AI pre-check (owner, Oct 2026: a high-risk post waits for an administrator)
+  'm.hold.chip': ['รอผู้ดูแลระบบตรวจ', '等待管理员审核', 'Awaiting review'],
+  'm.hold.owner': ['ประกาศนี้รอผู้ดูแลระบบตรวจ เพราะ AI พบสัญญาณเสี่ยงหลอกลวงหรือค้ามนุษย์ — ระหว่างนี้ไม่มีใครเห็นหรือสมัครได้', '此招聘信息正在等待管理员审核，因为 AI 发现了诈骗或人口贩卖风险迹象——期间无人可见或申请', 'This post is awaiting review because the AI found signs of a scam or human trafficking — meanwhile nobody can see or apply'],
+  'm.hold.done': ['บันทึกแล้ว — รอผู้ดูแลระบบตรวจ', '已保存——等待管理员审核', 'Saved — awaiting review'],
+  'm.hold.doneText': ['ผู้ดูแลระบบจะตรวจก่อน ระบบจะเริ่มแจ้งผู้หางานเมื่อปล่อยประกาศแล้วเท่านั้น', '管理员会先审核，发布后系统才开始通知求职者', 'An administrator checks it first; job seekers are notified only once it has been released'],
+  'm.adm.held': ['AI พักไว้รอตรวจ', 'AI 暂缓发布待审核', 'Held by the AI pre-check'],
+  'm.adm.heldNote': ['ไม่ได้เก็บผลตรวจของ AI ไว้ — เปิดประกาศเพื่ออ่านเอง', '未保存 AI 的检查结果——请打开招聘信息自行查看', 'The AI’s findings are not stored — open the post to read it'],
+  'm.adm.release': ['ไม่ผิด (ปล่อยประกาศ)', '无问题（发布）', 'No problem (release it)'],
   // ---------- back office
   'm.adm.reports': ['รายงานประกาศ ({n})', '被举报的招聘信息（{n}）', 'Reported posts ({n})'],
   'm.adm.reportsNone': ['ไม่มีรายงานที่รอตรวจ', '没有待审核的举报', 'No reports waiting'],

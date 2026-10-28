@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { addPin, applyTo, sampleApplicant, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, removePin, renewPost, requestPersonVerify, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
+import { addPin, applyTo, sampleApplicant, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, releaseHeld, removePin, renewPost, requestPersonVerify, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
 import { applyCaseAction, submitCase, type CaseAction } from './domain/match/cases'
 import { cleanPhone, cleanRegNo } from './domain/match/verify'
-import { reportPost, type ReportGroup, type ReportReason } from './domain/match/reports'
+import { reportPost, withHeld, type ReportGroup, type ReportReason } from './domain/match/reports'
 import { HOUR_MS, pinActive, type PinLike } from './domain/match/release'
 import { seedState } from './domain/match/seed'
 import type { PinGroup } from './domain/match/market'
@@ -106,13 +106,13 @@ interface Ctx {
   agency: boolean
   /** report a suspicious post (once per post, not my own); it then leaves my board */
   report: (postId: string, reason: ReportReason, note: string) => Promise<Outcome<unknown>>
-  /** administrator: open reports grouped by post */
+  /** administrator: posts held by the AI pre-check, then open reports grouped by post (the local demo: held posts only) */
   reports: ReportGroup[]
   /** administrator: add simulated posts and/or pins (the generator, 0008) — everything is labelled "simulated data" */
   addSamples: (posts: SimPost[], pins: SimPin[]) => Promise<Outcome<{ posts: number; pins: number }>>
   /** administrator: remove simulated posts and/or pins */
   clearSamples: (posts: boolean, pins: boolean) => Promise<Outcome<{ posts: number; pins: number }>>
-  /** administrator: not a problem (shown again) · remove the post · suspend its employer */
+  /** administrator: not a problem (shown again; a held post is released) · remove the post · suspend its employer */
   moderate: (postId: string, action: 'dismiss' | 'remove' | 'suspend') => Promise<Outcome<unknown>>
   advanceClock: (hours: number) => void
   resetClock: () => void
@@ -243,7 +243,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     // signed in: limits are checked at the real time, like the database does
     const limitAt = () => (local ? at() : new Date().toISOString())
     return {
-      st: stView, now, limitNow, mode, syncing: writing > 0, pool, pinsByProvince, pinGroups, counts, stats: local ? null : stats, pendingVerifications, agency: local || admin, reports: local ? [] : reportQueue(reportRows),
+      st: stView, now, limitNow, mode, syncing: writing > 0, pool, pinsByProvince, pinGroups, counts, stats: local ? null : stats, pendingVerifications, agency: local || admin, reports: withHeld(local ? [] : reportQueue(reportRows), local || admin ? st.posts : []),
       setRole: async (role) => { if (local) setLocal((s) => ({ ...s, role })); else await profile({ user_type: role }) },
       setOrigin: async (origin) => { if (local) setLocal((s) => ({ ...s, me: { ...s.me, origin } })); else await profile({ origin_country: origin?.country ?? null, origin_province: origin?.province ?? null }) },
       pin: async (input) => {
@@ -268,7 +268,8 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         // fewer people than already hold a place cannot be asked for (bug hunt, Oct 2026: it showed "3/1 places")
         if (input.headcount < (counts[id]?.held ?? holding(st.acceptances, id))) return { ok: false, problem: 'belowHeld' } as const
         // an unchanged start date is checked against the posting day (a post whose start has passed can still be corrected)
-        const r = makePost(input, id, MY_EMPLOYER, old.startDate && input.startDate === old.startDate ? old.createdAt : at()); if (!r.ok) return r
+        // a hold stays until an administrator releases it (0012); an edit the AI rates high risk holds the post again
+        const r = makePost({ ...input, held: input.held || old.held }, id, MY_EMPLOYER, old.startDate && input.startDate === old.startDate ? old.createdAt : at()); if (!r.ok) return r
         const value = { ...r.value, createdAt: old.createdAt, releasedAt: old.releasedAt }
         // more people wanted: places go to the queue at once, as the database does
         if (local) { setLocal((s) => ({ ...s, myCompany: input.company, posts: s.posts.map((p) => (p.id === id ? value : p)), acceptances: promote(s.acceptances, value, at()) })); return { ok: true, value } }
@@ -393,7 +394,16 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         return !w.ok && w.problem === 'already' ? fail('reported') : w
       },
       moderate: async (postId, action) => {
-        if (local) return fail('state') // no administrators in the local demo
+        if (local) {
+          // the demo: a held post is released or removed as on the live site; there are no accounts to suspend, and no reports reach this queue
+          const p = st.posts.find((x) => x.id === postId)
+          if (!p?.held || action === 'suspend') return fail('state')
+          if (action === 'remove') {
+            if (caseBlocksDelete(st, postId)) return fail('caseStarted')
+            setLocal((s) => ({ ...s, posts: s.posts.filter((x) => x.id !== postId), acceptances: s.acceptances.filter((a) => a.postId !== postId), cases: s.cases.filter((c) => c.postId !== postId) }))
+          } else setLocal((s) => releaseHeld(s, postId))
+          return { ok: true, value: null }
+        }
         return write((sb) => sb.rpc('moderate_post', { p_post: postId, p_action: action }), () => null)
       },
       advanceClock: (hours) => {

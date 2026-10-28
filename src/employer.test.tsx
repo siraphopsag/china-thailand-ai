@@ -93,6 +93,9 @@ describe('B. pre-check (simulated AI)', () => {
     expect(w({ details: 'Kitchen job.' })).toContain('shortDetails')
     for (const d of ['เฉพาะผู้ชาย อายุไม่เกิน 30 ปี ทำงานครัว', '限男，35岁以下，厨房工作，有经验优先考虑', 'Male only, kitchen work with day shifts and training provided']) expect(w({ details: d }), d).toContain('discrimination')
     for (const d of ['ต้องโอนเงินค่ามัดจำก่อนเริ่มงานครัวในร้าน', '入职前需缴纳押金，厨房工作，包吃住提供培训', 'A deposit is required before starting kitchen work']) expect(w({ details: d }), d).toContain('scamRisk')
+    // Oct 2026: an AI evaluation found the rules missed registration fees
+    for (const d of ['Pay the 990 baht registration fee', 'ต้องจ่ายค่าลงทะเบียน 990 บาทก่อนเริ่มงาน', '入职前需支付990泰铢注册费']) expect(w({ details: d }), d).toContain('scamRisk')
+    expect(w({ details: 'Register at the front desk on your first day; uniforms are provided free.' })).not.toContain('scamRisk')
     expect(w({ headcount: 60 })).toContain('manyPeople')
     const pc = src('./domain/match/precheck.ts')
     expect(pc).toMatch(/SIMULATED/) // stands in for a future AI review

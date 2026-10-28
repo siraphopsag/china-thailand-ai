@@ -476,11 +476,16 @@ export function PostCard({ post, level, reached, children }: { post: Post; level
         {c.reserved > 0 && <span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ticket" size={12} />{t('m.cnt.reserved', { n: c.reserved })}</span>}
         {state !== 'open' && <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(state === 'waiting' ? 'm.state.waiting' : 'm.state.closed')}</span>}
         <UnverifiedChip post={post} />
-        {post.sample && <SampleBadge />}{post.demo && <DemoBadge />}
+        {post.sample && <SampleBadge />}{post.demo && <DemoBadge />}<HeldChip post={post} />
       </p>
       {children}
     </li>
   )
+}
+/** held by the AI pre-check (owner, Oct 2026): hidden from job seekers until an administrator releases it */
+export function HeldChip({ post }: { post: Post }) {
+  const { t } = useI18n()
+  return post.held ? <span className="chip bg-danger-bg text-danger-fg border-danger-line"><Icon name="hourglass" size={12} />{t('m.hold.chip')}</span> : null
 }
 /** newest first ↔ oldest first; the visible words are part of the button's name */
 export function SortToggle({ order, onChange, className = '' }: { order: 'new' | 'old'; onChange: (o: 'new' | 'old') => void; className?: string }) {
@@ -974,15 +979,18 @@ export function BackofficePage() {
               <div className={`${ROW} space-y-2`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-semibold min-w-0">{p ? <NavLink to={`post?id=${p.id}`} className="hover:underline underline-offset-4">{p.position} · {p.company}</NavLink> : t('m.adm.reportsGone')}</p>
-                  <p className="flex flex-wrap gap-1.5"><span className="chip bg-danger-bg text-danger-fg border-danger-line"><Icon name="alert" size={12} />{t('m.adm.reportsBy', { n: g.count })}</span>
+                  <p className="flex flex-wrap gap-1.5">{g.held && <span className="chip bg-danger-bg text-danger-fg border-danger-line"><Icon name="ai" size={12} />{t('m.adm.held')}</span>}
+                    {g.count > 0 && <span className="chip bg-danger-bg text-danger-fg border-danger-line"><Icon name="alert" size={12} />{t('m.adm.reportsBy', { n: g.count })}</span>}
                     {p?.hidden && <span className="chip bg-warn-bg text-warn-fg border-warn-line"><Icon name="eyeOff" size={12} />{t('m.adm.hidden')}</span>}</p>
                 </div>
+                {/* owner, Oct 2026: the AI's findings are not saved with the post (label only) */}
+                {g.held && <p className="text-xs text-muted">{t('m.adm.heldNote')}</p>}
                 <p className="flex flex-wrap gap-1.5">{Object.entries(g.reasons).map(([k, n]) => <span key={k} className="chip bg-surface3 border-line">{t(`m.rpt.r.${k}` as never)} × {n}</span>)}</p>
                 {g.notes.length > 0 && <p className="text-xs text-muted line-clamp-1">{g.notes.map((n) => `“${n}”`).join(' · ')}</p>}
                 {p && <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn-ghost text-sm" onClick={() => void decideR(g.postId, 'dismiss')}><Icon name="ok" size={15} />{t('m.adm.dismiss')}</button>
+                  <button type="button" className="btn-ghost text-sm" onClick={() => void decideR(g.postId, 'dismiss')}><Icon name="ok" size={15} />{t(g.held ? 'm.adm.release' : 'm.adm.dismiss')}</button>
                   <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideR(g.postId, 'remove')}><Icon name="trash" size={15} />{t('m.adm.remove')}</button>
-                  {!p.employerId.startsWith('sample:') && <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideR(g.postId, 'suspend')}><Icon name="lock" size={15} />{t('m.adm.suspend')}</button>}
+                  {!p.employerId.startsWith('sample:') && mode !== 'local' && <button type="button" className="btn-ghost text-sm text-danger-fg" onClick={() => void decideR(g.postId, 'suspend')}><Icon name="lock" size={15} />{t('m.adm.suspend')}</button>}
                 </div>}
               </div>)
           }} /></div>)}
@@ -1005,7 +1013,7 @@ export function BackofficePage() {
             const reached = people.filter((s) => reachFor(p, s.pins, pool, now).visible).length
             return (
               <button type="button" onClick={() => setPostOpen(p.id)} className={`${ROW} w-full text-left flex flex-wrap items-center justify-between gap-2 hover:bg-surface3`}>
-                <span className="min-w-0"><h3 className="font-semibold">{p.position} · {p.company} {p.sample && <SampleBadge />}</h3>
+                <span className="min-w-0"><h3 className="font-semibold">{p.position} · {p.company} {p.sample && <SampleBadge />}<HeldChip post={p} /></h3>
                   <span className="block text-xs text-muted truncate">{N.place(p.country, p.province)} · {N.industry(p.industry)} · {t('m.adm.applicants', { n: acc.length })} · {t('m.adm.reachedN', { n: reached })}</span></span>
                 <span className="flex items-center gap-2">{stage !== 'expired' && <LevelBadge level={stage} reached />}<Icon name="next" size={15} className="text-muted" /></span>
               </button>)

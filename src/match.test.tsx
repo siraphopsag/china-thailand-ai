@@ -38,6 +38,8 @@ function html(node: ReactNode, st?: MatchState): string {
 }
 const NOW = Date.parse('2026-10-03T08:00:00.000Z')
 const at = (days: number) => new Date(NOW + days * DAY_MS).toISOString()
+/** days from the real time: pages rendered through MatchProvider run on the real clock (a pin dated from NOW expires 30 days later) */
+const real = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString()
 /** the post details added in Oct 2026, filled with valid sample values */
 const EXTRA = { headcount: 1, employment: 'permanent' as const, salary: null, startDate: at(1).slice(0, 10), languages: [{ lang: 'zh' as const, level: 'basic' as const }], education: 'none' as const, benefits: [] }
 const seeker = (pins: Seeker['pins']): Seeker => ({ id: ME, name: 'you', origin: { country: 'TH', province: 'TH-10' }, pins, synthetic: true })
@@ -309,7 +311,6 @@ describe('renew and delete on the board (owner, Oct 2026: they seemed to do noth
 })
 
 describe('the board (owner, Oct 2026)', () => {
-  const real = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString()
   it('job seeker: the shop shelves (reach rings with names — no stars, owner Oct 2026), search and filters, newest first, and my pins', () => {
     const st = seedState(); st.role = 'seeker'
     st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: real(-5) }])
@@ -462,8 +463,8 @@ describe('accessibility audit, rounds 2–3 (#3–#6, #8–#10)', () => {
     expect(geo).toMatch(/onPickCountry\(d\.code as GeoCode\)/)
   })
   it('#5 job titles on notifications and in the back office are headings', () => {
-    const st = seedState(NOW); st.role = 'seeker'
-    st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: at(-5) }])
+    const st = seedState(); st.role = 'seeker' // the page runs on the real clock
+    st.me = seeker([{ id: 'm1', country: 'CN', province: 'CN-JS', industry: 'manufacturing', skills: ['quality_control'], at: real(-5) }])
     expect(html(<NotificationsPage />, st)).toMatch(/<h3 class="[^"]*"><a href="\/post\?id=post-s2"[^>]*>วิศวกรควบคุมคุณภาพ<\/a><\/h3>/)
     expect(src('./pages/match.tsx')).toMatch(/<h3 className="font-semibold">\{p\.position\} · \{p\.company\}/)
   })

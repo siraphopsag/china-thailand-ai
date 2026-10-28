@@ -37,7 +37,9 @@ export function parseReports(raw: unknown, postIds: Set<string>): Report[] {
 }
 
 /** the administrator's queue: open reports grouped by post, most reported first */
-export interface ReportGroup { postId: string; count: number; reasons: Partial<Record<ReportReason, number>>; notes: string[]; first: string }
+export interface ReportGroup { postId: string; count: number; reasons: Partial<Record<ReportReason, number>>; notes: string[]; first: string
+  /** owner, Oct 2026 (0012): held by the AI pre-check (high risk) — it waits here even without reports */
+  held?: boolean }
 export function groupReports(rows: { postId: string; reason: ReportReason; note: string; at: string }[]): ReportGroup[] {
   const by = new Map<string, ReportGroup>()
   for (const r of rows) {
@@ -48,4 +50,12 @@ export function groupReports(rows: { postId: string; reason: ReportReason; note:
     by.set(r.postId, g)
   }
   return [...by.values()].sort((a, b) => b.count - a.count || a.first.localeCompare(b.first))
+}
+/** the same queue with the posts the AI pre-check held (0012), longest waiting first, ahead of the reports: nobody sees a held
+ *  post, and its employer waits for the decision */
+export function withHeld(groups: ReportGroup[], posts: { id: string; held?: boolean; createdAt: string }[]): ReportGroup[] {
+  const held = posts.filter((p) => p.held).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  const ids = new Set(held.map((p) => p.id))
+  return [...held.map((p) => ({ ...(groups.find((g) => g.postId === p.id) ?? { postId: p.id, count: 0, reasons: {}, notes: [], first: p.createdAt }), held: true })),
+    ...groups.filter((g) => !ids.has(g.postId))]
 }

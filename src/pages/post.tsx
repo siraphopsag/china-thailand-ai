@@ -11,7 +11,7 @@ import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { CaseLink } from './case'
 import { ReportButton, ScamNote } from './safety'
-import { AgencyLinks, DemoBadge, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, TranslatedNote, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
+import { AgencyLinks, DemoBadge, HeldChip, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, TranslatedNote, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 
 /**
  * One post (owner, Oct 2026): details, the five release levels with their times, who else is looking at it right now, and —
@@ -93,7 +93,7 @@ export function PostPage() {
         {c.reserved > 0 && <span className="chip bg-info-bg text-info-fg border-info-line"><Icon name="ticket" size={12} />{t('m.cnt.reserved', { n: c.reserved })}</span>}
         {state !== 'open' && <span className="chip bg-warn-bg text-warn-fg border-warn-line">{t(state === 'waiting' ? 'm.state.waiting' : 'm.state.closed')}</span>}
         <UnverifiedChip post={p} />
-        {p.sample && <SampleBadge />}{p.demo && <DemoBadge />}
+        {p.sample && <SampleBadge />}{p.demo && <DemoBadge />}<HeldChip post={p} />
       </div>
       {/* real people only: others who have this post open now, and how many are filling in the form (database mode) */}
       <div role="status" aria-live="polite" className="space-y-1 shrink-0 empty:hidden">
@@ -102,7 +102,7 @@ export function PostPage() {
       </div>
       {p.sample && <div className="shrink-0"><SampleNote /></div>}
       {!p.verified && !mine && <div className="shrink-0"><Warn>{t('m.vf.warnSeeker')}</Warn></div>}
-      {mine && p.hidden && <div className="shrink-0"><Warn tone="danger">{t('m.rpt.hiddenOwner')}</Warn></div>}
+      {mine && p.hidden && <div className="shrink-0"><Warn tone="danger">{t(p.held ? 'm.hold.owner' : 'm.rpt.hiddenOwner')}</Warn></div>}
       <Toast msg={msg} />
       {askDialog}
 
@@ -145,7 +145,7 @@ export function PostPage() {
               {now >= s.warnAt && <Warn>{t('m.em.expiring', { t: until(s.expiresAt) })}</Warn>}
               <p className="text-sm text-muted">{t('m.em.life', { d: N.dayTime(s.expiresAt) })}</p>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn-primary text-sm" disabled={busy} onClick={renewIt}><Icon name="renew" size={15} />{busy ? t('m.ask.busy') : t('m.em.renew')}</button>
+                {!p.held && <button type="button" className="btn-primary text-sm" disabled={busy} onClick={renewIt}><Icon name="renew" size={15} />{busy ? t('m.ask.busy') : t('m.em.renew')}</button>}
                 <NavLink to={`hire?edit=${p.id}`} className="btn-ghost text-sm"><Icon name="edit" size={15} />{t('m.post.edit')}</NavLink>
                 <button type="button" className="btn-ghost text-sm text-danger-fg" disabled={busy} onClick={async () => {
                   if (caseBlocksDelete(st, p.id)) { setMsg({ tone: 'danger', text: problemText('caseStarted') }); return }

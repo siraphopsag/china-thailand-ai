@@ -150,7 +150,7 @@ export const design = {
   'm.adm.tab.posts': ['ประกาศ', '招聘信息', 'Posts'],
   'm.adm.attn': ['ต้องดูแล', '需要处理', 'Needs attention'],
   'm.adm.attn.verify': ['บริษัทรอตรวจเลขทะเบียน', '等待核实注册号的公司', 'Companies waiting for a check'],
-  'm.adm.attn.reports': ['ประกาศที่มีคนรายงาน', '被举报的招聘信息', 'Posts people reported'],
+  'm.adm.attn.reports': ['ประกาศที่มีคนรายงานหรือ AI พักไว้', '被举报或被 AI 暂缓的招聘信息', 'Posts reported or held by the AI'],
   'm.adm.attn.cases': ['เคสที่ยังไม่ปิด', '未结束的个案', 'Cases still open'],
   'm.adm.attn.posts': ['ประกาศทั้งหมดในระบบ', '系统中的全部招聘信息', 'Posts in the system'],
   'm.adm.demoClock': ['นาฬิกาสาธิต (เลื่อนเวลาเพื่อดูการปล่อยแต่ละวง)', '演示时钟（快进以查看圈层发布）', 'Demo clock (move time to watch the rings release)'],

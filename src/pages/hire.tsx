@@ -32,6 +32,8 @@ import { PlanGrid } from './member'
  * "Post this job?" → "Your post is live" with [View the post] [Post another]. 3 free posts per weekly cycle (new or renewed); after
  * that the membership package window (10 per cycle; planned price shown struck through, free in the prototype — no payment).
  * Editing (owner, Oct 2026): "Edit" on one of my posts (or hire?edit=<id>) fills the same form; saving keeps the posting date.
+ * High risk (owner, Oct 2026): when the AI rates a post high risk it is saved but held — hidden, marked "awaiting review" in my
+ * posts — until an administrator releases it (SQL 0012). With the basic rules only (no AI answer) nothing is held.
  */
 type Stage = null | 'check' | 'confirm' | 'done' | 'package' | 'joined'
 const today = (now: number) => localDay(new Date(now).toISOString())
@@ -77,8 +79,8 @@ export function HirePage() {
   useEffect(() => { if (deletedAsked) go('hire?tab=mine', { replace: true }) }, [deletedAsked])
   const [stage, setStage] = useState<Stage>(null)
   const [check, setCheck] = useState<Precheck | null>(null)
-  // the AI check (null = not asked; 'busy' = waiting); a high-risk result needs the employer's tick before posting
-  const [aiRes, setAiRes] = useState<AiResponse<AiCheck> | 'busy' | null>(null), [ack, setAck] = useState(false)
+  // the AI check (null = not asked; 'busy' = waiting); a high-risk result holds the post for an administrator (owner, Oct 2026)
+  const [aiRes, setAiRes] = useState<AiResponse<AiCheck> | 'busy' | null>(null)
   const aiRun = useRef(0)
   const lite = useLite()
   const [shown, setShown] = useState(false) // the orb has turned green: show the result
@@ -138,7 +140,7 @@ export function HirePage() {
       return
     }
     const r = precheck(i, at)
-    setPending(i); setCheck(r); setAiRes(null); setAck(false); setShown(false)
+    setPending(i); setCheck(r); setAiRes(null); setShown(false)
     // rule errors (e.g. a phone number in the details) must be fixed first; otherwise the AI reads the post when it can
     // local development only (?orbdemo): try the AI check without an account or an AI key — not in the built site
     const demo = import.meta.env.DEV && new URLSearchParams(location.search).has('orbdemo')
@@ -154,11 +156,12 @@ export function HirePage() {
   const closeCheck = () => { aiRun.current++; setStage(null); if (check?.errors[0]) showProblem(check.errors[0]) }
   const aiOk = aiRes && aiRes !== 'busy' && aiRes.ok && shown ? aiRes : null
   const orbOn = aiRes === 'busy' || (aiRes !== null && aiRes.ok && !shown) // still reading, or turning green
+  const held = aiOk?.result.verdict === 'high_risk' // only an AI answer holds a post; the basic rules never do
   // what is saved: the AI's translations (or none — an edit without them clears the old ones) and the in-country rule
   const finalInput = (i: PostInput): PostInput => {
     const ai = aiOk?.result
     return { ...i, domesticOnly: !!i.domesticOnly || !!ai?.closedToForeigners || mustStayDomestic(i),
-      translations: ai?.translations ? { ...ai.translations, src: guessLang(`${i.position} ${i.details}`) } : {} }
+      translations: ai?.translations ? { ...ai.translations, src: guessLang(`${i.position} ${i.details}`) } : {}, ...(held ? { held: true } : {}) }
   }
   const confirm = async () => {
     if (!pending || saving) return
@@ -304,7 +307,8 @@ export function HirePage() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <NavLink to={`post?id=${x.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-primary min-h-[24px]">{t('m.pp.view')}<Icon name="next" size={14} /></NavLink>
                 <button type="button" className="inline-flex items-center gap-1 text-sm font-medium min-h-[24px] hover:underline underline-offset-4" onClick={() => startEdit(x)} aria-label={`${t('m.post.edit')}: ${x.position}`}><Icon name="edit" size={14} />{t('m.post.edit')}</button>
-                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium min-h-[24px] hover:underline underline-offset-4" onClick={() => renewIt(x)} disabled={renewing === x.id} aria-label={`${t('m.em.renew')}: ${x.position}`}><Icon name="renew" size={14} />{renewing === x.id ? t('m.ask.busy') : t('m.em.renew')}</button>
+                {/* a held post cannot reach anyone yet: renewing would only use up a post */}
+                {!x.held && <button type="button" className="inline-flex items-center gap-1 text-sm font-medium min-h-[24px] hover:underline underline-offset-4" onClick={() => renewIt(x)} disabled={renewing === x.id} aria-label={`${t('m.em.renew')}: ${x.position}`}><Icon name="renew" size={14} />{renewing === x.id ? t('m.ask.busy') : t('m.em.renew')}</button>}
                 <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-danger-fg min-h-[24px] hover:underline underline-offset-4" onClick={() => remove(x)} disabled={deleting === x.id} aria-label={`${t('m.post.delete')}: ${x.position}`}><Icon name="trash" size={14} />{deleting === x.id ? t('m.ask.busy') : t('m.post.delete')}</button>
               </div>
             </PostCard>) })}</ul>)}
@@ -319,14 +323,14 @@ export function HirePage() {
           : aiOk ? <><p className="mo-checked"><span className="mo-checked-ball" aria-hidden="true" />{t('ai.chk.allDone')}</p><AiCheckResult res={aiOk.result} left={aiOk.left} /></>
           : <p className="text-xs text-muted">{aiRes && !aiRes.ok ? t('ai.chk.fallback', { why: t(`ai.why.${aiRes.reason}` as never) }) : t('m.chk.simNote')}</p>}
         {!aiOk && !orbOn && check.errors.length === 0 && check.warnings.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')}</p>}
-        {aiOk?.result.verdict === 'high_risk' && <label className="flex items-start gap-2 text-sm font-medium rounded-lg border border-danger-line bg-danger-bg text-danger-fg p-3"><input type="checkbox" className="mt-1" checked={ack} onChange={(e) => setAck(e.target.checked)} />{t('ai.chk.ack')}</label>}
+        {held && <HoldNotice />}
         {!aiOk && !orbOn && check.errors.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-danger-fg flex items-center gap-1.5"><Icon name="alert" size={16} />{t('m.chk.errors')}</p>
           <ul className="list-disc pl-6 text-sm space-y-1">{check.errors.map((e) => <li key={e}>{N.problem(e)}</li>)}</ul></div>}
         {!aiOk && !orbOn && check.warnings.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-warn-fg flex items-center gap-1.5"><Icon name="warn" size={16} />{t('m.chk.warnings')}</p>
           <ul className="list-disc pl-6 text-sm space-y-1">{check.warnings.map((w) => <li key={w}>{t(`m.chk.w.${w}` as never)}</li>)}</ul></div>}
         <div className="flex flex-wrap justify-end gap-2 pt-1">
           <button type="button" className="btn-ghost" onClick={closeCheck}>{t('m.chk.fix')}</button>
-          {check.errors.length === 0 && !orbOn && <button type="button" className="btn-primary" disabled={aiOk?.result.verdict === 'high_risk' && !ack} onClick={() => setStage('confirm')}>{t('m.chk.continue')}<Icon name="next" size={16} /></button>}
+          {check.errors.length === 0 && !orbOn && <button type="button" className="btn-primary" onClick={() => setStage('confirm')}>{t('m.chk.continue')}<Icon name="next" size={16} /></button>}
         </div></>)}</Modal>
 
       {/* 2) are you sure? */}
@@ -334,18 +338,19 @@ export function HirePage() {
         <h2 id={id} className="h2">{t(editing ? 'm.edit.cf.title' : 'm.cf.title')}</h2>
         {aiOk ? (aiOk.result.verdict === 'ok' && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('ai.chk.v.ok')} <span className="text-muted">({t('ai.chk.by')})</span></p>)
           : check && check.warnings.length === 0 && check.errors.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')} <span className="text-muted">({t('m.chk.sim')})</span></p>}
+        {held && <HoldNotice />}
         <div className="card-i space-y-1 text-sm"><p className="font-semibold">{pending.position} · {pending.company}</p><p className="text-muted">{N.place(pending.place.country, pending.place.province)} · {t('m.people', { n: pending.headcount })} · {N.employment(pending.employment)}</p></div>
         {(() => { const f = finalInput(pending); return <>
           {f.domesticOnly && <p className="text-sm flex items-start gap-1.5"><Icon name="home" size={16} className="mt-0.5 shrink-0 text-primary" />{t('m.cf.domestic')}</p>}
           {f.translations && Object.keys(f.translations).some((k) => k !== 'src') && <p className="text-sm flex items-start gap-1.5"><Icon name="language" size={16} className="mt-0.5 shrink-0 text-primary" />{t('m.cf.translated')}</p>}
         </> })()}
         <p className="text-xs text-muted">{editing ? t('m.edit.note') : t('m.cf.quota', { n: used + 1, max: limit })}</p>
-        <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setStage(null)}>{t('m.cf.back')}</button><button type="button" className="btn-primary" disabled={saving} onClick={confirm}><Icon name="send" size={16} />{t(editing ? 'm.edit.cf.yes' : 'm.cf.yes')}</button></div></>)}</Modal>
+        <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setStage(null)}>{t('m.cf.back')}</button><button type="button" className="btn-primary" disabled={saving} onClick={confirm}><Icon name="send" size={16} />{held ? t('ai.hold.yes') : t(editing ? 'm.edit.cf.yes' : 'm.cf.yes')}</button></div></>)}</Modal>
 
       {/* 3) posted */}
       <Modal open={stage === 'done'} onClose={another}>{(id) => posted && (<>
-        <div className="flex items-center gap-3"><span className="glass-drop w-11 h-11 shrink-0"><Icon name="check" size={22} /></span><h2 id={id} className="h2">{t(editing ? 'm.edit.done' : 'm.dn.title')}</h2></div>
-        <p className="text-sm text-muted">{t(editing ? 'm.edit.note' : 'm.dn.text')}</p>
+        <div className="flex items-center gap-3"><span className="glass-drop w-11 h-11 shrink-0"><Icon name={posted.held ? 'hourglass' : 'check'} size={22} /></span><h2 id={id} className="h2">{posted.held ? t('m.hold.done') : t(editing ? 'm.edit.done' : 'm.dn.title')}</h2></div>
+        <p className="text-sm text-muted">{posted.held ? t('m.hold.doneText') : t(editing ? 'm.edit.note' : 'm.dn.text')}</p>
         <div className="grid sm:grid-cols-2 gap-2"><button type="button" className="btn-primary" onClick={() => { const pid = posted.id; another(); go(`post?id=${pid}`) }}><Icon name="posts" size={16} />{t('m.dn.view')}</button>
           <button type="button" className="btn-ghost" onClick={another}><Icon name={editing ? 'back' : 'plus'} size={16} />{t(editing ? 'm.pk.ok' : 'm.dn.more')}</button></div></>)}</Modal>
 
@@ -359,6 +364,12 @@ export function HirePage() {
         <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setStage(null)}>{t('m.pk.later')}</button></div></>)}</Modal>
     </Page>
   )
+}
+
+/** the AI rated the post high risk: it is saved but held until an administrator has checked it (owner, Oct 2026) */
+export function HoldNotice() {
+  const { t } = useI18n()
+  return <p role="note" className="flex items-start gap-2 text-sm font-medium rounded-lg border border-danger-line bg-danger-bg text-danger-fg p-3"><Icon name="eyeOff" size={16} className="mt-0.5 shrink-0" />{t('ai.hold.notice')}</p>
 }
 
 function QuotaNote({ used, limit, member }: { used: number; limit: number; member: boolean }) {

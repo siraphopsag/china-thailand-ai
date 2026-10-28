@@ -112,8 +112,10 @@ export interface Post extends Place {
   verified: boolean
   /** how: a company registration (all five levels) or a private person's phone (up to level 3); missing = company (before 0007) */
   verifiedAs?: VerifyKind
-  /** hidden while an administrator checks reports (database only; its employer and administrators still see it) */
+  /** hidden while an administrator checks reports (database only) or a held post (below); its employer and administrators still see it */
   hidden?: boolean
+  /** owner, Oct 2026 (0012): held for review because the AI pre-check rated it high risk — hidden until an administrator releases it */
+  held?: boolean
   /** a sample post made for the prototype, not a real employer (shown with a "Sample" badge) */
   sample?: boolean
   /** made by a demo account (SQL 0011) — shown with a "demo account" label */

@@ -39,7 +39,9 @@ export const ai = {
   'ai.chk.quote': ['ข้อความในประกาศ', '招聘信息原文', 'In your post'],
   'ai.chk.fixIt': ['แนะนำให้แก้', '修改建议', 'Suggested fix'],
   'ai.chk.laws': ['ข้อมูลกฎหมายที่เกี่ยวข้อง', '相关法律信息', 'Related legal records'],
-  'ai.chk.ack': ['ฉันตรวจแล้ว ยืนยันว่าเป็นงานจริงและไม่เก็บเงินจากผู้หางาน', '我已检查，确认这是真实职位且不向求职者收费', 'I have checked: this is a real job and job seekers pay nothing'],
+  // owner, Oct 2026: a high-risk post is saved but held — nobody sees it until an administrator has checked it
+  'ai.hold.notice': ['ประกาศนี้จะถูกบันทึกแต่พักไว้รอตรวจ — ยังไม่มีใครเห็นจนกว่าผู้ดูแลระบบจะตรวจแล้ว · ดำเนินการต่อได้ หรือกลับไปแก้ไขก่อน', '这条招聘信息会被保存，但将暂缓发布、等待审核——在管理员审核之前任何人都看不到。您可以继续，也可以先返回修改', 'This post will be held for review — it is saved, but nobody can see it until an administrator has checked it. You can continue, or go back and edit it first'],
+  'ai.hold.yes': ['บันทึกและส่งให้ผู้ดูแลระบบตรวจ', '保存并提交管理员审核', 'Save and send for review'],
 
   // ---------- B) the legal Q&A assistant
   'ai.ask.title': ['ผู้ช่วยกฎหมาย AI', 'AI 法律助手', 'AI legal assistant'],
