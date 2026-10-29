@@ -7,6 +7,7 @@ import { useI18n } from '../i18n'
 import { Icon } from './icons'
 import { GEO, HOME, MAX_K, clampView, codeOfIso, lerpView, viewForBox, type GeoCode, type View } from '../geo'
 import capitals from '../data/geo/capitals.json'
+import taiwan from '../data/geo/taiwan.json'
 import { FLAGS } from './flags'
 import { useLite } from '../theme'
 
@@ -27,6 +28,14 @@ import { useLite } from '../theme'
  * projection, so text always stands upright.
  */
 const CHINA_PARTS = new Set(['156', '344', '446'])
+/** Taiwan is drawn as part of China (owner, 29 Oct 2026: the region file had left it out). Natural Earth 1:50m, world-atlas
+ *  2.0.2 country 158; no maritime lines are drawn. */
+export const TAIWAN = taiwan as { type: 'MultiPolygon'; coordinates: number[][][][] }
+/** China's outline = mainland + Hong Kong + Macao (merged arcs) + Taiwan */
+export function withTaiwan(g: Geometry): Geometry {
+  const own = g.type === 'MultiPolygon' ? g.coordinates : g.type === 'Polygon' ? [g.coordinates] : []
+  return { type: 'MultiPolygon', coordinates: [...own, ...TAIWAN.coordinates] }
+}
 type CountryF = Feature<Geometry, { name?: string }>
 type ProvinceF = Feature<Geometry, { iso_3166_2?: string; adm0_a3?: string }>
 type Capital = { country: GeoCode; name: string; lon: number; lat: number }
@@ -42,7 +51,7 @@ function loadGeo() {
     const ao = at.objects[Object.keys(at.objects)[0]] as GeometryCollection<ProvinceF['properties']>
     const provinces = (feature(at, ao) as FeatureCollection<Geometry, ProvinceF['properties']>).features.filter((f) => f.properties.iso_3166_2 && !f.properties.iso_3166_2.includes('~'))
     const geoms = rt.objects.countries.geometries
-    const china: CountryF = { type: 'Feature', id: '156', properties: { name: 'China' }, geometry: merge(rt, geoms.filter((g) => CHINA_PARTS.has(String(g.id))) as never) }
+    const china: CountryF = { type: 'Feature', id: '156', properties: { name: 'China' }, geometry: withTaiwan(merge(rt, geoms.filter((g) => CHINA_PARTS.has(String(g.id))) as never)) }
     return { countries: [china, ...geoms.filter((g) => !CHINA_PARTS.has(String(g.id))).map((g) => feature(rt, g) as CountryF)], provinces }
   })
   return cache

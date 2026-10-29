@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { ACTIVE, GEO, HOME, SOON, clampView, codeOfIso, lerpView, viewForBox } from './geo'
 import capitals from './data/geo/capitals.json'
 import region from './data/geo/region-asean-china.json'
+import taiwan from './data/geo/taiwan.json'
+import { withTaiwan } from './components/geomap'
 import { messages } from './locales/index'
 
 describe('geographic onboarding rules', () => {
@@ -46,11 +48,21 @@ describe('geographic data is taken from Natural Earth, not invented', () => {
     const ids = new Set(t.objects.countries.geometries.map((g) => g.id))
     for (const c of [...ACTIVE, ...SOON]) expect(ids.has(GEO[c].iso), c).toBe(true)
   })
-  it('nothing outside China + ASEAN exists in the map data (no India, Japan, Korea, Taiwan, Mongolia, Russia, Australia…)', () => {
+  it('nothing outside China + ASEAN exists in the map data (no India, Japan, Korea, Mongolia, Russia, Australia…; Taiwan is never a country of its own)', () => {
     const t2 = region as unknown as { objects: Record<string, { geometries: { id?: string }[] }> }
     const allowed = new Set([...[...ACTIVE, ...SOON].map((c) => GEO[c].iso), '344', '446']) // Hong Kong and Macao are drawn as part of China
     for (const g of t2.objects.countries.geometries) expect(allowed.has(String(g.id)), String(g.id)).toBe(true)
     for (const iso of ['356', '392', '410', '158', '496', '643', '036']) expect(t2.objects.countries.geometries.some((g) => g.id === iso), iso).toBe(false)
+  })
+  it('Taiwan is drawn as part of China (owner, 29 Oct 2026), from Natural Earth, with no maritime lines', () => {
+    const tw = taiwan as { type: string; coordinates: number[][][][] }
+    expect(tw.type).toBe('MultiPolygon')
+    const pts = tw.coordinates.flat(2)
+    expect(pts.length).toBeGreaterThan(20)
+    for (const [lon, lat] of pts) { expect(lon).toBeGreaterThan(118); expect(lon).toBeLessThan(122.5); expect(lat).toBeGreaterThan(21.5); expect(lat).toBeLessThan(25.5) }
+    const mainland = { type: 'Polygon' as const, coordinates: [[[100, 30], [110, 30], [110, 40], [100, 30]]] }
+    const china = withTaiwan(mainland) as { type: string; coordinates: unknown[] }
+    expect(china.type).toBe('MultiPolygon'); expect(china.coordinates.length).toBe(1 + tw.coordinates.length)
   })
   it('every country and capital shown has a name in Thai, Chinese and English', () => {
     const m = messages as Record<string, readonly string[]>
