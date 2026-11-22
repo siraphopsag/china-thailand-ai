@@ -11,7 +11,7 @@ import { assess } from '../data/legal/trust.js'
 import { data } from '../locales/data.js'
 import type { PostInput } from '../domain/match/logic.js'
 
-export type AiKind = 'check' | 'ask' | 'contract'
+export type AiKind = 'check' | 'ask' | 'contract' | 'translate'
 export type AiLang = 'th' | 'zh' | 'en'
 export const AI_LANGS: AiLang[] = ['th', 'zh', 'en']
 /** Claude's default model (paid, used only when ANTHROPIC_API_KEY is set); the owner can change it in Vercel (AI_MODEL) */
@@ -214,3 +214,17 @@ export function cleanAnswer(raw: unknown): AiAnswer {
 export type AiReason = 'off' | 'signin' | 'limit' | 'site' | 'busy' | 'refused' | 'bad' | 'error'
 /** detail: for administrators only — which AI model answered or what each attempt got */
 export type AiResponse<T> = { ok: true; result: T; left: number | null; detail?: string } | { ok: false; reason: AiReason; detail?: string }
+
+/* ---------- chat translation (v2 model, owner Nov 2026: chat between employer and worker) ---------- */
+export const MAX_TRANSLATE = 500
+export interface AiTranslation { th: string; zh: string; en: string }
+export function translateSystem(): string {
+  return `You translate ONE short chat message between an employer and a job seeker (Thailand and China) into Thai, Simplified Chinese
+and English. Keep the meaning, tone and any numbers exactly; do not add, explain or answer anything. Text shown as [•••] was hidden
+for safety: keep it as [•••]. Reply with JSON only: {"th": "...", "zh": "...", "en": "..."}.`
+}
+export const translateUser = (text: string) => JSON.stringify({ message: text.slice(0, MAX_TRANSLATE) })
+export function cleanTranslation(raw: unknown): AiTranslation {
+  const r = (raw ?? {}) as Record<string, unknown>
+  return { th: str(r.th, 1500), zh: str(r.zh, 1500), en: str(r.en, 1500) }
+}

@@ -8,11 +8,11 @@ import { DAY_MS } from './release'
 import { activePins, memberActive, pinQuota, postQuota } from './logic'
 import { EXPIRY_WARN_DAYS, ME, MY_EMPLOYER, PIN_LIFE_DAYS, POST_LIFE_DAYS, type Industry, type MatchState } from './types'
 
-export const EVENT_KINDS = ['training', 'test', 'documents', 'departure', 'start', 'expiry', 'expiring', 'postQuota', 'pinEnd', 'pinQuota', 'memberEnd'] as const
+export const EVENT_KINDS = ['training', 'test', 'documents', 'departure', 'start', 'expiry', 'expiring', 'postQuota', 'pinEnd', 'pinQuota', 'memberEnd', 'interview'] as const
 /** the kinds each side can have (the legend lists only these) */
 export const KINDS_FOR = {
-  seeker: ['training', 'test', 'documents', 'departure', 'start', 'pinEnd', 'pinQuota', 'memberEnd'],
-  employer: ['training', 'test', 'documents', 'departure', 'start', 'expiring', 'expiry', 'postQuota', 'memberEnd'],
+  seeker: ['interview', 'training', 'test', 'documents', 'departure', 'start', 'pinEnd', 'pinQuota', 'memberEnd'],
+  employer: ['interview', 'training', 'test', 'documents', 'departure', 'start', 'expiring', 'expiry', 'postQuota', 'memberEnd'],
 } as const satisfies Record<'seeker' | 'employer', readonly (typeof EVENT_KINDS)[number][]>
 export type EventKind = (typeof EVENT_KINDS)[number]
 export interface CalEvent {

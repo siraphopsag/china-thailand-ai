@@ -112,8 +112,8 @@ describe('B. contract check', () => {
     expect(c?.clauses).toEqual(['x'.repeat(400)]); expect(JSON.stringify(c)).not.toContain('secret')
     expect(contractSystem('th')).toContain('LEGAL RECORDS'); expect(contractUser(c!)).toMatch(/^<contract>/)
     const api = src('../api/ai.ts')
-    expect(api).toContain("take(token, kind === 'contract' ? 'check' : kind)")
-    expect(api).toContain("const result = kind === 'ask' ? cleanAnswer(out.raw) : cleanCheck(out.raw)")
+    expect(api).toContain("take(token, kind === 'contract' ? 'check' : kind === 'translate' ? 'ask' : kind)")
+    expect(api).toContain("const result = kind === 'ask' ? cleanAnswer(out.raw) : kind === 'translate' ? cleanTranslation(out.raw) : cleanCheck(out.raw)")
     expect(src('./pages/contract.tsx')).toContain("canAi = status === 'signedIn' && online !== false")
   })
   it('the page shows the sample, the Thai–Chinese draft and is reachable from the case', () => {

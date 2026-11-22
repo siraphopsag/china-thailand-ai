@@ -5,7 +5,7 @@ import { mustStayDomestic, postIssues, type PostInput, type Problem } from './lo
 import { wageWarning, type MinWage } from './minwage'
 import type { Industry, Skill } from './types'
 
-export type Warning = 'noSalary' | 'skillMismatch' | 'shortDetails' | 'discrimination' | 'scamRisk' | 'manyPeople'
+export type Warning = 'noSalary' | 'skillMismatch' | 'shortDetails' | 'discrimination' | 'scamRisk' | 'manyPeople' | 'lure'
 /**
  * Fixed legal rules (v2 model, owner Nov 2026): matters with a legal number or an official list are checked by rules, not guessed
  * by the AI, and they show even when the AI answers. 'belowMinWage' blocks a permanent or contract job (it would be unlawful pay);

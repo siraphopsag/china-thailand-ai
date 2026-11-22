@@ -7,6 +7,7 @@ import { localDay } from '../domain/match/logic'
 import { KINDS_FOR, calendarEvents, monthGrid, toIcs, type CalEvent, type EventKind } from '../domain/match/calendar'
 import { Icon, type IconName } from '../components/icons'
 import { Empty, Page, useGate, useNames } from './match'
+import { bookedInterviews } from '../chatStore'
 
 /**
  * The calendar (owner, Oct 2026): a month with each appointment as a coloured label (icon + words, never colour alone), the
@@ -15,7 +16,7 @@ import { Empty, Page, useGate, useNames } from './match'
  * Days are set by the agency on the case page.
  */
 const ICON: Record<EventKind, IconName> = { training: 'culture', test: 'plan', documents: 'documents', departure: 'plane', start: 'employment', expiry: 'hourglass',
-  expiring: 'warn', postQuota: 'renew', pinEnd: 'pin', pinQuota: 'renew', memberEnd: 'crown' }
+  expiring: 'warn', postQuota: 'renew', pinEnd: 'pin', pinQuota: 'renew', memberEnd: 'crown', interview: 'users' }
 const locale = (l: string) => (l === 'zh' ? 'zh-CN' : l === 'th' ? 'th-TH' : 'en-GB')
 const ymOf = (day: string) => ({ y: Number(day.slice(0, 4)), m: Number(day.slice(5, 7)) - 1 })
 
@@ -29,6 +30,7 @@ export function useEventTitle() {
     if (e.kind === 'pinEnd' && e.pin) { const s = `${N.place(e.pin.country as never, e.pin.province)} · ${N.industry(e.pin.industry)}`; return { what: t('m.cal.k.pinEnd'), post: s, sub: s } }
     if (e.kind === 'memberEnd') return { what: t('m.cal.k.memberEnd'), post: t('m.cal.memberSub'), sub: t('m.cal.memberSub') }
     const post = st.posts.find((p) => p.id === e.postId)
+    if (e.kind === 'interview') { const s = post?.position ?? t('c2.sample.position'); return { what: `${t('m.cal.k.interview')} ${e.what}`, post: s, sub: s } }
     const what = e.kind === 'training' ? (e.what.startsWith('@') ? t(`m.tr.${e.what.slice(1)}` as never) : e.what)
       : e.kind === 'test' ? t(`m.cs.test.${e.what}` as never) : t(`m.cal.k.${e.kind}` as never)
     const p = post?.position ?? '—'
@@ -50,7 +52,9 @@ export function CalendarPage() {
   if (!st.role && !agency) return <Page title={t('m.cal.title')}><Empty icon="bell" text={t('m.profile.none')} to="choose-role" action={t('hero.cta')} /></Page>
 
   // the local demo has no administrators: the agency's view would show the sample case to everyone, so follow the role there
-  const events = calendarEvents(st, agency && mode !== 'local', limitNow)
+  // v2 (Nov 2026): interviews booked in the chat (kept on this device in the prototype)
+  const events = [...calendarEvents(st, agency && mode !== 'local', limitNow),
+    ...bookedInterviews().map((x): CalEvent => ({ id: `iv:${x.accId}`, day: x.at.slice(0, 10), kind: 'interview', what: x.at.slice(11, 16), postId: x.postId, to: `chat?acc=${x.accId}` }))]
   const byDay = events.reduce<Record<string, CalEvent[]>>((m, e) => ({ ...m, [e.day]: [...(m[e.day] ?? []), e] }), {})
   const weeks = monthGrid(ym.y, ym.m, weekStart)
   const fmt = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale(lang), o)

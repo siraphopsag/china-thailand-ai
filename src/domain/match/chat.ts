@@ -1,0 +1,61 @@
+// Chat and interview booking (v2 model, owner Nov 2026: "easier interviews and chat"). A chat opens once both sides are interested
+// (the worker accepted the offer). Ready-made phrases are sent in Thai and Chinese at once; typed text keeps the platform safe:
+// phone numbers, e-mail, links and LINE / WeChat ids are hidden, so nobody is pulled into a private chat where scams happen. The
+// employer offers up to three interview times; the worker picks one and it goes into both calendars. Pure: no React, no storage.
+
+export type Side = 'employer' | 'seeker'
+export interface ChatMsg { id: string; from: Side; at: string; text: string; /** a ready-made phrase (locale ch.p.*) instead of text */ phrase?: string; masked?: boolean }
+export interface Interview { slots: string[]; mode: 'video' | 'onsite'; offeredAt: string; chosen?: string; chosenAt?: string }
+export interface Chat { msgs: ChatMsg[]; interview?: Interview }
+
+/** phrases each side can send in one tap (shown in both languages) */
+export const PHRASES: Record<Side, readonly string[]> = {
+  employer: ['hello', 'askStart', 'askExp', 'sendDocs', 'interviewInvite', 'thanks'],
+  seeker: ['hello', 'canStart', 'askHousing', 'askHours', 'askContract', 'thanks'],
+}
+export const MAX_TEXT = 500
+export const MAX_SLOTS = 3
+
+/** contact details are hidden: e-mail, links, phone numbers, and LINE / WeChat / Telegram / WhatsApp ids */
+const CONTACT: RegExp[] = [
+  /[^\s@]+@[^\s@]+\.[^\s@]+/g,
+  /(https?:\/\/|www\.)\S+/gi,
+  /\+?\d[\d\s-]{6,}\d/g,
+  /(?<![A-Za-z])line\s*(id\s*[:：]?|[:：]|@)\s*@?[\w.-]{3,}/gi,
+  /(?<![A-Za-z])(wechat|weixin|vx|wx|telegram|whats\s*app|tg)(?![A-Za-z])\s*[:：]?\s*@?[\w.-]{3,}/gi,
+  /(ไอดีไลน์|ไลน์|微信)\s*[:：]?\s*@?[\w.-]{3,}/g,
+  /(^|\s)@[\w.]{4,}/g,
+]
+export function maskContact(text: string): { text: string; masked: boolean } {
+  let out = text, masked = false
+  for (const re of CONTACT) out = out.replace(re, (_m, lead?: string) => { masked = true; return (typeof lead === 'string' && /^\s$/.test(lead) ? lead : '') + '[•••]' })
+  return { text: out, masked }
+}
+export type ChatProblem = 'empty' | 'long' | 'phrase'
+export function newMessage(chat: Chat, from: Side, input: { text?: string; phrase?: string }, id: string, at: string): { ok: true; value: Chat; masked: boolean } | { ok: false; problem: ChatProblem } {
+  if (input.phrase) {
+    if (!PHRASES[from].includes(input.phrase)) return { ok: false, problem: 'phrase' }
+    return { ok: true, value: { ...chat, msgs: [...chat.msgs, { id, from, at, text: '', phrase: input.phrase }] }, masked: false }
+  }
+  const raw = (input.text ?? '').trim()
+  if (!raw) return { ok: false, problem: 'empty' }
+  if (raw.length > MAX_TEXT) return { ok: false, problem: 'long' }
+  const m = maskContact(raw)
+  return { ok: true, value: { ...chat, msgs: [...chat.msgs, { id, from, at, text: m.text, ...(m.masked ? { masked: true } : {}) }] }, masked: m.masked }
+}
+
+/** times are "YYYY-MM-DDTHH:mm" in the viewer's own time; offers are 1–3 different times, all later than now */
+export type SlotProblem = 'none' | 'many' | 'past' | 'same'
+export function offerSlots(chat: Chat, slots: string[], mode: Interview['mode'], now: string, nowLocal: string): { ok: true; value: Chat } | { ok: false; problem: SlotProblem } {
+  const xs = slots.filter(Boolean)
+  if (!xs.length) return { ok: false, problem: 'none' }
+  if (xs.length > MAX_SLOTS) return { ok: false, problem: 'many' }
+  if (new Set(xs).size !== xs.length) return { ok: false, problem: 'same' }
+  if (xs.some((s) => !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s) || s <= nowLocal)) return { ok: false, problem: 'past' }
+  return { ok: true, value: { ...chat, interview: { slots: [...xs].sort(), mode, offeredAt: now } } }
+}
+export function pickSlot(chat: Chat, slot: string, now: string): Chat | null {
+  const iv = chat.interview
+  if (!iv || iv.chosen || !iv.slots.includes(slot)) return null
+  return { ...chat, interview: { ...iv, chosen: slot, chosenAt: now } }
+}

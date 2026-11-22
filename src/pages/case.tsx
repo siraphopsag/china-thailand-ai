@@ -13,6 +13,7 @@ import { AgencyLinks, Empty, Page, Toast, useApplicantName, useGate, useNames } 
 import { ScamNote } from './safety'
 import { ArrivalBox, DocAttach } from './case-extras'
 import { AftercarePanel, arrivalDay } from './aftercare'
+import { isVerifiedSeeker, useSeekerVerify } from './seeker-verify'
 
 /**
  * The case after a match (owner, Oct 2026): nine steps from the employer's confirmation to the worker's arrival. The employer
@@ -25,6 +26,7 @@ export const trainingName = (x: Training, t: (k: never) => string) => (x.name.st
 export function CasePage() {
   const { t } = useI18n()
   const { st, agency, caseAct, now } = useMatch()
+  const sv = useSeekerVerify()
   const nameOf = useApplicantName()
   const id = useSearchParam('id')
   const gate = useGate(`case?id=${id}`)
@@ -40,7 +42,8 @@ export function CasePage() {
         view={isSeeker ? 'seeker' : 'employer'} team={agency} atNow={new Date(now).toISOString()} />
     : null
   return <CaseView key={c.id} c={c} sub={`${p.position} · ${p.company}`} isSeeker={isSeeker} isEmployer={isEmployer}
-    withName={isEmployer && acc ? nameOf(acc) : null} agency={agency} act={(a) => caseAct(c.id, a)} extra={after} />
+    withName={isEmployer && acc ? nameOf(acc) : null} agency={agency} act={(a) => caseAct(c.id, a)} extra={after}
+    seekerUnverified={c.seekerId === ME && !c.steps.accepted && !isVerifiedSeeker(sv)} />
 }
 
 /** the case screen itself; the real case page and the demo case (case-demo.tsx) both use it */
@@ -58,8 +61,12 @@ export interface CaseViewProps {
   contractTo?: string
   /** shown under the steps (the end system after arrival) */
   extra?: ReactNode
+  /** where the chat with the other side opens (default: this match) */
+  chatTo?: string
+  /** v2: the worker has not verified their identity yet — the team cannot accept the case */
+  seekerUnverified?: boolean
 }
-export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, title, top, contractTo, extra }: CaseViewProps) {
+export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, title, top, contractTo, extra, chatTo, seekerUnverified }: CaseViewProps) {
   const { t } = useI18n()
   const N = useNames()
   const [busy, setBusy] = useState(false)
@@ -79,6 +86,7 @@ export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, 
       <Toast msg={msg} />
       {askDialog}
       {top}
+      {seekerUnverified && <Warn>{t(isSeeker ? 'sv.needFirst.seeker' : 'sv.needFirst.team')} {isSeeker && <NavLink to="me" className="underline underline-offset-4 font-medium">{t('sv.go')}</NavLink>}</Warn>}
       <div className={`grid gap-4 items-start fit:flex-1 fit:min-h-0 fit:items-stretch ${agency ? 'lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)]' : 'lg:grid-cols-2'}`}>
         <div className={col}>
           {/* ---------- where it stands: the nine steps in one card, the current one explained in place ---------- */}
@@ -112,6 +120,7 @@ export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, 
             {cur === 'arrived' && (isEmployer || agency) && (
               <button type="button" className="btn-primary" disabled={busy} onClick={arrive}><Icon name="ok" size={16} />{busy ? t('m.ask.busy') : t(isEmployer ? 'm.cs.arrive' : 'm.cs.arriveAgency')}</button>)}
             <ArrivalBox c={c} isSeeker={isSeeker} run={run} busy={busy} ask={ask} />
+            {(isSeeker || isEmployer) && <NavLink to={chatTo ?? `chat?acc=${c.accId}`} className="text-sm text-primary underline underline-offset-4 inline-flex items-center gap-1 min-h-[24px] mr-3"><Icon name="users" size={14} />{t('ch.open')}</NavLink>}
             {c.steps.submitted && <NavLink to={contractTo ?? `contract?case=${c.id}`} className="text-sm text-primary underline underline-offset-4 inline-flex items-center gap-1 min-h-[24px]"><Icon name="documents" size={14} />{t('c2.open')}</NavLink>}
           </section>
           {isSeeker && c.steps.submitted && !c.steps.arrived && <DocAttach c={c} />}
@@ -121,7 +130,7 @@ export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, 
         {/* 1024–1279 px: the case details and the agency share the second column; from 1280 px they get a column each */}
         <div className={`${col} xl:contents`}>
           <div className="space-y-3 min-w-0 xl:min-h-0 xl:overflow-y-auto xl:pr-1"><CaseInfo c={c} /></div>
-          {agency && <div className="space-y-3 min-w-0 xl:min-h-0 xl:overflow-y-auto xl:pr-1"><AgencyPanel c={c} run={run} busy={busy} /></div>}
+          {agency && <div className="space-y-3 min-w-0 xl:min-h-0 xl:overflow-y-auto xl:pr-1"><AgencyPanel c={c} run={run} busy={busy} blockAccept={!!seekerUnverified} /></div>}
         </div>
       </div>
     </Page>
@@ -178,7 +187,7 @@ function Ticks({ title, items }: { title: string; items: { k: string; label: str
 }
 
 /** the agency's controls: only what the current step allows; course list editable until training is done */
-function AgencyPanel({ c, run, busy }: { c: Case; run: (a: CaseAction, done?: string) => Promise<boolean>; busy: boolean }) {
+function AgencyPanel({ c, run, busy, blockAccept }: { c: Case; run: (a: CaseAction, done?: string) => Promise<boolean>; busy: boolean; blockAccept: boolean }) {
   const { t } = useI18n()
   const { mode, now } = useMatch()
   const [course, setCourse] = useState(''), [date, setDate] = useState(c.departureDate ?? ''), [note, setNote] = useState(c.note)
@@ -203,7 +212,8 @@ function AgencyPanel({ c, run, busy }: { c: Case; run: (a: CaseAction, done?: st
       <div role="tabpanel" className="space-y-3">
       {shown === 'step' && (<>
         {cur === 'submitted' && <p className="text-sm text-muted">{t('m.cs.ag.wait')}</p>}
-        {cur === 'accepted' && <button type="button" className="btn-primary" disabled={busy} onClick={() => void run({ kind: 'accept' }, t('m.cs.saved'))}><Icon name="ok" size={16} />{t('m.cs.ag.accept')}</button>}
+        {cur === 'accepted' && blockAccept && <p className="text-xs text-warn-fg">{t('sv.needFirst.team')}</p>}
+        {cur === 'accepted' && <button type="button" className="btn-primary" disabled={busy || blockAccept} onClick={() => void run({ kind: 'accept' }, t('m.cs.saved'))}><Icon name="ok" size={16} />{t('m.cs.ag.accept')}</button>}
         {(cur === 'documents' || cur === 'tests' || cur === 'training' || cur === 'permit') && <p className="text-xs text-muted">{t('m.cs.ag.tick')}</p>}
         {cur === 'documents' && <ul className="space-y-1.5">{DOCS.map((k) => toggle(!!c.docs[k], t(`m.cs.doc.${k}` as never), { kind: 'doc', key: k }))}</ul>}
         {cur === 'tests' && <ul className="space-y-1.5">{TESTS.map((k) => toggle(!!c.tests[k], t(`m.cs.test.${k}` as never), { kind: 'test', key: k }))}</ul>}

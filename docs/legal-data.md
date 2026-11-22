@@ -86,3 +86,13 @@ passed to the agency at once without the credibility check, in line with TH Anti
 fixed points with no free text, shown only as an anonymous total, to limit defamation and PDPA risk. No office addresses or
 building photos are stored: offices are found by map search (Google Maps in Thailand, Amap in China); building photos and a 3D
 model are roadmap items.
+
+## Front system: anti-spam, job-seeker verification, special posts, chat (added 22 Nov 2026)
+
+Anti-spam: casino and online-gambling work is refused (gambling is illegal in Thailand under the Gambling Act B.E. 2478 and in
+mainland China under Criminal Law Art. 303) together with scam-compound wording; copies of existing posts, more than 5 new posts a
+day and "easy money" lures are caught by rules; reported posts are hidden after 3 reports (unchanged, SQL 0005). Job-seeker
+verification keeps only the last 4 digits of the phone and passport numbers, the nationality and the expiry (PDPA data
+minimisation). Special posts use sample organisations only; paid posts say "Sponsored". Chat hides phone numbers, e-mail, links and
+LINE / WeChat ids so conversations stay on the platform, where scams can be reported; AI translation of a typed message uses the
+signed-in person's question allowance.

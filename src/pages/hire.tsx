@@ -6,6 +6,7 @@ import { canPost, caseBlocksDelete, isCountry, localDay, memberActive, mustStayD
 import { guessLang } from '../domain/match/postText'
 import { scheduleOf, stageAt, capStage } from '../domain/match/release'
 import { precheck, type LawRule, type Precheck } from '../domain/match/precheck'
+import { spamCheck } from '../domain/match/spam'
 import { useAuth } from '../auth'
 import { aiCheck } from '../ai/client'
 import type { AiCheck, AiResponse } from '../ai/spec'
@@ -139,7 +140,10 @@ export function HirePage() {
       setMsg(other ? { tone: 'danger', text: N.problem(other.problem) } : { tone: 'danger', text: t('m.err.fields', { n: new Set(marked.map((x) => x.key)).size }) })
       return
     }
-    const r = precheck(i, at)
+    // anti-spam (v2, owner Nov 2026): copies, too many posts a day and scam-compound work stop the post; lures are a warning
+    const sp = spamCheck(i, at, st.posts.filter((x) => x.employerId === MY_EMPLOYER), st.posts.filter((x) => x.employerId !== MY_EMPLOYER && !x.hidden), editing?.id)
+    const r0 = precheck(i, at)
+    const r = { ...r0, errors: [...r0.errors, ...sp.errors], warnings: sp.lure ? [...r0.warnings, 'lure' as const] : r0.warnings, laws: sp.errors.length ? [] : r0.laws }
     setPending(i); setCheck(r); setAiRes(null); setShown(false)
     // rule errors (e.g. a phone number in the details) must be fixed first; otherwise the AI reads the post when it can
     // local development only (?orbdemo): try the AI check without an account or an AI key — not in the built site

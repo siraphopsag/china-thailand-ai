@@ -12,6 +12,7 @@ import { dueDay, type CheckDay } from '../domain/match/aftercare'
 import { ME } from '../domain/match/types'
 import { removeFile } from '../caseFiles'
 import { clearAftercare } from '../aftercareStore'
+import { clearChat } from '../chatStore'
 import { Warn } from '../components/ui'
 import { Icon } from '../components/icons'
 import { CaseView } from './case'
@@ -54,7 +55,7 @@ export function CaseDemoPage() {
     if (r.ok) setC(r.value)
     return r.ok ? r : { ok: false, problem: r.problem === 'name' ? 'caseText' : r.problem === 'available' ? 'departDate' : r.problem === 'contact' ? 'contact' : 'state' }
   }
-  const restart = () => { for (const d of DOCS) removeFile('demo', d); clearAftercare('demo'); try { sessionStorage.removeItem(KEY) } catch { /* ignore */ } setC(demoCase(now)); setAs('seeker'); setJump(null) }
+  const restart = () => { for (const d of DOCS) removeFile('demo', d); clearAftercare('demo'); clearChat('acc-demo'); try { sessionStorage.removeItem(KEY) } catch { /* ignore */ } setC(demoCase(now)); setAs('seeker'); setJump(null) }
   const pick = (k: 'seeker' | 'employer') => (
     <button key={k} type="button" role="tab" aria-selected={as === k} onClick={() => setAs(k)}
       className={`min-h-[36px] px-3 rounded-lg text-sm ${as === k ? 'seg-on' : 'hover:bg-surface3'}`}>{t(`dm.as.${k}` as never)}</button>)
@@ -77,5 +78,5 @@ export function CaseDemoPage() {
     ? <AftercarePanel c={c} caseKey="demo" employerId={DEMO_EMPLOYER} country="CN" province="CN-GD" today={today} view={as} team atNow={atNow} />
     : null
   return <CaseView key={as} c={c} sub={`${t('c2.sample.position')} · ${t('c2.sample.company')}`} title={t('dm.title')} top={top}
-    isSeeker={as === 'seeker'} isEmployer={as === 'employer'} withName={null} agency={false} act={act} contractTo="contract" extra={after} />
+    isSeeker={as === 'seeker'} isEmployer={as === 'employer'} withName={null} agency={false} act={act} contractTo="contract" chatTo="chat?acc=acc-demo" extra={after} />
 }

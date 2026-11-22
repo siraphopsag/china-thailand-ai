@@ -38,6 +38,7 @@ const isId = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9:_-]
 
 export type Problem = 'place' | 'industry' | 'skills' | 'limit' | 'duplicate' | 'company' | 'position' | 'details' | 'years' | 'contact' | 'notOpen' | 'already' | 'unknown'
   | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits' | 'quota' | 'network' | 'intro' | 'available' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'caseText' | 'departDate' | 'reported' | 'reportLimit' | 'reportNote' | 'suspended' | 'phone' | 'code'
+  | 'dupPost' | 'dailyLimit' | 'scamWords'
 const oneOf = <T extends string>(all: readonly T[], v: unknown): v is T => typeof v === 'string' && (all as readonly string[]).includes(v)
 const VERIFY_KINDS: readonly VerifyKind[] = ['company', 'person']
 const intIn = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max

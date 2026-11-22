@@ -551,6 +551,7 @@ a.prep-strip-warn:hover { filter: brightness(.97) }
 .cal-documents { --cal-bg: var(--warn-bg); --cal-fg: var(--warn-fg); --cal-line: var(--warn-line) }
 .cal-departure { --cal-bg: var(--ok-bg); --cal-fg: var(--ok-fg); --cal-line: var(--ok-line) }
 .cal-start { --cal-bg: var(--brand); --cal-fg: var(--brandfg); --cal-line: var(--primary) }
+.cal-interview { --cal-bg: var(--info-bg); --cal-fg: var(--info-fg); --cal-line: var(--info-line) }
 .cal-expiry { --cal-bg: var(--danger-bg); --cal-fg: var(--danger-fg); --cal-line: var(--danger-line) }
 /* owner, 13 Oct 2026: the days people plan around */
 .cal-expiring { --cal-bg: var(--review-bg); --cal-fg: var(--review-fg); --cal-line: var(--review-line) }
@@ -907,3 +908,14 @@ html[data-lite] .bg-paths.is-on .bg-flow path { animation: none !important }
 .er-star { color: rgb(var(--muted)); padding: .15rem; border-radius: .5rem } .er-star.on, .er-gold { color: #f59e0b } .er-star.on svg, .er-gold { fill: #f59e0b }
 .cr-meter { flex: 1; max-width: 9rem; height: .5rem; border-radius: 9999px; background: rgb(var(--surface3)); overflow: hidden; display: block }
 .cr-meter > span { display: block; height: 100% } .cr-strong > span { background: rgb(var(--ok-fg)) } .cr-medium > span { background: #f59e0b } .cr-weak > span { background: rgb(var(--danger-fg)) }
+
+/* ---------- v2: chat bubbles ---------- */
+.ch-bubble { max-width: 80%; border-radius: 1rem; padding: .5rem .75rem; font-size: .9rem; line-height: 1.45 }
+.ch-mine { background: rgb(var(--primary)); color: rgb(var(--onprimary)); border-bottom-right-radius: .3rem }
+.ch-theirs { background: rgb(var(--surface3)); color: rgb(var(--ink)); border-bottom-left-radius: .3rem }
+
+/* ---------- v2: special posts at the top of the board ---------- */
+.sp-gov { --sp: 14 165 233 } .sp-company { --sp: 34 197 94 } .sp-law { --sp: 129 140 248 }
+.sp-card { border-color: rgb(var(--sp) / .55); background: linear-gradient(135deg, rgb(var(--sp) / .14), rgb(var(--surface)) 60%); color: rgb(var(--ink)) }
+.sp-card:hover { border-color: rgb(var(--sp)) }
+.sp-badge { display: inline-flex; align-items: center; gap: .25rem; font-size: 11px; font-weight: 700; padding: .1rem .5rem; border-radius: 9999px; background: rgb(var(--sp) / .2); color: rgb(var(--ink)) }

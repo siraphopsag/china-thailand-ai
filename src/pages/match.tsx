@@ -21,6 +21,7 @@ import { Drawer } from '../components/drawer'
 import { motionOff, setMotionOff } from '../components/ui/background-paths'
 import { NeedLogin } from './auth'
 import { VerifyCard } from './case'
+import { SeekerVerifyCard } from './seeker-verify'
 import { currentStep, stepsDone } from '../domain/match/cases'
 import { SimTools } from './simtools'
 import { PREP, dayPick, prepSeen, setAskPrefill, type PrepKey } from '../prepare'
@@ -633,6 +634,7 @@ export function NotificationsPage() {
                 <h3 className="font-semibold flex items-start gap-2"><Icon name={a.status === 'rejected' ? 'info' : 'ok'} size={18} className={`${a.status === 'rejected' ? 'text-muted' : 'text-ok-fg'} mt-0.5`} /><NavLink to={`post?id=${p.id}`} className="hover:underline underline-offset-4">{t(say(a), { p: p.position })}</NavLink></h3>
                 {a.status === 'forwarded' && <p className="text-sm text-muted">{t('m.st.forwarded')}</p>}
                 {(a.status === 'confirmed' || a.status === 'forwarded') && <AgencyLinks />}
+                {['accepted', 'confirmed', 'forwarded'].includes(a.status) && <NavLink to={`chat?acc=${a.id}`} className="btn-soft text-sm inline-flex"><Icon name="users" size={15} />{t('ch.open')}</NavLink>}
               </li>) })}</ul>
           </section>)}
         <section className="space-y-2" aria-labelledby="n-new"><h2 id="n-new" className="h2">{t('m.n.offers')}</h2>
@@ -669,6 +671,7 @@ export function MePage() {
       <AccountSection />
       </div>
       {st.role === 'employer' && <VerifyCard />}
+      {st.role === 'seeker' && <SeekerVerifyCard />}
       </div>
     </Page>
   )

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, useSearchParam } from '../store'
+import { SponsoredStrip } from './sponsored'
 import { useMatch } from '../matchData'
 import { capacityOf, isCountry, pinQuota, postQuota } from '../domain/match/logic'
 import { reportedIds } from '../domain/match/reports'
@@ -147,6 +148,8 @@ export function BoardPage() {
           {filtering && <div className="sm:col-span-2 lg:col-span-4"><button type="button" className="btn-ghost text-sm" onClick={() => setF(NO_FILTER)}><Icon name="close" size={15} />{t('m.board.clear')}</button></div>}
         </div>
 
+        {/* v2 (owner, Nov 2026): special posts from government agencies, verified companies and law firms, labelled, at most 3 */}
+        <SponsoredStrip />
         {!shown.length ? <Empty icon={seeker ? 'pin' : 'posts'} text={t(items.length ? 'm.board.noneFound' : seeker ? 'm.board.noneSeeker' : 'm.board.noneEmployer')} to={items.length ? undefined : seeker ? 'seek' : 'hire'}
             action={items.length ? t('m.board.clearAll') : t(seeker ? 'm.pin.go' : 'm.emp.post')} onAction={() => { setF(NO_FILTER); setTab('all'); setScope('all') }} /> : (
           <CardGrid shown={shown} fit={fit} gridRef={gridRef} label={t(seeker ? 'm.board.shop' : 'm.bd.listEmployer')}
