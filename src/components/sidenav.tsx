@@ -14,19 +14,20 @@ export function useUnread(): number {
 }
 
 type Item = { to: string; key: string; icon: IconName; match: string[] }
-/** menu order (owner, Oct 2026): home, my pins / my posts, board, notifications, prepare, settings, help, back office (admin), profile last */
+/** menu order (owner, Oct 2026): home, my pins / my posts, board, notifications, prepare, settings, help, back office (admin), profile last;
+ *  v2 (owner, Nov 2026: the new systems must be easy to find): the contract check and the help page come after the calendar */
 export function sideItems(role: 'seeker' | 'employer' | null, admin: boolean): Item[] {
   const items: Item[] = [{ to: '', key: 'm.home', icon: 'home', match: [''] }]
   if (role === 'seeker') items.push({ to: 'seek', key: 'm.pins', icon: 'pin', match: ['seek'] })
   if (role === 'employer') items.push({ to: 'hire', key: 'm.posts', icon: 'posts', match: ['hire'] })
-  items.push({ to: 'board', key: 'm.board', icon: 'store', match: ['board', 'post'] }, { to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'calendar', key: 'm.cal', icon: 'calendar', match: ['calendar'] }, { to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources', 'ask'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
+  items.push({ to: 'board', key: 'm.board', icon: 'store', match: ['board', 'post'] }, { to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'calendar', key: 'm.cal', icon: 'calendar', match: ['calendar'] }, { to: 'contract', key: 'm.nav.contract', icon: 'documents', match: ['contract'] }, { to: 'sos', key: 'm.nav.sos', icon: 'phone', match: ['sos'] },{ to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources', 'ask'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
   items.push({ to: 'member', key: 'm.member', icon: 'crown', match: ['member'] })
   if (admin) items.push({ to: 'backoffice', key: 'm.admin', icon: 'shield', match: ['backoffice'] }, { to: 'analytics', key: 'm.an.nav', icon: 'chart', match: ['analytics'] })
   items.push({ to: 'me', key: 'm.profile', icon: 'profile', match: ['me'] })
   return items
 }
 /** on phones the bottom bar keeps 5 main places; these go under "More" so the bar does not cover the screen */
-export const MORE_KEYS = ['m.cal', 'm.prepare', 'm.member', 'm.settings', 'm.help', 'm.admin', 'm.an.nav']
+export const MORE_KEYS = ['m.cal', 'm.nav.contract', 'm.nav.sos','m.prepare', 'm.member', 'm.settings', 'm.help', 'm.admin', 'm.an.nav']
 /**
  * Each place has its own colour (owner, Oct 2026: as in the reference): a bright bead (its icon in near-black, ≥ 7:1) and a label
  * colour that reads on the light (600–700 shades) and the dark (300–400 shades) plate.
@@ -38,6 +39,8 @@ export const HUES: Record<string, Hue> = {
   'm.board': { bead: '#fb923c', light: '#c2410c', dark: '#fdba74' },
   'm.notif': { bead: '#fb7185', light: '#be123c', dark: '#fda4af' },
   'm.cal': { bead: '#38bdf8', light: '#0369a1', dark: '#7dd3fc' },
+  'm.nav.contract': { bead: '#60a5fa', light: '#1d4ed8', dark: '#93c5fd' },
+  'm.nav.sos': { bead: '#f87171', light: '#b91c1c', dark: '#fca5a5' },
   'm.prepare': { bead: '#2dd4bf', light: '#0f766e', dark: '#5eead4' },
   'm.settings': { bead: '#a78bfa', light: '#6d28d9', dark: '#c4b5fd' },
   'm.help': { bead: '#34d399', light: '#047857', dark: '#6ee7b7' },

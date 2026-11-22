@@ -27,6 +27,9 @@ import { ContractPage, SAMPLE_POST } from './pages/contract'
 import { SosPage } from './pages/sos'
 import { CasePage } from './pages/case'
 import { LawRulesBox } from './pages/hire'
+import { CaseDemoPage, demoCase, DEMO_DEPARTED_DAYS_AGO } from './pages/case-demo'
+import { NewSystems } from './pages/home'
+import { sideItems, MORE_KEYS } from './components/sidenav'
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
 const NOW = Date.parse('2026-11-22T08:00:00.000Z')
@@ -118,7 +121,7 @@ describe('B. contract check', () => {
     const page = html(<ContractPage />, { ...seedState(NOW), role: 'seeker' })
     expect(page).toContain(T('c2.title')); expect(page).toContain(T('c2.risky')); expect(page).toContain('lang="zh-CN"')
     expect(src('./App.tsx')).toContain('contract: <ContractPage />')
-    expect(src('./pages/case.tsx')).toContain('to={`contract?case=${c.id}`}')
+    expect(src("./pages/case.tsx")).toContain("to={contractTo ?? `contract?case=${c.id}`}")
   })
 })
 
@@ -201,5 +204,39 @@ describe('E. texts', () => {
       expect(messages[k as keyof typeof messages], k).toEqual([th, zh, en])
     }
     expect(others).toBeGreaterThan(Object.keys(v2).length)
+  })
+})
+
+describe('F. the new systems are easy to find (owner, Nov 2026)', () => {
+  it('the menu lists the contract check and the help page for every role; on phones they sit under More', () => {
+    for (const r of [null, 'seeker', 'employer'] as const) {
+      const items = sideItems(r, false)
+      expect(items.find((i) => i.key === 'm.nav.contract')?.to).toBe('contract')
+      expect(items.find((i) => i.key === 'm.nav.sos')?.to).toBe('sos')
+    }
+    expect(MORE_KEYS).toContain('m.nav.contract'); expect(MORE_KEYS).toContain('m.nav.sos')
+  })
+  it('the lobby shows four cards, each a link to its system, with the minimum wages from the tables', () => {
+    const page = html(<NewSystems />, seedState(NOW))
+    expect(page).toContain(T('v2h.h'))
+    for (const to of ['contract', 'sos', 'hire', 'case-demo']) expect(page).toContain(`href="/${to}"`)
+    expect(page).toContain(`${(TH_MIN_DAILY['TH-10'] * TH_DAYS_PER_MONTH).toLocaleString('en-US')}`)
+    expect(page).toContain(CN_MIN_MONTHLY['CN-GD'].toLocaleString('en-US'))
+    expect(src('./pages/home.tsx')).toContain('<NewSystems />')
+    expect(src('./App.tsx')).toContain("'case-demo': <CaseDemoPage />")
+  })
+  it('the demo case has left 3 days ago, nobody has confirmed, so the alert shows; both confirmations clear it', () => {
+    const c = demoCase(NOW), today = new Date(NOW).toISOString().slice(0, 10)
+    expect(DEMO_DEPARTED_DAYS_AGO).toBeGreaterThan(2)
+    expect(arrivalPending(c)).toBe('both'); expect(arrivalAlert(c, today)).toBe('both')
+    const at = new Date(NOW).toISOString()
+    const a = applyCaseAction(c, { kind: 'seekerArrived' }, at, today); expect(a.ok).toBe(true)
+    const b = a.ok ? applyCaseAction(a.value, { kind: 'arrived' }, at, today) : a; expect(b.ok).toBe(true)
+    if (b.ok) { expect(arrivalPending(b.value)).toBeNull(); expect(arrivalAlert(b.value, today)).toBeNull() }
+    expect(parseCase(c)).not.toBeNull()
+  })
+  it('the demo page needs no account: the note, the side switcher, the arrival box and the attachments', () => {
+    const page = html(<CaseDemoPage />, seedState(NOW))
+    for (const k of ['dm.title', 'dm.note', 'dm.as.seeker', 'dm.as.employer', 'dm.reset', 'ar.h', 'ar.seeker.yes', 'att.h', 'ar.alert.h'] as const) expect(page, k).toContain(T(k))
   })
 })

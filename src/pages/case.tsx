@@ -1,8 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { tk, useI18n } from '../i18n'
 import { NavLink, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { localDay } from '../domain/match/logic'
+import { localDay, type Outcome } from '../domain/match/logic'
 import { APPOINTMENTS, CASE_STEPS, DOCS, PERMITS, TESTS, currentStep, stepsDone, trainingsLeft, type Case, type CaseAction, type Training } from '../domain/match/cases'
 import { ME, MY_EMPLOYER, type Country, type VerifyKind } from '../domain/match/types'
 import { cleanPhone, cleanRegNo, isMobile, isRegNo, oneTimeCode } from '../domain/match/verify'
@@ -23,24 +23,43 @@ export const trainingName = (x: Training, t: (k: never) => string) => (x.name.st
 
 export function CasePage() {
   const { t } = useI18n()
-  const N = useNames()
   const { st, agency, caseAct } = useMatch()
   const nameOf = useApplicantName()
   const id = useSearchParam('id')
-  const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<Msg>(null)
-  const [ask, askDialog] = useConfirm()
   const gate = useGate(`case?id=${id}`)
   if (gate) return <Page title={t('m.cs.title')}>{gate}</Page>
   const c = st.cases.find((x) => x.id === id)
   const p = c && st.posts.find((x) => x.id === c.postId)
   if (!c || !p) return <Page title={t('m.cs.nfTitle')}><Empty icon="bell" text={t('m.cs.notFound')} to="notifications" action={t('m.notif.title')} /></Page>
-
-  const isSeeker = c.seekerId === ME, isEmployer = p.employerId === MY_EMPLOYER
+  const isEmployer = p.employerId === MY_EMPLOYER
   const acc = st.acceptances.find((a) => a.id === c.accId)
+  return <CaseView key={c.id} c={c} sub={`${p.position} · ${p.company}`} isSeeker={c.seekerId === ME} isEmployer={isEmployer}
+    withName={isEmployer && acc ? nameOf(acc) : null} agency={agency} act={(a) => caseAct(c.id, a)} />
+}
+
+/** the case screen itself; the real case page and the demo case (case-demo.tsx) both use it */
+export interface CaseViewProps {
+  c: Case; sub: string; isSeeker: boolean; isEmployer: boolean
+  /** the worker's name the employer sees (null = not shown) */
+  withName: string | null
+  /** show the C.A.L.L. case team's controls */
+  agency: boolean
+  act: (a: CaseAction) => Promise<Outcome<unknown>>
+  title?: string
+  /** shown above the steps (the demo's switcher) */
+  top?: ReactNode
+  /** where "Check the contract" goes (default: this case on the contract page) */
+  contractTo?: string
+}
+export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, title, top, contractTo }: CaseViewProps) {
+  const { t } = useI18n()
+  const N = useNames()
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<Msg>(null)
+  const [ask, askDialog] = useConfirm()
   const cur = currentStep(c), n = stepsDone(c)
   const run = async (a: CaseAction, done?: string) => {
-    setBusy(true); const r = await caseAct(c.id, a); setBusy(false)
+    setBusy(true); const r = await act(a); setBusy(false)
     if (r.ok) { setMsg(done ? { tone: 'info', text: done } : null); return true }
     setMsg({ tone: 'danger', text: N.problem(r.problem) }); return false
   }
@@ -48,9 +67,10 @@ export function CasePage() {
 
   const col = 'space-y-3 min-w-0 fit:min-h-0 fit:overflow-y-auto fit:pr-1'
   return (
-    <Page title={t('m.cs.title')} sub={`${p.position} · ${p.company}`} fit body="flex flex-col gap-3">
+    <Page title={title ?? t('m.cs.title')} sub={sub} fit body="flex flex-col gap-3">
       <Toast msg={msg} />
       {askDialog}
+      {top}
       <div className={`grid gap-4 items-start fit:flex-1 fit:min-h-0 fit:items-stretch ${agency ? 'lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)]' : 'lg:grid-cols-2'}`}>
         <div className={col}>
           {/* ---------- where it stands: the nine steps in one card, the current one explained in place ---------- */}
@@ -58,7 +78,7 @@ export function CasePage() {
             <div className="flex items-baseline justify-between gap-2"><h2 id="cs-now" className="h2">{t('m.cs.steps')}</h2><span className="text-xs text-muted">{t('m.cs.progress', { n })}</span></div>
             <div className="h-2 rounded-full bg-surface3 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={9} aria-valuenow={n} aria-label={t('m.cs.progress', { n })}>
               <div className="h-full bg-primary" style={{ width: `${(n / 9) * 100}%` }} /></div>
-            {isEmployer && acc && <p className="text-xs text-muted">{t('m.cs.with', { n: nameOf(acc) })}</p>}
+            {withName && <p className="text-xs text-muted">{t('m.cs.with', { n: withName })}</p>}
             <ol className="space-y-0.5">{CASE_STEPS.map((s2, i) => {
               const at = c.steps[s2], current = cur === s2
               return (
@@ -84,7 +104,7 @@ export function CasePage() {
             {cur === 'arrived' && (isEmployer || agency) && (
               <button type="button" className="btn-primary" disabled={busy} onClick={arrive}><Icon name="ok" size={16} />{busy ? t('m.ask.busy') : t(isEmployer ? 'm.cs.arrive' : 'm.cs.arriveAgency')}</button>)}
             <ArrivalBox c={c} isSeeker={isSeeker} run={run} busy={busy} ask={ask} />
-            {c.steps.submitted && <NavLink to={`contract?case=${c.id}`} className="text-sm text-primary underline underline-offset-4 inline-flex items-center gap-1 min-h-[24px]"><Icon name="documents" size={14} />{t('c2.open')}</NavLink>}
+            {c.steps.submitted && <NavLink to={contractTo ?? `contract?case=${c.id}`} className="text-sm text-primary underline underline-offset-4 inline-flex items-center gap-1 min-h-[24px]"><Icon name="documents" size={14} />{t('c2.open')}</NavLink>}
           </section>
           {isSeeker && c.steps.submitted && !c.steps.arrived && <DocAttach c={c} />}
         </div>

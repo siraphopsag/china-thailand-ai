@@ -5,9 +5,32 @@ import { BRAND, BRAND_CONCEPTS } from '../brand'
 import { Glow } from '../components/backdrop'
 import { BackgroundPaths } from '../components/ui/background-paths'
 import { useI18n } from '../i18n'
+import { minMonthlyWage } from '../domain/match/minwage'
 
 /** the main parts of the system and the problem each one answers (lobby) */
 const SYSTEMS: [number, IconName][] = [[1, 'pin'], [2, 'target'], [3, 'verified'], [4, 'shield'], [5, 'plane'], [6, 'chart']]
+
+/** v2 model (owner, Nov 2026: "the new systems must be easy to see"): one card per new system, each opening it at once */
+const NEW_SYSTEMS: { k: string; icon: IconName; to: string }[] = [
+  { k: 'contract', icon: 'documents', to: 'contract' }, { k: 'sos', icon: 'phone', to: 'sos' },
+  { k: 'wage', icon: 'legal', to: 'hire' }, { k: 'arrive', icon: 'plane', to: 'case-demo' },
+]
+export function NewSystems() {
+  const { t } = useI18n()
+  const th = minMonthlyWage('TH', 'TH-10'), cn = minMonthlyWage('CN', 'CN-GD')
+  const nf = (n?: number) => (n ?? 0).toLocaleString('en-US')
+  return (
+    <section aria-labelledby="new-h" className="space-y-4">
+      <div><h2 id="new-h" className="text-2xl font-bold flex items-center gap-2"><Icon name="shield" size={22} className="text-primary" />{t('v2h.h')}</h2><p className="text-muted mt-1">{t('v2h.sub')}</p></div>
+      <ul className="grid sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-3">{NEW_SYSTEMS.map((s) => (
+        <li key={s.k}><NavLink to={s.to} className="glass-card !p-4 h-full flex flex-col gap-2 hover:border-primary">
+          <span className="flex items-center gap-2.5"><span className="glass-drop w-9 h-9 shrink-0"><Icon name={s.icon} size={17} /></span><span className="font-semibold leading-snug">{t(`v2h.${s.k}.t` as never)}</span></span>
+          <span className="text-sm text-muted flex-1">{t(`v2h.${s.k}.d` as never, { th: nf(th?.monthly), cn: nf(cn?.monthly) } as never)}</span>
+          <span className="text-sm font-semibold text-primary inline-flex items-center gap-1">{t(`v2h.${s.k}.go` as never)}<Icon name="next" size={15} /></span>
+        </NavLink></li>))}</ul>
+    </section>
+  )
+}
 
 export function Landing() {
   const { t } = useI18n()
@@ -32,6 +55,7 @@ export function Landing() {
       </section>
       {/* liquid-glass cards (owner, Oct 2026); the soft coloured light they show comes from the page background */}
       <div className="space-y-14">
+        <NewSystems />
         <section aria-labelledby="stands-h" className="space-y-4">
           <div><h2 id="stands-h" className="text-2xl font-bold">{t('m.problems.h')}</h2><p className="text-muted mt-1">{t('brand.stands')} Cross · ASEAN · Language · Legal</p></div>
           <ul className="grid sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-3">{BRAND_CONCEPTS.map((c, i) => (

@@ -373,9 +373,9 @@ describe('reviewed shell and pages', () => {
   })
   it('menu order: home, my pins / my posts by role, board, notifications, calendar, prepare, settings, help, back office (admin only), profile last', () => {
     const keys = (r: 'seeker' | 'employer' | null, a: boolean) => sideItems(r, a).map((i) => i.key)
-    expect(keys(null, false)).toEqual(['m.home', 'm.board', 'm.notif', 'm.cal', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
-    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.board', 'm.notif', 'm.cal', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
-    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.board', 'm.notif', 'm.cal', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.admin', 'm.an.nav', 'm.profile'])
+    expect(keys(null, false)).toEqual(['m.home', 'm.board', 'm.notif', 'm.cal', 'm.nav.contract', 'm.nav.sos', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
+    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.board', 'm.notif', 'm.cal', 'm.nav.contract', 'm.nav.sos', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
+    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.board', 'm.notif', 'm.cal', 'm.nav.contract', 'm.nav.sos', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.admin', 'm.an.nav', 'm.profile'])
     for (const r of [null, 'seeker', 'employer'] as const) for (const i of sideItems(r, true)) expect(ROUTES.has(i.to), i.to).toBe(true)
     expect(src('./components/sidenav.tsx')).not.toMatch(/to: '(start|interview|dashboard|plan|documents|jobs|employer|review)'/)
   })
@@ -527,7 +527,7 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
   it('Lobby: the 14 short-reading cards (4 letters, 4 steps, 6 systems — owner, Oct 2026) are glass over still coloured light; letters and numbers sit on indigo drops; forms stay solid', () => {
     const page = html(<Landing />)
     expect(page.match(/<li class="glass-card/g)?.length).toBe(14)
-    expect(page.match(/class="glass-drop w-/g)?.length).toBe(14)
+    expect(page.match(/class="glass-drop w-/g)?.length).toBe(18) // + the 4 new-system cards (v2, Nov 2026), which are links
     expect(page).not.toContain('glass-orbs') // the box of light showed hard edges; the light now lives in the page background
     expect(css).toMatch(/radial-gradient\(42vw 38vh at 8% 55%, rgb\(var\(--glow-a\) \/ calc\(var\(--orb-a\) \* \.8\)\), transparent 72%\)/)
     // forms keep solid cards; their lists and empty states are glass
