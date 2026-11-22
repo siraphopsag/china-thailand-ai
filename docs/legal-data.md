@@ -63,3 +63,15 @@ Chiang Mai, Songkhla and Khon Kaen; 1506 and 1377 (Thailand).
 No addresses are stored. Each agency is the province's own office of that agency (Thai provincial labour protection and
 employment offices, police; Chinese labour inspection and police), found through a map search (Google Maps in Thailand, Amap in
 China), so no invented address is ever shown.
+
+## Middle system: identity and signing (added 22 Nov 2026, for the advisor to confirm)
+
+Passport lines: ICAO Doc 9303 part 4 (TD3 format, check digits with weights 7-3-1). Checked on the device only; tested against
+the ICAO specimen (ERIKSSON, Utopia). The sample worker (SOMCHAI JAIDEE, AC1234567) is invented, using the usual Thai placeholder name.
+
+Working age: Thailand LPA s.44 (no one under 15) and s.45 (workers under 18); China Labour Law Art. 15 (no one under 16) and
+Art. 58 (young workers 16–18). Passport validity: most visas ask for 6 months; this is a warning only, not a legal rule.
+
+Electronic signature: Thai Electronic Transactions Act s.9; Chinese Electronic Signature Law Arts. 13–14. The signature is bound to
+a SHA-256 fingerprint of the exact bilingual text, so any later change voids it. The partner law firms are samples: no real firm
+is named or connected.

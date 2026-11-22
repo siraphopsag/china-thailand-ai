@@ -859,3 +859,40 @@ a.prep-strip-warn:hover { filter: brightness(.97) }
 html[data-lite] .bg-paths.is-on .bg-sheen, html[data-lite] .bg-paths.is-on .bg-sheen-lines { display: none; animation: none !important }
 html[data-lite] .bg-paths.is-on .bg-flow path { animation: none !important }
 [data-lite] .hero-tilt { transform: none }
+
+/* ---------- v2 (owner, Nov 2026): the full journey in the lobby — front (amber), middle (indigo), end (emerald) ---------- */
+.jr-front { --jr: 245 158 11; --jr-ink: 180 83 9 }
+.jr-middle { --jr: 129 140 248; --jr-ink: 67 56 202 }
+.jr-end { --jr: 52 211 153; --jr-ink: 4 120 87 }
+:root[data-theme='dark'] .jr-front { --jr-ink: 252 211 77 }
+:root[data-theme='dark'] .jr-middle { --jr-ink: 165 180 252 }
+:root[data-theme='dark'] .jr-end { --jr-ink: 110 231 183 }
+.jr-stage { border-color: rgb(var(--jr) / .45); border-top-width: 4px; border-top-color: rgb(var(--jr));
+  background: linear-gradient(180deg, rgb(var(--jr) / .16), rgb(var(--jr) / 0) 38%), rgb(var(--surface));
+  box-shadow: 0 18px 50px -24px rgb(var(--jr) / .55); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px) }
+.jr-node { width: 3rem; height: 3rem; flex-shrink: 0; border-radius: 9999px; display: grid; place-items: center; font-size: 1.35rem; font-weight: 800;
+  background: rgb(var(--jr)); color: #0b1020; box-shadow: 0 0 0 6px rgb(var(--jr) / .18), 0 10px 28px rgb(var(--jr) / .5) }
+.jr-kicker { color: rgb(var(--jr-ink)) }
+.jr-problem { color: rgb(var(--ink)); background: rgb(var(--jr) / .1); border-radius: .9rem; padding: .6rem .75rem }
+.jr-feat { color: rgb(var(--ink)); transition: background .15s ease }
+.jr-feat:hover, .jr-feat:focus-visible { background: rgb(var(--jr) / .14) }
+.jr-ic { width: 2rem; height: 2rem; flex-shrink: 0; border-radius: .7rem; display: grid; place-items: center; background: rgb(var(--jr) / .18); color: rgb(var(--jr-ink)) }
+.jr-law { display: inline-flex; align-items: center; gap: .3rem; font-size: 11px; font-weight: 600; padding: .2rem .55rem; border-radius: 9999px;
+  border: 1px solid rgb(var(--jr) / .5); color: rgb(var(--jr-ink)); background: rgb(var(--jr) / .08) }
+.jr-go { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; width: 100%; min-height: 44px; border-radius: 9999px; font-weight: 700;
+  background: rgb(var(--jr)); color: #0b1020; transition: filter .15s ease } .jr-go:hover { filter: brightness(1.08) }
+/* the path that joins the three systems: across on wide screens, down the side on phones */
+.jr-path { isolation: isolate }
+.jr-path::before { content: ''; position: absolute; z-index: -1; border-radius: 9999px;
+  background: linear-gradient(90deg, rgb(245 158 11), rgb(129 140 248), rgb(52 211 153)) }
+@media (min-width: 1024px) { .jr-path::before { left: 8%; right: 8%; top: 2.9rem; height: 4px } }
+@media (max-width: 1023px) { .jr-path::before { top: 2rem; bottom: 2rem; left: 2.6rem; width: 4px; background: linear-gradient(180deg, rgb(245 158 11), rgb(129 140 248), rgb(52 211 153)) } }
+
+/* ---------- v2: the four steps of the middle system (contract page) ---------- */
+.mid-step { width: 100%; display: flex; align-items: center; gap: .6rem; border: 1px solid rgb(var(--line)); border-radius: 1rem; padding: .55rem .7rem; min-height: 56px; background: rgb(var(--surface)); transition: background .15s ease }
+.mid-step:hover { background: rgb(var(--surface3)) }
+.mid-on { border-color: rgb(var(--primary)); box-shadow: 0 0 0 2px rgb(var(--primary) / .35) }
+.mid-num { width: 2rem; height: 2rem; flex-shrink: 0; border-radius: 9999px; display: grid; place-items: center; font-weight: 700; background: rgb(var(--surface3)); color: rgb(var(--ink)) }
+.mid-todo.mid-on .mid-num { background: rgb(var(--primary)); color: rgb(var(--onprimary)) }
+.mid-done .mid-num { background: rgb(var(--ok-fg)); color: rgb(var(--ok-bg)) }
+.mid-warn .mid-num { background: rgb(var(--danger-fg)); color: rgb(var(--danger-bg)) }

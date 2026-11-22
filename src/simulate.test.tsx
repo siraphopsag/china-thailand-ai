@@ -119,10 +119,9 @@ describe('board layout (owner, Oct 2026): computers 4 × 2, phones one row each 
 })
 
 describe('the lobby explains how it works', () => {
-  it('six parts with the problem each answers, and what "simulated data" means', () => {
+  it('three systems with the problem each answers (the journey, Nov 2026), and what "simulated data" means', () => {
     const page = html(<Landing />, seedState(NOW))
-    expect(page).toContain(T('m.sys.h'))
-    for (const n of [1, 2, 3, 4, 5, 6]) { expect(page).toContain(T(`m.sys.${n}.p` as MsgKey)); expect(page).toContain(T(`m.sys.${n}` as MsgKey)) }
+    for (const k of ['front', 'middle', 'end']) { expect(page).toContain(T(`jr.${k}.p` as MsgKey)); expect(page).toContain(T(`jr.${k}.t` as MsgKey)) }
     expect(page).toContain(T('m.simwhat.h')); expect(page).toContain(T('m.simwhat'))
     expect(tr('m.proto', undefined, 'th')).not.toContain('ข้อมูลทั้งหมดเป็นตัวอย่าง') // real users post now
   })

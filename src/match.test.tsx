@@ -379,10 +379,10 @@ describe('reviewed shell and pages', () => {
     for (const r of [null, 'seeker', 'employer'] as const) for (const i of sideItems(r, true)) expect(ROUTES.has(i.to), i.to).toBe(true)
     expect(src('./components/sidenav.tsx')).not.toMatch(/to: '(start|interview|dashboard|plan|documents|jobs|employer|review)'/)
   })
-  it('Lobby: centred start button to /choose-role, what C.A.L.L. solves and how it works — nothing else added', () => {
+  it('Lobby: centred start button to /choose-role, the full journey (v2, Nov 2026) and what C.A.L.L. solves', () => {
     const page = html(<Landing />)
     expect(page).toMatch(new RegExp(`<a href="/choose-role" class="cta-core[^"]*">${T('hero.cta')}`))
-    for (const k of ['m.hero.h1a', 'm.hero.h1b', 'm.problems.h', 'm.how.h', 'm.how.1', 'm.how.4', 'm.proto'] as const) expect(page, k).toContain(T(k))
+    for (const k of ['m.hero.h1a', 'm.hero.h1b', 'm.problems.h', 'jr.h', 'jr.front.t', 'jr.end.t', 'm.proto'] as const) expect(page, k).toContain(T(k))
     for (const k of ['home.paths', 'home.steps.h', 'home.biz.h', 'goal.th_cn.t'] as const) expect(page, k).not.toContain(T(k))
   })
   it('role page: two choices, employer then job seeker, with the owner\'s wording; no admin, no business planning', () => {
@@ -524,10 +524,10 @@ describe('liquid-glass menu capsule (owner, Oct 2026)', () => {
     }
     expect(css).toMatch(/@media \(prefers-reduced-transparency: reduce\) \{\s*\.nav-pill, \.glass-pop, \.glass-card \{ background: rgb\(var\(--surface\)\); backdrop-filter: none/)
   })
-  it('Lobby: the 14 short-reading cards (4 letters, 4 steps, 6 systems — owner, Oct 2026) are glass over still coloured light; letters and numbers sit on indigo drops; forms stay solid', () => {
+  it('Lobby: the 4 letter cards (owner, Oct 2026; the steps and systems became the journey in Nov 2026) are glass over still coloured light; letters and numbers sit on indigo drops; forms stay solid', () => {
     const page = html(<Landing />)
-    expect(page.match(/<li class="glass-card/g)?.length).toBe(14)
-    expect(page.match(/class="glass-drop w-/g)?.length).toBe(18) // + the 4 new-system cards (v2, Nov 2026), which are links
+    expect(page.match(/<li class="glass-card/g)?.length).toBe(4)
+    expect(page.match(/class="glass-drop w-/g)?.length).toBe(4)
     expect(page).not.toContain('glass-orbs') // the box of light showed hard edges; the light now lives in the page background
     expect(css).toMatch(/radial-gradient\(42vw 38vh at 8% 55%, rgb\(var\(--glow-a\) \/ calc\(var\(--orb-a\) \* \.8\)\), transparent 72%\)/)
     // forms keep solid cards; their lists and empty states are glass
@@ -625,17 +625,11 @@ describe('languages look alike (owner, Oct 2026)', () => {
     expect(page).toContain('<span class="sr-only">' + T('m.seek.s3') + '</span>')
     expect(page).not.toContain('sm:not-sr-only')
   })
-  it('Lobby cards: every "how it works" step has a short title + one short sentence; C/A/L/L sentences are short in all languages', () => {
-    const page = html(<Landing />)
-    for (const n of [1, 2, 3, 4]) {
-      expect(page, `title ${n}`).toContain(`<span class="block font-semibold leading-snug">${T(`m.how.${n}.t` as MsgKey)}</span>`)
-      expect(page, `text ${n}`).toContain(`<span class="block text-sm text-muted mt-1">${T(`m.how.${n}` as MsgKey)}</span>`)
-    }
-    for (const k of ['m.how.1', 'm.how.2', 'm.how.3', 'm.how.4', 'brand.cross', 'brand.asean', 'brand.language', 'brand.legal'] as const) {
+  it('Lobby cards: C/A/L/L sentences are short in all languages (the "how it works" steps became the journey, Nov 2026)', () => {
+    for (const k of ['brand.cross', 'brand.asean', 'brand.language', 'brand.legal'] as const) {
       const [th, zh, en] = messages[k] as readonly string[]
       expect(th.length, k).toBeLessThanOrEqual(80); expect(zh.length, k).toBeLessThanOrEqual(30); expect(en.length, k).toBeLessThanOrEqual(75)
     }
-    for (const n of [1, 2, 3, 4]) { const [th, , en] = messages[`m.how.${n}.t` as MsgKey] as readonly string[]; expect(th.length).toBeLessThanOrEqual(24); expect(en.split(' ').length).toBeLessThanOrEqual(4) }
   })
   it('skill chips in a row share one height; the menu capsule shows icons only, so no label can overflow in any language', () => {
     expect(src('./pages/match.tsx')).toContain('grid grid-cols-2 auto-rows-fr gap-2')

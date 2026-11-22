@@ -28,7 +28,6 @@ import { SosPage } from './pages/sos'
 import { CasePage } from './pages/case'
 import { LawRulesBox } from './pages/hire'
 import { CaseDemoPage, demoCase, DEMO_DEPARTED_DAYS_AGO } from './pages/case-demo'
-import { NewSystems } from './pages/home'
 import { sideItems, MORE_KEYS } from './components/sidenav'
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
@@ -216,13 +215,7 @@ describe('F. the new systems are easy to find (owner, Nov 2026)', () => {
     }
     expect(MORE_KEYS).toContain('m.nav.contract'); expect(MORE_KEYS).toContain('m.nav.sos')
   })
-  it('the lobby shows four cards, each a link to its system, with the minimum wages from the tables', () => {
-    const page = html(<NewSystems />, seedState(NOW))
-    expect(page).toContain(T('v2h.h'))
-    for (const to of ['contract', 'sos', 'hire', 'case-demo']) expect(page).toContain(`href="/${to}"`)
-    expect(page).toContain(`${(TH_MIN_DAILY['TH-10'] * TH_DAYS_PER_MONTH).toLocaleString('en-US')}`)
-    expect(page).toContain(CN_MIN_MONTHLY['CN-GD'].toLocaleString('en-US'))
-    expect(src('./pages/home.tsx')).toContain('<NewSystems />')
+  it('the demo case route is registered', () => {
     expect(src('./App.tsx')).toContain("'case-demo': <CaseDemoPage />")
   })
   it('the demo case has left 3 days ago, nobody has confirmed, so the alert shows; both confirmations clear it', () => {
