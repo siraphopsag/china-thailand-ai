@@ -75,3 +75,14 @@ Art. 58 (young workers 16–18). Passport validity: most visas ask for 6 months;
 Electronic signature: Thai Electronic Transactions Act s.9; Chinese Electronic Signature Law Arts. 13–14. The signature is bound to
 a SHA-256 fingerprint of the exact bilingual text, so any later change voids it. The partner law firms are samples: no real firm
 is named or connected.
+
+## End system: check-ins, review and complaints (added 22 Nov 2026)
+
+Check-ins on the arrival day, day 7 and day 30 follow the plan's anti-trafficking advice (early checks catch people who are
+held). A missed check-in, an "unsafe" answer or the worker's secret word alerts the C.A.L.L. team only; the employer never sees
+the answers or the timeline. Complaints that may endanger life or freedom (forced work, violence, "unsafe", secret word) are
+passed to the agency at once without the credibility check, in line with TH Anti-Trafficking Act s.6/1 and ACTIP Art. 14
+(victim protection); others are scored from evidence and the case record to stop false reports. Employer reviews are stars and
+fixed points with no free text, shown only as an anonymous total, to limit defamation and PDPA risk. No office addresses or
+building photos are stored: offices are found by map search (Google Maps in Thailand, Amap in China); building photos and a 3D
+model are roadmap items.

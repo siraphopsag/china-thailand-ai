@@ -1,7 +1,7 @@
 // Help after the job starts (v2 model, owner Nov 2026: the "end system"). Emergency numbers come first and work at once (tel:
 // links, no form, no sign-in); a quick-exit button leaves the page in one tap; the worker's location can be shared from their
 // own phone. Below, the report pack: what happened → the evidence to keep → the agency and its office in the province → a
-// summary to print or save. Nothing on this page is sent anywhere by the website.
+// summary to print or save (path 1), or a complaint C.A.L.L. checks and files with the agency (path 2, v2 end system).
 import { useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useMatch } from '../matchData'
@@ -11,6 +11,10 @@ import { ME } from '../domain/match/types'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
 import { Page, useNames } from './match'
+import { useSearchParam } from '../store'
+import { useAftercare } from '../aftercareStore'
+import { actComplaint, checkinFlags, fileComplaint, type ComplaintAction } from '../domain/match/aftercare'
+import { ComplaintCard, arrivalDay } from './aftercare'
 
 /** leaves at once and replaces this page in the history, so "Back" does not return to it */
 export const quickExit = () => { try { location.replace('https://www.bing.com/') } catch { location.href = 'about:blank' } }
@@ -44,6 +48,22 @@ export function SosPage() {
   }
   const tt = (k: string, v?: Record<string, string | number>) => t(k as never, v)
   const provName = N.prov(province)
+  // path 2: C.A.L.L. files it (checked first, urgent ones at once) — kept with the case it belongs to
+  const caseParam = useSearchParam('case')
+  const caseKey = caseParam || myCase?.id || 'nocase'
+  const [aft, saveAft] = useAftercare(caseKey)
+  const arrived = caseKey === 'demo' || !!(myCase && caseKey === myCase.id && arrivalDay(myCase))
+  const flags = aft.checkins.flatMap(checkinFlags)
+  const fileToCall = () => {
+    if (!problem) return
+    const at = new Date(now).toISOString()
+    saveAft({ ...aft, complaints: [fileComplaint({ id: `cm-${now}-${aft.complaints.length}`, caseId: caseKey, problem, country, province, note, evidence: have, at, hasCase: caseKey !== 'nocase', arrived, flags }), ...aft.complaints] })
+  }
+  const actOn = (id: string, x: ComplaintAction) => {
+    const cm = aft.complaints.find((y) => y.id === id)
+    const n = cm && actComplaint(cm, x.kind === 'addEvidence' ? { ...x, flags, hasCase: caseKey !== 'nocase', arrived } : x, new Date(now).toISOString())
+    if (n) saveAft({ ...aft, complaints: aft.complaints.map((y) => (y.id === id ? n : y)) })
+  }
   const download = () => {
     if (!problem) return
     const text = packText({ problem, country, province, note, evidence: have, when: N.dayTime(now) }, tt, provName)
@@ -104,12 +124,25 @@ export function SosPage() {
                 </li>))}</ul>
             </div>
           </div>
-          <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-3">
-            <button type="button" className="btn-ghost" onClick={() => window.print()}><Icon name="documents" size={16} />{t('rp.print')}</button>
-            <button type="button" className="btn-primary" onClick={download}><Icon name="download" size={16} />{t('rp.save')}</button>
+          <div className="grid md:grid-cols-2 gap-3 border-t border-line pt-3">
+            <div className="rounded-xl border border-line p-3 space-y-2">
+              <p className="font-semibold text-sm flex items-center gap-2"><Icon name="pin" size={16} />{t('cr.path.self')}</p>
+              <p className="text-xs text-muted">{t('cr.path.self.d')}</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn-ghost" onClick={() => window.print()}><Icon name="documents" size={16} />{t('rp.print')}</button>
+                <button type="button" className="btn-soft" onClick={download}><Icon name="download" size={16} />{t('rp.save')}</button>
+              </div>
+              <p className="text-xs text-muted">{t('rp.private')}</p>
+            </div>
+            <div className="rounded-xl border border-primary/60 bg-brand/30 p-3 space-y-2">
+              <p className="font-semibold text-sm flex items-center gap-2"><Icon name="shield" size={16} className="text-primary" />{t('cr.path.call')}</p>
+              <p className="text-xs text-muted">{t('cr.path.call.d')}</p>
+              <button type="button" className="btn-primary" onClick={fileToCall}><Icon name="send" size={16} />{t('cr.send')}</button>
+            </div>
           </div>
-          <p className="text-xs text-muted">{t('rp.private')}</p>
         </>}
+        {aft.complaints.length > 0 && <div className="space-y-2 border-t border-line pt-3"><h3 className="font-semibold text-sm">{t('cr.mine')}</h3>
+          {aft.complaints.map((cm) => <ComplaintCard key={cm.id} cm={cm} viewer="worker" onAct={(x) => actOn(cm.id, x as ComplaintAction)} />)}</div>}
       </section>
     </Page>
   )

@@ -12,6 +12,7 @@ import { useConfirm } from '../components/confirm'
 import { CaseLink } from './case'
 import { ReportButton, ScamNote } from './safety'
 import { AgencyLinks, DemoBadge, HeldChip, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, TranslatedNote, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
+import { EmployerRating } from './aftercare'
 
 /**
  * One post (owner, Oct 2026): details, the five release levels with their times, who else is looking at it right now, and —
@@ -86,7 +87,7 @@ export function PostPage() {
   const statusLine = (a: Acceptance) => a.status === 'reserved' ? t('m.ap.inQueue', { n: c.reserved }) : t(`m.as.${a.status}` as never)
 
   return (
-    <Page title={p.position} sub={<>{p.company}<VerifyTick post={p} /> · {N.place(p.country, p.province)} · {N.industry(p.industry)}</>} fit body="flex flex-col gap-3">
+    <Page title={p.position} sub={<>{p.company}<VerifyTick post={p} /> <EmployerRating employerId={p.employerId} compact /> · {N.place(p.country, p.province)} · {N.industry(p.industry)}</>} fit body="flex flex-col gap-3">
       <div className="shrink-0 flex flex-wrap items-center gap-2">
         {stage !== 'expired' && <LevelBadge level={mine || !reach ? stage : reach.level} reached={mine || !reach} />}
         <span className="chip bg-surface3 border-line"><Icon name="users" size={12} />{t('m.cnt.held', { n: c.held, max: cap })}</span>

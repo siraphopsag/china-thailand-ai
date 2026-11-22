@@ -12,6 +12,7 @@ import { useConfirm } from '../components/confirm'
 import { AgencyLinks, Empty, Page, Toast, useApplicantName, useGate, useNames } from './match'
 import { ScamNote } from './safety'
 import { ArrivalBox, DocAttach } from './case-extras'
+import { AftercarePanel, arrivalDay } from './aftercare'
 
 /**
  * The case after a match (owner, Oct 2026): nine steps from the employer's confirmation to the worker's arrival. The employer
@@ -23,7 +24,7 @@ export const trainingName = (x: Training, t: (k: never) => string) => (x.name.st
 
 export function CasePage() {
   const { t } = useI18n()
-  const { st, agency, caseAct } = useMatch()
+  const { st, agency, caseAct, now } = useMatch()
   const nameOf = useApplicantName()
   const id = useSearchParam('id')
   const gate = useGate(`case?id=${id}`)
@@ -33,8 +34,13 @@ export function CasePage() {
   if (!c || !p) return <Page title={t('m.cs.nfTitle')}><Empty icon="bell" text={t('m.cs.notFound')} to="notifications" action={t('m.notif.title')} /></Page>
   const isEmployer = p.employerId === MY_EMPLOYER
   const acc = st.acceptances.find((a) => a.id === c.accId)
-  return <CaseView key={c.id} c={c} sub={`${p.position} · ${p.company}`} isSeeker={c.seekerId === ME} isEmployer={isEmployer}
-    withName={isEmployer && acc ? nameOf(acc) : null} agency={agency} act={(a) => caseAct(c.id, a)} />
+  const isSeeker = c.seekerId === ME
+  const after = (isSeeker || isEmployer || agency) && arrivalDay(c)
+    ? <AftercarePanel c={c} caseKey={c.id} employerId={p.employerId} country={p.country} province={p.province} today={localDay(new Date(now).toISOString())}
+        view={isSeeker ? 'seeker' : 'employer'} team={agency} atNow={new Date(now).toISOString()} />
+    : null
+  return <CaseView key={c.id} c={c} sub={`${p.position} · ${p.company}`} isSeeker={isSeeker} isEmployer={isEmployer}
+    withName={isEmployer && acc ? nameOf(acc) : null} agency={agency} act={(a) => caseAct(c.id, a)} extra={after} />
 }
 
 /** the case screen itself; the real case page and the demo case (case-demo.tsx) both use it */
@@ -50,8 +56,10 @@ export interface CaseViewProps {
   top?: ReactNode
   /** where "Check the contract" goes (default: this case on the contract page) */
   contractTo?: string
+  /** shown under the steps (the end system after arrival) */
+  extra?: ReactNode
 }
-export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, title, top, contractTo }: CaseViewProps) {
+export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, title, top, contractTo, extra }: CaseViewProps) {
   const { t } = useI18n()
   const N = useNames()
   const [busy, setBusy] = useState(false)
@@ -107,6 +115,7 @@ export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, 
             {c.steps.submitted && <NavLink to={contractTo ?? `contract?case=${c.id}`} className="text-sm text-primary underline underline-offset-4 inline-flex items-center gap-1 min-h-[24px]"><Icon name="documents" size={14} />{t('c2.open')}</NavLink>}
           </section>
           {isSeeker && c.steps.submitted && !c.steps.arrived && <DocAttach c={c} />}
+          {extra}
         </div>
 
         {/* 1024–1279 px: the case details and the agency share the second column; from 1280 px they get a column each */}

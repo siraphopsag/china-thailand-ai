@@ -896,3 +896,14 @@ html[data-lite] .bg-paths.is-on .bg-flow path { animation: none !important }
 .mid-todo.mid-on .mid-num { background: rgb(var(--primary)); color: rgb(var(--onprimary)) }
 .mid-done .mid-num { background: rgb(var(--ok-fg)); color: rgb(var(--ok-bg)) }
 .mid-warn .mid-num { background: rgb(var(--danger-fg)); color: rgb(var(--danger-bg)) }
+
+/* ---------- v2: the end system on the case page — check-in timeline, review stars, credibility meter ---------- */
+.ac-node { position: relative; border: 1px solid rgb(var(--line)); border-radius: 1rem; padding: .6rem .5rem .55rem; text-align: center; background: rgb(var(--surface)) }
+.ac-dot { width: 2rem; height: 2rem; margin: 0 auto .3rem; border-radius: 9999px; display: grid; place-items: center; font-weight: 800; background: rgb(var(--surface3)); color: rgb(var(--ink)) }
+.ac-done { border-color: rgb(var(--ok-line)) } .ac-done .ac-dot { background: rgb(var(--ok-fg)); color: rgb(var(--ok-bg)) }
+.ac-open { border-color: rgb(var(--primary)); box-shadow: 0 0 0 2px rgb(var(--primary) / .3) } .ac-open .ac-dot { background: rgb(var(--primary)); color: rgb(var(--onprimary)) }
+.ac-missed { border-color: rgb(var(--danger-line)); background: rgb(var(--danger-bg)); color: rgb(var(--danger-fg)) } .ac-missed .ac-dot { background: rgb(var(--danger-fg)); color: rgb(var(--danger-bg)) }
+.ac-upcoming { color: rgb(var(--muted)) }
+.er-star { color: rgb(var(--muted)); padding: .15rem; border-radius: .5rem } .er-star.on, .er-gold { color: #f59e0b } .er-star.on svg, .er-gold { fill: #f59e0b }
+.cr-meter { flex: 1; max-width: 9rem; height: .5rem; border-radius: 9999px; background: rgb(var(--surface3)); overflow: hidden; display: block }
+.cr-meter > span { display: block; height: 100% } .cr-strong > span { background: rgb(var(--ok-fg)) } .cr-medium > span { background: #f59e0b } .cr-weak > span { background: rgb(var(--danger-fg)) }
