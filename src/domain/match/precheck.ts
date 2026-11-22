@@ -1,11 +1,30 @@
 // "Pre-check before posting" (owner, Oct 2026). SIMULATED: simple rules standing in for a future AI review, which should look
 // for signs of illegal content, missing details and anything odd before a post goes out. The page labels it "simulated AI".
 // Messages say "may … please check" — this is not a legal assessment.
-import { postIssues, type PostInput, type Problem } from './logic'
+import { mustStayDomestic, postIssues, type PostInput, type Problem } from './logic'
+import { wageWarning, type MinWage } from './minwage'
 import type { Industry, Skill } from './types'
 
 export type Warning = 'noSalary' | 'skillMismatch' | 'shortDetails' | 'discrimination' | 'scamRisk' | 'manyPeople'
-export interface Precheck { errors: Problem[]; warnings: Warning[] }
+/**
+ * Fixed legal rules (v2 model, owner Nov 2026): matters with a legal number or an official list are checked by rules, not guessed
+ * by the AI, and they show even when the AI answers. 'belowMinWage' blocks a permanent or contract job (it would be unlawful pay);
+ * for temporary work and internships it is a warning. 'closedJob' keeps the post inside Thailand (as before) and now says why.
+ */
+export type LawRule =
+  | { rule: 'belowMinWage'; block: boolean; min: MinWage }
+  | { rule: 'veryHighPay'; block: false; min: MinWage }
+  | { rule: 'closedJob'; block: false }
+export interface Precheck { errors: Problem[]; warnings: Warning[]; laws: LawRule[] }
+/** the fixed legal rules of a post (also used by the board and the contract check) */
+export function lawRules(input: Pick<PostInput, 'place' | 'salary' | 'minYears' | 'employment' | 'position' | 'details'>): LawRule[] {
+  const out: LawRule[] = []
+  const w = wageWarning(input.place, input.salary, input.minYears)
+  if (w?.warning === 'belowMinWage') out.push({ rule: 'belowMinWage', block: input.employment === 'permanent' || input.employment === 'contract', min: w.min })
+  if (w?.warning === 'veryHighPay') out.push({ rule: 'veryHighPay', block: false, min: w.min })
+  if (mustStayDomestic(input)) out.push({ rule: 'closedJob', block: false })
+  return out
+}
 
 /** skills that usually belong to each field (a post whose skills share none of these gets a gentle warning) */
 const RELATED: Record<Industry, Skill[]> = {
@@ -45,5 +64,5 @@ export function precheck(input: PostInput, at: string): Precheck {
   if (DISCRIMINATION.test(words)) warnings.push('discrimination')
   if (SCAM.test(words)) warnings.push('scamRisk')
   if (input.headcount > 50) warnings.push('manyPeople')
-  return { errors, warnings }
+  return { errors, warnings, laws: errors.length ? [] : lawRules(input) }
 }

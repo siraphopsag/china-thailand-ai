@@ -5,7 +5,7 @@ import { useMatch } from '../matchData'
 import { canPost, caseBlocksDelete, isCountry, localDay, memberActive, mustStayDomestic, postIssues, postQuota, type PostField, type PostInput, type Problem } from '../domain/match/logic'
 import { guessLang } from '../domain/match/postText'
 import { scheduleOf, stageAt, capStage } from '../domain/match/release'
-import { precheck, type Precheck } from '../domain/match/precheck'
+import { precheck, type LawRule, type Precheck } from '../domain/match/precheck'
 import { useAuth } from '../auth'
 import { aiCheck } from '../ai/client'
 import type { AiCheck, AiResponse } from '../ai/spec'
@@ -151,7 +151,7 @@ export function HirePage() {
       if (run === aiRun.current) setAiRes(res)
       return
     }
-    setStage(r.errors.length || r.warnings.length ? 'check' : 'confirm')
+    setStage(r.errors.length || r.warnings.length || r.laws.length ? 'check' : 'confirm')
   }
   const closeCheck = () => { aiRun.current++; setStage(null); if (check?.errors[0]) showProblem(check.errors[0]) }
   const aiOk = aiRes && aiRes !== 'busy' && aiRes.ok && shown ? aiRes : null
@@ -322,22 +322,23 @@ export function HirePage() {
         {orbOn ? <><ThinkingOrb lite={lite} done={aiRes !== 'busy'} onDone={() => setShown(true)} chips={[t('ai.cat.scam'), t('ai.cat.trafficking'), t('ai.cat.labour_law'), t('ai.cat.discrimination'), t('ai.cat.missing_info')]} label={(c) => t('ai.chk.now', { c })} doneText={t('ai.chk.allDone')} summing={t('ai.chk.summing')} /><p className="text-xs text-muted text-center">{t('ai.chk.wait')}</p></>
           : aiOk ? <><p className="mo-checked"><span className="mo-checked-ball" aria-hidden="true" />{t('ai.chk.allDone')}</p><AiCheckResult res={aiOk.result} left={aiOk.left} /></>
           : <p className="text-xs text-muted">{aiRes && !aiRes.ok ? t('ai.chk.fallback', { why: t(`ai.why.${aiRes.reason}` as never) }) : t('m.chk.simNote')}</p>}
-        {!aiOk && !orbOn && check.errors.length === 0 && check.warnings.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')}</p>}
+        {!aiOk && !orbOn && check.errors.length === 0 && check.warnings.length === 0 && check.laws.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')}</p>}
         {held && <HoldNotice />}
+        {!orbOn && check.laws.length > 0 && <LawRulesBox laws={check.laws} />}
         {!aiOk && !orbOn && check.errors.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-danger-fg flex items-center gap-1.5"><Icon name="alert" size={16} />{t('m.chk.errors')}</p>
           <ul className="list-disc pl-6 text-sm space-y-1">{check.errors.map((e) => <li key={e}>{N.problem(e)}</li>)}</ul></div>}
         {!aiOk && !orbOn && check.warnings.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-warn-fg flex items-center gap-1.5"><Icon name="warn" size={16} />{t('m.chk.warnings')}</p>
           <ul className="list-disc pl-6 text-sm space-y-1">{check.warnings.map((w) => <li key={w}>{t(`m.chk.w.${w}` as never)}</li>)}</ul></div>}
         <div className="flex flex-wrap justify-end gap-2 pt-1">
           <button type="button" className="btn-ghost" onClick={closeCheck}>{t('m.chk.fix')}</button>
-          {check.errors.length === 0 && !orbOn && <button type="button" className="btn-primary" onClick={() => setStage('confirm')}>{t('m.chk.continue')}<Icon name="next" size={16} /></button>}
+          {check.errors.length === 0 && !orbOn && !check.laws.some((l) => l.block) && <button type="button" className="btn-primary" onClick={() => setStage('confirm')}>{t('m.chk.continue')}<Icon name="next" size={16} /></button>}
         </div></>)}</Modal>
 
       {/* 2) are you sure? */}
       <Modal open={stage === 'confirm'} onClose={() => setStage(null)}>{(id) => pending && (<>
         <h2 id={id} className="h2">{t(editing ? 'm.edit.cf.title' : 'm.cf.title')}</h2>
         {aiOk ? (aiOk.result.verdict === 'ok' && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('ai.chk.v.ok')} <span className="text-muted">({t('ai.chk.by')})</span></p>)
-          : check && check.warnings.length === 0 && check.errors.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')} <span className="text-muted">({t('m.chk.sim')})</span></p>}
+          : check && check.warnings.length === 0 && check.errors.length === 0 && check.laws.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')} <span className="text-muted">({t('m.chk.sim')})</span></p>}
         {held && <HoldNotice />}
         <div className="card-i space-y-1 text-sm"><p className="font-semibold">{pending.position} · {pending.company}</p><p className="text-muted">{N.place(pending.place.country, pending.place.province)} · {t('m.people', { n: pending.headcount })} · {N.employment(pending.employment)}</p></div>
         {(() => { const f = finalInput(pending); return <>
@@ -367,6 +368,22 @@ export function HirePage() {
 }
 
 /** the AI rated the post high risk: it is saved but held until an administrator has checked it (owner, Oct 2026) */
+/** the fixed legal rules (minimum wage, jobs closed to foreigners): shown with or without the AI, each with its law */
+export function LawRulesBox({ laws }: { laws: LawRule[] }) {
+  const { t } = useI18n()
+  const fmt = (n: number) => n.toLocaleString('en-US')
+  return (
+    <div className="space-y-1.5" role="group" aria-labelledby="law-rules-h">
+      <p id="law-rules-h" className="text-sm font-semibold flex items-center gap-1.5"><Icon name="alert" size={16} />{t('wg.rules')}</p>
+      <ul className="space-y-2">{laws.map((l) => (
+        <li key={l.rule} className={`rounded-lg border p-3 text-sm space-y-1 ${l.block ? 'border-danger-line bg-danger-bg text-danger-fg' : 'border-warn-line bg-warn-bg text-warn-fg'}`}>
+          <p className="font-medium">{l.rule === 'closedJob' ? t('wg.closedJob') : t(l.block ? 'wg.belowMin.block' : `wg.${l.rule}.warn` as never, { min: fmt(l.min.monthly), cur: l.min.currency })}</p>
+          <p className="text-xs">{l.rule === 'closedJob' ? t('wg.law.closedJob') : <>{l.min.source}{l.min.daily ? ` · ${t('wg.daily', { daily: l.min.daily })}` : ''}</>}</p>
+        </li>))}</ul>
+    </div>
+  )
+}
+
 export function HoldNotice() {
   const { t } = useI18n()
   return <p role="note" className="flex items-start gap-2 text-sm font-medium rounded-lg border border-danger-line bg-danger-bg text-danger-fg p-3"><Icon name="eyeOff" size={16} className="mt-0.5 shrink-0" />{t('ai.hold.notice')}</p>

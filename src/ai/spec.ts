@@ -11,7 +11,7 @@ import { assess } from '../data/legal/trust.js'
 import { data } from '../locales/data.js'
 import type { PostInput } from '../domain/match/logic.js'
 
-export type AiKind = 'check' | 'ask'
+export type AiKind = 'check' | 'ask' | 'contract'
 export type AiLang = 'th' | 'zh' | 'en'
 export const AI_LANGS: AiLang[] = ['th', 'zh', 'en']
 /** Claude's default model (paid, used only when ANTHROPIC_API_KEY is set); the owner can change it in Vercel (AI_MODEL) */
@@ -137,6 +137,40 @@ ${legalContext()}`
 }
 
 export const checkUser = (p: PostForAi) => `<post>\n${JSON.stringify(p, null, 1)}\n</post>`
+
+// ---------------- C) checking a draft contract against its post (v2 model, owner Nov 2026: "AI contract check")
+/** the draft as the AI reads it: the post's facts, the country of work and the clauses as the person sees them (no account data) */
+export interface ContractForAi { country: 'TH' | 'CN'; province: string; position: string; postSalary: { min: number; max: number; currency: string } | null; clauses: string[] }
+export function contractForAi(v: unknown): ContractForAi | null {
+  const r = (v ?? {}) as Record<string, unknown>
+  if (r.country !== 'TH' && r.country !== 'CN') return null
+  const clauses = Array.isArray(r.clauses) ? r.clauses.filter((x): x is string => typeof x === 'string').slice(0, 12).map((x) => x.slice(0, 400)) : []
+  if (!clauses.length) return null
+  const s = (r.postSalary ?? null) as Record<string, unknown> | null
+  const salary = s && typeof s.min === 'number' && typeof s.max === 'number' && typeof s.currency === 'string' ? { min: s.min, max: s.max, currency: s.currency.slice(0, 3) } : null
+  return { country: r.country, province: String(r.province ?? '').slice(0, 10), position: String(r.position ?? '').slice(0, 120), postSalary: salary, clauses }
+}
+export function contractSystem(lang: AiLang): string {
+  return `${COMMON}
+
+TASK: review ONE draft employment contract before a worker signs it. The worker was matched through a job post; compare the
+clauses with the post (pay, position, place) and with the labour law of the country of work ("country": TH = Thailand, CN = China).
+Report only real issues, most serious first, at most 8. Look especially for: pay lower than the post or below a legal minimum; the
+employer keeping the passport or identity documents; deposits, guarantees or fees paid by the worker; no weekly day off or excessive
+hours; heavy deductions for housing, food, fines or "debts"; penalties for leaving; vague or missing duties, place or pay date.
+category: "labour_law" for a clause that may break labour law, "trafficking" for document seizure, debt or restrictions on leaving,
+"scam" for money asked from the worker, "missing_info" for something a fair contract should state, "other" otherwise.
+For every issue give: the exact clause words it is about (quote), a short explanation, a concrete fix, and related LEGAL RECORDS ids
+(often none). verdict: "ok" when nothing needs attention, "review" when something should be fixed before signing, "high_risk" for
+document seizure, debt bondage or money asked from the worker. Write summary, explanation and suggestion in ${LANG_NAME[lang]}, short
+and plain. Keep quote in the contract's own language. This is not legal advice; a lawyer reviews real contracts.
+Reply with ONE JSON object only, exactly this shape:
+{"verdict":"ok"|"review"|"high_risk","summary":string,"flags":[{"category":"scam"|"trafficking"|"labour_law"|"discrimination"|"missing_info"|"other","severity":"high"|"medium"|"low","quote":string,"explanation":string,"suggestion":string,"lawIds":string[]}]}
+
+LEGAL RECORDS:
+${legalContext()}`
+}
+export const contractUser = (c: ContractForAi) => `<contract>\n${JSON.stringify(c, null, 1)}\n</contract>`
 /** the last exchanges (cleaned, capped) */
 export function cleanHistory(v: unknown): AskTurn[] {
   if (!Array.isArray(v)) return []

@@ -128,7 +128,7 @@ export const market = {
   'm.sys.4.p': ['งานหลอกและมิจฉาชีพ', '虚假招聘与诈骗', 'Fake jobs and scams'],
   'm.sys.4': ['คำเตือนบนประกาศของนายจ้างที่ยังไม่ยืนยัน ปุ่มรายงาน (3 รายงานซ่อนประกาศ) และหน้า “วิธีสังเกตงานหลอก”', '未认证雇主的招聘信息带有警示、举报按钮（3 次举报即隐藏）以及“如何识别虚假招聘”页面', 'Warnings on posts by unverified employers, a report button (3 reports hide a post) and a “spot a fake job” page'],
   'm.sys.5.p': ['ขั้นตอนเอกสารไปทำงานต่างประเทศยุ่งยาก', '出国工作的手续繁琐', 'The paperwork for working abroad is hard'],
-  'm.sys.5': ['เคสส่งต่อหน่วยงานจัดหางาน ติดตามได้ 9 ขั้น พร้อมปฏิทินวันนัด อบรม ทดสอบ และวันเริ่มงาน', '个案转交职业介绍机构，可跟踪 9 个步骤，并有预约、培训、测试和入职日期的日历', 'Cases go to an employment agency and can be followed in 9 steps, with a calendar for appointments, training, tests and the first day'],
+  'm.sys.5': ['ทีม C.A.L.L. ดูแลเคสเอง ติดตามได้ 9 ขั้น พร้อมปฏิทินวันนัด อบรม ทดสอบ วันเริ่มงาน และการยืนยันว่าถึงจากทั้งสองฝ่าย', 'C.A.L.L. 团队亲自跟进个案，可跟踪 9 个步骤，并有预约、培训、测试、入职日期的日历以及双方的到达确认', 'The C.A.L.L. team follows each case itself in 9 steps, with a calendar for appointments, training, tests and the first day, and arrival confirmed by both sides'],
   'm.sys.6.p': ['ไม่เห็นภาพรวมว่าตลาดต้องการอะไร', '看不清市场需要什么', 'No picture of what the market needs'],
   'm.sys.6': ['หน้าสภาพตลาดงานบนแผนที่: จังหวัดที่คึกคัก สายงานมาแรง สายงานยอดฮิต และอุปสงค์–อุปทาน (ตัวเลขรวม ไม่ระบุตัวบุคคล)', '地图上的就业市场：活跃省份、求职热度上升的行业、招聘需求最多的行业与供需对比（仅汇总数字，不识别个人）', 'The job market on the map: busy provinces, rising and most wanted fields, demand and supply (totals only)'],
   'm.simwhat.h': ['ข้อมูลจำลองคืออะไร', '什么是模拟数据', 'What is simulated data?'],

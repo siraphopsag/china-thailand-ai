@@ -9,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import {
-  AI_LANGS, DEFAULT_MODEL, FLAG_CATEGORIES, GEMINI_MODELS, MAX_QUESTION, SEVERITIES, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, cleanHistory, postForAi,
+  AI_LANGS, DEFAULT_MODEL, FLAG_CATEGORIES, GEMINI_MODELS, MAX_QUESTION, SEVERITIES, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, cleanHistory, contractForAi, contractSystem, contractUser, postForAi,
   type AiKind, type AiLang, type AiReason,
 } from '../src/ai/spec.js'
 import type { PostInput } from '../src/domain/match/logic.js'
@@ -30,6 +30,8 @@ const CheckSchema = z.object({
   translations: z.object({ th: z.object({ position: z.string(), details: z.string() }), zh: z.object({ position: z.string(), details: z.string() }), en: z.object({ position: z.string(), details: z.string() }) }),
   closedToForeigners: z.boolean(),
 })
+// v2 (Nov 2026): a draft contract is checked with the same verdict and flags, without translations
+const ContractSchema = CheckSchema.omit({ translations: true, closedToForeigners: true })
 // owner, 19 Oct 2026: the answer in the three languages too (switching the site's language switches the answer)
 const AnswerIn = z.object({ answer: z.string(), nextStep: z.string() })
 const AskSchema = z.object({ answer: z.string(), lawIds: z.array(z.string()), grounding: z.enum(['grounded', 'partial', 'out_of_scope']), nextStep: z.string(),
@@ -95,6 +97,8 @@ async function claude(apiKey: string, kind: AiKind, system: string, content: str
   try {
     const res = kind === 'check'
       ? await client.messages.parse({ model, max_tokens: 8000, system: sys, output_config: { effort: 'medium', format: zodOutputFormat(CheckSchema) }, messages: [{ role: 'user', content }] })
+      : kind === 'contract'
+      ? await client.messages.parse({ model, max_tokens: 6000, system: sys, output_config: { effort: 'medium', format: zodOutputFormat(ContractSchema) }, messages: [{ role: 'user', content }] })
       : await client.messages.parse({ model, max_tokens: 6000, system: sys, output_config: { effort: 'low', format: zodOutputFormat(AskSchema) }, messages: [{ role: 'user', content }] })
     if (res.stop_reason === 'refusal') return { reason: 'refused', status: 200 }
     return res.parsed_output ? { raw: res.parsed_output } : { reason: 'bad', status: 502 }
@@ -113,28 +117,30 @@ export async function POST(request: Request) {
     if (raw.length > 20_000) return fail('bad', 413)
     let body: Record<string, unknown>
     try { body = JSON.parse(raw) } catch { return fail('bad', 400) }
-    const kind = body?.kind === 'check' || body?.kind === 'ask' ? (body.kind as AiKind) : null
+    const kind = body?.kind === 'check' || body?.kind === 'ask' || body?.kind === 'contract' ? (body.kind as AiKind) : null
     const lang: AiLang = AI_LANGS.includes(body?.lang as AiLang) ? (body.lang as AiLang) : 'th'
     if (!kind) return fail('bad', 400)
     const question = typeof body.question === 'string' ? body.question.trim() : ''
     if (kind === 'ask' && (question.length < 4 || question.length > MAX_QUESTION)) return fail('bad', 400)
     const post = kind === 'check' && body.post && typeof body.post === 'object' ? postForAi(body.post as PostInput) : null
     if (kind === 'check' && (!post || typeof post.position !== 'string')) return fail('bad', 400)
+    const contract = kind === 'contract' ? contractForAi(body.contract) : null
+    if (kind === 'contract' && !contract) return fail('bad', 400)
 
     const claudeKey = env('ANTHROPIC_API_KEY'), geminiKey = env('GEMINI_API_KEY')
     if (!claudeKey && !geminiKey) return fail('off', 503)
     const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
     if (!token) return fail('signin', 401)
-    const t = await take(token, kind)
+    const t = await take(token, kind === 'contract' ? 'check' : kind) // a contract check uses the post-check allowance (no new SQL)
     if (!t) return fail('signin', 401)
     if (!t.ok) return fail(t.reason ?? 'limit', 429)
 
-    const system = kind === 'check' ? checkSystem(lang) : askSystem(lang)
-    const content = kind === 'check' ? checkUser(post!) : askUser(question, cleanHistory(body.history))
+    const system = kind === 'check' ? checkSystem(lang) : kind === 'contract' ? contractSystem(lang) : askSystem(lang)
+    const content = kind === 'check' ? checkUser(post!) : kind === 'contract' ? contractUser(contract!) : askUser(question, cleanHistory(body.history))
     const out = claudeKey ? await claude(claudeKey, kind, system, content) : await gemini(geminiKey, system, content)
     const admin = t.left === null // administrators see what went wrong (model + status; never a key or user text)
     if ('reason' in out) return json({ ok: false, reason: out.reason, ...(admin && out.detail ? { detail: out.detail } : {}) }, out.status)
-    const result = kind === 'check' ? cleanCheck(out.raw) : cleanAnswer(out.raw)
+    const result = kind === 'ask' ? cleanAnswer(out.raw) : cleanCheck(out.raw)
     if (kind === 'ask' && !(result as ReturnType<typeof cleanAnswer>).answer) return fail('bad', 502)
     return json({ ok: true, result, left: t.left, ...(admin && out.detail ? { detail: out.detail } : {}) })
   } catch (e) {

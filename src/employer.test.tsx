@@ -83,7 +83,7 @@ describe('A. post details', () => {
 })
 
 describe('B. pre-check (simulated AI)', () => {
-  it('a clean post has nothing to report', () => { expect(precheck(good, at(0))).toEqual({ errors: [], warnings: [] }) })
+  it('a clean post has nothing to report', () => { expect(precheck(good, at(0))).toEqual({ errors: [], warnings: [], laws: [] }) })
   it('errors stop posting; warnings can be accepted', () => {
     expect(precheck({ ...good, details: 'call 081 234 5678 for more' }, at(0)).errors).toEqual(['contact'])
     expect(precheck({ ...good, salary: { min: 9, max: 1, currency: 'THB' } }, at(0)).errors).toEqual(['salary'])
@@ -110,7 +110,7 @@ describe('B. pre-check (simulated AI)', () => {
 describe('C. confirm → posted', () => {
   it('flow: Check and post → (pre-check) → "Post this job?" → "Your post is live" with View the post / Post another', () => {
     const h = src('./pages/hire.tsx')
-    expect(h).toMatch(/setStage\(r\.errors\.length \|\| r\.warnings\.length \? 'check' : 'confirm'\)/)
+    expect(h).toMatch(/setStage\(r\.errors\.length \|\| r\.warnings\.length \|\| r\.laws\.length \? 'check' : 'confirm'\)/)
     expect(h).toContain("t(editing ? 'm.edit.cf.title' : 'm.cf.title')"); expect(h).toContain("t(editing ? 'm.edit.cf.yes' : 'm.cf.yes')"); expect(h).toContain("t('m.cf.back')")
     expect(h).toContain("t(editing ? 'm.edit.done' : 'm.dn.title')")
     expect(h).toContain("go(`post?id=${pid}`)") // View the post → its page

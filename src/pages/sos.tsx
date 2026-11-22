@@ -1,0 +1,116 @@
+// Help after the job starts (v2 model, owner Nov 2026: the "end system"). Emergency numbers come first and work at once (tel:
+// links, no form, no sign-in); a quick-exit button leaves the page in one tap; the worker's location can be shared from their
+// own phone. Below, the report pack: what happened → the evidence to keep → the agency and its office in the province → a
+// summary to print or save. Nothing on this page is sent anywhere by the website.
+import { useMemo, useState } from 'react'
+import { useI18n } from '../i18n'
+import { useMatch } from '../matchData'
+import { HELPLINES, type HelpCountry } from '../data/helplines'
+import { AGENCIES, EVIDENCE, PROBLEMS, URGENT, officeSearch, packText, type ProblemKind } from '../domain/match/reportPack'
+import { ME } from '../domain/match/types'
+import { Icon } from '../components/icons'
+import { Warn } from '../components/ui'
+import { Page, useNames } from './match'
+
+/** leaves at once and replaces this page in the history, so "Back" does not return to it */
+export const quickExit = () => { try { location.replace('https://www.bing.com/') } catch { location.href = 'about:blank' } }
+
+export function SosPage() {
+  const { t } = useI18n()
+  const N = useNames()
+  const { st, now } = useMatch()
+  // the country of work of my latest case, else Thailand
+  const myCase = useMemo(() => [...st.cases].reverse().find((c) => c.seekerId === ME), [st.cases])
+  const myPost = myCase && st.posts.find((p) => p.id === myCase.postId)
+  const [country, setCountry] = useState<HelpCountry>(myPost?.country ?? 'TH')
+  const [province, setProvince] = useState<string>(myPost?.province ?? (country === 'CN' ? 'CN-GD' : 'TH-10'))
+  const [problem, setProblem] = useState<ProblemKind | null>(null)
+  const [have, setHave] = useState<string[]>([])
+  const [note, setNote] = useState('')
+  const [loc, setLoc] = useState<{ lat: number; lng: number } | 'busy' | 'denied' | null>(null)
+  const lines = HELPLINES[country]
+  const switchCountry = (c: HelpCountry) => { setCountry(c); setProvince(c === 'CN' ? 'CN-GD' : 'TH-10') }
+  const share = () => {
+    if (!navigator.geolocation) { setLoc('denied'); return }
+    setLoc('busy')
+    navigator.geolocation.getCurrentPosition((p) => setLoc({ lat: +p.coords.latitude.toFixed(5), lng: +p.coords.longitude.toFixed(5) }), () => setLoc('denied'), { enableHighAccuracy: true, timeout: 15000 })
+  }
+  const mapLink = (l: { lat: number; lng: number }) => (country === 'CN' ? `https://uri.amap.com/marker?position=${l.lng},${l.lat}` : `https://maps.google.com/?q=${l.lat},${l.lng}`)
+  const shareText = (l: { lat: number; lng: number }) => t('hp.loc.msg', { link: mapLink(l) })
+  const sendLoc = async (l: { lat: number; lng: number }) => {
+    const text = shareText(l)
+    try { if (navigator.share) { await navigator.share({ text }); return } } catch { /* cancelled */ }
+    try { await navigator.clipboard.writeText(text) } catch { /* shown on the page anyway */ }
+  }
+  const tt = (k: string, v?: Record<string, string | number>) => t(k as never, v)
+  const provName = N.prov(province)
+  const download = () => {
+    if (!problem) return
+    const text = packText({ problem, country, province, note, evidence: have, when: N.dayTime(now) }, tt, provName)
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
+    const a = document.createElement('a'); a.href = url; a.download = 'report-pack.txt'; a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  return (
+    <Page title={t('hp.title')} sub={t('hp.sub')} actions={<button type="button" className="btn-ghost" onClick={quickExit}><Icon name="close" size={16} />{t('hp.exit')}</button>}>
+      <div role="tablist" aria-label={t('hp.where')} className="flex flex-wrap gap-1 rounded-xl border border-line bg-surface p-1 w-fit">
+        {(['TH', 'CN'] as HelpCountry[]).map((c) => <button key={c} type="button" role="tab" aria-selected={country === c} onClick={() => switchCountry(c)} className={`min-h-[36px] px-4 rounded-lg text-sm ${country === c ? 'seg-on' : 'hover:bg-surface3'}`}>{t(`hp.in.${c}` as never)}</button>)}
+      </div>
+
+      <section className="card space-y-3" aria-labelledby="hp-lines">
+        <h2 id="hp-lines" className="h2">{t('hp.lines')}</h2>
+        {lines.length === 0 ? <p className="text-sm text-muted">{t('hp.lines.none')}</p> : (
+          <ul className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2">{lines.map((l) => (
+            <li key={l.tel}><a href={`tel:${l.tel}`} className={`flex items-center gap-3 rounded-xl border p-3 min-h-touch ${l.urgent ? 'border-danger-line bg-danger-bg text-danger-fg' : 'border-line bg-surface hover:bg-surface3'}`}>
+              <span className="text-2xl font-bold tabular-nums shrink-0">{l.show}</span><span className="text-sm leading-snug">{t(l.key as never)}</span></a></li>))}</ul>)}
+        <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
+          <button type="button" className="btn-soft" onClick={share} disabled={loc === 'busy'}><Icon name="target" size={16} />{loc === 'busy' ? t('hp.loc.busy') : t('hp.loc.get')}</button>
+          {loc && typeof loc === 'object' && <>
+            <span className="text-sm tabular-nums">{loc.lat}, {loc.lng}</span>
+            <a className="text-sm text-primary underline" href={mapLink(loc)} target="_blank" rel="noopener noreferrer">{t('hp.loc.map')}</a>
+            <button type="button" className="btn-ghost text-sm" onClick={() => void sendLoc(loc)}><Icon name="send" size={14} />{t('hp.loc.share')}</button></>}
+          {loc === 'denied' && <span className="text-sm text-danger-fg">{t('hp.loc.denied')}</span>}
+        </div>
+        <p className="text-xs text-muted">{t('hp.loc.note')}</p>
+      </section>
+
+      <section className="card space-y-3" aria-labelledby="hp-pack">
+        <h2 id="hp-pack" className="h2">{t('rp.h')}</h2>
+        <p className="text-sm text-muted">{t('rp.sub')}</p>
+        <fieldset className="space-y-1.5"><legend className="text-sm font-medium mb-1">{t('rp.what')}</legend>
+          <div className="flex flex-wrap gap-2">{PROBLEMS.map((p) => (
+            <label key={p} className={`chip cursor-pointer min-h-[36px] px-3 ${problem === p ? 'seg-on' : 'bg-surface border-line'}`}>
+              <input type="radio" name="rp-problem" className="sr-only" checked={problem === p} onChange={() => { setProblem(p); setHave([]) }} />{t(`rp.p.${p}` as never)}</label>))}</div>
+        </fieldset>
+        {problem && <>
+          {URGENT.includes(problem) && <Warn tone="danger">{t('rp.urgent')}</Warn>}
+          <div className="grid lg:grid-cols-2 gap-4 items-start">
+            <div className="space-y-2"><h3 className="font-semibold text-sm">{t('rp.pack.evidence')}</h3>
+              <ul className="space-y-1.5">{EVIDENCE[problem].map((e) => (
+                <li key={e}><label className="flex items-start gap-2 text-sm min-h-[28px]"><input type="checkbox" className="mt-1" checked={have.includes(e)} onChange={(x) => setHave((h) => (x.target.checked ? [...h, e] : h.filter((y) => y !== e)))} /><span>{t(`rp.ev.${e}` as never)}</span></label></li>))}</ul>
+              <label className="block space-y-1 text-sm"><span className="font-medium">{t('rp.pack.note')}</span>
+                <textarea className="input w-full min-h-[90px]" maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} aria-describedby="rp-note-h" /></label>
+              <p id="rp-note-h" className="text-xs text-muted">{t('rp.note.hint')}</p>
+            </div>
+            <div className="space-y-2"><h3 className="font-semibold text-sm">{t('rp.pack.agency')}</h3>
+              <label className="block space-y-1 text-sm"><span className="font-medium">{t('rp.province')}</span>
+                <select className="input w-full" value={province} onChange={(e) => setProvince(e.target.value)}>{N.provList(country).map((p) => <option key={p} value={p}>{N.prov(p)}</option>)}</select></label>
+              <ul className="space-y-2">{AGENCIES[problem][country].map((a) => (
+                <li key={a} className="rounded-lg border border-line p-3 text-sm space-y-1">
+                  <p className="font-medium">{t(`rp.ag.${a}` as never)}</p>
+                  <p className="text-xs text-muted">{t(`rp.agd.${a}` as never)}</p>
+                  <a className="text-primary underline inline-flex items-center gap-1 min-h-[24px]" href={officeSearch(country, provName, t(`rp.ag.${a}` as never))} target="_blank" rel="noopener noreferrer"><Icon name="pin" size={14} />{t('rp.office', { p: provName })}</a>
+                </li>))}</ul>
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-3">
+            <button type="button" className="btn-ghost" onClick={() => window.print()}><Icon name="documents" size={16} />{t('rp.print')}</button>
+            <button type="button" className="btn-primary" onClick={download}><Icon name="download" size={16} />{t('rp.save')}</button>
+          </div>
+          <p className="text-xs text-muted">{t('rp.private')}</p>
+        </>}
+      </section>
+    </Page>
+  )
+}

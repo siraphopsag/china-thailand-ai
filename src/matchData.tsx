@@ -39,7 +39,7 @@ const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toStr
 const emptyState = (clockHours = 0): MatchState => ({ ...seedState(), role: null, posts: [], seekers: [], acceptances: [], clockHours, myCompany: '', member: false, memberUntil: null, credits: [], cases: [], employerVerify: null })
 /** an employer waiting for verification, as the agency (administrator) sees it; id null = me in the local demo */
 export interface PendingVerify { id: string | null; name: string; company: string; kind: VerifyKind; country: Country; regNo: string; phone4?: string; at: string }
-const CASE_RPC: Record<CaseAction['kind'], string> = { accept: 'accept', doc: 'doc', test: 'test', train: 'train', trainAdd: 'train_add', trainRemove: 'train_remove', permit: 'permit', departure: 'departure', departOk: 'depart_ok', note: 'note', arrived: 'arrived', date: 'date', trainDate: 'train_date' }
+const CASE_RPC: Record<CaseAction['kind'], string> = { accept: 'accept', doc: 'doc', test: 'test', train: 'train', trainAdd: 'train_add', trainRemove: 'train_remove', permit: 'permit', departure: 'departure', departOk: 'depart_ok', note: 'note', arrived: 'arrived', date: 'date', trainDate: 'train_date', seekerArrived: 'seeker_arrived' }
 const fail = <T,>(problem: Problem): Outcome<T> => ({ ok: false, problem })
 export const nowWith = (clockHours: number, real = Date.now()) => real + clockHours * HOUR_MS
 export function countsFrom(acc: Acceptance[]): Record<string, Counts> {
@@ -382,6 +382,8 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         const r = applyCaseAction(c, action, at(), today())
         if (!r.ok) return fail(r.problem === 'name' ? 'caseText' : r.problem === 'available' ? 'departDate' : r.problem === 'contact' ? 'contact' : 'state')
         if (local) { setLocal((s) => ({ ...s, cases: s.cases.map((x) => (x.id === caseId ? r.value : x)) })); return r }
+        // the worker's own arrival confirmation is a separate function (SQL 0013), callable by the case's worker only
+        if (action.kind === 'seekerArrived') return write((sb) => sb.rpc('case_seeker_arrived', { p_id: caseId }), () => null)
         const key = 'key' in action ? action.key : 'id' in action ? action.id : null
         const value = 'name' in action ? action.name : 'date' in action ? action.date : 'text' in action ? action.text : null
         return write((sb) => sb.rpc('case_action', { p_id: caseId, p_action: CASE_RPC[action.kind], p_key: key, p_value: value }), () => null)

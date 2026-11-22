@@ -35,7 +35,7 @@ export interface PostRow {
   held?: boolean | null
 }
 export interface ReportRow { id: string; post_id: string; reporter_id: string; reason: string; note: string | null; status: string; created_at: string }
-export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string; dates?: unknown }
+export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string; dates?: unknown; seeker_arrived_at?: string | null }
 export interface PinRow { id: string; seeker_id: string | null; country: string; province: string; industry: string; skills: string[]; created_at: string; is_sample?: boolean | null }
 export interface AcceptanceRow { id: string; post_id: string; seeker_id: string; seeker_name: string; status: string; created_at: string; forwarded_at: string | null
   intro?: string | null; available_from?: string | null; promoted_at?: string | null; decided_at?: string | null }
@@ -134,7 +134,7 @@ export function rowToCase(r: CaseRow, uid: string): Case {
   const steps = (isObj(r.steps) ? Object.fromEntries(CASE_STEPS.filter((s) => typeof (r.steps as Record<string, unknown>)[s] === 'string').map((s) => [s, iso((r.steps as Record<string, string>)[s])])) : {}) as Partial<Record<CaseStep, string>>
   const trainings = Array.isArray(r.trainings) ? r.trainings.flatMap((x) => (isObj(x) && typeof x.id === 'string' && typeof x.name === 'string' ? [{ id: x.id, name: x.name, done: x.done === true, ...(typeof x.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? { date: x.date } : {}) }] : [])) : []
   return { id: r.id, accId: r.acceptance_id, postId: r.post_id, seekerId: r.seeker_id === uid ? ME : r.seeker_id, steps, docs: flagsOf(DOCS, r.docs), tests: flagsOf(TESTS, r.tests), permit: flagsOf(PERMITS, r.permit),
-    trainings, departureDate: r.departure_date, note: r.note ?? '', createdAt: iso(r.created_at),
+    trainings, departureDate: r.departure_date, note: r.note ?? '', createdAt: iso(r.created_at), ...(r.seeker_arrived_at && steps.departure ? { seekerArrived: iso(r.seeker_arrived_at) } : {}),
     dates: isObj(r.dates) ? Object.fromEntries(APPOINTMENTS.flatMap((k) => { const v = (r.dates as Record<string, unknown>)[k]; return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? [[k, v]] : [] })) : {} }
 }
 /** the whole matching state for one signed-in person, as the pages expect it */

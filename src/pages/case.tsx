@@ -11,6 +11,7 @@ import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { AgencyLinks, Empty, Page, Toast, useApplicantName, useGate, useNames } from './match'
 import { ScamNote } from './safety'
+import { ArrivalBox, DocAttach } from './case-extras'
 
 /**
  * The case after a match (owner, Oct 2026): nine steps from the employer's confirmation to the worker's arrival. The employer
@@ -82,7 +83,10 @@ export function CasePage() {
             {isSeeker && <p className="text-xs font-medium text-warn-fg flex items-start gap-1.5"><Icon name="warn" size={14} className="mt-0.5 shrink-0" />{t('m.cs.noFee')}</p>}
             {cur === 'arrived' && (isEmployer || agency) && (
               <button type="button" className="btn-primary" disabled={busy} onClick={arrive}><Icon name="ok" size={16} />{busy ? t('m.ask.busy') : t(isEmployer ? 'm.cs.arrive' : 'm.cs.arriveAgency')}</button>)}
+            <ArrivalBox c={c} isSeeker={isSeeker} run={run} busy={busy} ask={ask} />
+            {c.steps.submitted && <NavLink to={`contract?case=${c.id}`} className="text-sm text-primary underline underline-offset-4 inline-flex items-center gap-1 min-h-[24px]"><Icon name="documents" size={14} />{t('c2.open')}</NavLink>}
           </section>
+          {isSeeker && c.steps.submitted && !c.steps.arrived && <DocAttach c={c} />}
         </div>
 
         {/* 1024–1279 px: the case details and the agency share the second column; from 1280 px they get a column each */}

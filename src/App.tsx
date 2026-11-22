@@ -13,6 +13,8 @@ import { pageTitle } from './utils/labels'
 import { BackButton, Header } from './components/shell'
 import { Icon } from './components/icons'
 import { Landing } from './pages/home'
+import { SosButton } from './components/sos-button'
+import { useMatch } from './matchData'
 // the home page loads immediately; every other page loads on demand
 const LanguagePage = lazy(() => import('./pages/info').then((m) => ({ default: m.LanguagePage })))
 const SourcesPage = lazy(() => import('./pages/info').then((m) => ({ default: m.SourcesPage })))
@@ -37,6 +39,8 @@ const AnalyticsPage = lazy(() => import('./pages/analytics').then((m) => ({ defa
 const CalendarPage = lazy(() => import('./pages/calendar').then((m) => ({ default: m.CalendarPage })))
 const SafetyPage = lazy(() => import('./pages/safety').then((m) => ({ default: m.SafetyPage })))
 const TermsPage = lazy(() => import('./pages/terms').then((m) => ({ default: m.TermsPage })))
+const ContractPage = lazy(() => import('./pages/contract').then((m) => ({ default: m.ContractPage })))
+const SosPage = lazy(() => import('./pages/sos').then((m) => ({ default: m.SosPage })))
 const AskPage = lazy(() => import('./pages/ask').then((m) => ({ default: m.AskPage })))
 const ChooseRolePage = lazy(() => import('./pages/choose').then((m) => ({ default: m.ChooseRolePage })))
 
@@ -46,6 +50,7 @@ const READING = ['', 'privacy', 'terms', 'sources', 'language', 'safety', 'help'
 const FOOT = 'underline inline-flex items-center min-h-[24px]'
 function Shell({ route, children }: { route: string; children: ReactNode }) {
   const { t } = useI18n()
+  const { st } = useMatch()
   const shown = useRef(route)
   // Every view gets its own title (its h1 + the product name), and after a route change focus moves to that h1 so
   // keyboard and screen-reader users start at the new content and hear which page opened. Pages load lazily, so wait for the h1.
@@ -70,6 +75,7 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:bg-surface focus:text-ink focus:p-2 z-50">{t('nav.skip')}</a>
       <Header route={route} />
       <SideNav route={route} />
+      {st.role === 'seeker' && route !== 'sos' && <SosButton />}
       {/* room for the menu capsule: on the left from 768 px, below the content on phones */}
       <div id="page-body" className="flex-1 flex flex-col md:pl-28">
       <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl fit:max-w-[1400px] w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-28 md:pb-10 fit:py-4"><DemoNotice /><div className="md:hidden"><BackButton route={route} /></div><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
@@ -108,7 +114,7 @@ function Router() {
     '': <Landing />, language: <LanguagePage />, sources: <SourcesPage />, privacy: <PrivacyPage />,
     login: <LoginPage />, register: <RegisterPage />, forgot: <ForgotPage />, 'reset-password': <ResetPasswordPage />,
     'choose-role': <ChooseRolePage />,
-    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, case: <CasePage />, terms: <TermsPage />, safety: <SafetyPage />, calendar: <CalendarPage />, analytics: <AnalyticsPage />, ask: <AskPage />, // matching prototype
+    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, case: <CasePage />, terms: <TermsPage />, safety: <SafetyPage />, calendar: <CalendarPage />, analytics: <AnalyticsPage />, ask: <AskPage />, contract: <ContractPage />, sos: <SosPage />, // matching prototype
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>
 }

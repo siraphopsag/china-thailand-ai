@@ -32,14 +32,17 @@ export interface Case {
   /** appointment days (YYYY-MM-DD) */
   dates: Partial<Record<Appointment, string>>
   createdAt: string
+  /** v2 model (owner, Nov 2026): the worker confirms the arrival too; the step itself is the employer's pick-up (steps.arrived) */
+  seekerArrived?: string
 }
 export type CaseAction =
   | { kind: 'accept' } | { kind: 'doc'; key: Doc } | { kind: 'test'; key: TestKey } | { kind: 'train'; id: string }
   | { kind: 'trainAdd'; name: string } | { kind: 'trainRemove'; id: string } | { kind: 'permit'; key: PermitKey }
   | { kind: 'departure'; date: string } | { kind: 'departOk' } | { kind: 'note'; text: string } | { kind: 'arrived' }
   | { kind: 'date'; key: Appointment; date: string | null } | { kind: 'trainDate'; id: string; date: string | null }
+  | { kind: 'seekerArrived' }
 /** who may do it: the agency does everything except confirming the arrival, which is the employer's */
-export const actorOf = (a: CaseAction['kind']): 'agency' | 'employer' => (a === 'arrived' ? 'employer' : 'agency')
+export const actorOf = (a: CaseAction['kind']): 'agency' | 'employer' | 'seeker' => (a === 'arrived' ? 'employer' : a === 'seekerArrived' ? 'seeker' : 'agency')
 export type CaseProblem = 'state' | 'contact' | 'name' | 'available' | 'unknown'
 export type CaseOutcome = { ok: true; value: Case } | { ok: false; problem: CaseProblem }
 
@@ -124,6 +127,8 @@ export function applyCaseAction(c: Case, a: CaseAction, at: string, today: strin
       return { ok: true, value: { ...c, note: a.text } }
     }
     case 'arrived': return need('arrived') ? { ok: true, value: done('arrived', c, at) } : fail('state')
+    // the worker: once the departure is confirmed, before or after the employer's pick-up, once
+    case 'seekerArrived': return c.steps.departure && !c.seekerArrived ? { ok: true, value: { ...c, seekerArrived: at } } : fail('state')
     // appointments: once the case is with the agency and until the worker arrives; a day is set from today on, or cleared
     case 'date': case 'trainDate': {
       if (!c.steps.submitted || c.steps.arrived) return fail('state')
@@ -157,5 +162,25 @@ export function parseCase(v: unknown): Case | null {
   if (typeof v.note !== 'string' || textProblem(v.note, 0, 300) !== null) return null
   const dates = v.dates === undefined ? {} : v.dates // saved before appointments existed
   if (!isObj(dates) || !Object.entries(dates).every(([k, x]) => (APPOINTMENTS as readonly string[]).includes(k) && isDay(x))) return null
+  if (v.seekerArrived !== undefined && (!isIso(v.seekerArrived) || !doneFlags[CASE_STEPS.indexOf('departure')])) return null
   return { ...(v as unknown as Case), dates: dates as Case['dates'] }
+}
+
+/* ---------- arrival confirmed by both sides (v2 model, owner Nov 2026) ---------- */
+/** days after the departure day before a missing confirmation raises an alert */
+export const ARRIVAL_GRACE_DAYS = 2
+/** who still has to confirm the arrival, once the departure is confirmed (null = both have) */
+export type ArrivalPending = 'both' | 'seeker' | 'employer'
+export const arrivalPending = (c: Case): ArrivalPending | null => {
+  if (!c.steps.departure) return null
+  if (!c.steps.arrived && !c.seekerArrived) return 'both'
+  return !c.seekerArrived ? 'seeker' : !c.steps.arrived ? 'employer' : null
+}
+/** the alert: the departure day is more than ARRIVAL_GRACE_DAYS behind `today` (YYYY-MM-DD) and a confirmation is still missing.
+ *  It is the clearest anti-trafficking checkpoint: a worker who left but never "arrived" needs a call at once. */
+export function arrivalAlert(c: Case, today: string): ArrivalPending | null {
+  const who = arrivalPending(c)
+  if (!who || !c.departureDate) return null
+  const late = Date.parse(today + 'T00:00:00Z') - Date.parse(c.departureDate + 'T00:00:00Z') > ARRIVAL_GRACE_DAYS * 86_400_000
+  return late ? who : null
 }

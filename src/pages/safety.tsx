@@ -33,6 +33,10 @@ export function SafetyPage() {
           <a className="text-primary underline inline-flex items-center gap-1 min-h-[24px]" href={DOE} target="_blank" rel="noopener noreferrer">{t('m.agency.doe')}<Icon name="external" size={13} /></a>
           <a className="text-primary underline inline-flex items-center gap-1 min-h-[24px]" href="tel:1694">{t('m.sc.call')}</a>
         </div>
+        <div className="flex flex-wrap gap-2 border-t border-line pt-3">
+          <NavLink to="sos" className="btn-soft text-sm"><Icon name="phone" size={15} />{t('hp.title')}</NavLink>
+          <NavLink to="contract" className="btn-ghost text-sm"><Icon name="documents" size={15} />{t('c2.title')}</NavLink>
+        </div>
       </section>
       <section className="glass-card p-5 space-y-2 text-sm" aria-labelledby="sc-emp">
         <h2 id="sc-emp" className="h2">{t('m.sc.emp.h')}</h2>
