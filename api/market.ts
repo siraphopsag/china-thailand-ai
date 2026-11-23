@@ -6,10 +6,9 @@
 import { DATA_GO_TH, DOE_DATASETS, WB_INDICATORS, cleanExternal, newestCsv, parseDoeIndustries, parseDoeProvinces, parseWorldBank, type External, type WbKey } from '../src/domain/openData.js'
 
 const WEEK = 7 * 24 * 3600
-const UA = 'CALL-prototype open-data reader (weekly)'
 
 async function get(url: string, as: 'json' | 'text', ms = 40000): Promise<unknown> {
-  const r = await fetch(url, { headers: { 'user-agent': UA, accept: as === 'json' ? 'application/json' : 'text/csv,*/*' }, signal: AbortSignal.timeout(ms) })
+  const r = await fetch(url, { headers: { accept: as === 'json' ? 'application/json' : 'text/csv,*/*' }, signal: AbortSignal.timeout(ms) })
   if (!r.ok) throw new Error(`${r.status} ${url}`)
   return as === 'json' ? r.json() : r.text()
 }
