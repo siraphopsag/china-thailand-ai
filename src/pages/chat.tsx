@@ -37,7 +37,10 @@ export function ChatPage() {
   const demo = accId === DEMO_ACC
   const sides: Side[] = demo || mode === 'local' ? ['seeker', 'employer']
     : [...(a?.seekerId === ME ? ['seeker' as const] : []), ...(p?.employerId === MY_EMPLOYER ? ['employer' as const] : [])]
-  const [side, setSide] = useState<Side>(p?.employerId === MY_EMPLOYER && a?.seekerId !== ME ? 'employer' : 'seeker')
+  const [picked, setSide] = useState<Side | null>(null)
+  // the side I am in this match (the data may arrive after the first render, e.g. when the chat link is opened directly)
+  const preferred: Side = p?.employerId === MY_EMPLOYER && a?.seekerId !== ME ? 'employer' : 'seeker'
+  const side: Side = picked && sides.includes(picked) ? picked : sides.includes(preferred) ? preferred : sides[0] ?? 'seeker'
   const remote = mode === 'remote' && !demo && isUuid(accId)
   const [localChat, saveLocal] = useChat(accId, demo ? 'post-demo' : p?.id ?? '')
   const [remoteChat, saveRemote, problem, loaded] = useRemoteChat(remote ? accId : null)
