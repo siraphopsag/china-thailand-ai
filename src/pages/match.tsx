@@ -26,6 +26,7 @@ import { currentStep, stepsDone } from '../domain/match/cases'
 import { SimTools } from './simtools'
 import { PREP, dayPick, prepSeen, setAskPrefill, type PrepKey } from '../prepare'
 import { situations, terms } from '../data/culture'
+import { SayButton } from '../components/speak'
 import { registry } from '../data/legal/registry'
 import { assess, localText } from '../data/legal/trust'
 import { FLAGS } from '../components/flags'
@@ -719,7 +720,7 @@ function useNarrow() {
 }
 const HUB_LAWS = ['th-labour', 'th-closed-jobs', 'cn-immigration'] as const
 export function PreparePage() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const { st, now } = useMatch()
   const [seen] = useState(prepSeen)
   const [q, setQ] = useState('')
@@ -774,7 +775,8 @@ export function PreparePage() {
         <li key={k}><NavLink to={`language?sit=${k}`} className="prep-row"><span className="prep-badge" aria-hidden>{i + 1}</span><span className="flex-1 min-w-0 font-medium">{tk('sit', `${k}.t`)}</span><Icon name="right" size={16} className="text-muted shrink-0" /></NavLink></li>))}</ul>,
       <More to="language" text={t('m.prep.cu.go')} />,
       <div className="prep-strip prep-strip-info"><span className="text-xs font-semibold shrink-0">{t('m.prep.cu.term')}</span>
-        <span className="flex-1 min-w-0 flex flex-wrap items-baseline gap-x-2"><b className="text-base" lang={/[一-鿿]/.test(word) ? 'zh' : 'th'}>{word}</b><span className="text-sm">{t(`term.${term.n}.n` as never)}</span></span></div>),
+        <span className="flex-1 min-w-0 flex flex-wrap items-baseline gap-x-2"><b className="text-base" lang={term.lang}>{word}</b>{(term.py || (term.roman && lang !== 'th')) && <span className="text-xs text-muted" lang={term.py ? 'zh-Latn-pinyin' : 'th-Latn'}>{term.py ?? term.roman}</span>}<span className="text-sm">{t(`term.${term.n}.n` as never)}</span></span>
+        <SayButton text={term.say} lang={term.lang} /></div>),
     sources: tool('sources', 'text-ok-fg', t('m.prep.lg.over'), t('m.prep.lg.h', { n: registry.length }), <p className="prep-gaps text-sm text-muted">{t('m.prep.lg.gaps', { n: gaps })}</p>,
       <ul className="prep-laws px-4 md:px-5 divide-y divide-line">{HUB_LAWS.map((id) => { const c = registry.find((x) => x.id === id)?.country ?? 'TH'; return (
         <li key={id} className="prep-row"><img src={FLAGS[c]} alt={t(`geo.c.${c}` as never)} className="w-6 h-[18px] rounded-[3px] shrink-0 ring-1 ring-line object-cover" /><span className="flex-1 min-w-0 font-medium">{localText(id, 'topic')}</span></li>) })}</ul>,

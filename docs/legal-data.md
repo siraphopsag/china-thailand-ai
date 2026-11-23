@@ -103,3 +103,10 @@ signed-in person's question allowance.
 - **Data minimisation (PDPA s.22–23; PIPL Art. 6):** job-seeker verification keeps only the last 4 digits of the phone and passport numbers, the nationality and the expiry date. The contract keeps the passport lines because the contract itself names the worker and the passport number (PDPA s.24(3), performance of a contract). Advisor to confirm.
 - **Contact details hidden in chat** (e-mail, links, phone numbers) by the database as well as the website, so a scammer cannot move the worker to a private chat by skipping the website.
 - **Signatures:** each side can add only its own signature; a signature belongs to the SHA-256 fingerprint of the exact text (Thai ETA s.9; CN Electronic Signature Law Art. 13–14, as listed above).
+
+## Market data from outside sources (added 24 Nov 2026, `src/domain/openData.ts`, `api/market.ts`)
+
+- Thailand, monthly, per province and per industry: job vacancies (`dataset13_08`) and job seekers (`dataset13_04`) registered with the Department of Employment, read from data.go.th's public CKAN API. Used with the source named under data.go.th's conditions of use ("Open Data Common"). The advisor should confirm the licence text; the full DGA licence document could not be opened online on 24 Nov 2026.
+- Thailand and China, yearly, national: World Bank WDI (modelled ILO estimates), CC BY 4.0 — unemployment, youth unemployment, labour force, employment by sector.
+- Government job boards are linked, not copied: ไทยมีงานทำ (DOE), 中国公共招聘网 (MOHRSS), 国家大学生就业服务平台.
+- Totals only; no personal data is read or sent. The server reads the sources at most about once a week (Vercel cache).

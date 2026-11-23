@@ -10,6 +10,7 @@ import { currentStep, lastUpdate, newCase, parseCase, type Case } from './cases'
 import { parseReports, reportedIds } from './reports'
 import { isMobile, isRegNo, phoneLast4 } from './verify'
 import { cleanTranslations, closedToForeigners, hasTranslations, type PostTranslations } from './postText'
+import { hasContact } from '../contact'
 
 export { DAY_MS, HOUR_MS }
 /**
@@ -21,7 +22,7 @@ export function textProblem(v: unknown, min: number, max: number): 'type' | 'len
   if (typeof v !== 'string') return 'type'
   const s = v.trim()
   if (s.length < min || s.length > max || s !== v) return 'length'
-  if (/[^\s@]+@[^\s@]+/.test(s) || /(https?:\/\/|www\.)/i.test(s) || /\d[\d\s-]{6,}\d/.test(s)) return 'contact'
+  if (/[^\s@]+@[^\s@]+/.test(s) || hasContact(s)) return 'contact' // e-mail, links, phone numbers and chat ids in any spelling (contact.ts)
   return null
 }
 

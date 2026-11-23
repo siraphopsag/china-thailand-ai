@@ -1,14 +1,15 @@
 // The employer's own words on a post in other languages (owner, Oct 2026): when a post reaches job seekers who read another language,
 // the job title and details the AI translated while checking the post are shown instead, with the original one tap away.
-// Also the occupations Thai law closes to foreigners, which keep a post inside Thailand. Pure: no React, no storage, no other modules
-// (the AI server function uses it too).
+// Also the occupations Thai law closes to foreigners, which keep a post inside Thailand. Pure: no React, no storage; the only other
+// module is the contact rules, imported with ".js" (the AI server function uses this file too).
+import { hasContact } from '../contact.js'
 export type UiLang = 'th' | 'zh' | 'en'
 export const UI_LANGS: readonly UiLang[] = ['th', 'zh', 'en']
 export interface PostText { position: string; details: string }
 /** src: the language the employer wrote in; one entry per language (the source language may be left out) */
 export type PostTranslations = { src?: UiLang } & Partial<Record<UiLang, PostText>>
 
-const CONTACT = (s: string) => /[^\s@]+@[^\s@]+/.test(s) || /(https?:\/\/|www\.)/i.test(s) || /\d[\d\s-]{6,}\d/.test(s)
+const CONTACT = (s: string) => /[^\s@]+@[^\s@]+/.test(s) || hasContact(s)
 const isLang = (v: unknown): v is UiLang => v === 'th' || v === 'zh' || v === 'en'
 const MAX_POSITION = 120, MAX_DETAILS = 1500
 

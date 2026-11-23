@@ -1,10 +1,11 @@
 // Reference pages the matching prototype links to: language & culture and legal sources (from "Prepare") and privacy (footer).
 // They came from the first business-planning tool, which was removed in Oct 2026.
 import { useState } from 'react'
-import { useSearchParam } from '../store'
+import { NavLink, useSearchParam } from '../store'
 import { Disclaimer, Disclosure, PageHead, SourceCard, TabBar, Warn } from '../components/ui'
 import { Icon } from '../components/icons'
-import { situations, situationPoints, terms } from '../data/culture'
+import { situations, situationPoints, terms, type Term } from '../data/culture'
+import { SayButton } from '../components/speak'
 import { regText, regulations } from '../data/regulations'
 import { tk, useI18n } from '../i18n'
 
@@ -22,6 +23,19 @@ function CultureSituations() {
     </div>
   )
 }
+/** the original term, how to say it, and a button to hear it (pinyin for everyone; the Thai reading for Thai readers; the Thai
+ * term in Latin letters for Chinese and English readers) */
+export function TermOriginal({ x }: { x: Term }) {
+  const { t, lang } = useI18n()
+  return (
+    <div className="space-y-0.5">
+      <div className="flex items-start gap-1.5"><span lang={x.lang} className="flex-1 min-w-0">{x.orig}</span><SayButton text={x.say} lang={x.lang} /></div>
+      {x.py && <div className="text-xs text-muted"><span className="sr-only">{t('say.py')}: </span><span lang="zh-Latn-pinyin">{x.py}</span></div>}
+      {x.th && lang === 'th' && <div className="text-xs text-muted">{t('say.th')}: {x.th}</div>}
+      {x.roman && lang !== 'th' && <div className="text-xs text-muted"><span className="sr-only">{t('say.roman')}: </span><span lang="th-Latn">{x.roman}</span></div>}
+    </div>
+  )
+}
 export function LanguagePage() {
   const { t } = useI18n()
   return (
@@ -31,7 +45,7 @@ export function LanguagePage() {
         <div className="mt-2"><Warn tone="info">{t('cul.warn')}</Warn></div>
         <CultureSituations /></div>
       <Disclosure title={t('lng.table')}>
-        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-surface3 text-left"><th className="p-2">{t('lng.col1')}</th><th className="p-2">{t('lng.col2')}</th><th className="p-2">{t('lng.col3')}</th></tr></thead><tbody>{terms.map((x) => <tr key={x.n} className="border-b border-line align-top"><td className="p-2 font-medium">{tk('term', `${x.n}.n`)}</td><td className="p-2" lang="zh">{x.orig}</td><td className="p-2 text-muted">{tk('term', `${x.n}.m`)}</td></tr>)}</tbody></table></div>
+        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-surface3 text-left"><th className="p-2">{t('lng.col1')}</th><th className="p-2">{t('lng.col2')}</th><th className="p-2">{t('lng.col3')}</th></tr></thead><tbody>{terms.map((x) => <tr key={x.n} className="border-b border-line align-top"><td className="p-2 font-medium">{tk('term', `${x.n}.n`)}</td><td className="p-2"><TermOriginal x={x} /></td><td className="p-2 text-muted">{tk('term', `${x.n}.m`)}</td></tr>)}</tbody></table></div>
         <div className="text-xs text-muted">{t('lng.note')}</div>
       </Disclosure>
       <Disclaimer />
@@ -72,6 +86,7 @@ export function PrivacyPage() {
         <section key={k} aria-labelledby={`pri-${k}`} className="space-y-1.5">
           <h2 id={`pri-${k}`} className="font-semibold text-base">{i + 1}. {tk('pri', k + '.h')}</h2>
           <ul className="list-disc pl-5 space-y-1 text-muted">{tk('pri', k + '.t').split(' · ').map((x) => <li key={x}>{withMail(x)}</li>)}</ul>
-        </section>))}</div><Disclaimer /></div>
+        </section>))}
+        <p className="text-muted">{t('od.privacy')} · <NavLink to="open-data" className="link">{t('od.more')}</NavLink></p></div><Disclaimer /></div>
   )
 }

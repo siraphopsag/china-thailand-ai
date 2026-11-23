@@ -2,6 +2,7 @@
 // (the worker accepted the offer). Ready-made phrases are sent in Thai and Chinese at once; typed text keeps the platform safe:
 // phone numbers, e-mail, links and LINE / WeChat ids are hidden, so nobody is pulled into a private chat where scams happen. The
 // employer offers up to three interview times; the worker picks one and it goes into both calendars. Pure: no React, no storage.
+import { maskAfter, maskContact } from '../contact'
 
 export type Side = 'employer' | 'seeker'
 export interface ChatMsg { id: string; from: Side; at: string; text: string; /** a ready-made phrase (locale ch.p.*) instead of text */ phrase?: string; masked?: boolean }
@@ -16,20 +17,17 @@ export const PHRASES: Record<Side, readonly string[]> = {
 export const MAX_TEXT = 500
 export const MAX_SLOTS = 3
 
-/** contact details are hidden: e-mail, links, phone numbers, and LINE / WeChat / Telegram / WhatsApp ids */
-const CONTACT: RegExp[] = [
-  /[^\s@]+@[^\s@]+\.[^\s@]+/g,
-  /(https?:\/\/|www\.)\S+/gi,
-  /\+?\d[\d\s-]{6,}\d/g,
-  /(?<![A-Za-z])line\s*(id\s*[:：]?|[:：]|@)\s*@?[\w.-]{3,}/gi,
-  /(?<![A-Za-z])(wechat|weixin|vx|wx|telegram|whats\s*app|tg)(?![A-Za-z])\s*[:：]?\s*@?[\w.-]{3,}/gi,
-  /(ไอดีไลน์|ไลน์|微信)\s*[:：]?\s*@?[\w.-]{3,}/g,
-  /(^|\s)@[\w.]{4,}/g,
-]
-export function maskContact(text: string): { text: string; masked: boolean } {
-  let out = text, masked = false
-  for (const re of CONTACT) out = out.replace(re, (_m, lead?: string) => { masked = true; return (typeof lead === 'string' && /^\s$/.test(lead) ? lead : '') + '[•••]' })
-  return { text: out, masked }
+/** contact details are hidden: e-mail, links, phone numbers, and LINE / WeChat / Telegram / WhatsApp ids, in any spelling (contact.ts) */
+export { maskContact }
+/** a number or address sent in pieces: the sender's own typed messages just before, since the other side last wrote, within 30 minutes */
+export function earlierPieces(chat: Chat, from: Side, at: string, max = 3): string[] {
+  const out: string[] = []
+  for (let i = chat.msgs.length - 1; i >= 0 && out.length < max; i--) {
+    const m = chat.msgs[i]
+    if (m.from !== from || m.phrase || Date.parse(at) - Date.parse(m.at) > 30 * 60_000) break
+    out.unshift(m.text)
+  }
+  return out
 }
 export type ChatProblem = 'empty' | 'long' | 'phrase'
 export function newMessage(chat: Chat, from: Side, input: { text?: string; phrase?: string }, id: string, at: string): { ok: true; value: Chat; masked: boolean } | { ok: false; problem: ChatProblem } {
@@ -40,7 +38,7 @@ export function newMessage(chat: Chat, from: Side, input: { text?: string; phras
   const raw = (input.text ?? '').trim()
   if (!raw) return { ok: false, problem: 'empty' }
   if (raw.length > MAX_TEXT) return { ok: false, problem: 'long' }
-  const m = maskContact(raw)
+  const m = maskAfter(earlierPieces(chat, from, at), raw)
   return { ok: true, value: { ...chat, msgs: [...chat.msgs, { id, from, at, text: m.text, ...(m.masked ? { masked: true } : {}) }] }, masked: m.masked }
 }
 

@@ -19,6 +19,7 @@ import { useMatch } from './matchData'
 const LanguagePage = lazy(() => import('./pages/info').then((m) => ({ default: m.LanguagePage })))
 const SourcesPage = lazy(() => import('./pages/info').then((m) => ({ default: m.SourcesPage })))
 const PrivacyPage = lazy(() => import('./pages/info').then((m) => ({ default: m.PrivacyPage })))
+const OpenDataPage = lazy(() => import('./pages/marketOpen').then((m) => ({ default: m.OpenDataPage })))
 const LoginPage = lazy(() => import('./pages/auth').then((m) => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('./pages/auth').then((m) => ({ default: m.RegisterPage })))
 const ForgotPage = lazy(() => import('./pages/auth').then((m) => ({ default: m.ForgotPage })))
@@ -114,7 +115,7 @@ function Router() {
   const { status } = useAuth()
   useEffect(() => { if (status !== 'off' && status !== 'loading') trackVisit() }, [status]) // one anonymous visit per browser per day
   const pages: Record<string, ReactNode> = {
-    '': <Landing />, language: <LanguagePage />, sources: <SourcesPage />, privacy: <PrivacyPage />,
+    '': <Landing />, language: <LanguagePage />, sources: <SourcesPage />, privacy: <PrivacyPage />, 'open-data': <OpenDataPage />,
     login: <LoginPage />, register: <RegisterPage />, forgot: <ForgotPage />, 'reset-password': <ResetPasswordPage />,
     'choose-role': <ChooseRolePage />,
     seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, case: <CasePage />, terms: <TermsPage />, safety: <SafetyPage />, calendar: <CalendarPage />, analytics: <AnalyticsPage />, ask: <AskPage />, contract: <ContractPage />, sos: <SosPage />, 'case-demo': <CaseDemoPage />, chat: <ChatPage />, chats: <ChatsPage />, // matching prototype

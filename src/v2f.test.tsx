@@ -1,0 +1,128 @@
+// Owner's review, 24 Nov 2026: contact details typed to get round the check ("name @ gmail.com"); how to say the Chinese terms;
+// the job market from outside sources on the board's map (advisers' feedback at the pitch).
+import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { CONTACT_RULES, hasContact, maskAfter, maskContact } from './domain/contact'
+import { newMessage } from './domain/match/chat'
+import { textProblem } from './domain/match/logic'
+import { terms } from './data/culture'
+import { pickVoice } from './components/speak'
+import { AGENCY_BOARDS, DOE_PROVINCE, ISIC, SOURCES, change, cleanExternal, csvLine, newestCsv, parseDoeIndustries, parseDoeProvinces, parseWorldBank } from './domain/openData'
+import snapshot from './data/marketSnapshot.json'
+import { v2f } from './locales/v2f'
+import { messages } from './locales/index'
+import { provinces } from './locales/provinces'
+
+const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
+
+describe('A. contact details in any spelling', () => {
+  const caught = ['siraooja @ gmail.com', 'siraooja at gmail dot com', 'siraooja แอท จีเมล ดอท คอม', 'siraooja(at)gmail(dot)com', 'siraooja 艾特 qq 点 com',
+    '๐๘๑๒๓๔๕๖๗๘', '０８１２３４５６７８', 'ศูนย์แปดหนึ่ง สองสามสี่ ห้าหกเจ็ดแปด', '零八一二三四五六七八', 'zero eight one two three four five six seven eight',
+    '081.234.5678', '(081) 234 5678', '081​234​5678', 'ไลน์ siraooja', 'line: sira_99', 'IG: siraooja', '微信号：abc123', 'wechat sira99',
+    '@siraooja', 'bit.ly/abc', 't.me/sira', 'qq 12345678', 'gmail.com']
+  const fine = ['ติดต่อผ่านอีเมลผม', 'We stand in line every day; the deadline is Monday; pay 12,000 baht', 'Production line: operators needed',
+    'I will be at home. Go there at 9', 'เริ่มงาน 24/11/2026 เวลา 09:00', 'เงินเดือน 15,000 บาท ทำงาน 6 วัน', '月薪五千，工作八小时', 'Use gmail please',
+    'ไลน์ผลิต 3 กะ', 'Food Paradise Co., Ltd.', 'No.1 Factory', 'เฟส 2 เริ่ม', 'one of the two jobs', 'Node.js developer', 'ทำงาน 8.00-17.00 น. หยุด 1 วัน']
+  it('the owner’s example and the usual ways round the check are hidden whole; ordinary sentences are left alone', () => {
+    expect(maskContact('siraooja @ gmail.com')).toEqual({ text: '[•••]', masked: true })
+    for (const x of caught) expect(maskContact(x).text, x).toBe('[•••]')
+    for (const x of fine) expect(maskContact(x), x).toEqual({ text: x, masked: false })
+  })
+  it('a number or address sent in pieces is hidden in the message that completes it', () => {
+    expect(maskAfter(['โทร 081', '234'], '5678 ครับ')).toEqual({ text: '[•••] ครับ', masked: true })
+    expect(maskAfter(['siraooja'], 'gmail.com').masked).toBe(true)
+    expect(maskAfter(['เงินเดือน 15000'], 'เริ่ม 1 ธ.ค.').masked).toBe(false)
+    const at = (m: number) => new Date(Date.UTC(2026, 10, 24, 1, m)).toISOString()
+    let chat = { msgs: [] as never[] } as Parameters<typeof newMessage>[0]
+    for (const [i, x] of ['ติดต่อ 081', '234'].entries()) { const r = newMessage(chat, 'seeker', { text: x }, `m${i}`, at(i)); if (r.ok) chat = r.value }
+    const last = newMessage(chat, 'seeker', { text: '5678' }, 'm9', at(3))
+    expect(last.ok && last.value.msgs.slice(-1)[0]).toMatchObject({ text: '[•••]', masked: true })
+    // once the other side has written, or after 30 minutes, earlier pieces no longer count
+    const other = newMessage(chat, 'employer', { text: 'ok' }, 'e1', at(3))
+    const after = other.ok ? newMessage(other.value, 'seeker', { text: '5678' }, 'm10', at(4)) : null
+    expect(after?.ok && after.value.msgs.slice(-1)[0]?.text).toBe('5678')
+  })
+  it('posts, introductions and notes refuse them too; the database uses the very same rules', () => {
+    expect(textProblem('ติดต่อ siraooja @ gmail.com', 0, 300)).toBe('contact')
+    expect(textProblem('ไลน์ shop99', 0, 300)).toBe('contact')
+    expect(textProblem('ทำงานโรงงาน กะละ 8 ชั่วโมง', 0, 300)).toBeNull()
+    expect(hasContact('ศูนย์แปดหนึ่ง สองสามสี่ ห้าหกเจ็ดแปด')).toBe(true)
+    const sql = src('../supabase/migrations/0015_contact_rules.sql')
+    for (const r of CONTACT_RULES) expect(sql, r).toContain(`b := regexp_replace(b, '${r}', '[•••]', 'gi');`)
+    expect(sql).toContain('create or replace function public.no_contact(t text)')
+    expect(sql).toContain("if n_all > n_prev + n_new then b := '[•••]'; end if;")
+    for (const r of CONTACT_RULES) { expect(r).not.toMatch(/\\[bBwW]/); expect(r).not.toContain("'") } // syntax both sides share
+  })
+})
+
+describe('B. how to say the terms', () => {
+  it('every Chinese term has pinyin, a Thai reading and the words to read out; the Thai term has a Latin reading', () => {
+    for (const x of terms) {
+      expect(x.orig.startsWith(x.say.split('，')[0]), x.say).toBe(true)
+      if (x.lang === 'zh') { expect(x.py).toMatch(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/); expect(x.th).toMatch(/[ก-๙]/); expect(x.say).not.toMatch(/[A-Za-z]/) }
+      else expect(x.roman).toMatch(/^[a-z ]+$/)
+    }
+  })
+  it('the speaker uses the device’s own voice (mainland Chinese first) and is not shown without one', () => {
+    expect(pickVoice([{ lang: 'zh-TW' }, { lang: 'zh-CN' }], 'zh')).toEqual({ lang: 'zh-CN' })
+    expect(pickVoice([{ lang: 'zh_HK' }], 'zh')).toEqual({ lang: 'zh_HK' })
+    expect(pickVoice([{ lang: 'en-US' }], 'th')).toBeNull()
+    expect(src('./components/speak.tsx')).toContain('if (!voice) return null')
+    expect(src('./pages/info.tsx')).toContain('<TermOriginal x={x} />')
+    expect(src('./pages/match.tsx')).toContain('<SayButton text={term.say} lang={term.lang} />')
+  })
+})
+
+describe('C. the job market from outside sources', () => {
+  const head = ['Year', 'Month', ' Total ', ...Object.keys(DOE_PROVINCE)]
+  const row = (y: string, m: string, f: (i: number) => string) => [y, m, '', ...Object.keys(DOE_PROVINCE).map((_, i) => f(i))].join(',')
+  const provCsv = ['﻿จำนวนตำแหน่งงานจำแนกตามรายจังหวัด,,', head.join(','), row('2026', 'Jan', (i) => String(i + 1)), row('2026', 'Feb', (i) => (i === 0 ? '"1,200"' : '2')), row('2026', 'Mar', () => '0')].join('\r\n')
+  it('reads the department’s monthly files: the latest month with figures, the one before, per province and per industry', () => {
+    expect(Object.values(DOE_PROVINCE).length).toBe(77)
+    expect(new Set(Object.values(DOE_PROVINCE)).size).toBe(77)
+    for (const iso of Object.values(DOE_PROVINCE)) expect(provinces, iso).toHaveProperty(`prov.${iso}`)
+    const p = parseDoeProvinces(provCsv)!
+    expect([p.now.month, p.now.byProvince['TH-10'], p.now.total, p.before?.month, p.before?.byProvince['TH-11']]).toEqual(['2026-02', 1200, 1200 + 76 * 2, '2026-01', 2])
+    const ind = parseDoeIndustries(['Year,Month,Total,' + ISIC.join(','), '2026,Jan,10,' + ISIC.map(() => '1').join(','), '2026,Feb," 9,000 ",0,0," 5,000 ",' + ISIC.slice(3).map(() => '-').join(',')].join('\n'))!
+    expect(ind.month).toBe('2026-02'); expect(ind.rows[0]).toEqual({ section: 'C', n: 5000 })
+    expect(csvLine('a,"1,234",b')).toEqual(['a', '1,234', 'b'])
+    expect(parseDoeProvinces('nothing here')).toBeNull()
+  })
+  it('picks the newest CSV file, reads the World Bank answer, and keeps only clean numbers', () => {
+    const pkg = { result: { resources: [{ name: '(CSV)-รายจังหวัด', format: 'CSV', url: 'https://x/old.csv', last_modified: '2026-01-01' }, { name: '(CSV)-รายจังหวัด', format: 'CSV', url: 'https://x/new.csv', last_modified: '2026-03-13' }, { name: 'รายจังหวัด', format: 'XLS', url: 'https://x/n.xls', last_modified: '2026-09-01' }] } }
+    expect(newestCsv(pkg, 'รายจังหวัด')).toBe('https://x/new.csv')
+    expect(parseWorldBank([{}, [{ countryiso3code: 'THA', date: '2025', value: 0.8 }, { countryiso3code: 'CHN', date: '2024', value: 4.6 }, { countryiso3code: 'CHN', date: '2025', value: null }]])).toEqual({ TH: { year: '2025', value: 0.8 }, CN: { year: '2024', value: 4.6 } })
+    expect(cleanExternal({ checkedAt: 'x' })).toBeNull()
+    expect(cleanExternal({ checkedAt: '2026-11-24T00:00:00Z', th: { vacancies: { now: { month: '2026-02', byProvince: { 'TH-10': 5, evil: 9, 'TH-11': -1 } } }, seekers: { now: { month: '2026-02', byProvince: {} } }, industries: { rows: [{ section: 'Z', n: 1 }] } }, countries: null }))
+      .toEqual({ checkedAt: '2026-11-24T00:00:00Z', th: { vacancies: { now: { month: '2026-02', total: 5, byProvince: { 'TH-10': 5 } }, before: null }, seekers: { now: { month: '2026-02', total: 0, byProvince: {} }, before: null }, industries: { month: '2026-02', rows: [] } }, countries: null })
+    expect([change(110, 100), change(5, 0), change(5, null)]).toEqual([10, null, null])
+  })
+  it('the copy saved in the website is complete: 77 provinces, industries, and both countries', () => {
+    const d = cleanExternal(snapshot)!
+    expect(Object.keys(d.th!.vacancies.now.byProvince).length).toBe(77)
+    expect(d.th!.industries.rows.length).toBeGreaterThan(5)
+    expect(Object.keys(d.countries!.TH)).toHaveLength(6); expect(Object.keys(d.countries!.CN)).toHaveLength(6)
+  })
+  it('open licences and links only; read about once a week on the server; totals only; explained on its own page', () => {
+    expect(SOURCES.wb.licence).toBe('CC BY 4.0'); expect(SOURCES.doe.url).toMatch(/^https:\/\/data\.go\.th\//)
+    for (const b of AGENCY_BOARDS) expect(b.url).toMatch(/^https?:\/\//)
+    const api = src('../api/market.ts')
+    expect(api).toContain('s-maxage=${WEEK}'); expect(api).not.toMatch(/request\.(headers|url)|cookie/i) // nothing about the visitor is used
+    expect(src('../vercel.json')).toContain('"api/market.ts": { "maxDuration": 60 }')
+    expect(src('./pages/board.tsx')).toContain("mSrc === 'open' ? <ExternalPanel")
+    expect(src('./App.tsx')).toContain("'open-data': <OpenDataPage />")
+    expect(src('./pages/info.tsx')).toContain('<NavLink to="open-data"')
+    expect(JSON.stringify(snapshot)).not.toMatch(/@|name|phone|email/i)
+  })
+})
+
+describe('D. texts', () => {
+  it('every new text has Thai, Chinese and English in the right scripts', () => {
+    for (const [k, [th, zh, en]] of Object.entries(v2f)) {
+      expect(th, k).toMatch(/[฀-๿]/); expect(zh, k).toMatch(/[一-鿿]/); expect(en, k).toMatch(/[A-Za-z]/)
+      expect(en, k).not.toMatch(/[฀-๿一-鿿]/)
+      expect(messages[k as keyof typeof messages]).toEqual([th, zh, en])
+    }
+    for (const s of ISIC) expect(v2f).toHaveProperty(`od.isic.${s}`)
+  })
+})

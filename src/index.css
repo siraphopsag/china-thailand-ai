@@ -919,3 +919,9 @@ html[data-lite] .bg-paths.is-on .bg-flow path { animation: none !important }
 .sp-card { border-color: rgb(var(--sp) / .55); background: linear-gradient(135deg, rgb(var(--sp) / .14), rgb(var(--surface)) 60%); color: rgb(var(--ink)) }
 .sp-card:hover { border-color: rgb(var(--sp)) }
 .sp-badge { display: inline-flex; align-items: center; gap: .25rem; font-size: 11px; font-weight: 700; padding: .1rem .5rem; border-radius: 9999px; background: rgb(var(--sp) / .2); color: rgb(var(--ink)) }
+
+/* hearing a term read aloud (speak.tsx) */
+.say-btn { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; color: inherit; border: 1px solid currentColor; opacity: .8; background: transparent; cursor: pointer }
+.say-btn:hover, .say-btn:focus-visible { opacity: 1 }
+.say-btn.is-on { opacity: 1; background: rgb(var(--primary) / .15) }
+@media (pointer: coarse) { .say-btn { width: 40px; height: 40px } }

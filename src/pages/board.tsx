@@ -17,6 +17,7 @@ import { Pager, useFit, usePaged } from '../components/pager'
 import { DemoBadge, Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, TranslatedNote, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
 import { ReportButton } from './safety'
 import { MarketPanel } from './market'
+import { ExternalPanel, externalCounts, useDates, useExternal } from './marketOpen'
 
 /**
  * The board (owner, Oct 2026): one place to see the posts, built like a game shop with five levels. Job seekers see the posts
@@ -47,6 +48,10 @@ export function BoardPage() {
   const [view, setView] = useState<'cards' | 'map'>('cards')
   const [mapOf, setMapOf] = useState<'posts' | 'pins' | null>(null)
   const [mScope, setMScope] = useState<Scope>('all'), [mProv, setMProv] = useState<string | null>(null)
+  // the market from the app's own users, or from outside sources (advisers' feedback, owner 24 Nov 2026)
+  const [mSrc, setMSrc] = useState<'app' | 'open'>('app')
+  const ext = useExternal(mSrc === 'open')
+  const D = useDates()
   const [pinsOpen, setPinsOpen] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
   const fit = useFit()
@@ -87,7 +92,7 @@ export function BoardPage() {
   const live = st.posts.filter((p) => !p.hidden && stageOf(p, pool, now) !== 'expired')
   const mk = marketOf(live, pinGroups, mScope, mProv, now)
   const inScope = (c: string) => mScope === 'all' || c === mScope
-  const mapCounts = showMap === 'posts'
+  const mapCounts = mSrc === 'open' ? externalCounts(ext.data, showMap === 'posts' ? 'vacancies' : 'seekers', mScope) : showMap === 'posts'
     ? live.filter((p) => inScope(p.country)).reduce<Record<string, number>>((m, p) => ({ ...m, [p.province]: (m[p.province] ?? 0) + 1 }), {})
     : pinGroups.filter((g) => inScope(g.country)).reduce<Record<string, number>>((m, g) => ({ ...m, [g.province]: (m[g.province] ?? 0) + g.n }), {})
   const pickScope = (s: Scope) => { setMScope(s); setMProv(null) }
@@ -163,14 +168,18 @@ export function BoardPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
               <h2 id="bd-map" className="h2 flex items-center gap-2"><Icon name="globe" size={18} className="text-primary" />{t('m.bd.map')}</h2>
               <div className={SEG} role="group" aria-label={t('m.board.mapShow')}>
-                {(['posts', 'pins'] as const).map((k) => <button key={k} type="button" aria-pressed={showMap === k} onClick={() => setMapOf(k)} className={pill(showMap === k)}><Icon name={k === 'posts' ? 'posts' : 'pin'} size={14} />{t(k === 'posts' ? 'm.board.mapPosts' : 'm.board.mapPins')}</button>)}
+                {(['posts', 'pins'] as const).map((k) => <button key={k} type="button" aria-pressed={showMap === k} onClick={() => setMapOf(k)} className={pill(showMap === k)}><Icon name={k === 'posts' ? 'posts' : 'pin'} size={14} />{mSrc === 'open' ? t(k === 'posts' ? 'od.vac' : 'od.seek') : t(k === 'posts' ? 'm.board.mapPosts' : 'm.board.mapPins')}</button>)}
               </div>
             </div>
             <GeoMap className={MAP_SIZE} label={t('m.board.mapLabel')} country={mScope === 'all' ? null : mScope} province={mProv} counts={mapCounts}
               onPickCountry={(c: GeoCode) => pickScope(isCountry(c) ? c : 'all')} onPickProvince={(p) => setMProv(p ?? null)} />
-            <p className="text-xs text-muted shrink-0">{t('m.mk.mapHint')}</p>
+            <p className="text-xs text-muted shrink-0">{mSrc === 'open' && ext.data?.th ? t(showMap === 'posts' ? 'od.map.vac' : 'od.map.seek', { m: D.month(ext.data.th.vacancies.now.month) }) : t('m.mk.mapHint')}</p>
           </>}>
-            <MarketPanel m={mk} scope={mScope} province={mProv} onScope={pickScope} onAll={() => setMProv(null)} />
+            <div className={`${SEG} self-start`} role="group" aria-label={t('od.mode')}>
+              {(['app', 'open'] as const).map((k) => <button key={k} type="button" aria-pressed={mSrc === k} onClick={() => setMSrc(k)} className={pill(mSrc === k)}><Icon name={k === 'app' ? 'users' : 'globe'} size={14} />{t(k === 'app' ? 'od.mode.app' : 'od.mode.open')}</button>)}
+            </div>
+            {mSrc === 'open' ? <ExternalPanel scope={mScope} province={mProv} onScope={pickScope} onAll={() => setMProv(null)} />
+              : <MarketPanel m={mk} scope={mScope} province={mProv} onScope={pickScope} onAll={() => setMProv(null)} />}
           </MapLayout>
         </div>)}
 
