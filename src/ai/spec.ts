@@ -17,7 +17,21 @@ export const AI_LANGS: AiLang[] = ['th', 'zh', 'en']
 /** Claude's default model (paid, used only when ANTHROPIC_API_KEY is set); the owner can change it in Vercel (AI_MODEL) */
 export const DEFAULT_MODEL = 'claude-haiku-5-5'
 /** Gemini (free tier, the owner's choice: no paid services): tried in order until one is offered; GEMINI_MODEL goes first */
-export const GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash']
+export const GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
+/**
+ * The models to try, in order (24 Nov 2026: every listed model answered "503 high demand" on the free tier and gemini-2.5-flash
+ * was retired): GEMINI_MODEL, then the preferred list, then any other text "flash" model Google offers this key right now (newest
+ * first), at most `max`. `listed` is Google's model list (models.list); when it could not be read, the preferred list is used as is.
+ */
+export function pickGeminiModels(listed: Array<{ name?: string; supportedGenerationMethods?: string[] }> | null, preferred: readonly string[], max = 6): string[] {
+  const offered = listed?.filter((m) => typeof m.name === 'string' && m.supportedGenerationMethods?.includes('generateContent')).map((m) => m.name!.replace(/^models\//, '')) ?? null
+  const textFlash = (n: string) => /^gemini-[\d.]+-flash(-lite)?(-\d{3}|-latest|-preview[\w-]*)?$/.test(n) && !/(image|tts|audio|live|thinking-exp)/.test(n)
+  const version = (n: string) => Number(n.match(/^gemini-([\d.]+)/)?.[1] ?? 0)
+  const pref = preferred.filter(Boolean)
+  const known = offered ? pref.filter((m) => offered.includes(m)) : pref
+  const extra = offered ? offered.filter((m) => textFlash(m) && !known.includes(m)).sort((a, b) => version(b) - version(a) || a.length - b.length) : []
+  return [...new Set([...known, ...extra])].slice(0, max)
+}
 /** uses a day per person and kind (admins: no limit) and for the whole site — enforced in the database (SQL 0009) */
 export const PER_USER_DAY = 20
 export const SITE_DAY = 200

@@ -9,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import {
-  AI_LANGS, DEFAULT_MODEL, FLAG_CATEGORIES, GEMINI_MODELS, MAX_QUESTION, SEVERITIES, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, cleanHistory, contractForAi, contractSystem, contractUser, postForAi, MAX_TRANSLATE, translateSystem, translateUser, cleanTranslation,
+  AI_LANGS, DEFAULT_MODEL, FLAG_CATEGORIES, GEMINI_MODELS, pickGeminiModels, MAX_QUESTION, SEVERITIES, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, cleanHistory, contractForAi, contractSystem, contractUser, postForAi, MAX_TRANSLATE, translateSystem, translateUser, cleanTranslation,
   type AiKind, type AiLang, type AiReason,
 } from '../src/ai/spec.js'
 import type { PostInput } from '../src/domain/match/logic.js'
@@ -58,12 +58,30 @@ async function take(token: string, kind: AiKind): Promise<{ ok: boolean; reason?
 type Outcome = ({ raw: unknown } | { reason: AiReason; status: number }) & { detail?: string }
 const BLOCKED = ['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'RECITATION']
 
-/** Gemini (free tier): JSON mode, the shape is described in the system prompt; cleanCheck / cleanAnswer then keep only valid parts */
+/** the models Google offers this key now (read at most once an hour per server instance; null when it cannot be read) */
+let offered: { at: number; list: Array<{ name?: string; supportedGenerationMethods?: string[] }> | null } | null = null
+async function offeredModels(apiKey: string) {
+  if (offered && Date.now() - offered.at < 3600_000) return offered.list
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': apiKey }, signal: AbortSignal.timeout(5000) })
+    const j = r.ok ? ((await r.json()) as { models?: Array<{ name?: string; supportedGenerationMethods?: string[] }> }) : null
+    offered = { at: Date.now(), list: j?.models ?? null }
+  } catch { offered = { at: Date.now() - 3000_000, list: null } } // try again in 10 minutes
+  return offered.list
+}
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** Gemini (free tier): JSON mode, the shape is described in the system prompt; cleanCheck / cleanAnswer then keep only valid parts.
+ * A model that is busy (5xx "high demand") is asked once more after a short pause before the next one is tried. */
 async function gemini(apiKey: string, system: string, content: string): Promise<Outcome> {
-  const models = [...new Set([env('GEMINI_MODEL'), ...GEMINI_MODELS].filter(Boolean))]
+  const models = pickGeminiModels(await offeredModels(apiKey), [env('GEMINI_MODEL'), ...GEMINI_MODELS])
   const tried: string[] = [], started = Date.now()
   let busy = false
-  for (const model of models) {
+  const queue = models.flatMap((m) => [m, m]) // each model at most twice
+  for (let i = 0; i < queue.length; i++) {
+    const model = queue[i]
+    if (i % 2 === 1 && !tried[tried.length - 1]?.startsWith(`${model}:5`)) continue // the second try only after a busy answer
+    if (i % 2 === 1) await pause(1500)
     const budget = 50_000 - (Date.now() - started) // the function may run 60 s (vercel.json)
     if (budget < 8_000) { tried.push('time'); break }
     const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), Math.min(budget, 30_000))

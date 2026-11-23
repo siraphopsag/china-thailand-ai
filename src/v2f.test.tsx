@@ -10,6 +10,7 @@ import { pickVoice } from './components/speak'
 import { AGENCY_BOARDS, DOE_PROVINCE, ISIC, SOURCES, change, cleanExternal, csvLine, newestCsv, parseDoeIndustries, parseDoeProvinces, parseWorldBank } from './domain/openData'
 import snapshot from './data/marketSnapshot.json'
 import { v2f } from './locales/v2f'
+import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
 import { messages } from './locales/index'
 import { provinces } from './locales/provinces'
 
@@ -113,6 +114,20 @@ describe('C. the job market from outside sources', () => {
     expect(src('./App.tsx')).toContain("'open-data': <OpenDataPage />")
     expect(src('./pages/info.tsx')).toContain('<NavLink to="open-data"')
     expect(JSON.stringify(snapshot)).not.toMatch(/@|name|phone|email/i)
+  })
+})
+
+describe('E. the AI keeps answering when Google is busy', () => {
+  it('tries the preferred models Google still offers, then other text flash models, newest first; a busy model is asked twice', () => {
+    const gen = ['generateContent']
+    const listed = [{ name: 'models/gemini-3.8-flash', supportedGenerationMethods: gen }, { name: 'models/gemini-4.0-flash-lite', supportedGenerationMethods: gen },
+      { name: 'models/gemini-3.9-flash-image', supportedGenerationMethods: gen }, { name: 'models/text-embedding-005', supportedGenerationMethods: ['embedContent'] },
+      { name: 'models/gemini-3.5-flash-lite', supportedGenerationMethods: gen }, { name: 'models/gemini-3.6-flash', supportedGenerationMethods: gen }]
+    expect(pickGeminiModels(listed, ['', ...GEMINI_MODELS])).toEqual(['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-4.0-flash-lite', 'gemini-3.6-flash'])
+    expect(pickGeminiModels(null, ['my-model', ...GEMINI_MODELS])).toEqual(['my-model', ...GEMINI_MODELS])
+    expect(GEMINI_MODELS).not.toContain('gemini-2.5-flash') // retired by Google
+    const api = src('../api/ai.ts')
+    expect(api).toContain('pickGeminiModels(await offeredModels(apiKey)'); expect(api).toContain('if (i % 2 === 1) await pause(1500)')
   })
 })
 

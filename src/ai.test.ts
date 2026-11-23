@@ -157,7 +157,8 @@ describe('the server function with the free Gemini key (owner: no paid services)
   it('asks Gemini in JSON mode with the key in a header, and cleans the answer', async () => {
     const f = net(() => reply('```json\n{"answer":"Work permit needed.","lawIds":["th-labour","nope"],"grounding":"grounded","nextStep":"Ask the Ministry of Labour."}\n```'))
     expect((await call({ kind: 'ask', lang: 'en', question: 'Do I need a permit?' })).body).toEqual({ ok: true, left: 3, result: { answer: 'Work permit needed.', lawIds: ['th-labour'], grounding: 'grounded', nextStep: 'Ask the Ministry of Labour.' } })
-    const [url, init] = f.mock.calls[1] as [string, RequestInit]
+    expect(String(f.mock.calls[1][0])).toBe('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200') // which models Google offers now (24 Nov 2026)
+    const [url, init] = f.mock.calls[2] as [string, RequestInit]
     expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent')
     expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe('free-key')
     const sent = JSON.parse(String(init.body))
