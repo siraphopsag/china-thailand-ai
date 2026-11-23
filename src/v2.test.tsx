@@ -186,12 +186,12 @@ describe('D. help page and report pack', () => {
     expect(text).toContain('[x] ' + t('rp.ev.passportCopy')); expect(text).toContain('[ ] ' + t('rp.ev.witness'))
     expect(text).toContain(t('rp.ag.thPolice')); expect(text).toContain('Kept by the supervisor'); expect(text).toContain(t('rp.pack.foot'))
   })
-  it('hotlines are tel: links; the page has a quick exit; the floating button shows for job seekers only', () => {
+  it('hotlines are tel: links; no quick exit for now (owner, 23 Nov 2026: it looked like the site crashing); the floating button shows for job seekers only', () => {
     for (const c of ['TH', 'CN'] as const) for (const l of HELPLINES[c]) { expect(l.tel).toMatch(/^\+?[0-9-]+$/); expect(l.key in messages).toBe(true) }
     const page = html(<SosPage />, { ...seedState(NOW), role: 'seeker' })
-    expect(page).toContain(T('hp.exit')); expect(page).toContain(T('rp.h'))
+    expect(page).not.toContain(T('hp.exit')); expect(page).toContain(T('rp.h'))
     expect(src('./App.tsx')).toContain("{st.role === 'seeker' && route !== 'sos' && <SosButton />}")
-    expect(src('./pages/sos.tsx')).toContain("location.replace(")
+    expect(src('./pages/sos.tsx')).not.toContain('location.replace(')
   })
 })
 

@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go } from '../store'
 import { useMatch } from '../matchData'
-import { useAuth , demoNumber } from '../auth'
+import { SUPABASE_URL, useAuth, demoNumber } from '../auth'
+import { addAnother, forgetAccount, forgetAllAccounts, switchTo, updateAccount, useAccounts, type SavedAccount } from '../accounts'
 import { inbox } from '../domain/match/logic'
+import { useChatUnread } from '../chatUnread'
 import { Icon, type IconName } from './icons'
 import { Meniscus, type Hue, type Slot } from './meniscus'
 
@@ -20,14 +22,14 @@ export function sideItems(role: 'seeker' | 'employer' | null, admin: boolean): I
   const items: Item[] = [{ to: '', key: 'm.home', icon: 'home', match: [''] }]
   if (role === 'seeker') items.push({ to: 'seek', key: 'm.pins', icon: 'pin', match: ['seek'] })
   if (role === 'employer') items.push({ to: 'hire', key: 'm.posts', icon: 'posts', match: ['hire'] })
-  items.push({ to: 'board', key: 'm.board', icon: 'store', match: ['board', 'post'] }, { to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'calendar', key: 'm.cal', icon: 'calendar', match: ['calendar'] }, { to: 'contract', key: 'm.nav.contract', icon: 'documents', match: ['contract'] }, { to: 'sos', key: 'm.nav.sos', icon: 'phone', match: ['sos'] },{ to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources', 'ask'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
+  items.push({ to: 'board', key: 'm.board', icon: 'store', match: ['board', 'post'] }, { to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'chats', key: 'm.nav.chats', icon: 'chat', match: ['chats', 'chat'] }, { to: 'calendar', key: 'm.cal', icon: 'calendar', match: ['calendar'] }, { to: 'contract', key: 'm.nav.contract', icon: 'documents', match: ['contract'] }, { to: 'sos', key: 'm.nav.sos', icon: 'phone', match: ['sos'] },{ to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources', 'ask'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
   items.push({ to: 'member', key: 'm.member', icon: 'crown', match: ['member'] })
   if (admin) items.push({ to: 'backoffice', key: 'm.admin', icon: 'shield', match: ['backoffice'] }, { to: 'analytics', key: 'm.an.nav', icon: 'chart', match: ['analytics'] })
   items.push({ to: 'me', key: 'm.profile', icon: 'profile', match: ['me'] })
   return items
 }
 /** on phones the bottom bar keeps 5 main places; these go under "More" so the bar does not cover the screen */
-export const MORE_KEYS = ['m.cal', 'm.nav.contract', 'm.nav.sos','m.prepare', 'm.member', 'm.settings', 'm.help', 'm.admin', 'm.an.nav']
+export const MORE_KEYS = ['m.cal', 'm.nav.contract', 'm.nav.sos', 'm.prepare', 'm.member', 'm.settings', 'm.help', 'm.admin', 'm.an.nav', 'm.profile'] // profile: also behind the picture in the header
 /**
  * Each place has its own colour (owner, Oct 2026: as in the reference): a bright bead (its icon in near-black, ≥ 7:1) and a label
  * colour that reads on the light (600–700 shades) and the dark (300–400 shades) plate.
@@ -38,6 +40,7 @@ export const HUES: Record<string, Hue> = {
   'm.posts': { bead: '#fbbf24', light: '#b45309', dark: '#fcd34d' },
   'm.board': { bead: '#fb923c', light: '#c2410c', dark: '#fdba74' },
   'm.notif': { bead: '#fb7185', light: '#be123c', dark: '#fda4af' },
+  'm.nav.chats': { bead: '#4ade80', light: '#15803d', dark: '#86efac' },
   'm.cal': { bead: '#38bdf8', light: '#0369a1', dark: '#7dd3fc' },
   'm.nav.contract': { bead: '#60a5fa', light: '#1d4ed8', dark: '#93c5fd' },
   'm.nav.sos': { bead: '#f87171', light: '#b91c1c', dark: '#fca5a5' },
@@ -63,6 +66,7 @@ export function SideNav({ route }: { route: string }) {
   const { st } = useMatch()
   const { isAdmin } = useAuth()
   const unread = useUnread()
+  const chatUnread = useChatUnread()
   const items = sideItems(st.role, isAdmin)
   const main = items.filter((n) => !MORE_KEYS.includes(n.key)), more = items.filter((n) => MORE_KEYS.includes(n.key))
   const [moreOpen, setMoreOpen] = useState(false)
@@ -77,10 +81,11 @@ export function SideNav({ route }: { route: string }) {
     document.addEventListener('keydown', esc); document.addEventListener('pointerdown', away)
     return () => { document.removeEventListener('keydown', esc); document.removeEventListener('pointerdown', away) }
   }, [moreOpen])
-  const name = (n: Item) => (n.key === 'm.notif' && unread > 0 ? `${t(n.key as never)} · ${t('m.unread', { n: unread })}` : t(n.key as never))
+  const badgeOf = (n: Item) => (n.key === 'm.notif' ? unread : n.key === 'm.nav.chats' ? chatUnread : 0)
+  const name = (n: Item) => (badgeOf(n) > 0 ? `${t(n.key as never)} · ${t('m.unread', { n: badgeOf(n) })}` : t(n.key as never))
   const moreOn = more.some((n) => n.match.includes(route))
   const slot = (n: Item, i: number, list: Item[]): Slot => ({ key: n.key, label: t(n.key as never), aria: name(n), icon: n.icon, hue: HUES[n.key] ?? HUES['m.more'], current: n.match.includes(route),
-    to: n.to, badge: n.key === 'm.notif' && unread > 0 ? unread : undefined, split: GENERAL.includes(n.key) && !GENERAL.includes(list[i - 1]?.key ?? '') })
+    to: n.to, badge: badgeOf(n) > 0 ? badgeOf(n) : undefined, split: GENERAL.includes(n.key) && !GENERAL.includes(list[i - 1]?.key ?? '') })
   const railSlots = items.map((n, i) => slot(n, i, items))
   const barSlots: Slot[] = [...main.map((n, i) => ({ ...slot(n, i, main), split: false })),
     { key: 'm.more', label: t('m.more'), aria: t('m.more'), icon: 'more', hue: HUES['m.more'], current: moreOpen || moreOn, focus: moreOpen, onPress: () => setMoreOpen((o) => !o), expanded: moreOpen, controls: 'nav-more', btnRef: moreBtn }]
@@ -112,8 +117,12 @@ export function SideNav({ route }: { route: string }) {
 export function LoginButton() {
   const { t } = useI18n()
   const { status, online, user, isAdmin, signOut } = useAuth()
+  const { st, mode } = useMatch()
+  const accounts = useAccounts()
   const [menu, setMenu] = useState(false)
   const btn = useRef<HTMLButtonElement>(null), list = useRef<HTMLDivElement>(null)
+  // the switcher shows each account with its role, learnt once the profile has loaded
+  useEffect(() => { if (user && mode === 'remote') updateAccount(user.id, { name: user.name, role: st.role }) }, [user, mode, st.role])
   useEffect(() => {
     if (!menu) return
     list.current?.querySelector<HTMLElement>('a[href], button')?.focus()
@@ -137,7 +146,11 @@ export function LoginButton() {
             {isAdmin && <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary"><Icon name="shield" size={13} />{t('m.auth.admin')}</p>}</div>
           <NavLink to="me" className={item} onNavigate={() => setMenu(false)}><Icon name="profile" size={17} />{t('m.profile')}</NavLink>
           {isAdmin && <NavLink to="backoffice" className={item} onNavigate={() => setMenu(false)}><Icon name="shield" size={17} />{t('m.admin')}</NavLink>}
+          <AccountList accounts={accounts.filter((a) => a.id !== user.id)} item={item} />
+          <button type="button" className={item} onClick={() => { setMenu(false); addAnother(SUPABASE_URL) }}><Icon name="plus" size={17} />{t('ac2.add')}</button>
           <button type="button" className={item} onClick={async () => { setMenu(false); await signOut(); go('') }}><Icon name="logout" size={17} />{t('m.logout')}</button>
+          {accounts.length > 1 && <button type="button" className={item} onClick={async () => { setMenu(false); forgetAllAccounts(); await signOut(); go('') }}><Icon name="logout" size={17} />{t('ac2.logoutAll')}</button>}
+          <p className="px-3 pt-1 pb-2 text-[11px] text-muted leading-snug">{t('ac2.shared')}</p>
         </div>
       </div>
     )
@@ -146,5 +159,29 @@ export function LoginButton() {
     <NavLink to="login" className="h-10 px-3 rounded-lg bg-primary text-onprimary text-sm font-medium flex items-center gap-1.5 hover:opacity-95">
       <Icon name="login" size={17} /><span className="sr-only sm:not-sr-only">{t('m.login')}</span>
     </NavLink>
+  )
+}
+
+/** a remembered account's name as the menus show it (demo accounts by their number, in the reader's language) */
+export function accountName(a: Pick<SavedAccount, 'name' | 'email'>, t: ReturnType<typeof useI18n>['t']) {
+  const n = demoNumber(a.name); return n ? t('m.demo.name', { n }) : a.name || a.email
+}
+/** the other accounts remembered on this device: tap one to switch (owner, 23 Nov 2026), or remove it from the device */
+export function AccountList({ accounts, item, title = true }: { accounts: SavedAccount[]; item: string; title?: boolean }) {
+  const { t } = useI18n()
+  if (!accounts.length) return null
+  return (
+    <div className="border-y border-line my-1 py-1" role="group" aria-label={t('ac2.switch')}>
+      {title && <p className="px-3 pt-1 text-xs font-medium text-muted">{t('ac2.switch')}</p>}
+      {accounts.map((a) => (
+        <div key={a.id} className="flex items-center gap-1">
+          <button type="button" className={`${item} flex-1 min-w-0`} onClick={() => { if (!switchTo(a.id, SUPABASE_URL)) forgetAccount(a.id) }}>
+            <span aria-hidden className="h-7 w-7 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center text-xs font-semibold">{accountName(a, t).slice(0, 1).toUpperCase()}</span>
+            <span className="min-w-0 flex-1"><span className="block truncate font-medium">{accountName(a, t)}</span>
+              <span className="block truncate text-[11px] text-muted">{t(a.role ? (`m.role.${a.role}` as never) : 'ac2.role.none')}{a.email ? ` · ${a.email}` : ''}</span></span>
+          </button>
+          <button type="button" className="h-9 w-9 shrink-0 grid place-items-center rounded-lg text-muted hover:bg-surface3" aria-label={t('ac2.remove', { n: accountName(a, t) })} title={t('ac2.remove', { n: accountName(a, t) })} onClick={() => forgetAccount(a.id)}><Icon name="close" size={15} /></button>
+        </div>))}
+    </div>
   )
 }

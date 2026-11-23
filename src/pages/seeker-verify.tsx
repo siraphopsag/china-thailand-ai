@@ -1,8 +1,9 @@
 // Job-seeker verification (v2 model, owner Nov 2026: "verify both employers and workers"). Two steps: a mobile number confirmed with
 // a one-time code (shown on screen in the prototype, as for employers), then the passport's machine-readable lines checked against
 // the name and date of birth (ICAO 9303, domain/match/mrz.ts). Applying needs no verification; a case goes ahead with the C.A.L.L.
-// team only once the worker is verified. Only what is needed is kept, on this device in the prototype: the last 4 digits of the
-// phone and of the passport number, the nationality and the expiry date — never the full numbers (PDPA s.22–23 data minimisation).
+// team only once the worker is verified. Only what is needed is kept — the last 4 digits of the phone and of the passport number,
+// the nationality and the expiry date, never the full numbers (PDPA s.22–23 data minimisation): on the person's own profile in the
+// database when signed in (SQL 0014; employers see only "verified" for people who applied to them), on this device in the local demo.
 import { useEffect, useState, type FormEvent } from 'react'
 import { tk, useI18n } from '../i18n'
 import { cleanPhone, isMobile, oneTimeCode, phoneLast4 } from '../domain/match/verify'
@@ -10,6 +11,8 @@ import { identityCheck, parseMrz, type IdRecord } from '../domain/match/mrz'
 import { localDay } from '../domain/match/logic'
 import { ME, type Country } from '../domain/match/types'
 import { useMatch } from '../matchData'
+import { useAuth } from '../auth'
+import { useRemoteSeekerRow, useSeekerBadges, type SeekerRow, type SyncProblem } from '../shared'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
 import { SAMPLE_MRZ, SAMPLE_RECORD } from './contract-steps'
@@ -23,11 +26,41 @@ export function loadSeekerVerify(): SeekerVerify | null {
 function saveSeekerVerify(v: SeekerVerify | null) {
   try { if (v) localStorage.setItem(KEY, JSON.stringify(v)); else localStorage.removeItem(KEY); window.dispatchEvent(new Event(EVT)) } catch { /* storage blocked */ }
 }
-export const isVerifiedSeeker = (v: SeekerVerify | null) => !!v?.passport
-export function useSeekerVerify(): SeekerVerify | null {
+export const isVerifiedSeeker = (v: SeekerVerify | null) => !!v?.passport && (!v.passport.expiry || v.passport.expiry >= new Date().toISOString().slice(0, 10))
+function useLocalSeekerVerify(): SeekerVerify | null {
   const [v, setV] = useState(loadSeekerVerify)
   useEffect(() => { const on = () => setV(loadSeekerVerify()); window.addEventListener(EVT, on); return () => window.removeEventListener(EVT, on) }, [])
   return v
+}
+/** the profile columns (database) ↔ what the page works with */
+export function rowToVerify(r: SeekerRow | null): SeekerVerify | null {
+  if (!r?.seeker_phone4) return null
+  return { country: r.seeker_phone_country === 'CN' ? 'CN' : 'TH', phone4: r.seeker_phone4, phoneAt: r.seeker_phone_at ?? '',
+    ...(r.seeker_pp_last4 ? { passport: { last4: r.seeker_pp_last4, nationality: r.seeker_pp_nat ?? '', expiry: r.seeker_pp_expiry ?? '', at: r.seeker_pp_at ?? '' } } : {}) }
+}
+export const verifyToRow = (v: SeekerVerify | null): SeekerRow => ({ seeker_phone_country: v?.country ?? null, seeker_phone4: v?.phone4 ?? null, seeker_phone_at: v?.phoneAt || null,
+  seeker_pp_last4: v?.passport?.last4 ?? null, seeker_pp_nat: v?.passport?.nationality ?? null, seeker_pp_expiry: v?.passport?.expiry || null, seeker_pp_at: v?.passport?.at || null })
+/** my verification and how to change it: my profile in the database when signed in, this device in the local demo */
+export function useSeekerVerifyStore(): { v: SeekerVerify | null; save: (v: SeekerVerify | null) => void; problem: SyncProblem; loading: boolean } {
+  const { mode } = useMatch()
+  const { user } = useAuth()
+  const remote = mode === 'remote' && !!user
+  const local = useLocalSeekerVerify()
+  const r = useRemoteSeekerRow(remote ? user!.id : null)
+  if (!remote) return { v: local, save: saveSeekerVerify, problem: null, loading: false }
+  return { v: rowToVerify(r.row), save: (v) => void r.save(verifyToRow(v)), problem: r.problem, loading: r.row === null && !r.problem }
+}
+export const useSeekerVerify = () => useSeekerVerifyStore().v
+/** is this job seeker verified? me: my own record; others: what the database tells employers and the team (sample people in the local demo) */
+export function useSeekerVerified(seekerId: string): boolean {
+  const { mode } = useMatch()
+  const { user } = useAuth()
+  const remote = mode === 'remote' && !!user, me = seekerId === ME
+  const local = useLocalSeekerVerify()
+  const mine = useRemoteSeekerRow(remote && me ? user!.id : null).row
+  const badges = useSeekerBadges(remote && !me)
+  if (!remote) return me ? isVerifiedSeeker(local) : sampleVerified(seekerId)
+  return me ? isVerifiedSeeker(rowToVerify(mine)) : !!badges[seekerId]
 }
 /** sample job seekers of the local demo: about two in three are shown as verified (fixed by their id, labelled as sample data) */
 export const sampleVerified = (id: string) => [...id].reduce((s, c) => s + c.charCodeAt(0), 0) % 3 !== 0
@@ -35,8 +68,7 @@ export const sampleVerified = (id: string) => [...id].reduce((s, c) => s + c.cha
 /** the badge employers see next to an applicant */
 export function SeekerBadge({ seekerId }: { seekerId: string }) {
   const { t } = useI18n()
-  const mine = useSeekerVerify()
-  const ok = seekerId === ME ? isVerifiedSeeker(mine) : sampleVerified(seekerId)
+  const ok = useSeekerVerified(seekerId)
   return ok ? <span className="chip bg-ok-bg text-ok-fg border-ok-line text-xs"><Icon name="personCheck" size={12} />{t('sv.badge')}</span>
     : <span className="chip bg-surface3 text-muted border-line text-xs">{t('sv.badgeNo')}</span>
 }
@@ -46,7 +78,7 @@ export function SeekerVerifyCard() {
   const { t } = useI18n()
   const N = useNames()
   const { st, now } = useMatch()
-  const v = useSeekerVerify()
+  const { v, save: saveVerify, problem } = useSeekerVerifyStore()
   const home: Country = st.me.origin?.country ?? 'TH'
   const [country, setCountry] = useState<Country>(v?.country ?? home)
   const [phone, setPhone] = useState(''), [sent, setSent] = useState<{ code: string; at: number } | null>(null), [code, setCode] = useState('')
@@ -58,7 +90,7 @@ export function SeekerVerifyCard() {
     e.preventDefault(); if (!sent) return
     if (Date.now() - sent.at > CODE_LIFE_MS) { setErr(t('m.vf.codeOld')); return }
     if (code.trim() !== sent.code) { setErr(N.problem('code')); return }
-    setErr(''); setSent(null); saveSeekerVerify({ country, phone4: phoneLast4(cleanPhone(country, phone)), phoneAt: new Date(now).toISOString() })
+    setErr(''); setSent(null); saveVerify({ country, phone4: phoneLast4(cleanPhone(country, phone)), phoneAt: new Date(now).toISOString() })
   }
   const parsed = mrz.trim() ? parseMrz(mrz, today) : null
   // the country of work decides the youngest working age: a worker from Thailand works in China and the other way round
@@ -68,7 +100,7 @@ export function SeekerVerifyCard() {
     e.preventDefault()
     if (!parsed?.ok || !v) return
     if (high.length) { setErr(t('sv.pp.fail')); return }
-    setErr(''); saveSeekerVerify({ ...v, passport: { last4: parsed.value.number.slice(-4), nationality: parsed.value.nationality, expiry: parsed.value.expiry, at: new Date(now).toISOString() } })
+    setErr(''); saveVerify({ ...v, passport: { last4: parsed.value.number.slice(-4), nationality: parsed.value.nationality, expiry: parsed.value.expiry, at: new Date(now).toISOString() } })
   }
   const set = (p: Partial<IdRecord>) => setRec((r) => ({ ...r, ...p }))
   return (
@@ -81,7 +113,7 @@ export function SeekerVerifyCard() {
       </ol>
       {isVerifiedSeeker(v) ? (
         <div className="flex flex-wrap items-center gap-2"><span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name="personCheck" size={13} />{t('sv.badge')}</span>
-          <button type="button" className="btn-ghost text-sm" onClick={() => saveSeekerVerify(null)}>{t('sv.reset')}</button></div>
+          <button type="button" className="btn-ghost text-sm" onClick={() => saveVerify(null)}>{t('sv.reset')}</button></div>
       ) : !v ? (
         sent ? (
           <form className="space-y-2" onSubmit={confirmCode}>
@@ -116,6 +148,7 @@ export function SeekerVerifyCard() {
         </form>
       )}
       {err && <p className="text-sm text-danger-fg" role="alert">{err}</p>}
+      {problem && <p className="text-sm text-danger-fg" role="alert">{t(problem === 'dbOld' ? 'sh.dbOld' : 'sh.network')}</p>}
     </section>
   )
 }

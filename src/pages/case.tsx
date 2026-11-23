@@ -13,7 +13,7 @@ import { AgencyLinks, Empty, Page, Toast, useApplicantName, useGate, useNames } 
 import { ScamNote } from './safety'
 import { ArrivalBox, DocAttach } from './case-extras'
 import { AftercarePanel, arrivalDay } from './aftercare'
-import { isVerifiedSeeker, useSeekerVerify } from './seeker-verify'
+import { useSeekerVerified } from './seeker-verify'
 
 /**
  * The case after a match (owner, Oct 2026): nine steps from the employer's confirmation to the worker's arrival. The employer
@@ -25,10 +25,12 @@ export const trainingName = (x: Training, t: (k: never) => string) => (x.name.st
 
 export function CasePage() {
   const { t } = useI18n()
-  const { st, agency, caseAct, now } = useMatch()
-  const sv = useSeekerVerify()
+  const { st, agency, caseAct, now, mode } = useMatch()
   const nameOf = useApplicantName()
   const id = useSearchParam('id')
+  const caseSeeker = st.cases.find((x) => x.id === id)?.seekerId ?? ME
+  // the worker must be verified before the team takes the case: my own record, or (signed in) what the database says about them
+  const seekerVerified = useSeekerVerified(caseSeeker)
   const gate = useGate(`case?id=${id}`)
   if (gate) return <Page title={t('m.cs.title')}>{gate}</Page>
   const c = st.cases.find((x) => x.id === id)
@@ -39,11 +41,11 @@ export function CasePage() {
   const isSeeker = c.seekerId === ME
   const after = (isSeeker || isEmployer || agency) && arrivalDay(c)
     ? <AftercarePanel c={c} caseKey={c.id} employerId={p.employerId} country={p.country} province={p.province} today={localDay(new Date(now).toISOString())}
-        view={isSeeker ? 'seeker' : 'employer'} team={agency} atNow={new Date(now).toISOString()} />
+        seekerId={c.seekerId} view={isSeeker ? 'seeker' : 'employer'} team={agency} atNow={new Date(now).toISOString()} />
     : null
   return <CaseView key={c.id} c={c} sub={`${p.position} · ${p.company}`} isSeeker={isSeeker} isEmployer={isEmployer}
     withName={isEmployer && acc ? nameOf(acc) : null} agency={agency} act={(a) => caseAct(c.id, a)} extra={after}
-    seekerUnverified={c.seekerId === ME && !c.steps.accepted && !isVerifiedSeeker(sv)} />
+    seekerUnverified={(c.seekerId === ME || mode === 'remote') && !c.steps.accepted && !seekerVerified} />
 }
 
 /** the case screen itself; the real case page and the demo case (case-demo.tsx) both use it */

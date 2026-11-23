@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { LanguageProvider } from './i18n'
 import { tr } from './i18n/core'
-import { ThemeProvider, ACCENTS } from './theme'
+import { ThemeProvider, ACCENTS, weekStartFor } from './theme'
 import { MatchProvider } from './matchData'
 import { AuthProvider } from './auth'
 import { DAY_MS, parseState } from './domain/match/logic'
@@ -74,12 +74,13 @@ describe('A. accent colours', () => {
         expect(cr(x, y), `${a}: ${what}`).toBeGreaterThanOrEqual(4.5)
     }
   })
-  it('restored before the first paint; Settings offers the colours (name + swatch) and the first day of the week', () => {
+  it('restored before the first paint; Settings offers the colours (name + swatch); no colour preview, week setting or demo clock (owner, 23 Nov 2026)', () => {
     const init = src('../public/theme-init.js')
     expect(init).toContain("localStorage.getItem('cnth-accent')"); expect(init).toContain("setAttribute('data-accent', accent)")
     const h = html(<SettingsPage />, seedState(NOW))
     for (const a of ACCENTS) { expect(h).toContain(`swatch-${a}`); expect(h).toContain(T(`m.accent.${a}` as keyof typeof design)) }
-    expect(h).toContain(T('m.settings.week.sun')); expect(h).toContain(T('m.settings.week.mon'))
+    for (const k of ['m.settings.week', 'm.settings.preview.label', 'm.clock.title'] as const) expect(h, k).not.toContain(T(k as never))
+    expect([weekStartFor('th'), weekStartFor('zh'), weekStartFor('en')]).toEqual([0, 1, 0]) // the week follows the language
     expect(css).toMatch(/\.swatch-ember \{ background:/)
   })
 })

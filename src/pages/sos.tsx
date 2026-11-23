@@ -16,8 +16,6 @@ import { useAftercare } from '../aftercareStore'
 import { actComplaint, checkinFlags, fileComplaint, type ComplaintAction } from '../domain/match/aftercare'
 import { ComplaintCard, arrivalDay } from './aftercare'
 
-/** leaves at once and replaces this page in the history, so "Back" does not return to it */
-export const quickExit = () => { try { location.replace('https://www.bing.com/') } catch { location.href = 'about:blank' } }
 
 export function SosPage() {
   const { t } = useI18n()
@@ -73,7 +71,7 @@ export function SosPage() {
   }
 
   return (
-    <Page title={t('hp.title')} sub={t('hp.sub')} actions={<button type="button" className="btn-ghost" onClick={quickExit}><Icon name="close" size={16} />{t('hp.exit')}</button>}>
+    <Page title={t('hp.title')} sub={t('hp.sub')}>
       <div role="tablist" aria-label={t('hp.where')} className="flex flex-wrap gap-1 rounded-xl border border-line bg-surface p-1 w-fit">
         {(['TH', 'CN'] as HelpCountry[]).map((c) => <button key={c} type="button" role="tab" aria-selected={country === c} onClick={() => switchCountry(c)} className={`min-h-[36px] px-4 rounded-lg text-sm ${country === c ? 'seg-on' : 'hover:bg-surface3'}`}>{t(`hp.in.${c}` as never)}</button>)}
       </div>

@@ -31,10 +31,10 @@ export type DataMode = 'local' | 'remote' | 'signedOut' | 'loading'
 export interface Counts { held: number; pending: number; reserved: number }
 
 function load(): MatchState {
-  try { const raw = localStorage.getItem(MATCH_KEY); if (raw) { const st = parseState(JSON.parse(raw)); if (st) return st } } catch { /* fall back to the seed */ }
+  // the demo clock no longer survives a reload (owner, 23 Nov 2026: no simulated time for ordinary users): back to real time
+  try { const raw = localStorage.getItem(MATCH_KEY); if (raw) { const st = parseState(JSON.parse(raw)); if (st) return st.clockHours > 0 ? clampFuture(st, Date.now()) : st } } catch { /* fall back to the seed */ }
   return seedState()
 }
-const readClock = () => { try { const n = Number(localStorage.getItem(CLOCK_KEY)); return Number.isInteger(n) && n >= 0 && n <= MAX_CLOCK_HOURS ? n : 0 } catch { return 0 } }
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 const emptyState = (clockHours = 0): MatchState => ({ ...seedState(), role: null, posts: [], seekers: [], acceptances: [], clockHours, myCompany: '', member: false, memberUntil: null, credits: [], cases: [], employerVerify: null })
 /** an employer waiting for verification, as the agency (administrator) sees it; id null = me in the local demo */
@@ -135,7 +135,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
   useEffect(() => { if (initial) return; try { localStorage.setItem(MATCH_KEY, JSON.stringify(localSt)) } catch { /* storage unavailable */ } }, [localSt, initial])
 
   /* ---------- database ---------- */
-  const [clock, setClock] = useState(() => (typeof window === 'undefined' ? 0 : readClock()))
+  const [clock, setClock] = useState(0) // the back office demo clock (administrators): this visit only
   const [remoteSt, setRemote] = useState<MatchState>(() => emptyState())
   const [remotePool, setPool] = useState<PinStatRow[]>([])
   const [remoteCounts, setCounts] = useState<Record<string, Counts> | null>(null)
@@ -198,7 +198,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       go(n.next || (n.role === 'employer' ? 'hire' : n.role === 'seeker' ? 'seek' : ''), { replace: true })
     })()
   }, [mode, userId, refresh])
-  useEffect(() => { try { localStorage.setItem(CLOCK_KEY, String(clock)) } catch { /* ignore */ } }, [clock])
+  useEffect(() => { try { localStorage.removeItem(CLOCK_KEY) } catch { /* ignore */ } }, []) // a clock kept by an older version
 
   const raw = mode === 'local' ? localSt : mode === 'remote' ? { ...remoteSt, clockHours: clock } : emptyState(clock)
   const now = nowWith(raw.clockHours)

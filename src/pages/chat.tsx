@@ -1,16 +1,19 @@
 // Chat and interview booking between the employer and the worker of one match (v2 model, owner Nov 2026). Opens once the worker
 // has accepted the offer. Ready-made phrases go out in Thai and Chinese; typed text has contact details hidden; a signed-in person
 // can have the AI translate a message. The employer offers up to three times, the worker picks one, and it shows in the calendar.
-// Prototype: kept on this device (chatStore.ts); in the local demo either side can be tried with the side switch.
-import { useState, type FormEvent } from 'react'
+// Signed in, the conversation is shared through the database (shared.ts, SQL 0014) and new messages appear at once; the local demo
+// and the offline kit keep it on this device (chatStore.ts), where either side can be tried with the side switch. The job seeker's
+// introduction from the application is shown as the first message.
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { tr } from '../i18n/core'
 import { useI18n } from '../i18n'
 import { NavLink, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
 import { useAuth } from '../auth'
-import { MAX_SLOTS, MAX_TEXT, PHRASES, newMessage, offerSlots, pickSlot, type ChatMsg, type Side } from '../domain/match/chat'
+import { MAX_SLOTS, MAX_TEXT, PHRASES, newMessage, offerSlots, pickSlot, type Chat, type ChatMsg, type Side } from '../domain/match/chat'
 import { ME, MY_EMPLOYER } from '../domain/match/types'
 import { useChat } from '../chatStore'
+import { isUuid, markRead, newId, useRemoteChat } from '../shared'
 import { aiTranslate } from '../ai/client'
 import type { AiTranslation } from '../ai/spec'
 import { Icon } from '../components/icons'
@@ -26,6 +29,7 @@ const localStamp = (ms: number) => { const d = new Date(ms); return `${d.getFull
 export function ChatPage() {
   const { t } = useI18n()
   const { st, mode, now } = useMatch()
+  const { user } = useAuth()
   const nameOf = useApplicantName()
   const accId = useSearchParam('acc')
   const a = st.acceptances.find((x) => x.id === accId)
@@ -34,42 +38,55 @@ export function ChatPage() {
   const sides: Side[] = demo || mode === 'local' ? ['seeker', 'employer']
     : [...(a?.seekerId === ME ? ['seeker' as const] : []), ...(p?.employerId === MY_EMPLOYER ? ['employer' as const] : [])]
   const [side, setSide] = useState<Side>(p?.employerId === MY_EMPLOYER && a?.seekerId !== ME ? 'employer' : 'seeker')
-  const [chat, save] = useChat(accId, demo ? 'post-demo' : p?.id ?? '')
+  const remote = mode === 'remote' && !demo && isUuid(accId)
+  const [localChat, saveLocal] = useChat(accId, demo ? 'post-demo' : p?.id ?? '')
+  const [remoteChat, saveRemote, problem, loaded] = useRemoteChat(remote ? accId : null)
+  const chat: Chat = remote ? remoteChat : localChat
+  const save = (c: Chat) => (remote ? saveRemote(c) : saveLocal({ ...localChat, ...c }))
+  // opening the conversation marks what the other side wrote as read (the unread counts in the menu and the chat list)
+  const lastAt = chat.msgs.length ? chat.msgs[chat.msgs.length - 1].at : ''
+  useEffect(() => { if (remote && user && lastAt) markRead(user.id, accId, lastAt) }, [remote, user, accId, lastAt])
   if (!demo && (!a || !p || !sides.length)) return <Page title={t('ch.title')}><Empty icon="bell" text={t('ch.none')} to="notifications" action={t('m.notif.title')} /></Page>
   if (!demo && !OPEN.includes(a!.status)) return <Page title={t('ch.title')}><Empty icon="bell" text={t('ch.notYet')} to={`post?id=${p!.id}`} action={t('m.bd.openFull')} /></Page>
   const position = demo ? t('c2.sample.position') : p!.position, company = demo ? t('c2.sample.company') : p!.company
   const worker = demo ? 'SOMCHAI J.' : nameOf(a!)
   const at = new Date(now).toISOString()
   const other = side === 'seeker' ? company : worker
+  // the introduction the job seeker wrote when applying opens the conversation
+  const intro = !demo && a?.intro?.trim() ? { id: 'intro', from: 'seeker' as const, at: a.at, text: a.intro.trim() } : null
+  const msgs = intro ? [intro, ...chat.msgs] : chat.msgs
   return (
     <Page title={t('ch.title')} sub={`${position} · ${company}`}>
       <Warn tone="info">{t('ch.safe')}</Warn>
+      {remote && problem && <Warn>{t(problem === 'dbOld' ? 'sh.dbOld' : 'sh.network')}</Warn>}
       {sides.length > 1 && (
         <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">{t('ch.as')}</span>
           <div role="tablist" aria-label={t('ch.as')} className="flex gap-1 rounded-xl border border-line bg-surface p-1">{sides.map((s) => (
             <button key={s} type="button" role="tab" aria-selected={side === s} onClick={() => setSide(s)} className={`min-h-[36px] px-3 rounded-lg text-sm ${side === s ? 'seg-on' : 'hover:bg-surface3'}`}>{t(`ch.side.${s}` as never)}</button>))}</div>
           <span className="text-xs text-muted">{t('ch.asNote')}</span></div>)}
       <div className="grid lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-4 items-start">
-        <Conversation key={side} msgs={chat.msgs} side={side} other={other}
-          onSend={(input) => { const r = newMessage(chat, side, input, `m-${Date.now()}-${chat.msgs.length}`, at); if (r.ok) save({ ...chat, ...r.value }); return r.ok ? r.masked : null }} />
+        <Conversation key={side} msgs={msgs} side={side} other={other} loading={remote && !loaded} introId={intro?.id}
+          onSend={(input) => { const r = newMessage(chat, side, input, newId(), at); if (r.ok) save({ ...chat, ...r.value }); return r.ok ? r.masked : null }} />
         <InterviewBox chat={chat} side={side} at={at} nowLocal={localStamp(now)} onSave={(c) => save({ ...chat, ...c })} />
       </div>
     </Page>
   )
 }
 
-function Conversation({ msgs, side, other, onSend }: { msgs: ChatMsg[]; side: Side; other: string; onSend: (i: { text?: string; phrase?: string }) => boolean | null }) {
+function Conversation({ msgs, side, other, onSend, loading, introId }: { msgs: ChatMsg[]; side: Side; other: string; onSend: (i: { text?: string; phrase?: string }) => boolean | null; loading?: boolean; introId?: string }) {
   const { t } = useI18n()
   const N = useNames()
   const [text, setText] = useState('')
   const [masked, setMasked] = useState(false)
+  const list = useRef<HTMLOListElement>(null)
+  useEffect(() => { const el = list.current; if (el) el.scrollTop = el.scrollHeight }, [msgs.length]) // newest at the bottom, in view
   const send = (e: FormEvent) => { e.preventDefault(); const r = onSend({ text }); if (r !== null) { setText(''); setMasked(r) } }
   return (
     <section className="card !p-0 overflow-hidden flex flex-col" aria-labelledby="ch-h">
       <h2 id="ch-h" className="h2 px-4 pt-3 pb-2 border-b border-line flex items-center gap-2"><Icon name="users" size={18} className="text-primary" />{t('ch.with', { n: other })}</h2>
-      <ol className="flex-1 min-h-[16rem] max-h-[26rem] overflow-y-auto px-4 py-3 space-y-2" aria-live="polite">
-        {msgs.length === 0 && <li className="text-sm text-muted text-center py-8">{t('ch.empty')}</li>}
-        {msgs.map((m) => <Bubble key={m.id} m={m} mine={m.from === side} when={N.dayTime(Date.parse(m.at))} />)}
+      <ol ref={list} className="flex-1 min-h-[16rem] max-h-[26rem] overflow-y-auto px-4 py-3 space-y-2" aria-live="polite">
+        {msgs.length === 0 && <li className="text-sm text-muted text-center py-8">{t(loading ? 'c.loading' : 'ch.empty')}</li>}
+        {msgs.map((m) => <Bubble key={m.id} m={m} mine={m.from === side} when={m.id === introId ? `${t('sh.intro')} · ${N.dayTime(Date.parse(m.at))}` : N.dayTime(Date.parse(m.at))} />)}
       </ol>
       <div className="border-t border-line p-3 space-y-2">
         <p className="text-xs font-medium">{t('ch.phrases')}</p>

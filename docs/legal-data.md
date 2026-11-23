@@ -96,3 +96,10 @@ verification keeps only the last 4 digits of the phone and passport numbers, the
 minimisation). Special posts use sample organisations only; paid posts say "Sponsored". Chat hides phone numbers, e-mail, links and
 LINE / WeChat ids so conversations stay on the platform, where scams can be reported; AI translation of a typed message uses the
 signed-in person's question allowance.
+
+## Shared records: chat, contracts, verification, aftercare (added 23 Nov 2026, SQL `0014_shared_records.sql`)
+
+- **Who sees what** is enforced in the database, not the website: a chat only by the job seeker and the employer of that application (not the C.A.L.L. team); a contract by both sides of the case and read-only by the team; aftercare (check-ins, secret word, complaints) by the worker and the team, never the employer; employer reviews only as an anonymous list of stars and fixed points.
+- **Data minimisation (PDPA s.22–23; PIPL Art. 6):** job-seeker verification keeps only the last 4 digits of the phone and passport numbers, the nationality and the expiry date. The contract keeps the passport lines because the contract itself names the worker and the passport number (PDPA s.24(3), performance of a contract). Advisor to confirm.
+- **Contact details hidden in chat** (e-mail, links, phone numbers) by the database as well as the website, so a scammer cannot move the worker to a private chat by skipping the website.
+- **Signatures:** each side can add only its own signature; a signature belongs to the SHA-256 fingerprint of the exact text (Thai ETA s.9; CN Electronic Signature Law Art. 13–14, as listed above).

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { AuthError, Session, SupabaseClient } from '@supabase/supabase-js'
+import { afterSwitch, forgetAccount, rememberAccount } from './accounts'
 
 /*
  * Accounts through Supabase Auth (owner, Oct 2026): e-mail + password (works everywhere, also in mainland China) and Google.
@@ -57,6 +58,8 @@ export const configProblem = (rawUrl: unknown, rawKey: unknown) =>
 const RAW_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const RAW_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 const ENV_URL = tidyUrl(RAW_URL)
+/** the project address (the account switcher needs it to find where Supabase keeps the session) */
+export const SUPABASE_URL = ENV_URL
 const ENV_KEY = tidyKey(RAW_KEY)
 export const CONFIG_PROBLEM = configProblem(RAW_URL, RAW_KEY)
 
@@ -176,10 +179,14 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
     document.addEventListener('visibilitychange', onShow)
     check()
     getClient().then(async (sb) => {
-      const apply = (s: Session | null) => { if (!alive.current) return; const u = toUser(s); setUser(u); setStatus(u ? 'signedIn' : 'signedOut'); void loadRole(u) }
+      const apply = (s: Session | null) => {
+        if (!alive.current) return; const u = toUser(s); setUser(u); setStatus(u ? 'signedIn' : 'signedOut'); void loadRole(u)
+        // remember every account signed in here, with its newest session, for the account switcher (accounts.ts)
+        if (s && u) rememberAccount({ id: u.id, email: u.email, name: u.name, demo: !!u.demo, session: s })
+      }
       unsub = sb.auth.onAuthStateChange((e, s) => { if (e === 'PASSWORD_RECOVERY') setRecovery(true); apply(s) }).data.subscription.unsubscribe
       const { data } = await sb.auth.getSession()
-      apply(data.session); cleanUrl()
+      apply(data.session); cleanUrl(); afterSwitch(!!data.session)
     }).catch(() => { if (alive.current) { setStatus('signedOut'); setOnline(false) } })
     return () => { alive.current = false; unsub?.(); if (retry) window.clearInterval(retry); document.removeEventListener('visibilitychange', onShow) }
   }, [enabled, loadRole])
@@ -222,6 +229,7 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
     updatePassword: (password) => guard(async (sb) => { const r = authResult((await sb.auth.updateUser({ password })).error); if (r === 'ok') setRecovery(false); return r }),
     signOut: async () => {
       // sign out everywhere; if the service cannot be reached, at least forget the session on this device
+      if (user) forgetAccount(user.id) // a logged-out account leaves the switcher too
       try { const sb = await getClient(); const { error } = await sb.auth.signOut(); if (error) await sb.auth.signOut({ scope: 'local' }) } catch { try { const sb = await getClient(); await sb.auth.signOut({ scope: 'local' }) } catch { /* nothing stored */ } }
       setUser(null); setAdmin(false); setStatus(enabled ? 'signedOut' : 'off')
     },
@@ -230,6 +238,7 @@ export function AuthProvider({ children, enabled = isConfigured(ENV_URL, ENV_KEY
         const sb = await getClient()
         const { error } = await sb.rpc('delete_my_account')
         if (error) return false
+        if (user) forgetAccount(user.id)
         await sb.auth.signOut({ scope: 'local' }); setUser(null); setAdmin(false); setStatus('signedOut'); return true
       } catch { return false }
     },

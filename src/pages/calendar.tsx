@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink } from '../store'
 import { useMatch } from '../matchData'
-import { useTheme } from '../theme'
+import { weekStartFor } from '../theme'
 import { localDay } from '../domain/match/logic'
 import { KINDS_FOR, calendarEvents, monthGrid, toIcs, type CalEvent, type EventKind } from '../domain/match/calendar'
 import { Icon, type IconName } from '../components/icons'
 import { Empty, Page, useGate, useNames } from './match'
 import { bookedInterviews } from '../chatStore'
+import { useRemoteInterviews } from '../shared'
 
 /**
  * The calendar (owner, Oct 2026): a month with each appointment as a coloured label (icon + words, never colour alone), the
@@ -42,19 +43,21 @@ export function useEventTitle() {
 export function CalendarPage() {
   const { t, lang } = useI18n()
   const { st, now, limitNow, agency, mode } = useMatch()
-  const { weekStart } = useTheme()
+  const weekStart = weekStartFor(lang)
   const title = useEventTitle()
   const today = localDay(new Date(now).toISOString())
   const [ym, setYm] = useState(() => ymOf(today))
   const [sel, setSel] = useState(today)
+  const remoteIv = useRemoteInterviews(mode === 'remote') // signed in: interviews booked in the shared chat
   const gate = useGate('calendar')
   if (gate) return <Page title={t('m.cal.title')}>{gate}</Page>
   if (!st.role && !agency) return <Page title={t('m.cal.title')}><Empty icon="bell" text={t('m.profile.none')} to="choose-role" action={t('hero.cta')} /></Page>
 
   // the local demo has no administrators: the agency's view would show the sample case to everyone, so follow the role there
-  // v2 (Nov 2026): interviews booked in the chat (kept on this device in the prototype)
+  // v2 (Nov 2026): interviews booked in the chat (the database when signed in; this device in the local demo)
+  const booked = mode === 'remote' ? remoteIv.map((x) => ({ ...x, postId: st.acceptances.find((a) => a.id === x.accId)?.postId ?? '' })) : bookedInterviews()
   const events = [...calendarEvents(st, agency && mode !== 'local', limitNow),
-    ...bookedInterviews().map((x): CalEvent => ({ id: `iv:${x.accId}`, day: x.at.slice(0, 10), kind: 'interview', what: x.at.slice(11, 16), postId: x.postId, to: `chat?acc=${x.accId}` }))]
+    ...booked.map((x): CalEvent => ({ id: `iv:${x.accId}`, day: x.at.slice(0, 10), kind: 'interview', what: x.at.slice(11, 16), postId: x.postId, to: `chat?acc=${x.accId}` }))]
   const byDay = events.reduce<Record<string, CalEvent[]>>((m, e) => ({ ...m, [e.day]: [...(m[e.day] ?? []), e] }), {})
   const weeks = monthGrid(ym.y, ym.m, weekStart)
   const fmt = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale(lang), o)

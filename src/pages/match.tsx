@@ -191,7 +191,7 @@ export function Req() {
   return <span className="font-normal text-muted"> ({t('m.req')})</span>
 }
 /** nothing to show yet: say why and offer the next step, so no page is a dead end */
-export function Empty({ icon, text, to, action, onAction }: { icon: 'bell' | 'pin' | 'posts'; text: string; to?: string; action?: string; onAction?: () => void }) {
+export function Empty({ icon, text, to, action, onAction }: { icon: 'bell' | 'pin' | 'posts' | 'chat'; text: string; to?: string; action?: string; onAction?: () => void }) {
   return (
     <div className="glass-card p-5 flex flex-col items-center text-center gap-3 !py-8">
       <span className="w-12 h-12 rounded-2xl bg-brand text-brandfg grid place-items-center"><Icon name={icon} size={22} /></span>
@@ -827,7 +827,7 @@ export function PreparePage() {
 }
 export function SettingsPage() {
   const { t, lang, setLang } = useI18n()
-  const { theme, toggle, accent, setAccent, weekStart, setWeekStart, liteMode, setLiteMode, lite, liteByAuto } = useTheme()
+  const { theme, toggle, accent, setAccent, liteMode, setLiteMode, lite, liteByAuto } = useTheme()
   const [accentMsg, setAccentMsg] = useState('')
   const { reset, mode } = useMatch()
   const [done, setDone] = useState(false)
@@ -846,14 +846,7 @@ export function SettingsPage() {
             <span aria-hidden className={`w-7 h-7 rounded-md swatch-${a}`} />{t(`m.accent.${a}` as never)}</button>))}</div>
           <p id="accent-hint" className="text-xs text-muted mt-1">{t('m.settings.accent.d')}</p>
           <p role="status" className="text-sm font-medium text-primary mt-1">{accentMsg}</p>
-          {/* a small preview in the chosen colour (decoration; the whole site changes with it) */}
-          <div aria-hidden className="mt-2 rounded-xl border border-dashed border-line p-3 flex flex-wrap items-center gap-3" style={{ background: 'rgb(var(--page))' }}>
-            <span className="w-full text-xs text-muted">{t('m.settings.preview.label')}</span>
-            <span className="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium bg-primary text-onprimary pointer-events-none select-none">{t('m.settings.preview.btn')}</span>
-            <span className="chip bg-brand text-brandfg border-primary/40">{t('m.settings.preview.chip')}</span>
-            <span className="flex-1 min-w-[80px] h-2 rounded-full bg-surface3 overflow-hidden"><span className="block h-full w-2/3 bg-primary rounded-full" /></span>
-          </div></fieldset>
-        <fieldset><legend className="label">{t('m.settings.week')}</legend><div className="flex gap-2">{([0, 1] as const).map((w) => <button key={w} type="button" aria-pressed={weekStart === w} onClick={() => setWeekStart(w)} className={`min-h-[44px] px-4 rounded-lg border ${weekStart === w ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(w === 0 ? 'm.settings.week.sun' : 'm.settings.week.mon')}</button>)}</div></fieldset>
+          </fieldset>
       </section>
       <section className="card space-y-4" aria-label={t('m.settings.other')}>
         {/* the home hero's moving lines (WCAG 2.2.2: a way to stop them; owner asked for no button on the hero itself) */}
@@ -863,7 +856,6 @@ export function SettingsPage() {
         <fieldset aria-describedby="lite-hint"><legend className="label">{t('m.settings.lite')}</legend><div className="flex flex-wrap gap-2">{(['auto', 'on', 'off'] as const).map((m) => <button key={m} type="button" aria-pressed={liteMode === m} onClick={() => setLiteMode(m)} className={`min-h-[44px] px-4 rounded-lg border ${liteMode === m ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{t(m === 'auto' ? 'm.settings.lite.auto' : m === 'on' ? 'm.settings.on' : 'm.settings.off')}</button>)}</div>
           <p id="lite-hint" className="text-xs text-muted mt-1">{t('m.settings.lite.d')}</p>
           <p role="status" className="text-sm mt-1 inline-flex items-center gap-1.5"><Icon name="gauge" size={15} className="text-primary" />{t('m.settings.lite.now', { s: t(lite ? 'm.settings.lite.isOn' : 'm.settings.lite.isOff') })}{liteByAuto && ` · ${t('m.settings.lite.byAuto')}`}</p></fieldset>
-        <fieldset className="border-t border-line pt-3"><legend className="label">{t('m.clock.title')}</legend><ClockControls /></fieldset>
         {mode === 'local' && <div className="border-t border-line pt-3 space-y-2"><p className="text-sm text-muted">{t('m.settings.reset.d')}</p>
           <button type="button" className="btn-ghost" onClick={async () => { if (await ask(t('m.settings.reset.d'), { yes: t('m.settings.reset'), danger: true })) { reset(); setDone(true) } }}>{t('m.settings.reset')}</button>
           <p role="status" className="text-sm">{done && t('m.settings.resetDone')}</p></div>}

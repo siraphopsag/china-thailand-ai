@@ -3,7 +3,7 @@ import { useI18n } from '../i18n'
 import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { getClient, useAuth } from '../auth'
-import { useTheme } from '../theme'
+import { weekStartFor } from '../theme'
 import { localDay } from '../domain/match/logic'
 import { dbProblem } from '../domain/match/remote'
 import { METRICS, RANGES, STAGES, caseStages, change, heatWeeks, parseDaily, periods, toCsv, total, type DayRow, type Metric, type Range } from '../domain/match/analytics'
@@ -37,7 +37,7 @@ export function AnalyticsPage() {
   const { t, lang } = useI18n()
   const { st, now, mode } = useMatch()
   const { isAdmin } = useAuth()
-  const { weekStart } = useTheme()
+  const weekStart = weekStartFor(lang)
   const [range, setRange] = useState<Range>(30)
   const [metric, setMetric] = useState<Metric>('visits')
   const [rows, setRows] = useState<DayRow[] | null>(null)

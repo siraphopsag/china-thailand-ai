@@ -373,9 +373,9 @@ describe('reviewed shell and pages', () => {
   })
   it('menu order: home, my pins / my posts by role, board, notifications, calendar, prepare, settings, help, back office (admin only), profile last', () => {
     const keys = (r: 'seeker' | 'employer' | null, a: boolean) => sideItems(r, a).map((i) => i.key)
-    expect(keys(null, false)).toEqual(['m.home', 'm.board', 'm.notif', 'm.cal', 'm.nav.contract', 'm.nav.sos', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
-    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.board', 'm.notif', 'm.cal', 'm.nav.contract', 'm.nav.sos', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
-    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.board', 'm.notif', 'm.cal', 'm.nav.contract', 'm.nav.sos', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.admin', 'm.an.nav', 'm.profile'])
+    expect(keys(null, false)).toEqual(['m.home', 'm.board', 'm.notif', 'm.nav.chats', 'm.cal', 'm.nav.contract', 'm.nav.sos', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
+    expect(keys('seeker', false)).toEqual(['m.home', 'm.pins', 'm.board', 'm.notif', 'm.nav.chats', 'm.cal', 'm.nav.contract', 'm.nav.sos', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.profile'])
+    expect(keys('employer', true)).toEqual(['m.home', 'm.posts', 'm.board', 'm.notif', 'm.nav.chats', 'm.cal', 'm.nav.contract', 'm.nav.sos', 'm.prepare', 'm.settings', 'm.help', 'm.member', 'm.admin', 'm.an.nav', 'm.profile'])
     for (const r of [null, 'seeker', 'employer'] as const) for (const i of sideItems(r, true)) expect(ROUTES.has(i.to), i.to).toBe(true)
     expect(src('./components/sidenav.tsx')).not.toMatch(/to: '(start|interview|dashboard|plan|documents|jobs|employer|review)'/)
   })

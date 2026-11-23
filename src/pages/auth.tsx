@@ -6,6 +6,8 @@ import { Icon, type IconName } from '../components/icons'
 import { Warn } from '../components/ui'
 import { GoogleIdButton, takeGisReturn } from '../components/google-signin'
 import { useFieldError, type FieldError } from './match'
+import { useAccounts } from '../accounts'
+import { AccountList } from '../components/sidenav'
 
 /*
  * Sign-in pages (owner, Oct 2026, after a reference he liked: "Welcome back!", e-mail and password with a show/hide eye,
@@ -142,6 +144,7 @@ const errText = (r: AuthResult): 'm.lg.err.invalid' | 'm.lg.err.unconfirmed' | '
 export function LoginPage() {
   const { t } = useI18n()
   const { status, online, signInEmail } = useAuth()
+  const saved = useAccounts() // accounts signed in on this device before: one tap to go back in
   const next = useNext()
   const [email, setEmail] = useState(''), [pw, setPw] = useState('')
   const [busy, setBusy] = useState(false), [err, setErr] = useState<AuthResult | null>(null)
@@ -161,8 +164,11 @@ export function LoginPage() {
   return (
     <AuthShell title={t('m.lg.title')} sub={t('m.lg.sub')}>
       {status === 'off' || online === false ? <Unavailable /> : (<>
+        {saved.length > 0 && <div className="rounded-2xl border border-line p-1.5"><p className="px-3 pt-1.5 text-sm font-semibold">{t('ac2.saved')}</p>
+          <AccountList accounts={saved} item="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2.5 min-h-[44px] hover:bg-surface3 text-sm" title={false} /></div>}
         <form className="space-y-4" onSubmit={submit} noValidate>
-          <Field id="lg-email" label={t('m.lg.email')} icon="mail" type="email" autoComplete="email" value={email} onChange={setEmail} fe={fe} />
+          {/* "username": the browser's password manager offers the accounts it saved (owner, 23 Nov 2026) */}
+          <Field id="lg-email" label={t('m.lg.email')} icon="mail" type="email" autoComplete="username" value={email} onChange={setEmail} fe={fe} />
           <Field id="lg-pw" label={t('m.lg.password')} icon="lock" type="password" autoComplete="current-password" value={pw} onChange={setPw} fe={fe} reveal />
           <div className="flex justify-end -mt-2"><NavLink to="forgot" className="text-sm font-medium text-primary underline-offset-4 hover:underline min-h-[24px] inline-flex items-center">{t('m.lg.forgot')}</NavLink></div>
           <div role="status">{(err || googleErr) && <p className="text-sm text-danger-fg flex items-center gap-1.5"><Icon name="alert" size={15} />{t(err ? errText(err) : 'm.lg.err.google')}</p>}</div>

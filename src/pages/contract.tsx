@@ -3,7 +3,9 @@
 //   2. check the worker's passport against the record (domain/match/mrz.ts)
 //   3. optionally send it to a partner law firm in the country of work (sample firms in the prototype)
 //   4. sign on screen (bound to a fingerprint of the text) or print and sign on paper (domain/match/sign.ts)
-// The draft is in Thai and Chinese side by side. Work in progress is kept on this device (contractStore.ts). Not legal advice.
+// The draft is in Thai and Chinese side by side. Work in progress is shared by both sides of a real case through the database when
+// signed in (shared.ts, SQL 0014: each signs on their own device and sees the other's signature at once); the sample and the local
+// demo keep it on this device (contractStore.ts). Not legal advice.
 import { useEffect, useMemo, useState } from 'react'
 import { tr, type Lang } from '../i18n/core'
 import { useI18n } from '../i18n'
@@ -15,7 +17,8 @@ import { addSignature, reviewNotes, sha256, signBlock, signStatus, type Review, 
 import { minMonthlyWage } from '../domain/match/minwage'
 import { localDay } from '../domain/match/logic'
 import { ME, MY_EMPLOYER, type Country, type Currency, type Salary } from '../domain/match/types'
-import { clearContract, loadContract, saveContract } from '../contractStore'
+import { clearContract, cleanContract, loadContract, saveContract, type ContractSave } from '../contractStore'
+import { isUuid, useRemoteContract } from '../shared'
 import { Icon, type IconName } from '../components/icons'
 import { Warn } from '../components/ui'
 import { Page, useNames } from './match'
@@ -40,7 +43,7 @@ const emptyRecord = (country: Country): IdRecord => ({ surname: '', given: '', b
 export function ContractPage() {
   const { t, lang } = useI18n()
   const N = useNames()
-  const { st, now } = useMatch()
+  const { st, now, mode } = useMatch()
   const { status, online } = useAuth()
   const today = localDay(new Date(now).toISOString())
   const [ai, setAi] = useState<AiResponse<AiCheck> | 'busy' | null>(null)
@@ -59,21 +62,26 @@ export function ContractPage() {
   }, [st.cases, st.posts])
   const chosen = choices.find((c) => c.caseId === caseId) ?? choices[choices.length - 1]
   const post = chosen.post, key = chosen.caseId, isSample = key === 'sample'
+  const remote = mode === 'remote' && isUuid(key)
+  const doc = useRemoteContract<ContractSave & Record<string, unknown>>(remote ? key : null)
 
   // everything the four steps work on, kept on this device per case
   const fresh = () => {
-    const s = loadContract(key)
+    const s = remote ? cleanContract(doc.data) : loadContract(key)
     return { terms: s.terms ?? draftFromPost(post), checked: s.checked ?? false, record: s.record ?? (isSample ? SAMPLE_RECORD : emptyRecord(post.country)),
       mrz: s.mrz ?? '', idChecked: !!s.mrz && !!s.record, review: s.review ?? null, sign: s.sign ?? null }
   }
   const [w, setW] = useState(fresh)
   const [loaded, setLoaded] = useState(key)
   if (loaded !== key) { setLoaded(key); setW(fresh()); setAi(null) } // another case: load its own work
+  // shared contract: what either side saved (a signature, a changed clause) replaces the screen's copy as it arrives
+  const [seenVer, setSeenVer] = useState(0)
+  if (remote && doc.ver !== seenVer) { setSeenVer(doc.ver); setW(fresh()) }
   const [step, setStep] = useState<Step>('check')
   const save = (patch: Partial<typeof w>) => {
     setW((x) => ({ ...x, ...patch }))
     const { idChecked: _i, ...rest } = patch; void _i
-    saveContract(key, rest as never)
+    if (remote) doc.save(rest as never); else saveContract(key, rest as never)
   }
   const setTerms = (terms: ContractTerms) => { save({ terms, checked: false }); setAi(null) }
   const set = (patch: Partial<ContractTerms>) => setTerms({ ...w.terms, ...patch })
@@ -109,7 +117,7 @@ export function ContractPage() {
   const onSign = (side: Side, nm: string, img: string) => { const s = addSignature(w.sign, side, { at: new Date(now).toISOString(), name: nm, img }, hash); if (s) save({ sign: s }) }
   const onMode = (mode: 'online' | 'paper') => save({ sign: { ...(w.sign && w.sign.hash === hash ? w.sign : { hash }), mode } as SignState })
   const onPaper = (f: File) => save({ sign: { mode: 'paper', hash, paper: { name: f.name.slice(0, 80), size: f.size, at: new Date(now).toISOString() } } })
-  const restart = () => { clearContract(key); setW({ terms: draftFromPost(post), checked: false, record: isSample ? SAMPLE_RECORD : emptyRecord(post.country), mrz: '', idChecked: false, review: null, sign: null }); setAi(null); setStep('check') }
+  const restart = () => { if (remote) doc.clear(); else clearContract(key); setW({ terms: draftFromPost(post), checked: false, record: isSample ? SAMPLE_RECORD : emptyRecord(post.country), mrz: '', idChecked: false, review: null, sign: null }); setAi(null); setStep('check') }
 
   const sStatus = signStatus(w.sign, hash)
   const state: Record<Step, 'done' | 'warn' | 'todo'> = {
@@ -127,6 +135,8 @@ export function ContractPage() {
   return (
     <Page title={t('c2.title')} sub={t('c2.sub')}>
       <Warn tone="info">{t('c2.note')}</Warn>
+      {remote && doc.problem && <Warn>{t(doc.problem === 'dbOld' ? 'sh.dbOld' : 'sh.network')}</Warn>}
+      {remote && !doc.problem && <p className="text-xs text-muted flex items-center gap-1.5" role="status"><Icon name={doc.data ? 'users' : 'clock'} size={13} />{t(doc.data ? 'sh.contract.shared' : 'c.loading')}</p>}
       {/* the four steps of the middle system, each with where it stands */}
       <nav aria-label={t('mid.steps')} className="mid-steps">
         <ol className="grid grid-cols-2 md:grid-cols-4 gap-2">{STEPS.map((s, i) => (

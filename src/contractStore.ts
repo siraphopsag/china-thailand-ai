@@ -1,6 +1,7 @@
 // What the middle system remembers per case on this device (v2 model, owner Nov 2026): the contract terms being worked on, the
-// identity record and passport lines, the partner review and the signatures. Prototype only: kept in the browser
-// (localStorage 'call.contract.v1'), read back item by item, and cleared with "start again". Nothing is sent anywhere.
+// identity record and passport lines, the partner review and the signatures. In the local demo and the offline kit it is kept in
+// the browser (localStorage 'call.contract.v1'), read back item by item, and cleared with "start again"; signed in, the contract
+// page keeps the same record in the database for both sides of the case (shared.ts, SQL 0014).
 import type { ContractTerms } from './domain/match/contract'
 import type { IdRecord } from './domain/match/mrz'
 import type { Review, SignState } from './domain/match/sign'
@@ -19,8 +20,9 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 function readAll(): Record<string, ContractSave> {
   try { const v: unknown = JSON.parse(localStorage.getItem(KEY) ?? '{}'); return isObj(v) ? (v as Record<string, ContractSave>) : {} } catch { return {} }
 }
-export function loadContract(id: string): ContractSave {
-  const v = readAll()[id]
+export const loadContract = (id: string): ContractSave => cleanContract(readAll()[id])
+/** only well-formed parts are kept (what this device stored, or what the database returned) */
+export function cleanContract(v: unknown): ContractSave {
   if (!isObj(v)) return {}
   const out: ContractSave = {}
   if (isObj(v.terms) && typeof v.terms.pay === 'number' && typeof v.terms.daysOff === 'number') out.terms = v.terms as unknown as ContractTerms

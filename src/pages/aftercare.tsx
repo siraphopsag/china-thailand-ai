@@ -24,13 +24,13 @@ export function arrivalDay(c: Case): string | null {
 }
 const flagsOf = (a: Aftercare) => a.checkins.flatMap(checkinFlags)
 
-export function AftercarePanel({ c, caseKey, employerId, country, province, today, view, team, atNow }: {
-  c: Case; caseKey: string; employerId: string; country: Country; province: string; today: string
+export function AftercarePanel({ c, caseKey, seekerId, employerId, country, province, today, view, team, atNow }: {
+  c: Case; caseKey: string; seekerId?: string; employerId: string; country: Country; province: string; today: string
   view: 'seeker' | 'employer'; team: boolean; atNow: string
 }) {
   const { t } = useI18n()
   const N = useNames()
-  const [a, save] = useAftercare(caseKey)
+  const [a, save, problem] = useAftercare(caseKey, seekerId)
   const [sent, setSent] = useState(false)
   const arrival = arrivalDay(c)
   if (!arrival) return null
@@ -41,6 +41,7 @@ export function AftercarePanel({ c, caseKey, employerId, country, province, toda
     <section className="card !p-4 space-y-4 ac-panel" aria-labelledby="ac-h">
       <div><h2 id="ac-h" className="h2 flex items-center gap-2"><Icon name="shield" size={18} className="text-primary" />{t('ac.h')}</h2>
         <p className="text-xs text-muted mt-1">{t(view === 'seeker' ? 'ac.sub.seeker' : 'ac.sub.employer')}</p></div>
+      {problem && <Warn>{t(problem === 'dbOld' ? 'sh.dbOld' : 'sh.network')}</Warn>}
       {/* the three check-ins as a timeline (not for the employer: even a missed check-in is the worker's business) */}
       {view === 'seeker' && <ol className="grid grid-cols-3 gap-2" aria-label={t('ac.timeline')}>{states.map((s) => (
         <li key={s.day} className={`ac-node ac-${s.state}`}>
