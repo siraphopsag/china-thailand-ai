@@ -14,6 +14,7 @@ export const v2f = {
   'od.title': ['ตลาดแรงงานจากแหล่งข้อมูลภายนอก', '外部来源的劳动力市场', 'The job market from outside sources'],
   'od.meta': ['อัปเดตอัตโนมัติสัปดาห์ละครั้ง · ตรวจล่าสุด {d}', '每周自动更新 · 最近检查 {d}', 'Updated automatically every week · last checked {d}'],
   'od.snapshot': ['ตอนนี้อ่านแหล่งข้อมูลไม่ได้ จึงแสดงชุดที่บันทึกไว้เมื่อ {d}', '暂时无法读取数据来源，显示 {d} 保存的数据', 'The sources cannot be read right now, so the copy saved on {d} is shown.'],
+  'od.thSaved': ['ตัวเลขชุดนี้ดึงจากกรมการจัดหางานเมื่อ {d}', '这组数字于 {d} 取自泰国就业厅', 'These figures were taken from the Department of Employment on {d}.'],
   'od.loading': ['กำลังโหลดข้อมูลภายนอก…', '正在加载外部数据…', 'Loading outside data…'],
   'od.th.h': ['ไทย · ข้อมูลกรมการจัดหางาน เดือน {m}', '泰国 · 泰国就业厅数据，{m}', 'Thailand · Department of Employment, {m}'],
   'od.vac': ['ตำแหน่งงานว่าง', '空缺职位', 'Job vacancies'],

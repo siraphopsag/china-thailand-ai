@@ -14,13 +14,15 @@ import { AGENCY_BOARDS, SOURCES, change, cleanExternal, type External, type WbKe
 import snapshot from '../data/marketSnapshot.json'
 
 const SAVED = cleanExternal(snapshot)
-type Loaded = { data: External | null; saved: boolean; loading: boolean }
+/** saved: nothing could be read, the whole copy is shown · thSaved: the Thai figures come from the copy (data.go.th turns away
+ * requests from cloud servers, so the copy is refreshed with scripts/market-snapshot.ts from a computer in Thailand) */
+type Loaded = { data: External | null; saved: boolean; thSaved: boolean; loading: boolean }
 let cache: Loaded | null = null
 const offline = () => import.meta.env.VITE_DEMO_MIRROR === '1' || import.meta.env.MODE === 'test'
 
 /** the outside figures: the server's weekly answer, else the copy saved in the website */
 export function useExternal(on = true): Loaded {
-  const [s, setS] = useState<Loaded>(() => cache ?? (offline() ? { data: SAVED, saved: true, loading: false } : { data: null, saved: false, loading: true }))
+  const [s, setS] = useState<Loaded>(() => cache ?? (offline() ? { data: SAVED, saved: true, thSaved: true, loading: false } : { data: null, saved: false, thSaved: false, loading: true }))
   useEffect(() => {
     if (!on || cache || offline()) return
     let live = true
@@ -28,7 +30,7 @@ export function useExternal(on = true): Loaded {
       const data = cleanExternal(j)
       // a partial answer (one source down) is completed from the saved copy
       const full: External | null = data ? { ...data, th: data.th ?? SAVED?.th ?? null, countries: data.countries ?? SAVED?.countries ?? null } : SAVED
-      cache = { data: full, saved: !data, loading: false }
+      cache = { data: full, saved: !data, thSaved: !data?.th && !!SAVED?.th, loading: false }
       if (live) setS(cache)
     })
     return () => { live = false }
@@ -69,7 +71,7 @@ export function ExternalPanel({ scope, province, onScope, onAll }: { scope: Scop
   const { t } = useI18n()
   const N = useNames()
   const D = useDates()
-  const { data, saved, loading } = useExternal()
+  const { data, saved, thSaved, loading } = useExternal()
   if (loading) return <section className="glass-card p-4 min-w-0"><p className="text-sm text-muted" role="status">{t('od.loading')}</p></section>
   const th = data?.th, cs = data?.countries
   const prov = province && province.startsWith('TH-') ? province : null
@@ -100,6 +102,7 @@ export function ExternalPanel({ scope, province, onScope, onAll }: { scope: Scop
       {th && scope !== 'CN' && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">{t('od.th.h', { m: D.month(v!.now.month) })}</h3>
+          {thSaved && !saved && SAVED && <p className="text-xs text-muted -mt-2">{t('od.thSaved', { d: D.day(SAVED.checkedAt) })}</p>}
           <dl className="grid grid-cols-2 gap-2">
             {tiles.map(([k, now, before]) => {
               const n = prov ? now.byProvince[prov] ?? 0 : now.total

@@ -5,6 +5,8 @@
 //    (กรมการจัดหางาน, published on data.go.th under its "Open Data Common" licence and conditions of use; the source is named).
 //  · Thailand and China, national, yearly: unemployment, youth unemployment, the labour force and where people work (World Bank
 //    World Development Indicators, modelled ILO estimates, CC BY 4.0).
+// data.go.th turns away requests from cloud servers (403 from Vercel, 24 Nov 2026), so the Thai figures shown are the copy saved in
+// the website, refreshed from a computer in Thailand with scripts/market-snapshot.ts; the World Bank is read live every week.
 // Job posts of government agencies are not copied: their sites offer no open feed, so the page links to them instead.
 // Pure: no React, no storage, no other modules (the server function api/market.ts uses this file too).
 
