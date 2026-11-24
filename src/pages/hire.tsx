@@ -22,6 +22,7 @@ import { Icon } from '../components/icons'
 import { MoneyInput } from '../components/money-input'
 import { Warn } from '../components/ui'
 import { Empty, IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PanelTabs, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
+import { VerifyOverview } from './dataMap'
 import { VerifyCard } from './case'
 import { useFit } from '../components/pager'
 import { postToInput } from '../domain/match/remote'
@@ -299,7 +300,7 @@ export function HirePage() {
         </form>
       )}
       </>)}
-      {side === 'verify' && <VerifyCard />}
+      {side === 'verify' && <><VerifyCard /><VerifyOverview side="emp" /></>}
       {side === 'mine' && (
       <section className="space-y-2" aria-labelledby="myposts-h">
         <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="myposts-h" className="h2">{t('m.posts')}</h2><NavLink to="board" className="text-sm font-medium text-primary inline-flex items-center gap-1 min-h-[24px]">{t('m.board')}<Icon name="next" size={14} /></NavLink></div>

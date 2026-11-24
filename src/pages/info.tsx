@@ -6,6 +6,7 @@ import { Disclaimer, Disclosure, PageHead, SourceCard, TabBar, Warn } from '../c
 import { Icon } from '../components/icons'
 import { situations, situationPoints, terms, type Term } from '../data/culture'
 import { SayButton } from '../components/speak'
+import { DataMap, VerifyOverview } from './dataMap'
 import { regText, regulations } from '../data/regulations'
 import { tk, useI18n } from '../i18n'
 
@@ -81,6 +82,7 @@ export function PrivacyPage() {
   const { t } = useI18n()
   return (
     <div className="space-y-5 max-w-3xl"><PageHead title={t('pri.title')} sub={t('pri.sub')} />
+      <DataMap /><VerifyOverview />
       {/* PDPA notice (owner, 10 Oct 2026): each part a heading; the points of a part one per line */}
       <div className="card space-y-5 text-sm">{PRI.map((k, i) => (
         <section key={k} aria-labelledby={`pri-${k}`} className="space-y-1.5">

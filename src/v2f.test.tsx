@@ -10,6 +10,8 @@ import { pickVoice } from './components/speak'
 import { AGENCY_BOARDS, DOE_PROVINCE, ISIC, SOURCES, change, cleanExternal, csvLine, newestCsv, parseDoeIndustries, parseDoeProvinces, parseWorldBank } from './domain/openData'
 import snapshot from './data/marketSnapshot.json'
 import { v2f } from './locales/v2f'
+import { v2g } from './locales/v2g'
+import { DATA_ROWS } from './pages/dataMap'
 import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
 import { messages } from './locales/index'
 import { provinces } from './locales/provinces'
@@ -128,6 +130,17 @@ describe('E. the AI keeps answering when Google is busy', () => {
     expect(GEMINI_MODELS).not.toContain('gemini-2.5-flash') // retired by Google
     const api = src('../api/ai.ts')
     expect(api).toContain('pickGeminiModels(await offeredModels(apiKey)'); expect(api).toContain('if (i % 2 === 1) await pause(1500)')
+  })
+})
+
+describe('F. all the data on one page', () => {
+  it('every kind of stored data has what / why / who / how long; the contract says the full passport lines are kept; both transfer laws are named', () => {
+    for (const r of DATA_ROWS) for (const c of ['what', 'why', 'who', 'keep']) expect(v2g).toHaveProperty([`dm2.${r}.${c}`])
+    expect(v2g['dm2.contract.what'][2]).toContain('full passport lines')
+    expect(v2g['dm2.th'][2]).toContain('28'); expect(v2g['dm2.cn'][2]).toContain('38')
+    expect(src('./pages/info.tsx')).toContain('<DataMap /><VerifyOverview />')
+    expect(src('./pages/hire.tsx')).toContain('<VerifyOverview side="emp" />'); expect(src('./pages/match.tsx')).toContain('<VerifyOverview side="seek" />')
+    for (const [k, [th, zh, en]] of Object.entries(v2g)) { expect(th, k).toMatch(/[฀-๿]/); expect(zh, k).toMatch(/[一-鿿]/); expect(en, k).not.toMatch(/[฀-๿一-鿿]/); expect(messages[k as keyof typeof messages]).toEqual([th, zh, en]) }
   })
 })
 

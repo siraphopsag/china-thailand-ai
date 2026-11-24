@@ -22,6 +22,7 @@ import { motionOff, setMotionOff } from '../components/ui/background-paths'
 import { NeedLogin } from './auth'
 import { VerifyCard } from './case'
 import { SeekerVerifyCard } from './seeker-verify'
+import { VerifyOverview } from './dataMap'
 import { currentStep, stepsDone } from '../domain/match/cases'
 import { SimTools } from './simtools'
 import { PREP, dayPick, prepSeen, setAskPrefill, type PrepKey } from '../prepare'
@@ -673,6 +674,7 @@ export function MePage() {
       </div>
       {st.role === 'employer' && <VerifyCard />}
       {st.role === 'seeker' && <SeekerVerifyCard />}
+      {st.role === 'seeker' && <VerifyOverview side="seek" />}
       </div>
     </Page>
   )

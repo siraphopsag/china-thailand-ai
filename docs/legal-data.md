@@ -110,3 +110,11 @@ signed-in person's question allowance.
 - Thailand and China, yearly, national: World Bank WDI (modelled ILO estimates), CC BY 4.0 — unemployment, youth unemployment, labour force, employment by sector.
 - Government job boards are linked, not copied: ไทยมีงานทำ (DOE), 中国公共招聘网 (MOHRSS), 国家大学生就业服务平台.
 - Totals only; no personal data is read or sent. The server reads the sources at most about once a week (Vercel cache).
+
+## Data on one page (added 24 Nov 2026, `src/pages/dataMap.tsx`, texts `src/locales/v2g.ts`) — for the advisor to confirm
+
+- The privacy notice (`pri.*`) did not yet mention the records shared since SQL 0014 (chat, contracts with the full passport lines, aftercare). The new table does; the numbered notice below it should be brought into line.
+- Transfers: PDPA ss. 28–29 for users in Thailand; PIPL arts. 38–39 for users in China. The page says a route under art. 38 and separate consent under art. 39 must be in place before opening in China; the sign-up flow does not collect that separate consent today.
+- Retention: `purge_expired()` deletes a post 182 days after release once its worker has arrived, and the case, contract, chat and complaints go with it. Whether complaints and contracts should be kept longer is an open question.
+- Job-seeker verification is written by the person's own account (column grants in 0014); the team does not confirm it as it does for employers.
+- 李明's demo job was changed to Chinese-speaking guest relations (24 Nov). The closed-jobs patterns do not match it, but the patterns only look for words (they miss "tour coordinator" too), so the 2020 notification itself should be checked.
