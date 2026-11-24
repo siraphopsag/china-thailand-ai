@@ -20,7 +20,7 @@ export { HIDE_AFTER }
  *  gambling; "pig-butchering" and phone-fraud jobs) — Thai, Chinese and English */
 const SCAM_WORK = /คาสิโน|บาคาร่า|พนันออนไลน์|เว็บพนัน|สล็อตออนไลน์|แก๊งคอลเซ็นเตอร์|หลอกลงทุน|博彩|菠菜|赌场|网赌|杀猪盘|电诈|跑分|\bcasino\b|\bbaccarat\b|\bonline gambling\b|\bpig[- ]butcher|\bscam compound/i
 /** the lure of fake job ads: big money for no experience, paid daily, "just chat online" */
-const LURE = /ไม่ต้องมีประสบการณ์.{0,20}(รายได้|เงินเดือน).{0,10}(สูง|ดี|หลักแสน)|รายได้หลักแสน|งานง่าย.{0,10}(ได้|รายได้).{0,6}(เงิน|ดี)|ทำงานแค่แชท|รับเงินรายวัน.{0,10}(สูง|หลักพัน)|高薪轻松|轻松赚钱|日结高薪|无需经验.{0,6}高薪|月入[过上]万|\beasy money\b|\bno experience\b.{0,30}\bhigh (pay|salary|income)\b|\bjust chat(ting)? online\b/i
+const LURE = /ไม่ต้องมีประสบการณ์.{0,20}(รายได้|เงินเดือน).{0,10}(สูง|ดี|หลักแสน)|รายได้หลักแสน|งานง่าย.{0,10}(ได้|รายได้).{0,6}(เงิน|ดี)|ทำงานแค่แชท|รับเงินรายวัน.{0,10}(สูง|หลักพัน)|高薪轻松|轻松赚钱|日结高薪|无需经验.{0,6}高薪|月入[过上]万|\beasy money\b|\bno experience\b.{0,30}\bhigh (pay|salary|income)\b|\bjust chat(ting)? online\b|(?:รายได้|เงินเดือน|ค่าตอบแทน).{0,6}(?:สูง|ดีมาก|หลักแสน).{0,30}ไม่(?:ต้องมี|จำกัด|ต้องใช้)ประสบการณ์|(?:高薪|高收入|高工资|月入过万).{0,15}(?:无需|不需要|不限|零)经验|(?:无需|不需要|不限|零)经验.{0,15}(?:高薪|高收入|高工资|月入过万)|(?:high|big|great)[ -]?(?:pay|salary|income).{0,30}no experience|no experience.{0,30}(?:high|big|great)[ -]?(?:pay|salary|income)/i
 
 /** letters and digits only, lower case: spacing and punctuation do not make a copy "different" */
 const norm = (s: string) => s.toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, '')

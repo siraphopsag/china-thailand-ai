@@ -43,6 +43,12 @@ export function seedState(now = Date.now()): MatchState {
         translations: { src: 'en', th: { position: 'ผู้ประสานงานคลังสินค้า', details: 'ประกาศตัวอย่างสำหรับต้นแบบ ดูแลการขนส่งข้ามพรมแดน' }, zh: { position: '仓库协调员', details: '原型示例招聘信息。负责跨境货运。' } },
         headcount: 1, employment: 'permanent', salary: { min: 18000, max: 25000, currency: 'THB' }, startDate: day(now + DAY_MS * 20),
         languages: [{ lang: 'th', level: 'conversational' }, { lang: 'zh', level: 'basic' }], education: 'secondary', benefits: ['insurance'] }),
+      // the sample case's job (24 Nov 2026): an invented Bangkok hotel looking for a Chinese-speaking guest relations officer
+      post({ id: 'post-s4', employerId: 'employer:sample-4', company: 'Sample Riverside Hotel Bangkok', position: 'Guest Relations Officer (Chinese-speaking)', industry: 'hospitality', skills: ['hospitality_management', 'thai_chinese_translation'], minYears: 1,
+        details: 'Sample post for the prototype. Looks after Chinese-speaking hotel guests at the front desk.', country: 'TH', province: 'TH-10', createdAt: iso(now - DAY_MS * 2),
+        translations: { src: 'en', th: { position: 'พนักงานลูกค้าสัมพันธ์ภาษาจีน', details: 'ประกาศตัวอย่างสำหรับต้นแบบ ดูแลแขกที่พูดภาษาจีนที่แผนกต้อนรับของโรงแรม' }, zh: { position: '中文宾客关系专员', details: '原型示例招聘：在酒店前台接待讲中文的客人。' } },
+        headcount: 1, employment: 'contract', salary: { min: 36000, max: 36000, currency: 'THB' }, startDate: day(now + DAY_MS * 30),
+        languages: [{ lang: 'zh', level: 'native' }, { lang: 'en', level: 'conversational' }], education: 'bachelor', benefits: ['insurance', 'workDocs', 'meals'] }),
     ],
     acceptances: [
       { id: 'acc-s1', postId: 'post-s1', seekerId: 'seeker-a', at: iso(now - DAY_MS * 1.1), status: 'accepted', intro: 'Sample application for the prototype.', availableFrom: day(now + DAY_MS * 30) },

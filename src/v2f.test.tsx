@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { CONTACT_RULES, hasContact, maskAfter, maskContact } from './domain/contact'
 import { newMessage } from './domain/match/chat'
+import { spamCheck } from './domain/match/spam'
 import { textProblem } from './domain/match/logic'
 import { terms } from './data/culture'
 import { pickVoice } from './components/speak'
@@ -141,6 +142,14 @@ describe('F. all the data on one page', () => {
     expect(src('./pages/info.tsx')).toContain('<DataMap /><VerifyOverview />')
     expect(src('./pages/hire.tsx')).toContain('<VerifyOverview side="emp" />'); expect(src('./pages/match.tsx')).toContain('<VerifyOverview side="seek" />')
     for (const [k, [th, zh, en]] of Object.entries(v2g)) { expect(th, k).toMatch(/[฀-๿]/); expect(zh, k).toMatch(/[一-鿿]/); expect(en, k).not.toMatch(/[฀-๿一-鿿]/); expect(messages[k as keyof typeof messages]).toEqual([th, zh, en]) }
+  })
+})
+
+describe('G. the lure of fake jobs in either word order', () => {
+  it('warns whichever comes first, in three languages; ordinary pay wording is left alone', () => {
+    const lure = (details: string) => spamCheck({ company: 'A co', position: 'x', details } as never, '2026-11-24T00:00:00Z', [], []).lure
+    for (const d of ['งานบริการลูกค้า เงินเดือนสูง ไม่ต้องมีประสบการณ์ ทำงานแถบชายแดน', '客服工作，高薪，无需经验，边境地区', 'Customer service, high salary, no experience needed']) expect(lure(d), d).toBe(true)
+    for (const d of ['เงินเดือนสูงตามประสบการณ์', '有经验者薪资高', 'No experience needed, training given']) expect(lure(d), d).toBe(false)
   })
 })
 
