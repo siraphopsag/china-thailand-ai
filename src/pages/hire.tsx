@@ -5,7 +5,7 @@ import { useMatch } from '../matchData'
 import { canPost, caseBlocksDelete, isCountry, localDay, memberActive, mustStayDomestic, postIssues, postQuota, type PostField, type PostInput, type Problem } from '../domain/match/logic'
 import { guessLang } from '../domain/match/postText'
 import { scheduleOf, stageAt, capStage } from '../domain/match/release'
-import { precheck, type LawRule, type Precheck } from '../domain/match/precheck'
+import { holdByRules, precheck, type LawRule, type Precheck } from '../domain/match/precheck'
 import { spamCheck } from '../domain/match/spam'
 import { useAuth } from '../auth'
 import { aiCheck } from '../ai/client'
@@ -35,7 +35,8 @@ import { PlanGrid } from './member'
  * that the membership package window (10 per cycle; planned price shown struck through, free in the prototype — no payment).
  * Editing (owner, Oct 2026): "Edit" on one of my posts (or hire?edit=<id>) fills the same form; saving keeps the posting date.
  * High risk (owner, Oct 2026): when the AI rates a post high risk it is saved but held — hidden, marked "awaiting review" in my
- * posts — until an administrator releases it (SQL 0012). With the basic rules only (no AI answer) nothing is held.
+ * posts — until an administrator releases it (SQL 0012). The basic rules hold a
+ * post only when fake-job wording and unusually high pay come together (owner, 24 Nov 2026), even when the AI sees no problem.
  */
 type Stage = null | 'check' | 'confirm' | 'done' | 'package' | 'joined'
 const today = (now: number) => localDay(new Date(now).toISOString())
@@ -161,7 +162,8 @@ export function HirePage() {
   const closeCheck = () => { aiRun.current++; setStage(null); if (check?.errors[0]) showProblem(check.errors[0]) }
   const aiOk = aiRes && aiRes !== 'busy' && aiRes.ok && shown ? aiRes : null
   const orbOn = aiRes === 'busy' || (aiRes !== null && aiRes.ok && !shown) // still reading, or turning green
-  const held = aiOk?.result.verdict === 'high_risk' // only an AI answer holds a post; the basic rules never do
+  const ruleHeld = !!check && holdByRules(check) // fake-job wording and unusually high pay together
+  const held = aiOk?.result.verdict === 'high_risk' || (ruleHeld && !orbOn)
   // what is saved: the AI's translations (or none — an edit without them clears the old ones) and the in-country rule
   const finalInput = (i: PostInput): PostInput => {
     const ai = aiOk?.result
@@ -329,6 +331,7 @@ export function HirePage() {
           : <p className="text-xs text-muted">{aiRes && !aiRes.ok ? t('ai.chk.fallback', { why: t(`ai.why.${aiRes.reason}` as never) }) : t('m.chk.simNote')}</p>}
         {!aiOk && !orbOn && check.errors.length === 0 && check.warnings.length === 0 && check.laws.length === 0 && <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('m.chk.ok')}</p>}
         {held && <HoldNotice />}
+        {ruleHeld && !orbOn && <p className="text-sm text-danger-fg">{t('m.hold.rule')}</p>}
         {!orbOn && check.laws.length > 0 && <LawRulesBox laws={check.laws} />}
         {!aiOk && !orbOn && check.errors.length > 0 && <div className="space-y-1.5"><p className="text-sm font-semibold text-danger-fg flex items-center gap-1.5"><Icon name="alert" size={16} />{t('m.chk.errors')}</p>
           <ul className="list-disc pl-6 text-sm space-y-1">{check.errors.map((e) => <li key={e}>{N.problem(e)}</li>)}</ul></div>}

@@ -26,6 +26,10 @@ export function lawRules(input: Pick<PostInput, 'place' | 'salary' | 'minYears' 
   return out
 }
 
+/** owner, 24 Nov 2026: a post with the wording of fake job ads AND unusually high pay for no experience is held for the team to check,
+ * with or without the AI. Both are needed: either one alone stays a warning, so ordinary posts are not held. */
+export const holdByRules = (c: Precheck): boolean => !c.errors.length && c.warnings.includes('lure') && c.laws.some((l) => l.rule === 'veryHighPay')
+
 /** skills that usually belong to each field (a post whose skills share none of these gets a gentle warning) */
 const RELATED: Record<Industry, Skill[]> = {
   manufacturing: ['mechanical_engineering', 'electrical_engineering', 'civil_engineering', 'quality_control', 'project_management'],

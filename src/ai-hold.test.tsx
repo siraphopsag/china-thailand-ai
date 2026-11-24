@@ -139,11 +139,12 @@ describe('on screen', () => {
     expect('ai.chk.ack' in ai).toBe(false)
     expect(tr('ai.hold.notice', undefined, 'en')).toContain('nobody can see it until an administrator has checked it')
   })
-  it('high risk: a notice instead of the tick, Continue is never blocked, the post is saved held; the basic rules never hold', () => {
+  it('high risk: a notice instead of the tick, Continue is never blocked, the post is saved held; the basic rules hold only on both signs together (owner, 24 Nov 2026)', () => {
     expect(html(<HoldNotice />, seedState(NOW))).toContain(T('ai.hold.notice'))
     const h = src('./pages/hire.tsx')
     expect(h).not.toContain('ai.chk.ack'); expect(h).not.toContain('setAck')
-    expect(h).toContain("const held = aiOk?.result.verdict === 'high_risk'") // aiOk: an AI answer that was shown — the rule fallback leaves it null
+    expect(h).toContain("const held = aiOk?.result.verdict === 'high_risk'") 
+    expect(h).toContain("const ruleHeld = !!check && holdByRules(check)")
     expect(h.match(/\{held && <HoldNotice \/>\}/g)?.length).toBe(2) // the check and "Post this job?"
     expect(h).toContain("...(held ? { held: true } : {})")
     expect(h).toContain(`<button type="button" className="btn-primary" onClick={() => setStage('confirm')}>`)

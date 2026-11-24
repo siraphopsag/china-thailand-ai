@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { CONTACT_RULES, hasContact, maskAfter, maskContact } from './domain/contact'
 import { newMessage } from './domain/match/chat'
+import { holdByRules, precheck } from './domain/match/precheck'
 import { spamCheck } from './domain/match/spam'
 import { textProblem } from './domain/match/logic'
 import { terms } from './data/culture'
@@ -142,6 +143,23 @@ describe('F. all the data on one page', () => {
     expect(src('./pages/info.tsx')).toContain('<DataMap /><VerifyOverview />')
     expect(src('./pages/hire.tsx')).toContain('<VerifyOverview side="emp" />'); expect(src('./pages/match.tsx')).toContain('<VerifyOverview side="seek" />')
     for (const [k, [th, zh, en]] of Object.entries(v2g)) { expect(th, k).toMatch(/[฀-๿]/); expect(zh, k).toMatch(/[一-鿿]/); expect(en, k).not.toMatch(/[฀-๿一-鿿]/); expect(messages[k as keyof typeof messages]).toEqual([th, zh, en]) }
+  })
+})
+
+describe('H. fake-job wording and unusually high pay together are held for the team', () => {
+  const run = (details: string, max: number, minYears = 0) => {
+    const i = { company: 'Sample Border Service', position: 'Customer service', industry: 'hospitality', skills: ['customer_service'], minYears, details, place: { country: 'TH', province: 'TH-63' }, headcount: 5, employment: 'contract', salary: { min: 20000, max, currency: 'THB' }, startDate: '2027-01-10', languages: [{ lang: 'zh', level: 'native' }], education: 'none', benefits: [] } as never
+    const sp = spamCheck(i, '2026-11-24T00:00:00Z', [], []), r = precheck(i, '2026-11-24T00:00:00Z')
+    return holdByRules({ ...r, errors: [...r.errors, ...sp.errors], warnings: sp.lure ? [...r.warnings, 'lure'] : r.warnings, laws: sp.errors.length ? [] : r.laws })
+  }
+  const lure = 'งานบริการลูกค้า เงินเดือนสูง ไม่ต้องมีประสบการณ์ ทำงานแถบชายแดน มีที่พักให้', plain = 'งานบริการลูกค้าของโรงแรม ทำงานเป็นกะ มีที่พักและอาหารให้'
+  it('the opening scene is held; one sign alone, or an experienced role, is not', () => {
+    expect(run(lure, 120000)).toBe(true)
+    expect([run(lure, 25000), run(plain, 120000), run(plain, 25000), run(lure, 120000, 3)]).toEqual([false, false, false, false])
+  })
+  it('the reason is shown, and the texts no longer say that only the AI holds posts', () => {
+    expect(src('./pages/hire.tsx')).toContain("t('m.hold.rule')")
+    for (const k of ['m.hold.owner', 'm.adm.held', 'm.adm.heldNote', 'm.adm.attn.reports'] as const) expect(messages[k].join(' '), k).not.toContain('AI')
   })
 })
 
