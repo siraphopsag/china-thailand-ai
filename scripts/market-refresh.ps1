@@ -1,8 +1,7 @@
 # C.A.L.L. - weekly refresh of the Thai market figures (owner, 24 Nov 2026: "set it up").
-# data.go.th turns away requests from cloud servers, so this runs on the owner's PC in Thailand once a week (Windows Task
-# Scheduler, task "CALL market data weekly"). It reads the open sources again (scripts/market-snapshot.ts) and, only when the
-# figures changed (not just the date checked), commits src/data/marketSnapshot.json alone and pushes it, so Vercel rebuilds.
-# Log: %LOCALAPPDATA%\CALL-market\refresh.log. When the site moves to main, change -Branch in the task.
+# Runs once a week on the owner PC (Windows Task Scheduler, task "CALL market data weekly"). It reads the open sources again
+# (scripts/market-snapshot.ts) and leaves changed figures in src/data/marketSnapshot.json. It never commits or pushes.
+# Log: %LOCALAPPDATA%\CALL-market\refresh.log.
 param([string]$Repo = 'C:\Users\Boss Siraphop\call-poc-jobboard', [string]$Branch = 'poc/board')
 $ErrorActionPreference = 'Continue'
 $logDir = Join-Path $env:LOCALAPPDATA 'CALL-market'
@@ -20,8 +19,5 @@ if ((Invoke-Quiet 'npx.cmd tsx scripts/market-snapshot.ts') -ne 0) { Write-Log '
 $changed = git diff -U0 -- src/data/marketSnapshot.json | Where-Object { $_ -match '^[+-](?![+-])' -and $_ -notmatch 'checkedAt' }
 if (-not $changed) { git checkout -- src/data/marketSnapshot.json; Write-Log 'checked: no new figures'; exit 0 }
 
-$msgFile = Join-Path $logDir 'commit-message.txt'
-"Market data: new figures from the weekly refresh`n`nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" | Out-File -Encoding ascii $msgFile
-if ((Invoke-Quiet "git -c user.name=siraphopsag -c user.email=siraphop.sag@spumail.net commit -F `"$msgFile`" -- src/data/marketSnapshot.json") -ne 0) { Write-Log 'commit failed'; exit 1 }
-if ((Invoke-Quiet "git push origin $Branch") -ne 0) { Write-Log 'push failed (the commit stays on this PC; it goes up with the next push)'; exit 1 }
-Write-Log 'new figures saved and pushed'
+# Never commits or pushes: the owner approved refreshing the figures only. The changed file waits for the next reviewed commit.
+Write-Log "new figures saved in src/data/marketSnapshot.json; not committed or pushed"
