@@ -125,7 +125,7 @@ export const v2 = {
   'c2.note': ['ตัวอย่างการทำงานของระบบ ใช้ข้อมูลจำลอง ยังไม่มีการเซ็นหรือส่งสัญญาจริง และไม่ใช่คำแนะนำทางกฎหมาย', '系统演示，使用模拟数据，不会真正签署或发送合同，也不构成法律意见', 'A demonstration with sample data: nothing is signed or sent, and this is not legal advice.'],
   'c2.post.h': ['ประกาศงาน', '招聘信息', 'The job post'],
   'c2.pick': ['เลือกเคส', '选择案件', 'Choose a case'],
-  'c2.pick.sample': ['ตัวอย่าง: พนักงานตรวจคุณภาพ เซินเจิ้น', '示例：深圳质检员', 'Sample: quality inspector, Shenzhen'],
+  'c2.pick.sample': ['ตัวอย่าง: พนักงานลูกค้าสัมพันธ์ภาษาจีน กรุงเทพฯ', '示例：曼谷中文宾客关系专员', 'Sample: guest relations officer, Bangkok'],
   'c2.post.position': ['ตำแหน่ง', '职位', 'Position'],
   'c2.post.company': ['บริษัท', '公司', 'Company'],
   'c2.post.place': ['สถานที่ทำงาน', '工作地点', 'Place of work'],
