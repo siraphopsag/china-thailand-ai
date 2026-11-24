@@ -52,7 +52,7 @@ export function ChatPage() {
   if (!demo && (!a || !p || !sides.length)) return <Page title={t('ch.title')}><Empty icon="bell" text={t('ch.none')} to="notifications" action={t('m.notif.title')} /></Page>
   if (!demo && !OPEN.includes(a!.status)) return <Page title={t('ch.title')}><Empty icon="bell" text={t('ch.notYet')} to={`post?id=${p!.id}`} action={t('m.bd.openFull')} /></Page>
   const position = demo ? t('c2.sample.position') : p!.position, company = demo ? t('c2.sample.company') : p!.company
-  const worker = demo ? 'SOMCHAI J.' : nameOf(a!)
+  const worker = demo ? '李明 (LI MING)' : nameOf(a!)
   const at = new Date(now).toISOString()
   const other = side === 'seeker' ? company : worker
   // the introduction the job seeker wrote when applying opens the conversation

@@ -30,8 +30,8 @@ import { IdentityStep, ReviewStep, SignStep, SAMPLE_MRZ, SAMPLE_RECORD, badSampl
 
 /** the post a contract is checked against (a real post of one of my cases, or the training sample from the slides) */
 interface ContractPost { id: string; company: string; position: string; country: Country; province: string; salary: Salary | null; sample: boolean }
-/** the slides' sample: a quality inspector in Shenzhen at 6,000 yuan a month (Chinese law applies) */
-export const SAMPLE_POST: ContractPost = { id: 'sample', company: '@c2.sample.company', position: '@c2.sample.position', country: 'CN', province: 'CN-GD', salary: { min: 6000, max: 6000, currency: 'CNY' }, sample: true }
+/** the sample case (24 Nov 2026): an invented Chinese worker, 李明, in guest relations at an invented Bangkok hotel (Thai law applies) */
+export const SAMPLE_POST: ContractPost = { id: 'sample', company: '@c2.sample.company', position: '@c2.sample.position', country: 'TH', province: 'TH-10', salary: { min: 36000, max: 36000, currency: 'THB' }, sample: true }
 
 const fmt = (n: number) => n.toLocaleString('en-US')
 const STEPS = ['check', 'id', 'review', 'sign'] as const

@@ -75,7 +75,7 @@ export function CaseDemoPage() {
         </div>)}
     </div>)
   const after = arrival
-    ? <AftercarePanel c={c} caseKey="demo" employerId={DEMO_EMPLOYER} country="CN" province="CN-GD" today={today} view={as} team atNow={atNow} />
+    ? <AftercarePanel c={c} caseKey="demo" employerId={DEMO_EMPLOYER} country="TH" province="TH-10" today={today} view={as} team atNow={atNow} />
     : null
   return <CaseView key={as} c={c} sub={`${t('c2.sample.position')} · ${t('c2.sample.company')}`} title={t('dm.title')} top={top}
     isSeeker={as === 'seeker'} isEmployer={as === 'employer'} withName={null} agency={false} act={act} contractTo="contract" chatTo="chat?acc=acc-demo" extra={after} />

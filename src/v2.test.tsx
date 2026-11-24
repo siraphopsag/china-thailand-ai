@@ -88,7 +88,15 @@ describe('A. minimum wage and jobs closed to foreigners', () => {
 })
 
 describe('B. contract check', () => {
-  const post = { country: SAMPLE_POST.country, province: SAMPLE_POST.province, salary: SAMPLE_POST.salary }
+  const post = { country: 'CN' as const, province: 'CN-GD', salary: { min: 6000, max: 6000, currency: 'CNY' as const } }
+  it('the sample case (a Chinese worker at a Bangkok hotel): no findings as posted, every problem names Thai law', () => {
+    const p = { country: SAMPLE_POST.country, province: SAMPLE_POST.province, salary: SAMPLE_POST.salary }
+    expect([p.country, p.province]).toEqual(['TH', 'TH-10'])
+    expect(checkContract(draftFromPost(p), p)).toEqual([])
+    const f = checkContract(riskyDraft(p), p)
+    expect(f.map((x) => x.flag).sort()).toEqual(['deposit', 'heavyDeductions', 'noWeeklyDayOff', 'passportKept', 'payBelowPost'])
+    expect(f.flatMap((x) => x.laws).filter((l) => l.startsWith('c2.law.cn'))).toEqual([])
+  })
   it('a draft that copies the post has no findings; the sample with problems fires every rule with Chinese law', () => {
     expect(checkContract(draftFromPost(post), post)).toEqual([])
     const f = checkContract(riskyDraft(post), post)

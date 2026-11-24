@@ -48,15 +48,15 @@ describe('A. passport lines (ICAO 9303)', () => {
   it('makeMrz builds lines that read back with every check digit right', () => {
     const r = parseMrz(SAMPLE_MRZ, TODAY)
     expect(SAMPLE_MRZ.split('\n').map((l) => l.length)).toEqual([44, 44])
-    expect(r.ok && r.value).toMatchObject({ surname: 'JAIDEE', given: 'SOMCHAI', number: 'AC1234567', nationality: 'THA', birth: '1996-05-20', bad: [] })
+    expect(r.ok && r.value).toMatchObject({ surname: 'LI', given: 'MING', number: 'E12345678', nationality: 'CHN', birth: '1996-05-20', bad: [] })
   })
 })
 
 describe('B. identity against the record', () => {
   const read = (s: string) => { const r = parseMrz(s, TODAY); if (!r.ok) throw new Error(r.problem); return r.value }
   it('the sample passes; the problem sample shows five issues, the high ones block signing', () => {
-    expect(identityCheck(read(SAMPLE_MRZ), SAMPLE_RECORD, 'CN', TODAY)).toEqual([])
-    const flags = identityCheck(read(badSampleMrz(TODAY)), SAMPLE_RECORD, 'CN', TODAY).map((f) => f.flag)
+    expect(identityCheck(read(SAMPLE_MRZ), SAMPLE_RECORD, 'TH', TODAY)).toEqual([])
+    const flags = identityCheck(read(badSampleMrz(TODAY)), SAMPLE_RECORD, 'TH', TODAY).map((f) => f.flag)
     expect(flags).toEqual(['checkDigit', 'expiresSoon', 'nameMismatch', 'birthMismatch', 'minor'])
   })
   it('the youngest working age is 15 in Thailand and 16 in China; an expired passport is high risk', () => {

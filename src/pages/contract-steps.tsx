@@ -13,12 +13,12 @@ import { useNames } from './match'
 const NATIONALITIES = ['THA', 'CHN'] as const
 
 /** the training sample (an invented worker with the usual Thai placeholder name, not a real person) */
-export const SAMPLE_RECORD: IdRecord = { surname: 'JAIDEE', given: 'SOMCHAI', birth: '1996-05-20', nationality: 'THA' }
-export const SAMPLE_MRZ = makeMrz({ surname: 'JAIDEE', given: 'SOMCHAI', number: 'AC1234567', nationality: 'THA', birth: '1996-05-20', expiry: '2031-08-30', sex: 'M' })
+export const SAMPLE_RECORD: IdRecord = { surname: 'LI', given: 'MING', birth: '1996-05-20', nationality: 'CHN' }
+export const SAMPLE_MRZ = makeMrz({ surname: 'LI', given: 'MING', number: 'E12345678', nationality: 'CHN', birth: '1996-05-20', expiry: '2031-08-30', sex: 'M' })
 /** the problem sample: another first name, born 2009, the passport runs out in 3 months and one digit of its number was changed */
 export function badSampleMrz(today: string): string {
   const d = new Date(today + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + 3)
-  const [l1, l2] = makeMrz({ surname: 'JAIDEE', given: 'SOMCHAY', number: 'AC1234567', nationality: 'THA', birth: '2009-05-20', expiry: d.toISOString().slice(0, 10), sex: 'M' }).split('\n')
+  const [l1, l2] = makeMrz({ surname: 'LI', given: 'MIN', number: 'E12345678', nationality: 'CHN', birth: '2009-05-20', expiry: d.toISOString().slice(0, 10), sex: 'M' }).split('\n')
   return `${l1}\n${l2.slice(0, 4)}8${l2.slice(5)}`
 }
 
