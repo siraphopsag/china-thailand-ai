@@ -2,7 +2,7 @@
 // No server (local dev, demo mode) or anything unexpected → { ok: false }, and the page falls back or explains.
 import { getClient } from '../auth'
 import type { PostInput } from '../domain/match/logic'
-import type { AiAnswer, AiCheck, AiLang, AiReason, AiResponse, AiTranslation, AskTurn, ContractForAi } from './spec'
+import type { AiAnswer, AiCheck, AiLang, AiReason, AiResponse, AiTranslation, AiTriage, AskTurn, ContractForAi, TriageInput } from './spec'
 
 const REASONS: AiReason[] = ['off', 'signin', 'limit', 'site', 'busy', 'refused', 'bad', 'error']
 
@@ -26,4 +26,6 @@ async function call<T>(body: Record<string, unknown>): Promise<AiResponse<T>> {
 export const aiCheck = (post: PostInput, lang: AiLang) => call<AiCheck>({ kind: 'check', lang, post })
 export const aiAsk = (question: string, lang: AiLang, history: AskTurn[] = []) => call<AiAnswer>({ kind: 'ask', lang, question, history })
 export const aiContract = (contract: ContractForAi, lang: AiLang) => call<AiCheck>({ kind: 'contract', lang, contract })
+/** the C.A.L.L. team: the AI's reading of a complaint (fixed fields only, never the worker's words) */
+export const aiTriage = (complaint: Omit<TriageInput, 'missing'>, lang: AiLang) => call<AiTriage>({ kind: 'triage', lang, complaint })
 export const aiTranslate = (text: string, lang: AiLang) => call<AiTranslation>({ kind: 'translate', lang, text })

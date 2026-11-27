@@ -10,8 +10,9 @@ import { cleanTranslations, hasTranslations, type PostTranslations } from '../do
 import { assess } from '../data/legal/trust.js'
 import { data } from '../locales/data.js'
 import type { PostInput } from '../domain/match/logic.js'
+import { EVIDENCE, PROBLEMS, type ProblemKind } from '../domain/match/reportPack.js'
 
-export type AiKind = 'check' | 'ask' | 'contract' | 'translate'
+export type AiKind = 'check' | 'ask' | 'contract' | 'translate' | 'triage'
 export type AiLang = 'th' | 'zh' | 'en'
 export const AI_LANGS: AiLang[] = ['th', 'zh', 'en']
 /** Claude's default model (paid, used only when ANTHROPIC_API_KEY is set); the owner can change it in Vercel (AI_MODEL) */
@@ -229,6 +230,39 @@ export function cleanAnswer(raw: unknown): AiAnswer {
 export type AiReason = 'off' | 'signin' | 'limit' | 'site' | 'busy' | 'refused' | 'bad' | 'error'
 /** detail: for administrators only — which AI model answered or what each attempt got */
 export type AiResponse<T> = { ok: true; result: T; left: number | null; detail?: string } | { ok: false; reason: AiReason; detail?: string }
+
+/* ---------- triage of a complaint for the C.A.L.L. team (owner's blueprint, 27 Nov 2026) ----------
+ * The AI only helps the team read a complaint: how well the record backs it and what to ask for. It never decides, and it gets
+ * only fixed fields — the kind of problem, which evidence the worker has, the check-in answers, whether there is a case and an
+ * arrival — never the worker's own words or anything that names a person. */
+export interface TriageInput { problem: ProblemKind; evidence: string[]; missing: string[]; flags: string[]; hasCase: boolean; arrived: boolean; score: number }
+export interface AiTriage { level: 'strong' | 'mixed' | 'weak'; reasons: string[]; ask: string[] }
+const FLAGS = ['unpaid', 'passport', 'hours', 'unsafe', 'silent']
+/** keeps only the fixed fields (anything else from the page is dropped) */
+export function triageForAi(v: unknown): TriageInput | null {
+  const r = (v ?? {}) as Record<string, unknown>
+  if (!(PROBLEMS as readonly string[]).includes(r.problem as string)) return null
+  const p = r.problem as ProblemKind, all = EVIDENCE[p]
+  const evidence = Array.isArray(r.evidence) ? r.evidence.filter((x): x is string => typeof x === 'string' && all.includes(x)) : []
+  return { problem: p, evidence, missing: all.filter((x) => !evidence.includes(x)), flags: Array.isArray(r.flags) ? [...new Set(r.flags.filter((x): x is string => typeof x === 'string' && FLAGS.includes(x)))] : [],
+    hasCase: r.hasCase === true, arrived: r.arrived === true, score: typeof r.score === 'number' ? Math.max(0, Math.min(100, Math.round(r.score))) : 0 }
+}
+export function triageSystem(lang: AiLang): string {
+  return `You help the C.A.L.L. case team (a job platform between Thailand and China) read ONE complaint a worker filed after starting work.
+You get only fixed fields: the kind of problem, the evidence the worker says they have and do not have, the worker's check-in answers
+that raised flags, whether the job has a case on the platform and an arrival confirmed, and a rule-based score (0-100). You do not get
+the worker's words. Judge how well the record backs the complaint, never whether the worker is honest; someone in danger needs help
+whatever the evidence. Reply in ${LANG_NAME[lang]} with JSON only:
+{"level": "strong"|"mixed"|"weak", "reasons": [up to 4 short reasons], "ask": [up to 3 short things the team could ask the worker for]}.
+The team decides; say nothing that sounds like a final decision.`
+}
+export const triageUser = (x: TriageInput) => JSON.stringify(x)
+export function cleanTriage(raw: unknown): AiTriage | null {
+  const r = (raw ?? {}) as Record<string, unknown>
+  if (!['strong', 'mixed', 'weak'].includes(r.level as string)) return null
+  const list = (v: unknown, n: number) => (Array.isArray(v) ? v.map((x) => str(x, 200)).filter(Boolean).slice(0, n) : [])
+  return { level: r.level as AiTriage['level'], reasons: list(r.reasons, 4), ask: list(r.ask, 3) }
+}
 
 /* ---------- chat translation (v2 model, owner Nov 2026: chat between employer and worker) ---------- */
 export const MAX_TRANSLATE = 500

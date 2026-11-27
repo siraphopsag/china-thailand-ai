@@ -9,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import {
-  AI_LANGS, DEFAULT_MODEL, FLAG_CATEGORIES, GEMINI_MODELS, pickGeminiModels, MAX_QUESTION, SEVERITIES, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, cleanHistory, contractForAi, contractSystem, contractUser, postForAi, MAX_TRANSLATE, translateSystem, translateUser, cleanTranslation,
+  AI_LANGS, DEFAULT_MODEL, FLAG_CATEGORIES, GEMINI_MODELS, pickGeminiModels, MAX_QUESTION, SEVERITIES, askSystem, askUser, checkSystem, checkUser, cleanAnswer, cleanCheck, cleanHistory, contractForAi, contractSystem, contractUser, postForAi, MAX_TRANSLATE, translateSystem, translateUser, cleanTranslation, triageForAi, triageSystem, triageUser, cleanTriage,
   type AiKind, type AiLang, type AiReason,
 } from '../src/ai/spec.js'
 import type { PostInput } from '../src/domain/match/logic.js'
@@ -39,6 +39,7 @@ const AskSchema = z.object({ answer: z.string(), lawIds: z.array(z.string()), gr
 
 // v2 (Nov 2026): a chat message in the three languages
 const TranslateSchema = z.object({ th: z.string(), zh: z.string(), en: z.string() })
+const TriageSchema = z.object({ level: z.enum(['strong', 'mixed', 'weak']), reasons: z.array(z.string()), ask: z.array(z.string()) })
 
 /** count this use in the database as the signed-in person (their own token): false = not signed in; otherwise the verdict */
 async function take(token: string, kind: AiKind): Promise<{ ok: boolean; reason?: 'limit' | 'site'; left: number | null } | false> {
@@ -122,6 +123,8 @@ async function claude(apiKey: string, kind: AiKind, system: string, content: str
       ? await client.messages.parse({ model, max_tokens: 6000, system: sys, output_config: { effort: 'medium', format: zodOutputFormat(ContractSchema) }, messages: [{ role: 'user', content }] })
       : kind === 'translate'
       ? await client.messages.parse({ model, max_tokens: 2000, system: sys, output_config: { effort: 'low', format: zodOutputFormat(TranslateSchema) }, messages: [{ role: 'user', content }] })
+      : kind === 'triage'
+      ? await client.messages.parse({ model, max_tokens: 2000, system: sys, output_config: { effort: 'low', format: zodOutputFormat(TriageSchema) }, messages: [{ role: 'user', content }] })
       : await client.messages.parse({ model, max_tokens: 6000, system: sys, output_config: { effort: 'low', format: zodOutputFormat(AskSchema) }, messages: [{ role: 'user', content }] })
     if (res.stop_reason === 'refusal') return { reason: 'refused', status: 200 }
     return res.parsed_output ? { raw: res.parsed_output } : { reason: 'bad', status: 502 }
@@ -140,7 +143,7 @@ export async function POST(request: Request) {
     if (raw.length > 20_000) return fail('bad', 413)
     let body: Record<string, unknown>
     try { body = JSON.parse(raw) } catch { return fail('bad', 400) }
-    const kind = body?.kind === 'check' || body?.kind === 'ask' || body?.kind === 'contract' || body?.kind === 'translate' ? (body.kind as AiKind) : null
+    const kind = body?.kind === 'check' || body?.kind === 'ask' || body?.kind === 'contract' || body?.kind === 'translate' || body?.kind === 'triage' ? (body.kind as AiKind) : null
     const lang: AiLang = AI_LANGS.includes(body?.lang as AiLang) ? (body.lang as AiLang) : 'th'
     if (!kind) return fail('bad', 400)
     const question = typeof body.question === 'string' ? body.question.trim() : ''
@@ -151,21 +154,25 @@ export async function POST(request: Request) {
     if (kind === 'contract' && !contract) return fail('bad', 400)
     const message = kind === 'translate' && typeof body.text === 'string' ? body.text.trim() : ''
     if (kind === 'translate' && (!message || message.length > MAX_TRANSLATE)) return fail('bad', 400)
+    const triage = kind === 'triage' ? triageForAi(body.complaint) : null
+    if (kind === 'triage' && !triage) return fail('bad', 400)
 
     const claudeKey = env('ANTHROPIC_API_KEY'), geminiKey = env('GEMINI_API_KEY')
     if (!claudeKey && !geminiKey) return fail('off', 503)
     const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
     if (!token) return fail('signin', 401)
-    const t = await take(token, kind === 'contract' ? 'check' : kind === 'translate' ? 'ask' : kind) // contract → post-check allowance, translation → question allowance (no new SQL)
+    const t = await take(token, kind === 'contract' || kind === 'triage' ? 'check' : kind === 'translate' ? 'ask' : kind) // contract → post-check allowance, translation → question allowance (no new SQL)
     if (!t) return fail('signin', 401)
     if (!t.ok) return fail(t.reason ?? 'limit', 429)
+    if (kind === 'triage' && t.left !== null) return fail('signin', 403) // the C.A.L.L. team only (administrators have no daily limit)
 
-    const system = kind === 'check' ? checkSystem(lang) : kind === 'contract' ? contractSystem(lang) : kind === 'translate' ? translateSystem() : askSystem(lang)
-    const content = kind === 'check' ? checkUser(post!) : kind === 'contract' ? contractUser(contract!) : kind === 'translate' ? translateUser(message) : askUser(question, cleanHistory(body.history))
+    const system = kind === 'check' ? checkSystem(lang) : kind === 'contract' ? contractSystem(lang) : kind === 'translate' ? translateSystem() : kind === 'triage' ? triageSystem(lang) : askSystem(lang)
+    const content = kind === 'check' ? checkUser(post!) : kind === 'contract' ? contractUser(contract!) : kind === 'translate' ? translateUser(message) : kind === 'triage' ? triageUser(triage!) : askUser(question, cleanHistory(body.history))
     const out = claudeKey ? await claude(claudeKey, kind, system, content) : await gemini(geminiKey, system, content)
     const admin = t.left === null // administrators see what went wrong (model + status; never a key or user text)
     if ('reason' in out) return json({ ok: false, reason: out.reason, ...(admin && out.detail ? { detail: out.detail } : {}) }, out.status)
-    const result = kind === 'ask' ? cleanAnswer(out.raw) : kind === 'translate' ? cleanTranslation(out.raw) : cleanCheck(out.raw)
+    const result = kind === 'ask' ? cleanAnswer(out.raw) : kind === 'translate' ? cleanTranslation(out.raw) : kind === 'triage' ? cleanTriage(out.raw) : cleanCheck(out.raw)
+    if (kind === 'triage' && !result) return fail('bad', 502)
     if (kind === 'translate' && !(result as ReturnType<typeof cleanTranslation>).th) return fail('bad', 502)
     if (kind === 'ask' && !(result as ReturnType<typeof cleanAnswer>).answer) return fail('bad', 502)
     return json({ ok: true, result, left: t.left, ...(admin && out.detail ? { detail: out.detail } : {}) })

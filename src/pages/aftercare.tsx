@@ -13,6 +13,9 @@ import {
   type CheckDay, type CheckIn, type Complaint, type ComplaintAction, type EmployerReview, type WorkerReview,
 } from '../domain/match/aftercare'
 import { useAftercare, useReviews, type Aftercare } from '../aftercareStore'
+import { useAuth } from '../auth'
+import { aiTriage } from '../ai/client'
+import type { AiResponse, AiTriage } from '../ai/spec'
 import { useWorkerReview, useWorkerReviews } from '../workerReviewStore'
 import { ME } from '../domain/match/types'
 import { Icon } from '../components/icons'
@@ -200,6 +203,29 @@ export function WorkerRating({ seekerId, compact = false }: { seekerId: string; 
   )
 }
 
+/* ---------- the AI's reading of a complaint, for the team (owner's blueprint, 27 Nov 2026) ---------- */
+function TriageBox({ cm }: { cm: Complaint }) {
+  const { t, lang } = useI18n()
+  const { isAdmin, online } = useAuth()
+  const [res, setRes] = useState<AiResponse<AiTriage> | 'busy' | null>(null)
+  if (!isAdmin) return <p className="text-xs text-muted flex items-center gap-1.5"><Icon name="ai" size={13} />{t('tg.teamOnly')}</p>
+  const run = async () => { setRes('busy'); setRes(await aiTriage({ problem: cm.problem, evidence: cm.evidence, flags: [], hasCase: cm.reasons.includes('case'), arrived: cm.reasons.includes('arrived'), score: cm.score }, lang)) }
+  return (
+    <div className="rounded-lg border border-line p-2.5 space-y-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-semibold flex items-center gap-1.5"><Icon name="ai" size={13} />{t('tg.h')}</p>
+        {res !== 'busy' && <button type="button" className="btn-ghost text-xs" disabled={online === false} onClick={() => void run()}>{t(res ? 'tg.again' : 'tg.run')}</button>}</div>
+      <p className="text-[11px] text-muted">{t('tg.note')}</p>
+      {res === 'busy' && <p className="text-xs text-muted" role="status">{t('tg.busy')}</p>}
+      {res && res !== 'busy' && (res.ok ? (
+        <div className="text-xs space-y-1" role="status">
+          <p><span className={`chip text-[11px] ${res.result.level === 'strong' ? 'bg-ok-bg text-ok-fg border-ok-line' : res.result.level === 'weak' ? 'bg-warn-bg text-warn-fg border-warn-line' : 'bg-surface3 border-line'}`}>{t(`tg.l.${res.result.level}` as never)}</span></p>
+          {res.result.reasons.length > 0 && <ul className="list-disc pl-4">{res.result.reasons.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+          {res.result.ask.length > 0 && <><p className="font-medium">{t('tg.ask')}</p><ul className="list-disc pl-4">{res.result.ask.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
+        </div>) : <p className="text-xs text-warn-fg">{t(`ai.why.${res.reason}` as never)}</p>)}
+    </div>
+  )
+}
+
 /* ---------- complaints through C.A.L.L. ---------- */
 function ComplaintBox({ a, caseKey, country, province, atNow, onFile, onAct, hasCase, arrived }: {
   a: Aftercare; caseKey: string; country: Country; province: string; atNow: string; hasCase: boolean; arrived: boolean
@@ -267,6 +293,7 @@ export function ComplaintCard({ cm, viewer, onAct }: { cm: Complaint; viewer: 'w
             <span className={`cr-meter cr-${lvl}`}><span style={{ width: `${cm.score}%` }} /></span><span className="text-xs font-semibold tabular-nums">{cm.score}/100 · {t(`cr.lvl.${lvl}` as never)}</span></div>
           <p className="flex flex-wrap gap-1">{cm.reasons.map((r) => <span key={r} className="chip bg-surface3 border-line text-[11px]">{t(`cr.why.${r}` as never)}</span>)}</p>
           {cm.urgent && <p className="text-xs text-danger-fg">{t('cr.urgent.d')}</p>}
+          <TriageBox cm={cm} />
           <div className="flex flex-wrap gap-2">
             {cm.status === 'checking' && <><button type="button" className="btn-primary text-sm" onClick={() => onAct({ kind: 'forward' })}><Icon name="send" size={14} />{t('cr.team.forward')}</button>
               <button type="button" className="btn-ghost text-sm" onClick={() => onAct({ kind: 'askMore' })}>{t('cr.team.askMore')}</button></>}

@@ -86,5 +86,16 @@ export const v2h = {
   'pc.bright': ['สว่างหรือสะท้อนแสงเกินไป', '过亮或反光', 'Too bright or glaring'],
   'pc.blurry': ['เบลอ ถือกล้องให้นิ่งแล้วถ่ายใหม่', '模糊，请拿稳重拍', 'Blurred: hold still and take it again'],
   'pc.note': ['ระบบตรวจรูปเบื้องต้น (ขนาด ความสว่าง ความคมชัด) ในเครื่องของคุณ ไม่ส่งรูปไปที่ใด ทีม C.A.L.L. เป็นผู้ตรวจว่าเอกสารถูกต้อง', '系统仅在您的设备上初步检查照片（大小、亮度、清晰度），不会发送照片。文件内容由 C.A.L.L. 团队核实', 'The photo is checked on your device only (size, brightness, sharpness) and is not sent anywhere. The C.A.L.L. team checks that the document itself is right.'],
+  // ---------- the AI's reading of a complaint (team only)
+  'tg.h': ['ความเห็นจาก AI (ช่วยทีมอ่านเรื่อง)', 'AI 意见（协助团队阅读）', 'AI reading (helps the team)'],
+  'tg.note': ['AI เห็นเฉพาะประเภทปัญหา หลักฐานที่มี และผลเช็กอิน ไม่เห็นข้อความของลูกจ้าง ทีมเป็นผู้ตัดสินเสมอ', 'AI 只看到问题类型、已有证据和回访结果，看不到员工的文字；始终由团队决定', 'The AI sees only the kind of problem, the evidence and the check-ins, never the worker’s words. The team always decides.'],
+  'tg.run': ['ให้ AI ช่วยอ่าน', '请 AI 协助', 'Ask the AI'],
+  'tg.again': ['ถามอีกครั้ง', '再问一次', 'Ask again'],
+  'tg.busy': ['AI กำลังอ่าน…', 'AI 正在阅读…', 'The AI is reading…'],
+  'tg.ask': ['ควรขอเพิ่มจากลูกจ้าง', '可向员工补充索取', 'Worth asking the worker for'],
+  'tg.l.strong': ['บันทึกสนับสนุนชัด', '记录支持充分', 'Well backed by the record'],
+  'tg.l.mixed': ['สนับสนุนบางส่วน', '部分支持', 'Partly backed'],
+  'tg.l.weak': ['หลักฐานยังน้อย', '证据尚少', 'Little backing yet'],
+  'tg.teamOnly': ['ความเห็นจาก AI ใช้ได้เฉพาะทีม C.A.L.L. ที่ล็อกอิน', 'AI 意见仅限已登录的 C.A.L.L. 团队使用', 'The AI reading is for the signed-in C.A.L.L. team only'],
   'm.err.needVerify': ['ต้องยืนยันตัวตนก่อน จึงจะลงประกาศหรือปักหมุดได้', '需先完成身份验证，才能发布招聘信息或标记', 'Verify yourself first to post or pin'],
 } as const satisfies Record<string, Msg>

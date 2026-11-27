@@ -27,7 +27,7 @@ import { photoQuality } from './domain/photoCheck'
 import { contractHtml } from './pages/contract-steps'
 import { cleanContract } from './contractStore'
 import { isSigImg } from './domain/match/sign'
-import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
+import { GEMINI_MODELS, cleanTriage, pickGeminiModels, triageForAi, triageSystem } from './ai/spec'
 import { messages } from './locales/index'
 import { provinces } from './locales/provinces'
 
@@ -341,6 +341,19 @@ describe('Q. review fixes (27 Nov 2026)', () => {
     const page = src('./pages/chat.tsx')
     expect(page).toContain('msgs: c.msgs.map(({ typed: _t, ...m }) => m)'); expect(page).toContain("a!.endedFor !== 'contact'")
     expect(src('./shared.ts')).toContain("body: x.phrase ? '' : x.typed ?? x.text, phrase: x.phrase ?? null })")
+  })
+})
+
+describe('R. the AI helps the team read a complaint (owner’s blueprint)', () => {
+  it('only fixed fields reach the AI, never the worker’s words; the answer is cleaned; the team only', () => {
+    const x = triageForAi({ problem: 'unpaid', evidence: ['payslips', 'my secret'], flags: ['unpaid', 'x'], note: 'call me 0812345678', hasCase: true, arrived: true, score: 140 })
+    expect(x).toEqual({ problem: 'unpaid', evidence: ['payslips'], missing: ['contract', 'hours', 'messages', 'bank'], flags: ['unpaid'], hasCase: true, arrived: true, score: 100 })
+    expect(JSON.stringify(x)).not.toContain('0812'); expect(triageForAi({ problem: 'casino' })).toBeNull()
+    expect(cleanTriage({ level: 'strong', reasons: ['a', 'b', 'c', 'd', 'e'], ask: ['x'] })).toEqual({ level: 'strong', reasons: ['a', 'b', 'c', 'd'], ask: ['x'] })
+    expect(cleanTriage({ level: 'guilty' })).toBeNull(); expect(triageSystem('th')).toContain('The team decides')
+    const api = src('../api/ai.ts')
+    expect(api).toContain("if (kind === 'triage' && t.left !== null) return fail('signin', 403)")
+    expect(src('./pages/aftercare.tsx')).toContain('if (!isAdmin) return')
   })
 })
 
