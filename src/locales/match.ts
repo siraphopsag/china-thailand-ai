@@ -163,7 +163,7 @@ export const match = {
   'm.board.clearAll': ['ล้างการค้นหาและตัวกรอง', '清除搜索和筛选', 'Clear the search and filters'],
   'm.settings.preview.label': ['ตัวอย่างสีที่เลือก (ไม่ใช่ปุ่ม)', '所选颜色预览（不是按钮）', 'Preview of the chosen colour (not a button)'],
   // QA, Oct 2026: local demo — a simulated applicant, so the employer's side can be tried alone
-  'm.em.sim.lead': ['โหมดทดลองในเครื่องนี้: ยังไม่มีผู้หางานจริงมาสมัคร กดปุ่มด้านล่างเพื่อจำลองผู้สมัคร แล้วลองยืนยันหรือไม่รับได้', '本机体验模式：还没有真实求职者申请。点击下方按钮模拟一位申请人，然后试试确认或婉拒', 'Demo on this device: no real job seekers apply here. Add a simulated applicant below, then try confirming or declining'],
+  'm.em.sim.lead': ['ทดลองฝั่งนายจ้างได้คนเดียว: กดปุ่มด้านล่างให้ผู้หางานจำลองสมัคร แล้วลองตอบรับหรือไม่รับได้', '可独自体验雇主端：点击下方按钮让模拟求职者申请，然后试试录用或婉拒', 'Try the employer side alone: have a simulated job seeker apply below, then try confirming or declining'],
   'm.em.sim.go': ['จำลองผู้สมัคร 1 คน', '模拟一位申请人', 'Add a simulated applicant'],
   'm.em.sim.done': ['เพิ่มผู้สมัครจำลองแล้ว', '已添加模拟申请人', 'A simulated applicant was added'],
   'm.em.sim.none': ['ผู้หางานตัวอย่างสมัครครบทุกคนแล้ว', '所有示例求职者都已申请', 'Every sample job seeker has already applied'],

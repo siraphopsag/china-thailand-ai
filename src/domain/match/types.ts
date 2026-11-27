@@ -120,6 +120,10 @@ export interface Post extends Place {
   sample?: boolean
   /** made by a demo account (SQL 0011) — shown with a "demo account" label */
   demo?: boolean
+  /** demo (owner, 27 Nov 2026): shown to a demo viewer at once, at every level, without waiting or the employer's approval */
+  openAll?: boolean
+  /** a simulated employer's post made for my demo account (SQL 0021): that employer answers my application on request */
+  simFor?: boolean
   /** owner, Oct 2026 (0010): the employer keeps the post in its own country — the release stops at level 4, never abroad */
   domesticOnly?: boolean
   /** only people who already have the right to work in the post's country (the employer will not apply for a work permit) */

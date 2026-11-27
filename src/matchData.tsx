@@ -36,6 +36,15 @@ function load(): MatchState {
   return seedState()
 }
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+/** the simulated employer's post for a demo pin (the same wording as SQL 0021's demo_sample_post) */
+const SIM_POSITION: Record<Industry, string> = { manufacturing: 'พนักงานฝ่ายผลิต', technology: 'นักพัฒนาซอฟต์แวร์', hospitality: 'พนักงานต้อนรับโรงแรม', food_service: 'พนักงานครัว',
+  education: 'ครูสอนภาษา', logistics: 'พนักงานคลังสินค้า', finance: 'เจ้าหน้าที่บัญชี' } as Record<Industry, string>
+export function samplePostInput(place: Place, industry: Industry, skills: Skill[], today: string): PostInput {
+  const start = new Date(Date.parse(today + 'T00:00:00Z') + 30 * 86_400_000).toISOString().slice(0, 10)
+  return { place, company: 'บริษัทตัวอย่าง (นายจ้างจำลอง)', position: SIM_POSITION[industry] ?? 'พนักงานทั่วไป', industry, skills: skills.length ? [...skills] : ['customer_service'], minYears: 0,
+    details: 'ประกาศจำลองสำหรับบัญชีทดลอง สร้างให้ตรงกับหมุดของคุณ เพื่อลองสมัครและติดตามขั้นตอนต่อไปได้ด้วยตัวเอง', headcount: 3, employment: 'permanent',
+    salary: place.country === 'CN' ? { min: 4500, max: 7000, currency: 'CNY' } : { min: 15000, max: 22000, currency: 'THB' }, startDate: start, languages: [{ lang: place.country === 'CN' ? 'zh' : 'th', level: 'basic' }], education: 'none', benefits: ['housing', 'insurance'] }
+}
 const emptyState = (clockHours = 0): MatchState => ({ ...seedState(), role: null, posts: [], seekers: [], acceptances: [], clockHours, myCompany: '', member: false, memberUntil: null, credits: [], cases: [], employerVerify: null })
 /** an employer waiting for verification, as the agency (administrator) sees it; id null = me in the local demo */
 export interface PendingVerify { id: string | null; name: string; company: string; kind: VerifyKind; country: Country; regNo: string; phone4?: string; at: string }
@@ -82,8 +91,16 @@ interface Ctx {
   deletePost: (id: string) => Promise<boolean>
   /** start the release of my post again (uses one post of the weekly allowance) */
   renew: (id: string) => Promise<Outcome<unknown>>
-  /** local demo: a sample job seeker applies to my post (false: not the local demo, or every sample seeker has applied) */
+  /** a sample job seeker applies to my post — the local demo, or a demo account (SQL 0021); false: every one has applied */
   sampleApply: (postId: string) => Promise<boolean>
+  /** a demo account or the local demo (owner, 27 Nov 2026: the judges try everything alone with it): the helpers below are on */
+  demo: boolean
+  /** demo: my employer verification is approved at once */
+  demoVerify: () => Promise<boolean>
+  /** demo: a simulated employer posts a job that fits this place and field (seen by me only); the new post's id */
+  samplePost: (place: Place, industry: Industry, skills: Skill[]) => Promise<string | null>
+  /** demo: the simulated employer answers my application to its post */
+  sampleAnswer: (accId: string, confirm: boolean) => Promise<boolean>
   /** take a membership plan (simulated: free during the trial, no payment); returns the new end date */
   subscribe: (plan: PlanId) => Promise<string | null>
   /** apply (takes a place) or reserve (the post is full) */
@@ -130,7 +147,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
     : auth.status === 'off' || auth.online === false ? 'local'
     : auth.status === 'loading' || auth.online === null ? 'loading'
     : auth.status === 'signedIn' && auth.user ? 'remote' : 'signedOut'
-  const userId = auth.user?.id ?? null, userName = auth.user?.name ?? '', admin = auth.isAdmin
+  const userId = auth.user?.id ?? null, userName = auth.user?.name ?? '', admin = auth.isAdmin, demoUser = !!auth.user?.demo
 
   /* ---------- local demo ---------- */
   const [localSt, setLocal] = useState<MatchState>(() => initial ?? (typeof window === 'undefined' ? seedState() : load()))
@@ -208,7 +225,9 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
   const st = useMemo(() => withoutExpired(raw, now), [raw, now])
   // what the pages show: posts written in another language appear in the AI's translation (the employer's words stay in orig)
   const { lang } = useI18n()
-  const stView = useMemo(() => ({ ...st, posts: st.posts.map((p) => localizePost(p, lang)) }), [st, lang])
+  // a demo account sees other demo accounts' posts at once, at every level (owner, 27 Nov 2026: two demo accounts match each other)
+  const demo = mode === 'local' || (mode === 'remote' && demoUser)
+  const stView = useMemo(() => ({ ...st, posts: st.posts.map((p) => localizePost(demo && p.demo && p.employerId !== MY_EMPLOYER ? { ...p, openAll: true } : p, lang)) }), [st, lang, demo])
   const pool = useMemo<PinLike[]>(() => (mode === 'remote' ? [...st.me.pins, ...statsToPool(remotePool)] : poolOf(st)), [mode, st, remotePool])
   const pinsByProvince = useMemo(() => {
     if (mode === 'remote') return statsByProvince(remotePool.filter((r) => Date.parse(r.hour) > now - 30 * 24 * HOUR_MS))
@@ -296,10 +315,53 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         return (await profile({ member: true, member_until: until })).ok ? until : null
       },
       sampleApply: async (postId) => {
-        if (!local) return false
+        if (!local) {
+          if (!demo) return false
+          const r = await write((sb) => sb.rpc('demo_sample_apply', { p_post: postId }), (d) => typeof d === 'string' && d.length > 0)
+          return r.ok && r.value
+        }
         const r = sampleApplicant(st, postId, uid('acc'), at()); if (!r.ok) return false
         setLocal((s) => ({ ...s, acceptances: [...s.acceptances, r.value] }))
         return true
+      },
+      demo,
+      demoVerify: async () => {
+        if (local) {
+          const when = at()
+          setLocal((s) => {
+            const ev = { ...(s.employerVerify ?? { kind: 'company' as const, country: 'TH' as const, regNo: '0105599000001' }), status: 'verified' as const, at: s.employerVerify?.at ?? when, decidedAt: when }
+            return { ...s, employerVerify: ev, posts: s.posts.map((p) => (p.employerId === MY_EMPLOYER ? { ...p, verified: true, verifiedAs: ev.kind } : p)) }
+          })
+          return true
+        }
+        if (!demo) return false
+        return (await write((sb) => sb.rpc('demo_verify_employer'), () => null)).ok
+      },
+      samplePost: async (place, industry, skills) => {
+        if (local) {
+          const r = makePost(samplePostInput(place, industry, skills, localDay(at())), uid('post'), 'employer:sim-demo', at()); if (!r.ok) return null
+          const post: Post = { ...r.value, sample: true, verified: true, verifiedAs: 'company', simFor: true, openAll: true }
+          setLocal((s) => ({ ...s, posts: [post, ...s.posts] }))
+          return post.id
+        }
+        if (!demo) return null
+        const r = await write((sb) => sb.rpc('demo_sample_post', { p_country: place.country, p_province: place.province, p_industry: industry, p_skills: skills }), (d) => (typeof d === 'string' ? d : null))
+        return r.ok ? r.value : null
+      },
+      sampleAnswer: async (accId, confirm) => {
+        const a = mineAcc(accId), p = a && st.posts.find((x) => x.id === a.postId)
+        if (!a || !p?.simFor || a.seekerId !== ME) return false
+        if (local) {
+          const when = at()
+          const r = decide(st, accId, confirm, when); if (!r.ok) return false
+          setLocal((s) => {
+            if (!confirm) return { ...s, acceptances: r.value }
+            const opened = openCaseFor(s, r.value, accId, uid('case'), when)
+            return { ...s, acceptances: opened.acceptances, cases: opened.cases }
+          })
+          return true
+        }
+        return (await write((sb) => sb.rpc('demo_sample_answer', { p_acc: accId, p_confirm: confirm }), () => null)).ok
       },
       apply: async (postId, input) => {
         const r = applyTo(st, pool, postId, ME, input, uid('acc'), at()); if (!r.ok) return r
@@ -420,7 +482,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       resetClock: () => { if (local) setLocal((s) => clampFuture(s, Date.now())); else setClock(0) },
       reset: () => { if (local) { const fresh = seedState(); setLocal((s) => ({ ...fresh, role: s.role })) } else setClock(0) },
     }
-  }, [st, stView, now, limitNow, mode, writing, pool, pinsByProvince, pinGroups, counts, stats, at, refresh, userId, admin, people, reportRows])
+  }, [st, stView, now, limitNow, mode, demo, writing, pool, pinsByProvince, pinGroups, counts, stats, at, refresh, userId, admin, people, reportRows])
   return <C.Provider value={value}>{children}</C.Provider>
 }
 export const useMatch = () => { const c = useContext(C); if (!c) throw new Error('match'); return c }

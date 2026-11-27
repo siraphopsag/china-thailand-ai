@@ -75,6 +75,7 @@ export function reachFor(post: Post, myPins: PinLike[], pool: PinLike[], now: nu
   const stage = capStage(stageAt(s, now), post)
   const level = matchLevel(post, myPins, now)
   if (stage === 'expired') return { level, stage, visible: false, opensAt: null }
+  if (post.openAll) return { level, stage, visible: true, opensAt: null } // demo: open to every level at once
   if (level === 1 && stage === 1) {
     // my group: the hour of my earliest matching pin that took part in the rounds
     const mine = myPins.filter((p) => pinActive(p, now) && ruleOf(p, post) === 1).map((p) => s.groups.indexOf(hourOf(p.at))).filter((k) => k >= 0)

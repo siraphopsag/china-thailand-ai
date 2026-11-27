@@ -36,7 +36,7 @@ describe('seeker pins confirm first (owner, Oct 2026: it sent at once and jumped
     const m = src('./pages/match.tsx')
     expect(m).toContain("fe.clear(); setPinStage('confirm')")
     expect(m).toContain("<Modal open={pinStage === 'confirm'}")
-    expect(m).toContain("if (r.ok) { setPinned({ country: dc, province: dp }); setPinStage('done'); return }")
+    expect(m).toContain("if (r.ok) { setPinned({ country: dc, province: dp, industry, skills }); setSimFail(false); setPinStage('done'); return }")
     expect(m).toContain("{saving ? t('m.pin.busy') : t('m.pin.go')}")
     const [th] = messages['m.pin.cf.title'] as readonly string[]
     expect(th).toBe('ยืนยันการปักหมุดนี้ใช่หรือไม่?')

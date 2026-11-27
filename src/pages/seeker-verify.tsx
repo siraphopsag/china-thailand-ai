@@ -91,7 +91,7 @@ const CODE_LIFE_MS = 5 * 60_000
 export function SeekerVerifyCard() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, now } = useMatch()
+  const { st, now, demo } = useMatch()
   const { v, save: saveVerify, problem } = useSeekerVerifyStore()
   const home: Country = st.me.origin?.country ?? 'TH'
   const [country, setCountry] = useState<Country>(v?.country ?? home)
@@ -125,6 +125,10 @@ export function SeekerVerifyCard() {
         <li className={`rounded-xl border p-2.5 text-sm ${v ? 'border-ok-line bg-ok-bg text-ok-fg' : 'border-line'}`}><b>1 · {t('sv.s1')}</b><br />{v ? t('sv.s1.done', { d: v.phone4 }) : t('mid.st.todo')}</li>
         <li className={`rounded-xl border p-2.5 text-sm ${v?.passport ? 'border-ok-line bg-ok-bg text-ok-fg' : 'border-line'}`}><b>2 · {t('sv.s2')}</b><br />{v?.passport ? t('sv.s2.done', { d: v.passport.last4, e: N.day(v.passport.expiry) }) : t('mid.st.todo')}</li>
       </ol>
+      {/* a demo account: the phone and the sample passport in one tap (owner, 27 Nov 2026) */}
+      {demo && !isVerifiedSeeker(v) && (
+        <div className="card-i space-y-2 text-sm"><p className="flex items-start gap-1.5"><Icon name="sim" size={15} className="mt-0.5 shrink-0 text-warn-fg" />{t('dm.sv.lead')}</p>
+          <button type="button" className="btn-primary text-sm" onClick={() => { const at = new Date(now).toISOString(); saveVerify({ country: home, phone4: '0000', phoneAt: at, passport: { last4: '5678', nationality: home === 'TH' ? 'THA' : 'CHN', expiry: '2031-08-30', at } }) }}><Icon name="personCheck" size={15} />{t('dm.sv.go')}</button></div>)}
       {isVerifiedSeeker(v) ? (
         <div className="flex flex-wrap items-center gap-2"><span className="chip bg-ok-bg text-ok-fg border-ok-line"><Icon name="personCheck" size={13} />{t('sv.badge')}</span>
           <button type="button" className="btn-ghost text-sm" onClick={() => saveVerify(null)}>{t('sv.reset')}</button></div>

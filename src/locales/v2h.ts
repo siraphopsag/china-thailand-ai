@@ -98,6 +98,22 @@ export const v2h = {
   'tg.l.weak': ['หลักฐานยังน้อย', '证据尚少', 'Little backing yet'],
   'tg.teamOnly': ['ความเห็นจาก AI ใช้ได้เฉพาะทีม C.A.L.L. ที่ล็อกอิน', 'AI 意见仅限已登录的 C.A.L.L. 团队使用', 'The AI reading is for the signed-in C.A.L.L. team only'],
   // ---------- the key for the shaded map (board)
+  // the demo account tries everything alone (owner, 27 Nov 2026; SQL 0021)
+  'dm.tools': ['เครื่องมือบัญชีทดลอง · เร่งเวลา', '体验账号工具 · 加快时间', 'Demo tools · move the clock'],
+  'dm.tools.lead': ['ประกาศจะส่งถึงคนทีละวง วงละประมาณหนึ่งวัน กดเร่งเวลาเพื่อดูวงถัดไปได้ทันที เปลี่ยนแค่สิ่งที่เบราว์เซอร์นี้แสดง', '招聘信息逐圈送达，每圈约一天。按“加快时间”即可立即看到下一圈，只改变本浏览器的显示。', 'A post reaches people ring by ring, about a day each. Move the clock to see the next ring now. Only this browser’s view changes.'],
+  'dm.vf.lead': ['บัญชีทดลอง: กดปุ่มนี้เพื่อให้ผ่านการยืนยันทันที เหมือนทีมงานอนุมัติแล้ว (ใช้เลขทะเบียนจำลอง) ประกาศจะส่งถึงได้ครบทุกวง', '体验账号：按此按钮即可立即通过验证，如同团队已批准（使用模拟注册号）。招聘信息可送达所有圈层。', 'Demo account: press this to be verified at once, as if the team had approved (a made-up registration number). Your posts then reach every ring.'],
+  'dm.vf.go': ['ยืนยันแบบทดลอง (ผ่านทันที)', '模拟验证（立即通过）', 'Demo verification (instant)'],
+  'dm.vf.done': ['ยืนยันแบบทดลองแล้ว โพสต์งานได้เลย', '模拟验证已通过，现在可以发布职位', 'Verified for the demo. You can post now.'],
+  'dm.sv.lead': ['บัญชีทดลอง: กดปุ่มนี้เพื่อยืนยันเบอร์โทรและหนังสือเดินทางตัวอย่างในครั้งเดียว แล้วปักหมุดได้เลย', '体验账号：按此按钮一次完成手机号和示例护照验证，然后即可标记地点。', 'Demo account: press this to confirm a phone and the sample passport in one go, then pin right away.'],
+  'dm.sv.go': ['ยืนยันแบบทดลอง (ผ่านทันที)', '模拟验证（立即通过）', 'Demo verification (instant)'],
+  'dm.post.lead': ['บัญชีทดลอง: ให้นายจ้างจำลองโพสต์งานที่ตรงกับหมุดนี้ เพื่อลองสมัครได้ทันที (คุณเห็นคนเดียว)', '体验账号：让模拟雇主发布与此标记匹配的职位，即可立即试着申请（仅您可见）。', 'Demo account: have a simulated employer post a job that fits this pin, so you can try applying now (only you see it).'],
+  'dm.post.go': ['ให้นายจ้างจำลองโพสต์งาน', '让模拟雇主发布职位', 'Simulated employer posts a job'],
+  'dm.post.fail': ['สร้างประกาศจำลองไม่สำเร็จ ฐานข้อมูลอาจยังไม่ได้อัปเดต หรือสร้างครบ 20 ประกาศแล้ว', '无法创建模拟职位：数据库可能尚未更新，或已达 20 条上限。', 'Could not make the simulated post: the database may not be updated yet, or 20 have been made already.'],
+  'dm.ans.lead': ['ประกาศนี้มาจากนายจ้างจำลอง ให้นายจ้างตอบใบสมัครของคุณได้เลย', '此职位来自模拟雇主，可以让雇主立即回复您的申请。', 'This post is from a simulated employer. Have them answer your application now.'],
+  'dm.ans.yes': ['ให้นายจ้างจำลองตอบรับ', '让模拟雇主录用', 'Simulated employer accepts'],
+  'dm.ans.no': ['ให้นายจ้างจำลองปฏิเสธ', '让模拟雇主拒绝', 'Simulated employer declines'],
+  'dm.ans.yesDone': ['นายจ้างจำลองตอบรับแล้ว เคสเปิดแล้ว', '模拟雇主已录用，案件已开启', 'The simulated employer accepted. A case is open.'],
+  'dm.ans.noDone': ['นายจ้างจำลองปฏิเสธแล้ว', '模拟雇主已拒绝', 'The simulated employer declined.'],
   // text size (owner, 27 Nov 2026)
   'm.settings.text': ['ขนาดตัวอักษร', '文字大小', 'Text size'],
   'm.settings.text.d': ['ขยายตัวหนังสือ ปุ่ม และชื่อบนแผนที่ทั้งเว็บ จำไว้ในเครื่องนี้', '放大整个网站的文字、按钮和地图名称，保存在本设备上', 'Makes the text, buttons and map names larger across the site. Saved on this device.'],

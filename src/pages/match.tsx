@@ -325,7 +325,7 @@ export function SeekPage() {
   const tabAsked = useSearchParam('tab') // the calendar's "pin ends" opens my pins
   const [seekTab, setSeekTab] = useState<'new' | 'mine'>(tabAsked === 'mine' ? 'mine' : 'new')
   const N = useNames()
-  const { st, limitNow, setOrigin, pin, unpin } = useMatch()
+  const { st, limitNow, setOrigin, pin, unpin, demo, samplePost } = useMatch()
   // owner's blueprint (24 Nov 2026): nothing verified yet → no pins (the database checks it too, SQL 0016); administrators add sample data
   const seekLv = seekerLevel(useSeekerVerify()), { isAdmin: seekAdmin } = useAuth()
   const mustVerify = seekLv === 'none' && !seekAdmin
@@ -337,7 +337,8 @@ export function SeekPage() {
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null)
   // confirm → saving → pinned (owner, Oct 2026: it used to send at once, and the form jumped back to step 2 while saving)
   const [pinStage, setPinStage] = useState<'confirm' | 'done' | null>(null), [saving, setSaving] = useState(false)
-  const [pinned, setPinned] = useState<{ country: Country; province: string } | null>(null)
+  const [pinned, setPinned] = useState<{ country: Country; province: string; industry: Industry; skills: Skill[] } | null>(null)
+  const [simBusy, setSimBusy] = useState(false), [simFail, setSimFail] = useState(false)
   const fe = useFieldError()
   const gate = useGate('seek')
   if (gate) return <Page title={t('m.seek.title')}>{gate}</Page>
@@ -362,7 +363,7 @@ export function SeekPage() {
     setSaving(true)
     const r = await pin({ place: { country: dc, province: dp }, industry, skills })
     setSaving(false)
-    if (r.ok) { setPinned({ country: dc, province: dp }); setPinStage('done'); return }
+    if (r.ok) { setPinned({ country: dc, province: dp, industry, skills }); setSimFail(false); setPinStage('done'); return }
     setPinStage(null)
     if (r.problem === 'place' || r.problem === 'duplicate') fe.set('dest-prov', 'dest-prov', N.problem(r.problem))
     else if (r.problem === 'skills') fe.set('seek-skills', 'seek-skills-0', N.problem(r.problem))
@@ -422,7 +423,11 @@ export function SeekPage() {
         <p className="text-sm"><b>{N.place(pinned.country, pinned.province)}</b></p>
         <p className="text-sm text-muted">{t('m.pin.dn.text')}</p>
         <div className="grid sm:grid-cols-2 gap-2"><button type="button" className="btn-primary" onClick={() => { pinAgain('pins-h'); setSeekTab('mine') }}><Icon name="pin" size={16} />{t('m.pin.dn.mine')}</button>
-          <button type="button" className="btn-ghost" onClick={() => pinAgain()}><Icon name="plus" size={16} />{t('m.pin.dn.again')}</button></div></>)}</Modal>
+          <button type="button" className="btn-ghost" onClick={() => pinAgain()}><Icon name="plus" size={16} />{t('m.pin.dn.again')}</button></div>
+        {/* demo: a simulated employer posts a job that fits this pin, so applying can be tried at once (owner, 27 Nov 2026) */}
+        {demo && <div className="card-i space-y-2 text-sm"><p className="flex items-start gap-1.5"><Icon name="sim" size={15} className="mt-0.5 shrink-0 text-warn-fg" />{t('dm.post.lead')}</p>
+          <button type="button" className="btn-primary text-sm" disabled={simBusy} onClick={async () => { setSimBusy(true); const id = await samplePost({ country: pinned.country, province: pinned.province }, pinned.industry, pinned.skills); setSimBusy(false); if (id) { setPinStage(null); go(`post?id=${id}`) } else setSimFail(true) }}><Icon name="business" size={15} />{simBusy ? t('m.ask.busy') : t('dm.post.go')}</button>
+          {simFail && <p className="text-danger-fg" role="alert">{t('dm.post.fail')}</p>}</div>}</>)}</Modal>
       {seekTab === 'mine' && (
       <section className="space-y-2" aria-labelledby="pins-h">
         <h2 id="pins-h" tabIndex={-1} className="h2 outline-none">{t('m.pin.active', { n: activePins(st.me, limitNow).length })}</h2>
@@ -523,8 +528,9 @@ export function PinList({ onRemove, onNew }: { onRemove?: (id: string) => void; 
   const { t } = useI18n()
   const N = useNames()
   const { ago, until } = useRel()
-  const { st, limitNow, syncing } = useMatch()
+  const { st, limitNow, syncing, demo, samplePost } = useMatch()
   const [order, setOrder] = useState<'new' | 'old'>('new')
+  const [simBusy, setSimBusy] = useState<string | null>(null)
   const pins = activePins(st.me, limitNow).sort((a, b) => (order === 'new' ? b.at.localeCompare(a.at) : a.at.localeCompare(b.at)))
   // a pin just sent is still on its way: say so instead of "no pins yet"
   if (!pins.length && syncing) return <p className="text-muted py-10 text-center" role="status">{t('c.loading')}</p>
@@ -541,11 +547,25 @@ export function PinList({ onRemove, onNew }: { onRemove?: (id: string) => void; 
               <h3 className="font-semibold flex flex-wrap items-center gap-2">{N.place(p.country, p.province)}<span className={`chip ${fresh ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-surface3 text-muted border-line'}`}>{t(fresh ? 'm.pin.new' : 'm.pin.old')}</span>{p.sample && <span className="chip bg-warn-bg text-warn-fg border-warn-line font-semibold"><Icon name="sim" size={12} />{t('m.sample.pin')}</span>}</h3>
               <p className="text-sm text-muted">{N.industry(p.industry)} · {p.skills.map(N.skill).join(', ')}</p>
               <p className="text-xs text-muted">{t('m.pin.when', { t: ago(p.at) })} · {t('m.pin.ends', { t: until(Date.parse(p.at) + PIN_LIFE_DAYS * DAY_MS) })}</p>
+              {demo && !p.sample && <button type="button" className="btn-ghost text-xs !min-h-[32px] mt-1" disabled={simBusy !== null} onClick={async () => { setSimBusy(p.id); const id = await samplePost({ country: p.country, province: p.province }, p.industry, p.skills); setSimBusy(null); if (id) go(`post?id=${id}`) }}><Icon name="business" size={13} />{simBusy === p.id ? t('m.ask.busy') : t('dm.post.go')}</button>}
             </div>
             {onRemove && <button type="button" className="w-9 h-9 rounded-lg border border-control grid place-items-center hover:bg-surface3" aria-label={`${t('m.pin.remove')}: ${N.place(p.country, p.province)}`} title={t('m.pin.remove')} onClick={() => onRemove(p.id)}><Icon name="close" size={16} /></button>}
           </li>)
       })}</ul>
     </div>
+  )
+}
+/** a demo account's tools (owner, 27 Nov 2026: the judges try everything alone): move the clock to watch a post reach the
+ *  next levels without waiting a day. Folded away, so the page reads as usual. */
+export function DemoTools() {
+  const { t } = useI18n()
+  const { demo, st } = useMatch()
+  if (!demo) return null
+  return (
+    <details className="card-i text-sm shrink-0" open={st.clockHours > 0}>
+      <summary className="cursor-pointer font-semibold flex items-center gap-1.5 min-h-[32px]"><Icon name="sim" size={15} className="text-warn-fg" />{t('dm.tools')}</summary>
+      <div className="pt-2 space-y-2"><p className="text-muted">{t('dm.tools.lead')}</p><ClockControls /></div>
+    </details>
   )
 }
 /** the demo clock: jump an hour, a day or a month to watch the release levels; it moves what the site shows, not the database */

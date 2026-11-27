@@ -14,7 +14,7 @@ import { Icon } from '../components/icons'
 import { MoneyInput } from '../components/money-input'
 import { Drawer } from '../components/drawer'
 import { Pager, useFit, usePaged } from '../components/pager'
-import { DemoBadge, Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, TranslatedNote, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
+import { DemoBadge, DemoTools, Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, TranslatedNote, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
 import { ReportButton } from './safety'
 import { MarketPanel } from './market'
 import { ExternalPanel, externalCounts, useDates, useExternal } from './marketOpen'
@@ -113,6 +113,7 @@ export function BoardPage() {
         </div>
         <NavLink to={seeker ? 'seek' : 'hire'} className="btn-primary !rounded-full" aria-label={t(seeker ? 'm.pin.go' : 'm.emp.post')}><Icon name="plus" size={16} /><span className="sm:hidden" aria-hidden>{t(seeker ? 'm.bd.pinShort' : 'm.bd.postShort')}</span><span className="hidden sm:inline">{t(seeker ? 'm.pin.go' : 'm.emp.post')}</span></NavLink>
       </>}>
+      <DemoTools />
       {seeker && pinsOpen && <section id="bd-pins" className="shrink-0 fit:max-h-[40%] fit:overflow-y-auto" aria-label={t('m.board.myPins')}><PinList /></section>}
 
       {cards && (<>

@@ -281,7 +281,7 @@ const pick = (on: boolean) => `min-h-[44px] px-4 rounded-lg border ${on ? 'borde
 export function VerifyCard() {
   const { t } = useI18n()
   const N = useNames()
-  const { st, mode, requestVerification, requestPersonVerification, decideVerification } = useMatch()
+  const { st, mode, requestVerification, requestPersonVerification, decideVerification, demo: demoAcc, demoVerify } = useMatch()
   const ev = st.employerVerify
   const [kind, setKind] = useState<VerifyKind>(ev?.kind ?? 'company')
   const [country, setCountry] = useState<Country>(ev?.country ?? 'TH')
@@ -334,6 +334,10 @@ export function VerifyCard() {
       {(!ev || ev.status !== 'verified' || form) && <p className="text-sm text-muted">{t(kind === 'person' ? 'm.vf.lead.person' : 'm.vf.lead')}</p>}
       {ev?.status === 'verified' && person && !form && <p className="text-sm text-muted">{t('m.vf.toCompany')}</p>}
       <Toast msg={msg} />
+      {/* a demo account: approved at once, as the team would (owner, 27 Nov 2026: the judges try everything alone) */}
+      {demoAcc && ev?.status !== 'verified' && !(mode === 'local' && ev?.status === 'pending') && (
+        <div className="card-i space-y-2 text-sm"><p className="flex items-start gap-1.5"><Icon name="sim" size={15} className="mt-0.5 shrink-0 text-warn-fg" />{t('dm.vf.lead')}</p>
+          <button type="button" className="btn-primary text-sm" disabled={busy} onClick={async () => { setBusy(true); const ok = await demoVerify(); setBusy(false); setMsg(ok ? { tone: 'info', text: t('dm.vf.done') } : { tone: 'danger', text: t('m.err.network') }) }}><Icon name="verified" size={15} />{t('dm.vf.go')}</button></div>)}
       {ev?.status === 'pending' && mode === 'local' && (
         <div className="flex flex-wrap gap-2"><button type="button" className="btn-primary text-sm" disabled={busy} onClick={() => void demo(true)}>{t('m.vf.demoApprove')}</button>
           <button type="button" className="btn-ghost text-sm" disabled={busy} onClick={() => void demo(false)}>{t('m.vf.demoReject')}</button></div>)}

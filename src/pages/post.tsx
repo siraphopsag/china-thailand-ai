@@ -11,7 +11,7 @@ import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { CaseLink } from './case'
 import { ReportButton, ScamNote } from './safety'
-import { AgencyLinks, DemoBadge, HeldChip, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, TranslatedNote, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
+import { AgencyLinks, DemoBadge, DemoTools, HeldChip, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, TranslatedNote, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 import { EmployerRating } from './aftercare'
 import { SeekerBadge } from './seeker-verify'
 import { WorkerRating } from './aftercare'
@@ -29,7 +29,7 @@ export function PostPage() {
   const { t } = useI18n()
   const N = useNames()
   const { until } = useRel()
-  const { st, now, limitNow, mode, pool, counts, apply, withdraw, decide, renew, deletePost, sampleApply } = useMatch()
+  const { st, now, limitNow, mode, pool, counts, apply, withdraw, decide, renew, deletePost, sampleApply, demo, sampleAnswer } = useMatch()
   const nameOf = useApplicantName()
   const id = useSearchParam('id')
   const [intro, setIntro] = useState(''), [from, setFrom] = useState(''), [focused, setFocused] = useState(false)
@@ -91,6 +91,7 @@ export function PostPage() {
 
   return (
     <Page title={p.position} sub={<>{p.company}<VerifyTick post={p} /> <EmployerRating employerId={p.employerId} compact /> · {N.place(p.country, p.province)} · {N.industry(p.industry)}</>} fit body="flex flex-col gap-3">
+      <DemoTools />
       <div className="shrink-0 flex flex-wrap items-center gap-2">
         {stage !== 'expired' && <LevelBadge level={mine || !reach ? stage : reach.level} reached={mine || !reach} />}
         <span className="chip bg-surface3 border-line"><Icon name="users" size={12} />{t('m.cnt.held', { n: c.held, max: cap })}</span>
@@ -121,6 +122,11 @@ export function PostPage() {
                 <p className="font-medium flex items-center gap-2"><Icon name={myApp.status === 'rejected' ? 'info' : 'ok'} size={18} className={myApp.status === 'rejected' ? 'text-muted' : 'text-ok-fg'} />{statusLine(myApp)}</p>
                 {myApp.promotedAt && <p className="text-sm text-muted">{t('m.ap.promoted', { d: N.dayTime(Date.parse(myApp.promotedAt)) })}</p>}
                 {myCase && <CaseLink c={myCase} />}
+                {/* demo: the simulated employer of this post answers when asked (owner, 27 Nov 2026) */}
+                {p.simFor && myApp.status === 'accepted' && (
+                  <div className="card-i space-y-2 text-sm"><p className="flex items-start gap-1.5"><Icon name="sim" size={15} className="mt-0.5 shrink-0 text-warn-fg" />{t('dm.ans.lead')}</p>
+                    <div className="flex flex-wrap gap-2"><button type="button" className="btn-primary text-sm" disabled={busy} onClick={() => void act(() => sampleAnswer(myApp.id, true), t('dm.ans.yesDone'), 'ap-h')}><Icon name="check" size={15} />{t('dm.ans.yes')}</button>
+                      <button type="button" className="btn-ghost text-sm" disabled={busy} onClick={() => void act(() => sampleAnswer(myApp.id, false), t('dm.ans.noDone'), 'ap-h')}>{t('dm.ans.no')}</button></div></div>)}
                 {(myApp.status === 'confirmed' || myApp.status === 'forwarded') && <AgencyLinks />}
                 {(myApp.status === 'accepted' || myApp.status === 'reserved' || (myApp.status === 'confirmed' && !myCase?.steps.submitted)) && (
                   <button type="button" className="btn-ghost text-danger-fg" disabled={busy} onClick={async () => { if (await ask(t('m.ap.withdraw.confirm'), { yes: t(myApp.status === 'reserved' ? 'm.ap.withdrawQueue' : 'm.ap.withdraw'), danger: true })) void act(() => withdraw(myApp.id), t('m.ap.withdrawn'), 'ap-h') }}>{busy ? t('m.ask.busy') : t(myApp.status === 'reserved' ? 'm.ap.withdrawQueue' : 'm.ap.withdraw')}</button>)}
@@ -162,8 +168,8 @@ export function PostPage() {
               {noPosts && <div id="renew-none" tabIndex={-1} className="outline-none"><Warn tone="danger">{t('m.err.quota')} · <NavLink to="member" className="font-semibold underline underline-offset-2">{t('m.plan.see')}</NavLink></Warn></div>}
               <h3 id="em-apps" tabIndex={-1} className="font-semibold pt-2 border-t border-line outline-none">{t('m.em.applicants', { n: appsOf.filter((a) => a.status !== 'reserved').length })}</h3>
               {/* local demo: try the employer's side without a second person (QA, Oct 2026) */}
-              {mode === 'local' && <div className="card-i space-y-2 text-sm"><p className="text-muted flex items-start gap-1.5"><Icon name="sim" size={15} className="mt-0.5 shrink-0" />{t('m.em.sim.lead')}</p>
-                <button type="button" className="btn-ghost text-sm" disabled={busy || st.seekers.every((x) => appsOf.some((a) => a.seekerId === x.id))}
+              {(mode === 'local' || demo) && <div className="card-i space-y-2 text-sm"><p className="text-muted flex items-start gap-1.5"><Icon name="sim" size={15} className="mt-0.5 shrink-0" />{t('m.em.sim.lead')}</p>
+                <button type="button" className="btn-ghost text-sm" disabled={busy || (mode === 'local' && st.seekers.every((x) => appsOf.some((a) => a.seekerId === x.id)))}
                   onClick={async () => { const ok = await sampleApply(p.id); setMsg(ok ? { tone: 'info', text: t('m.em.sim.done') } : { tone: 'danger', text: t('m.em.sim.none') }) }}><Icon name="user" size={15} />{t('m.em.sim.go')}</button></div>}
               {!appsOf.some((a) => a.status !== 'reserved') ? <p className="text-sm text-muted">{t('m.em.noneYet')}</p> : (
                 <ul className="space-y-2">{appsOf.filter((a) => a.status !== 'reserved').map((a) => (
