@@ -10,7 +10,7 @@ import { ThemeProvider } from './theme'
 import { MatchProvider } from './matchData'
 import { AuthProvider } from './auth'
 import {
-  CHECKIN_GRACE, actComplaint, canReview, checkinFlags, checkinStates, credLevel, credibility, dueDay, fileComplaint, hasSecret, reviewProblem, reviewSummary, teamAlerts,
+  CHECKIN_DAYS, CHECKIN_GRACE, actComplaint, canReview, checkinFlags, checkinStates, credLevel, credibility, dueDay, fileComplaint, hasSecret, reviewProblem, reviewSummary, teamAlerts,
   type CheckIn,
 } from './domain/match/aftercare'
 import { seedState } from './domain/match/seed'
@@ -39,9 +39,11 @@ describe('A. check-ins', () => {
   it('day 1 is the arrival day; each check-in is open for its day plus the grace, then missed', () => {
     expect(dueDay(arr, 1)).toBe(arr); expect(dueDay(arr, 7)).toBe('2026-11-28'); expect(dueDay(arr, 30)).toBe('2026-12-21')
     expect(CHECKIN_GRACE).toBe(2)
-    expect(checkinStates(arr, [], arr).map((s) => s.state)).toEqual(['open', 'upcoming', 'upcoming'])
-    expect(checkinStates(arr, [ci(1)], '2026-12-01').map((s) => s.state)).toEqual(['done', 'missed', 'upcoming'])
-    expect(checkinStates(arr, [ci(1)], '2026-11-30').map((s) => s.state)).toEqual(['done', 'open', 'upcoming'])
+    expect(CHECKIN_DAYS).toEqual([1, 3, 7, 15, 30]) // owner’s blueprint, 27 Nov 2026: 24 h, 3, 7, 15, 30 days
+    expect([dueDay(arr, 3), dueDay(arr, 15)]).toEqual(['2026-11-24', '2026-12-06'])
+    expect(checkinStates(arr, [], arr).map((s) => s.state)).toEqual(['open', 'upcoming', 'upcoming', 'upcoming', 'upcoming'])
+    expect(checkinStates(arr, [ci(1)], '2026-12-01').map((s) => s.state)).toEqual(['done', 'missed', 'missed', 'upcoming', 'upcoming'])
+    expect(checkinStates(arr, [ci(1)], '2026-11-30').map((s) => s.state)).toEqual(['done', 'missed', 'open', 'upcoming', 'upcoming'])
   })
   it('answers that need the team: unpaid (not yet is fine on day 1), passport, hours, unsafe and the secret word', () => {
     expect(checkinFlags(ci(1, { paid: 'notYet' }))).toEqual([])
@@ -52,7 +54,7 @@ describe('A. check-ins', () => {
   })
   it('team alerts put the secret word and "unsafe" first, then missed check-ins', () => {
     const a = teamAlerts(arr, [ci(1, { paid: 'no' }), ci(30, { safe: 'no', silent: true })], '2026-12-21')
-    expect(a.map((x) => (x.kind === 'flag' ? x.flag : `missed-${x.day}`))).toEqual(['silent', 'unsafe', 'unpaid', 'missed-7'])
+    expect(a.map((x) => (x.kind === 'flag' ? x.flag : `missed-${x.day}`))).toEqual(['silent', 'unsafe', 'unpaid', 'missed-3', 'missed-7', 'missed-15'])
   })
 })
 
@@ -106,7 +108,7 @@ describe('D. pages', () => {
     expect(html(<AftercarePanel c={demoCase(NOW)} caseKey="t-2" employerId="e" country="CN" province="CN-GD" today="2026-11-22" view="seeker" team atNow="x" />)).toBe('')
     expect(src('./pages/sos.tsx')).toContain("t('cr.path.self')"); expect(src('./pages/sos.tsx')).toContain("t('cr.path.call')")
     expect(html(<SosPage />)).toContain(T('rp.h' as never) || '')
-    expect(src('./pages/case-demo.tsx')).toContain("([null, 7, 10, 30] as const)")
+    expect(src('./pages/case-demo.tsx')).toContain("([null, 3, 7, 10, 15, 30] as const)")
     expect(src('./pages/post.tsx')).toContain('<EmployerRating employerId={p.employerId} compact />')
   })
   it('every new text has Thai, Chinese and English in the right scripts and no key clashes', () => {

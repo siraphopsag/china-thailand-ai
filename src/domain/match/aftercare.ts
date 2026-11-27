@@ -1,4 +1,4 @@
-// The end system after arrival (v2 model, owner Nov 2026). Three check-ins (arrival day, day 7, day 30) ask the worker four short
+// The end system after arrival (v2 model, owner Nov 2026). Five check-ins (the first 24 hours, days 3, 7, 15 and 30) ask the worker four short
 // questions; a "no" on pay, passport, hours or safety, a missed check-in, or the worker's secret word written in the note raises an
 // alert that only the C.A.L.L. team sees (the employer never sees the answers). After day 30 the worker may review the employer:
 // stars and fixed points, no free text, shown on the employer's posts as an anonymous total. A complaint the worker asks C.A.L.L.
@@ -8,7 +8,8 @@ import { AGENCIES, URGENT, type ProblemKind } from './reportPack'
 import type { Country } from './types'
 
 /* ---------- check-ins ---------- */
-export const CHECKIN_DAYS = [1, 7, 30] as const
+/** the first 24 hours (arrival day), then days 3, 7, 15 and 30 (owner's blueprint, 27 Nov 2026; before: 1, 7, 30) */
+export const CHECKIN_DAYS = [1, 3, 7, 15, 30] as const
 export type CheckDay = (typeof CHECKIN_DAYS)[number]
 /** days after the due day before a check-in counts as missed */
 export const CHECKIN_GRACE = 2

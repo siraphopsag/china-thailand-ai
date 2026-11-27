@@ -6,8 +6,10 @@ export const v2c = {
   'ac.sub.seeker': ['ทีม C.A.L.L. จะถามคุณ 3 ครั้ง: วันที่ถึง วันที่ 7 และวันที่ 30 คำตอบเป็นความลับ นายจ้างไม่เห็น', 'C.A.L.L. 团队会询问你 3 次：到达当天、第 7 天和第 30 天。回答保密，雇主看不到', 'The C.A.L.L. team checks in three times: arrival day, day 7 and day 30. Your answers are private; the employer never sees them.'],
   'ac.sub.employer': ['ทีม C.A.L.L. ติดตามกับลูกจ้างโดยตรงหลังเริ่มงาน', 'C.A.L.L. 团队在员工到岗后直接跟进', 'The C.A.L.L. team follows up with the worker directly after the start.'],
   'ac.timeline': ['กำหนดเช็กอิน', '回访时间表', 'Check-in schedule'],
-  'ac.day.1': ['วันที่ถึง', '到达当天', 'Arrival day'],
+  'ac.day.1': ['24 ชั่วโมงแรก', '到达后 24 小时', 'First 24 hours'],
+  'ac.day.3': ['วันที่ 3', '第 3 天', 'Day 3'],
   'ac.day.7': ['วันที่ 7', '第 7 天', 'Day 7'],
+  'ac.day.15': ['วันที่ 15', '第 15 天', 'Day 15'],
   'ac.day.30': ['วันที่ 30', '第 30 天', 'Day 30'],
   'ac.st.done': ['ตอบแล้ว', '已回答', 'Answered'],
   'ac.st.open': ['ถึงเวลาตอบ', '待回答', 'Due now'],
@@ -118,7 +120,9 @@ export const v2c = {
   // ---------- demo days
   'dm.jump': ['เลื่อนวันในเดโม', '演示日期', 'Demo day'],
   'dm.jump.today': ['วันนี้', '今天', 'Today'],
+  'dm.jump.3': ['วันที่ 3', '第 3 天', 'Day 3'],
   'dm.jump.7': ['วันที่ 7', '第 7 天', 'Day 7'],
+  'dm.jump.15': ['วันที่ 15', '第 15 天', 'Day 15'],
   'dm.jump.10': ['วันที่ 10 (ลืมเช็กอิน)', '第 10 天（漏掉回访）', 'Day 10 (missed check-in)'],
   'dm.jump.30': ['วันที่ 30', '第 30 天', 'Day 30'],
 } as const satisfies Record<string, Msg>

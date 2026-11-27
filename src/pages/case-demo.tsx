@@ -70,7 +70,7 @@ export function CaseDemoPage() {
       {arrival && (
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('dm.jump')}>
           <span className="text-sm font-medium flex items-center gap-1.5"><Icon name="fastForward" size={15} />{t('dm.jump')}</span>
-          {([null, 7, 10, 30] as const).map((d) => (
+          {([null, 3, 7, 10, 15, 30] as const).map((d) => (
             <button key={String(d)} type="button" aria-pressed={jump === d} onClick={() => setJump(d)} className={`min-h-[34px] px-3 rounded-lg border text-sm ${jump === d ? 'seg-on border-primary' : 'border-line hover:bg-surface3'}`}>{t(d === null ? 'dm.jump.today' : `dm.jump.${d}` as never)}</button>))}
         </div>)}
     </div>)
