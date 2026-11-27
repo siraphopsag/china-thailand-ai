@@ -23,6 +23,7 @@ import { WORKER_BAD, WORKER_GOOD, canCloseJob, fileComplaint, jobClosed, mapLink
 import { cleanWorkerReview } from './workerReviewStore'
 import { businessProblem, cleanBusiness, cleanWork, totalYears, workProblem } from './domain/profileExtra'
 import { officeNear, osmEmbed, packText } from './domain/match/reportPack'
+import { photoQuality } from './domain/photoCheck'
 import { contractHtml } from './pages/contract-steps'
 import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
 import { messages } from './locales/index'
@@ -297,6 +298,22 @@ describe('O. agencies near where it happened (owner’s blueprint)', () => {
     const page = src('./pages/sos.tsx')
     expect(page).toContain('showMap ? ('); expect(page).toContain("t('hp.near.privacy')")
     expect(src('../vercel.json')).toContain('frame-src https://accounts.google.com/gsi/ https://www.openstreetmap.org;')
+  })
+})
+
+describe('P. a first check of document photos, on the device (owner’s blueprint)', () => {
+  const pic = (f: (x: number, y: number) => number, w = 64, h = 48) => Array.from({ length: w * h }, (_, i) => f(i % w, Math.floor(i / w)))
+  it('a sharp, well-lit, large photo passes; dark, glaring, blurred or small ones are named', () => {
+    const sharp = pic((x, y) => ((x >> 2) + (y >> 2)) % 2 ? 200 : 60)
+    expect(photoQuality(sharp, 64, 48, 2000).issues).toEqual([])
+    expect(photoQuality(pic(() => 20), 64, 48, 2000).issues).toEqual(['dark', 'blurry'])
+    expect(photoQuality(pic(() => 250), 64, 48, 2000).issues).toEqual(['bright', 'blurry'])
+    expect(photoQuality(pic((x) => 100 + x), 64, 48, 2000).issues).toEqual(['blurry'])
+    expect(photoQuality(sharp, 64, 48, 500).issues).toEqual(['small'])
+  })
+  it('nothing is sent: the check runs in the browser and only the result is kept', () => {
+    const code = src('./domain/photoCheck.ts'); expect(code).not.toMatch(/fetch\(|api\/ai|XMLHttpRequest/)
+    expect(src('./pages/case-extras.tsx')).toContain("t('pc.note')")
   })
 })
 

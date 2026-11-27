@@ -3,7 +3,8 @@
 // the worker and the page know which documents are ready. The picture can be previewed until the tab is closed.
 import type { Doc } from './domain/match/cases'
 
-export interface CaseFile { name: string; size: number; type: string; at: string }
+/** quality: the first photo check made on this device (photoCheck.ts); absent for a PDF */
+export interface CaseFile { name: string; size: number; type: string; at: string; quality?: { issues: string[] } }
 type Store = Record<string, Partial<Record<Doc, CaseFile>>>
 const KEY = 'call.case.files.v1'
 /** files bigger than this are refused (a phone photo or a short PDF fits) */
@@ -28,6 +29,11 @@ export function attachFile(caseId: string, doc: Doc, file: File, at: string): 't
   const old = previews.get(pkey(caseId, doc)); if (old) URL.revokeObjectURL(old)
   try { previews.set(pkey(caseId, doc), URL.createObjectURL(file)) } catch { /* no preview */ }
   return null
+}
+/** remembers the photo check of an attached file (only the result, never the picture) */
+export function setQuality(caseId: string, doc: Doc, issues: string[]) {
+  const s = read(); const f = s[caseId]?.[doc]; if (!f) return
+  s[caseId] = { ...s[caseId], [doc]: { ...f, quality: { issues } } }; write(s)
 }
 export function removeFile(caseId: string, doc: Doc) {
   const s = read(); if (s[caseId]) { delete s[caseId][doc]; write(s) }

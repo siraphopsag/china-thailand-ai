@@ -78,5 +78,12 @@ export const v2h = {
   'hp.tips.people': ['จดชื่อและช่องทางติดต่อของพยานที่อยู่ในเหตุการณ์', '记下在场证人的姓名和联系方式', 'Write down the names and contacts of people who saw what happened'],
   'hp.tips.copy': ['เก็บสำเนาพาสปอร์ต สัญญา และใบอนุญาตทำงานไว้กับตัวหรือในโทรศัพท์', '随身或在手机中保存护照、合同和工作许可的副本', 'Keep copies of your passport, contract and work permit with you or on your phone'],
   'hp.tips.safe': ['ความปลอดภัยมาก่อน อย่าเผชิญหน้ากับนายจ้างคนเดียว ถ้าอันตรายให้โทรสายด่วนทันที', '安全第一：不要独自与雇主对峙，如有危险请立即拨打热线', 'Safety first: do not confront the employer alone; if you are in danger, call a hotline now'],
+  // ---------- the first photo check of a document (on this device)
+  'pc.ok': ['รูปชัด อ่านได้', '照片清晰可读', 'Clear and readable'],
+  'pc.small': ['รูปเล็กไป ถ่ายให้เอกสารเต็มจอ', '照片太小，请让文件占满画面', 'Too small: fill the frame with the document'],
+  'pc.dark': ['มืดไป ถ่ายในที่สว่าง', '太暗，请在明亮处拍摄', 'Too dark: take it somewhere brighter'],
+  'pc.bright': ['สว่างหรือสะท้อนแสงเกินไป', '过亮或反光', 'Too bright or glaring'],
+  'pc.blurry': ['เบลอ ถือกล้องให้นิ่งแล้วถ่ายใหม่', '模糊，请拿稳重拍', 'Blurred: hold still and take it again'],
+  'pc.note': ['ระบบตรวจรูปเบื้องต้น (ขนาด ความสว่าง ความคมชัด) ในเครื่องของคุณ ไม่ส่งรูปไปที่ใด ทีม C.A.L.L. เป็นผู้ตรวจว่าเอกสารถูกต้อง', '系统仅在您的设备上初步检查照片（大小、亮度、清晰度），不会发送照片。文件内容由 C.A.L.L. 团队核实', 'The photo is checked on your device only (size, brightness, sharpness) and is not sent anywhere. The C.A.L.L. team checks that the document itself is right.'],
   'm.err.needVerify': ['ต้องยืนยันตัวตนก่อน จึงจะลงประกาศหรือปักหมุดได้', '需先完成身份验证，才能发布招聘信息或标记', 'Verify yourself first to post or pin'],
 } as const satisfies Record<string, Msg>

@@ -6,7 +6,8 @@ import { NavLink } from '../store'
 import { useMatch } from '../matchData'
 import { localDay } from '../domain/match/logic'
 import { DOCS, arrivalAlert, arrivalPending, type Case, type CaseAction, type Doc } from '../domain/match/cases'
-import { attachFile, caseFiles, previewOf, removeFile, type CaseFile } from '../caseFiles'
+import { attachFile, caseFiles, previewOf, removeFile, setQuality, type CaseFile } from '../caseFiles'
+import { checkPhotoFile } from '../domain/photoCheck'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
 import { useNames } from './match'
@@ -46,6 +47,8 @@ export function DocAttach({ c }: { c: Case }) {
     if (!f) return
     const p = attachFile(c.id, doc, f, new Date(now).toISOString())
     setErr(p ? t(`att.err.${p}` as never) : null); setFiles(caseFiles(c.id))
+    // owner's blueprint: a first check of the photo, on this device only (nothing is sent)
+    if (!p) void checkPhotoFile(f).then((q) => { if (q) { setQuality(c.id, doc, q.issues); setFiles(caseFiles(c.id)) } })
   }
   const drop = (doc: Doc) => { removeFile(c.id, doc); setFiles(caseFiles(c.id)) }
   const size = (f: CaseFile) => `${Math.max(1, Math.round(f.size / 1024))} KB`
@@ -61,10 +64,12 @@ export function DocAttach({ c }: { c: Case }) {
             <span className="font-medium min-w-[7rem]">{t(`m.cs.doc.${d}` as never)}</span>
             {f ? <span className="text-xs text-muted flex-1 min-w-0 truncate">{f.name} · {size(f)} · {N.dayTime(Date.parse(f.at))}{url && <> · <a className="text-primary underline" href={url} target="_blank" rel="noopener noreferrer">{t('att.view')}</a></>}</span>
               : <span className="text-xs text-muted flex-1">{t('att.none')}</span>}
+            {f?.quality && <span className={`basis-full sm:basis-auto text-xs inline-flex items-center gap-1 ${f.quality.issues.length ? 'text-warn-fg' : 'text-ok-fg'}`}><Icon name={f.quality.issues.length ? 'warn' : 'ok'} size={13} />{f.quality.issues.length ? f.quality.issues.map((x) => t(`pc.${x}` as never)).join(' · ') : t('pc.ok')}</span>}
             <label className="btn-ghost text-xs cursor-pointer">{t(f ? 'att.replace' : 'att.add')}<input type="file" className="sr-only" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={pick(d)} /></label>
             {f && <button type="button" className="btn-ghost text-xs" onClick={() => drop(d)}>{t('att.remove')}</button>}
           </li>)
       })}</ul>
+      <p className="text-xs text-muted">{t('pc.note')}</p>
       {err && <p className="text-sm text-danger-fg" role="alert">{err}</p>}
     </section>
   )
