@@ -193,7 +193,7 @@ function Ticks({ title, items }: { title: string; items: { k: string; label: str
 /** the agency's controls: only what the current step allows; course list editable until training is done */
 function AgencyPanel({ c, run, busy, blockAccept }: { c: Case; run: (a: CaseAction, done?: string) => Promise<boolean>; busy: boolean; blockAccept: boolean }) {
   const { t } = useI18n()
-  const { mode, now } = useMatch()
+  const { mode, now, demo, agency } = useMatch()
   const [course, setCourse] = useState(''), [date, setDate] = useState(c.departureDate ?? ''), [note, setNote] = useState(c.note)
   const cur = currentStep(c)
   const toggle = (on: boolean, label: string, a: CaseAction) => (
@@ -209,7 +209,7 @@ function AgencyPanel({ c, run, busy, blockAccept }: { c: Case; run: (a: CaseActi
   return (
     <section className="card !p-4 space-y-3 border-primary" aria-labelledby="cs-ag">
       <h2 id="cs-ag" className="h2 flex items-center gap-2"><Icon name="shield" size={18} className="text-primary" />{t('m.cs.ag.title')}</h2>
-      <p className="text-xs text-muted">{t(mode === 'local' ? 'm.cs.ag.demo' : 'm.cs.ag.admin')}</p>
+      <p className="text-xs text-muted">{t(mode === 'local' ? 'm.cs.ag.demo' : demo && !agency ? 'm.cs.ag.demoAcc' : 'm.cs.ag.admin')}</p>
       <div role="tablist" aria-label={t('m.cs.ag.title')} className="flex flex-wrap gap-1 rounded-xl border border-line bg-surface p-1">
         {tabs.map((k) => <button key={k} type="button" role="tab" aria-selected={shown === k} onClick={() => setTab(k)} className={`min-h-[34px] px-3 rounded-lg text-xs sm:text-sm ${shown === k ? 'seg-on' : 'hover:bg-surface3'}`}>{t(`m.cs.ag.tab.${k}` as never)}</button>)}
       </div>

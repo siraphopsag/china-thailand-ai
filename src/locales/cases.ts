@@ -66,6 +66,7 @@ export const cases = {
   // ---------- agency controls
   'm.cs.ag.title': ['ส่วนของทีมดูแลเคส C.A.L.L.', 'C.A.L.L. 个案团队操作区', 'C.A.L.L. case team controls'],
   'm.cs.ag.demo': ['สาธิต: ในโหมดทดลองคุณเล่นเป็นทีมดูแลเคสได้เอง เพื่อดูว่าแต่ละขั้นเป็นอย่างไร', '演示：在试用模式下您可以自己扮演个案团队，查看每一步的效果', 'Demo: in the trial mode you can play the case team yourself to see each step'],
+  'm.cs.ag.demoAcc': ['บัญชีทดลอง: คุณเล่นเป็นทีมดูแลเคสของ C.A.L.L. ได้เฉพาะเคสของตัวเอง เพื่อดูทุกขั้นจนถึงวันถึงที่ทำงาน', '体验账号：您可以仅在自己的个案中扮演 C.A.L.L. 个案团队，查看直到抵达工作地点的每一步', 'Demo account: you play the C.A.L.L. case team on your own case only, to see every step up to arrival at work'],
   'm.cs.ag.admin': ['คุณเป็นผู้ดูแลระบบ จึงทำหน้าที่ทีมดูแลเคสในต้นแบบนี้', '您是管理员，在本原型中扮演个案团队的角色', 'You are an administrator, so you play the case team in this prototype'],
   'm.cs.ag.wait': ['ยังทำอะไรไม่ได้ — รอนายจ้างยืนยันตัวตนบริษัท', '暂时无法操作——等待雇主完成公司认证', 'Nothing to do yet — waiting for the employer’s company verification'],
   'm.cs.ag.accept': ['รับเคส', '受理个案', 'Accept the case'],
