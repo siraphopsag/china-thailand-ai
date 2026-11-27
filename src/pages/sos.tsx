@@ -55,7 +55,7 @@ export function SosPage() {
   const fileToCall = () => {
     if (!problem) return
     const at = new Date(now).toISOString()
-    saveAft({ ...aft, complaints: [fileComplaint({ id: `cm-${now}-${aft.complaints.length}`, caseId: caseKey, problem, country, province, note, evidence: have, at, hasCase: caseKey !== 'nocase', arrived, flags }), ...aft.complaints] })
+    saveAft({ ...aft, complaints: [fileComplaint({ loc: typeof loc === 'object' ? loc : null, id: `cm-${now}-${aft.complaints.length}`, caseId: caseKey, problem, country, province, note, evidence: have, at, hasCase: caseKey !== 'nocase', arrived, flags }), ...aft.complaints] })
   }
   const actOn = (id: string, x: ComplaintAction) => {
     const cm = aft.complaints.find((y) => y.id === id)
@@ -64,7 +64,7 @@ export function SosPage() {
   }
   const download = () => {
     if (!problem) return
-    const text = packText({ problem, country, province, note, evidence: have, when: N.dayTime(now) }, tt, provName)
+    const text = packText({ problem, country, province, note, evidence: have, when: N.dayTime(now), loc: loc && typeof loc === 'object' ? { ...loc, link: mapLink(loc) } : null }, tt, provName)
     const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
     const a = document.createElement('a'); a.href = url; a.download = 'report-pack.txt'; a.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
@@ -87,7 +87,8 @@ export function SosPage() {
           {loc && typeof loc === 'object' && <>
             <span className="text-sm tabular-nums">{loc.lat}, {loc.lng}</span>
             <a className="text-sm text-primary underline" href={mapLink(loc)} target="_blank" rel="noopener noreferrer">{t('hp.loc.map')}</a>
-            <button type="button" className="btn-ghost text-sm" onClick={() => void sendLoc(loc)}><Icon name="send" size={14} />{t('hp.loc.share')}</button></>}
+            <button type="button" className="btn-ghost text-sm" onClick={() => void sendLoc(loc)}><Icon name="send" size={14} />{t('hp.loc.share')}</button>
+            <span className="basis-full text-xs text-ok-fg">{t('hp.loc.attach')}</span></>}
           {loc === 'denied' && <span className="text-sm text-danger-fg">{t('hp.loc.denied')}</span>}
         </div>
         <p className="text-xs text-muted">{t('hp.loc.note')}</p>

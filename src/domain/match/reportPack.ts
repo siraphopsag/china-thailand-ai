@@ -35,14 +35,17 @@ export function officeSearch(country: Country, provinceName: string, agencyName:
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
 }
 
-export interface PackInput { problem: ProblemKind; country: Country; province: string; note: string; evidence: string[]; when: string }
+export interface PackInput {
+  /** the shared location and a map link to it (owner’s blueprint, 27 Nov 2026) */
+  loc?: { lat: number; lng: number; link: string } | null
+  problem: ProblemKind; country: Country; province: string; note: string; evidence: string[]; when: string }
 /** the pack as plain text (for "Save as text"); `t` is the page's translator so the pack is in the reader's language */
 export function packText(p: PackInput, t: (k: string, v?: Record<string, string | number>) => string, provinceName: string): string {
   const lines = [
     t('rp.pack.title'), '',
     `${t('rp.pack.problem')}: ${t(`rp.p.${p.problem}`)}`,
     `${t('rp.pack.when')}: ${p.when}`,
-    `${t('rp.pack.where')}: ${provinceName}`,
+    `${t('rp.pack.where')}: ${provinceName}${p.loc ? ` · ${p.loc.lat}, ${p.loc.lng} (${p.loc.link})` : ''}`,
     '', `${t('rp.pack.evidence')}:`,
     ...EVIDENCE[p.problem].map((e) => `[${p.evidence.includes(e) ? 'x' : ' '}] ${t(`rp.ev.${e}`)}`),
     '', `${t('rp.pack.agency')}:`,

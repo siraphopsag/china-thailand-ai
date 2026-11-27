@@ -28,7 +28,7 @@ export const v2g = {
   'dm2.contract.why': ['ทำสัญญาจ้างสองภาษาและลงนาม', '订立并签署双语劳动合同', 'Making and signing the two-language contract'],
   'dm2.contract.who': ['ผู้หางาน นายจ้างของเคส และทีม', '求职者、该案件雇主和团队', 'The worker, the employer of the case and the team'],
   'dm2.contract.keep': ['ลบพร้อมประกาศของเคส (182 วัน เมื่อคนงานมาถึงแล้ว) หรือเมื่อลบบัญชีที่เกี่ยวข้อง', '随案件的招聘信息一并删除（劳动者到达后满182天），或在相关账号删除时删除', 'Deleted with the post of the case (182 days, once the worker has arrived) or with a linked account'],
-  'dm2.care.what': ['หลังเริ่มงาน: การเช็กอิน คำลับ และเรื่องร้องเรียน', '入职后：回访、暗语和投诉', 'After starting: check-ins, secret word and complaints'],
+  'dm2.care.what': ['หลังเริ่มงาน: การเช็กอิน คำลับ เรื่องร้องเรียน และตำแหน่งที่แจ้ง (ถ้าคุณแชร์)', '入职后：回访、暗语、投诉以及报告位置（如您分享）', 'After starting: check-ins, secret word, complaints and the location you report (if you share it)'],
   'dm2.care.why': ['ดูแลความปลอดภัยและช่วยเมื่อมีปัญหา', '保障安全并在出现问题时提供帮助', 'Safety, and help when something goes wrong'],
   'dm2.care.who': ['ผู้หางานและทีมเท่านั้น นายจ้างไม่เห็น', '仅求职者和团队；雇主看不到', 'The worker and the team only; never the employer'],
   'dm2.care.keep': ['ลบพร้อมประกาศของเคส (182 วัน เมื่อคนงานมาถึงแล้ว) หรือเมื่อลบบัญชีที่เกี่ยวข้อง', '随案件的招聘信息一并删除（劳动者到达后满182天），或在相关账号删除时删除', 'Deleted with the post of the case (182 days, once the worker has arrived) or with a linked account'],

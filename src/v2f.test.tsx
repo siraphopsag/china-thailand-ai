@@ -19,6 +19,8 @@ import { v2h } from './locales/v2h'
 import { seekerLevel } from './pages/seeker-verify'
 import { dbProblem } from './domain/match/remote'
 import { DATA_ROWS } from './pages/dataMap'
+import { fileComplaint, mapLinkOf } from './domain/match/aftercare'
+import { packText } from './domain/match/reportPack'
 import { contractHtml } from './pages/contract-steps'
 import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
 import { messages } from './locales/index'
@@ -233,6 +235,18 @@ describe('K. the contract as a file (owner’s blueprint)', () => {
     expect(contractHtml(docs, 'abc123', 'x', 'y', { ...(sign as object), worker: { name: 'y', img: 'javascript:alert(1)', at: '2026-11-27T01:00:00Z' } } as never)).not.toContain('javascript:')
     const page = src('./pages/contract-steps.tsx')
     expect(page).toContain("{t('sg.pdf')}"); expect(page).toContain("type: 'application/msword'")
+  })
+})
+
+describe('L. a report carries where it happened (owner’s blueprint)', () => {
+  it('the shared location goes with the complaint to C.A.L.L. and into the downloaded pack; nonsense coordinates are dropped', () => {
+    const base = { id: 'c1', caseId: 'demo', problem: 'unpaid' as const, country: 'TH' as const, province: 'TH-10', note: '', evidence: [], at: '2026-11-27T01:00:00Z', hasCase: true, arrived: true, flags: [] }
+    expect(fileComplaint({ ...base, loc: { lat: 13.75, lng: 100.5 } }).loc).toEqual({ lat: 13.75, lng: 100.5 })
+    expect(fileComplaint({ ...base, loc: { lat: 999, lng: 1 } }).loc).toBeUndefined(); expect(fileComplaint(base).loc).toBeUndefined()
+    expect(mapLinkOf({ lat: 13.75, lng: 100.5 }, 'CN')).toBe('https://uri.amap.com/marker?position=100.5,13.75')
+    const txt = packText({ problem: 'unpaid', country: 'TH', province: 'TH-10', note: '', evidence: [], when: 'x', loc: { lat: 13.75, lng: 100.5, link: 'https://maps.google.com/?q=13.75,100.5' } }, (k) => k, 'Bangkok')
+    expect(txt).toContain('Bangkok · 13.75, 100.5 (https://maps.google.com/?q=13.75,100.5)')
+    expect(src('./pages/sos.tsx')).toContain("fileComplaint({ loc: typeof loc === 'object' ? loc : null")
   })
 })
 

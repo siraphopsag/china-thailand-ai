@@ -9,7 +9,7 @@ import type { Case } from '../domain/match/cases'
 import type { Country } from '../domain/match/types'
 import { EVIDENCE, PROBLEMS, officeSearch, type ProblemKind } from '../domain/match/reportPack'
 import {
-  REVIEW_BAD, REVIEW_GOOD, actComplaint, canReview, checkinFlags, checkinStates, credLevel, fileComplaint, hasSecret, reviewSummary, teamAlerts,
+  REVIEW_BAD, REVIEW_GOOD, actComplaint, canReview, checkinFlags, checkinStates, credLevel, fileComplaint, mapLinkOf, hasSecret, reviewSummary, teamAlerts,
   type CheckDay, type CheckIn, type Complaint, type ComplaintAction, type EmployerReview,
 } from '../domain/match/aftercare'
 import { useAftercare, useReviews, type Aftercare } from '../aftercareStore'
@@ -210,6 +210,7 @@ export function ComplaintCard({ cm, viewer, onAct }: { cm: Complaint; viewer: 'w
       <ol className="grid grid-cols-4 gap-1">{FLOW.map((s, i) => (
         <li key={s} className={`rounded-lg px-1.5 py-1.5 text-center text-[11px] leading-tight border ${i < at || (i === at && cm.status !== 'needMore') || i === 0 ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line text-muted'} ${i === 1 && cm.status === 'needMore' ? '!border-warn-line !bg-warn-bg !text-warn-fg' : ''}`}>
           {t(i === 1 && cm.status === 'needMore' ? 'cr.st.needMore' : `cr.st.${s}` as never)}</li>))}</ol>
+      {cm.loc && <p className="text-xs flex flex-wrap items-center gap-1.5"><Icon name="target" size={13} /><span className="text-muted">{t('cr.loc')}</span><span className="tabular-nums">{cm.loc.lat}, {cm.loc.lng}</span><a className="text-primary underline" href={mapLinkOf(cm.loc, cm.country)} target="_blank" rel="noopener noreferrer">{t('hp.loc.map')}</a></p>}
       <p className="text-xs flex flex-wrap items-center gap-1.5"><span className="text-muted">{t('cr.agency')}</span><span className="font-medium">{t(`rp.ag.${cm.agency}` as never)}</span>
         <a className="text-primary underline inline-flex items-center gap-1" href={officeSearch(cm.country, N.prov(cm.province), t(`rp.ag.${cm.agency}` as never))} target="_blank" rel="noopener noreferrer"><Icon name="pin" size={12} />{t('cr.office')}</a></p>
       {viewer === 'team' && (

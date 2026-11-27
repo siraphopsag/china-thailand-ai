@@ -17,5 +17,8 @@ export const v2h = {
   'sg.pdf': ['บันทึกเป็น PDF', '保存为 PDF', 'Save as PDF'],
   'sg.doc': ['ดาวน์โหลดไฟล์ Word (.doc)', '下载 Word 文件（.doc）', 'Download a Word file (.doc)'],
   'sg.pdf.hint': ['ในหน้าต่างพิมพ์ เลือกเครื่องพิมพ์เป็น "บันทึกเป็น PDF"', '在打印窗口中选择“另存为 PDF”', 'In the print window, choose "Save as PDF" as the printer'],
+  // ---------- reporting with a location
+  'cr.loc': ['ตำแหน่งที่แจ้ง', '报告位置', 'Location given'],
+  'hp.loc.attach': ['พิกัดนี้จะแนบไปกับเรื่องที่ส่งให้ C.A.L.L. และในชุดเอกสารที่ดาวน์โหลด', '此位置会附在发给 C.A.L.L. 的报告和下载的材料包中', 'This location goes with the report you send to C.A.L.L. and into the pack you download'],
   'm.err.needVerify': ['ต้องยืนยันตัวตนก่อน จึงจะลงประกาศหรือปักหมุดได้', '需先完成身份验证，才能发布招聘信息或标记', 'Verify yourself first to post or pin'],
 } as const satisfies Record<string, Msg>

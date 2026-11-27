@@ -89,7 +89,13 @@ export interface Complaint {
   urgent: boolean; score: number; reasons: CredReason[]
   status: ComplaintStatus; agency: string
   history: { at: string; status: ComplaintStatus }[]
+  /** where it happened, when the worker shared the phone's location (owner's blueprint, 27 Nov 2026) */
+  loc?: GeoPoint
 }
+export interface GeoPoint { lat: number; lng: number }
+export const isGeoPoint = (v: unknown): v is GeoPoint => !!v && typeof v === 'object' && Number.isFinite((v as GeoPoint).lat) && Number.isFinite((v as GeoPoint).lng) && Math.abs((v as GeoPoint).lat) <= 90 && Math.abs((v as GeoPoint).lng) <= 180
+/** a map link for a point: AMap in China, Google Maps elsewhere (opened by the person; nothing is sent by the app) */
+export const mapLinkOf = (l: GeoPoint, country: Country) => (country === 'CN' ? `https://uri.amap.com/marker?position=${l.lng},${l.lat}` : `https://maps.google.com/?q=${l.lat},${l.lng}`)
 export type CredReason = 'evidence' | 'detail' | 'case' | 'arrived' | 'checkin'
 /** which check-in answers back up which problem */
 const BACKS: Record<ProblemKind, CheckFlag[]> = { unpaid: ['unpaid'], passport: ['passport'], forced: ['hours', 'unsafe', 'silent', 'passport'], violence: ['unsafe', 'silent'], fee: [], other: [] }
@@ -111,12 +117,12 @@ export function credibility(p: { problem: ProblemKind; evidence: string[]; note:
 export const credLevel = (score: number): 'strong' | 'medium' | 'weak' => (score >= CRED_STRONG ? 'strong' : score >= CRED_WEAK ? 'medium' : 'weak')
 
 /** a new complaint: urgent ones (life or freedom, or an "unsafe" / secret-word check-in) go to the agency at once */
-export function fileComplaint(p: { id: string; caseId: string; problem: ProblemKind; country: Country; province: string; note: string; evidence: string[]; at: string; hasCase: boolean; arrived: boolean; flags: CheckFlag[] }): Complaint {
+export function fileComplaint(p: { loc?: GeoPoint | null; id: string; caseId: string; problem: ProblemKind; country: Country; province: string; note: string; evidence: string[]; at: string; hasCase: boolean; arrived: boolean; flags: CheckFlag[] }): Complaint {
   const { score, reasons } = credibility(p)
   const urgent = URGENT.includes(p.problem) || p.flags.includes('unsafe') || p.flags.includes('silent')
   const status: ComplaintStatus = urgent ? 'forwarded' : 'checking'
   return { id: p.id, caseId: p.caseId, problem: p.problem, country: p.country, province: p.province, note: p.note.trim(), evidence: p.evidence, at: p.at,
-    urgent, score, reasons, status, agency: AGENCIES[p.problem][p.country][0], history: [{ at: p.at, status }] }
+    urgent, score, reasons, status, agency: AGENCIES[p.problem][p.country][0], history: [{ at: p.at, status }], ...(isGeoPoint(p.loc) ? { loc: { lat: p.loc.lat, lng: p.loc.lng } } : {}) }
 }
 /** the team and the agency move a complaint on; the worker answers "need more" with more evidence */
 export type ComplaintAction = { kind: 'forward' } | { kind: 'askMore' } | { kind: 'acknowledge' } | { kind: 'addEvidence'; evidence: string[]; note: string; flags: CheckFlag[]; hasCase: boolean; arrived: boolean }
