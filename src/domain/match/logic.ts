@@ -251,6 +251,24 @@ export function cancel(st: MatchState, accId: string, at: string): Outcome<Accep
   const next = st.acceptances.filter((x) => x.id !== accId)
   return { ok: true, value: post ? promote(next, post, at) : next }
 }
+/** a post is held for the team once its employer's violations have ended this many matches (owner's blueprint, 27 Nov 2026) */
+export const ENDED_BEFORE_HOLD = 3
+/**
+ * The chat's third violation (chat.ts): the match ends — the application is declined (kept, with its chat, as a record), the
+ * queue moves up, and a case nobody has started is removed. A case already under way keeps going (only the chat locks). When an
+ * employer's violations have ended ENDED_BEFORE_HOLD matches on one post, the post is held for the team. The database does the
+ * same (SQL 0017).
+ */
+export function endForContact(st: MatchState, accId: string, by: 'seeker' | 'employer', at: string): Outcome<MatchState> {
+  const a = st.acceptances.find((x) => x.id === accId); if (!a) return fail('unknown')
+  const post = st.posts.find((p) => p.id === a.postId); if (!post) return fail('unknown')
+  if (a.endedFor || (a.status !== 'accepted' && a.status !== 'confirmed')) return fail('state')
+  if (st.cases.some((c) => c.accId === accId && (c.steps.submitted || c.steps.accepted))) return fail('caseStarted')
+  const acceptances = promote(st.acceptances.map((x) => (x.id === accId ? { ...x, status: 'rejected' as const, decidedAt: at, endedFor: 'contact' as const, endedBy: by } : x)), post, at)
+  const ended = acceptances.filter((x) => x.postId === post.id && x.endedFor === 'contact' && x.endedBy === 'employer').length
+  const posts = by === 'employer' && ended >= ENDED_BEFORE_HOLD ? st.posts.map((p) => (p.id === post.id ? { ...p, held: true, hidden: true } : p)) : st.posts
+  return { ok: true, value: { ...st, acceptances, posts, cases: st.cases.filter((c) => c.accId !== accId) } }
+}
 /** simulated: the admin marks a confirmed case as forwarded to the employment authority; no data leaves the browser */
 export const forward = (a: Acceptance, at: string): Acceptance => (a.status === 'confirmed' ? { ...a, status: 'forwarded', forwardedAt: at } : a)
 

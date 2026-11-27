@@ -146,6 +146,8 @@ export interface Acceptance {
   promotedAt?: string; decidedAt?: string; forwardedAt?: string
   /** from the database: the name the employer sees */
   seekerName?: string
+  /** owner's blueprint (27 Nov 2026): the match was ended because one side kept sending contact details in the chat */
+  endedFor?: 'contact'; endedBy?: 'seeker' | 'employer'
 }
 /** one use of a weekly allowance: a new post or a renewal (they share one allowance), or a pin */
 export interface Credit { kind: 'post' | 'renew' | 'pin'; at: string }

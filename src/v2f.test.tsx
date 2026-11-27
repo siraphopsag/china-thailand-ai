@@ -3,10 +3,12 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { CONTACT_RULES, hasContact, maskAfter, maskContact } from './domain/contact'
-import { newMessage } from './domain/match/chat'
+import { closedBy, newMessage, strikesOf } from './domain/match/chat'
+import { seedState } from './domain/match/seed'
+import type { MatchState } from './domain/match/types'
 import { holdByRules, precheck } from './domain/match/precheck'
 import { spamCheck } from './domain/match/spam'
-import { employerLevel, textProblem } from './domain/match/logic'
+import { employerLevel, endForContact, textProblem } from './domain/match/logic'
 import { terms } from './data/culture'
 import { pickVoice } from './components/speak'
 import { AGENCY_BOARDS, DOE_PROVINCE, ISIC, SOURCES, change, cleanExternal, csvLine, newestCsv, parseDoeIndustries, parseDoeProvinces, parseWorldBank } from './domain/openData'
@@ -190,6 +192,32 @@ describe('I. verify before posting or pinning (owner’s blueprint)', () => {
     expect(sql).toContain("create trigger posts_need_verify before insert on public.posts"); expect(sql).toContain("create trigger pins_need_verify before insert on public.pins")
     expect(dbProblem({ message: 'need_verify' })).toBe('needVerify')
     for (const [k, [th, zh, en]] of Object.entries(v2h)) { expect(th, k).toMatch(/[฀-๿]/); expect(zh, k).toMatch(/[一-鿿]/); expect(en, k).not.toMatch(/[฀-๿一-鿿]/); expect(messages[k as keyof typeof messages]).toEqual([th, zh, en]) }
+  })
+})
+
+describe('J. contact details in the chat: two warnings, then the match ends (owner’s blueprint)', () => {
+  const at = (m: number) => new Date(Date.UTC(2026, 10, 27, 1, m)).toISOString()
+  it('the 3rd violation of one side locks the chat for both; ordinary messages do not count', () => {
+    let c = { msgs: [] } as Parameters<typeof newMessage>[0]
+    for (const [i, x] of ['สวัสดีครับ', 'line: sira_99', 'ok', 'siraooja @ gmail.com'].entries()) { const r = newMessage(c, 'employer', { text: x }, 'm' + i, at(i * 40)); if (r.ok) c = r.value }
+    expect([strikesOf(c, 'employer'), closedBy(c)]).toEqual([2, null])
+    const third = newMessage(c, 'employer', { text: 'โทร 0812345678' }, 'm9', at(400)); if (third.ok) c = third.value
+    expect([strikesOf(c, 'employer'), closedBy(c)]).toEqual([3, 'employer'])
+    expect(newMessage(c, 'seeker', { phrase: 'hello' }, 'x', at(401))).toEqual({ ok: false, problem: 'closed' })
+  })
+  it('the match ends (declined, kept as a record), the queue moves up, a started case keeps going; 3 ended matches hold the post', () => {
+    const st0 = seedState(Date.parse('2026-11-27T00:00:00Z'))
+    const p = st0.posts[0], mk = (id: string, status: 'accepted' | 'reserved') => ({ id, postId: p.id, seekerId: 'seeker-' + id, at: '2026-11-26T00:00:00.000Z', status, intro: '', availableFrom: null })
+    let st: MatchState = { ...st0, posts: st0.posts.map((x) => (x.id === p.id ? { ...x, headcount: 1 } : x)), acceptances: [mk('a1', 'accepted'), mk('a2', 'reserved')], cases: [] }
+    const r = endForContact(st, 'a1', 'employer', '2026-11-27T01:00:00Z'); expect(r.ok).toBe(true); if (!r.ok) return
+    expect(r.value.acceptances.map((x) => [x.id, x.status, x.endedFor ?? ''])).toEqual([['a1', 'rejected', 'contact'], ['a2', 'accepted', '']])
+    st = r.value
+    for (const id of ['a2', 'a3']) { if (id === 'a3') st = { ...st, acceptances: [...st.acceptances, mk('a3', 'accepted')] }; const x = endForContact(st, id, 'employer', '2026-11-27T02:00:00Z'); if (x.ok) st = x.value }
+    expect(st.posts.find((x) => x.id === p.id)?.held).toBe(true)
+    const sql = src('../supabase/migrations/0017_chat_strikes.sql')
+    expect(sql).toContain("not public.chat_locked(acceptance_id)"); expect(sql).toContain("if n <> 3 then return null; end if;")
+    expect(sql).not.toMatch(/delete from public.chat_messages/)
+    expect(src('./pages/chat.tsx')).toContain("t('ch.strike', { n: strikes, max: MAX_STRIKES })")
   })
 })
 

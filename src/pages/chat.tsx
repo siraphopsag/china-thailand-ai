@@ -10,7 +10,7 @@ import { useI18n } from '../i18n'
 import { NavLink, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
 import { useAuth } from '../auth'
-import { MAX_SLOTS, MAX_TEXT, PHRASES, newMessage, offerSlots, pickSlot, type Chat, type ChatMsg, type Side } from '../domain/match/chat'
+import { MAX_SLOTS, MAX_STRIKES, MAX_TEXT, PHRASES, closedBy, strikesOf, newMessage, offerSlots, pickSlot, type Chat, type ChatMsg, type Side } from '../domain/match/chat'
 import { ME, MY_EMPLOYER } from '../domain/match/types'
 import { useChat } from '../chatStore'
 import { isUuid, markRead, newId, useRemoteChat } from '../shared'
@@ -28,7 +28,7 @@ const localStamp = (ms: number) => { const d = new Date(ms); return `${d.getFull
 
 export function ChatPage() {
   const { t } = useI18n()
-  const { st, mode, now } = useMatch()
+  const { st, mode, now, endForContact } = useMatch()
   const { user } = useAuth()
   const nameOf = useApplicantName()
   const accId = useSearchParam('acc')
@@ -49,6 +49,9 @@ export function ChatPage() {
   // opening the conversation marks what the other side wrote as read (the unread counts in the menu and the chat list)
   const lastAt = chat.msgs.length ? chat.msgs[chat.msgs.length - 1].at : ''
   useEffect(() => { if (remote && user && lastAt) markRead(user.id, accId, lastAt) }, [remote, user, accId, lastAt])
+  // the chat's third violation ends the match (owner's blueprint, 27 Nov 2026); the database does it by itself (SQL 0017)
+  const closed = closedBy(chat)
+  useEffect(() => { if (closed && !remote && !demo && accId && a && !a.endedFor) endForContact(accId, closed) }, [closed, remote, demo, accId, a, endForContact])
   if (!demo && (!a || !p || !sides.length)) return <Page title={t('ch.title')}><Empty icon="bell" text={t('ch.none')} to="notifications" action={t('m.notif.title')} /></Page>
   if (!demo && !OPEN.includes(a!.status)) return <Page title={t('ch.title')}><Empty icon="bell" text={t('ch.notYet')} to={`post?id=${p!.id}`} action={t('m.bd.openFull')} /></Page>
   const position = demo ? t('c2.sample.position') : p!.position, company = demo ? t('c2.sample.company') : p!.company
@@ -68,7 +71,7 @@ export function ChatPage() {
             <button key={s} type="button" role="tab" aria-selected={side === s} onClick={() => setSide(s)} className={`min-h-[36px] px-3 rounded-lg text-sm ${side === s ? 'seg-on' : 'hover:bg-surface3'}`}>{t(`ch.side.${s}` as never)}</button>))}</div>
           <span className="text-xs text-muted">{t('ch.asNote')}</span></div>)}
       <div className="grid lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-4 items-start">
-        <Conversation key={side} msgs={msgs} side={side} other={other} loading={remote && !loaded} introId={intro?.id}
+        <Conversation key={side} msgs={msgs} side={side} other={other} loading={remote && !loaded} introId={intro?.id} closed={closed} strikes={strikesOf(chat, side)}
           onSend={(input) => { const r = newMessage(chat, side, input, newId(), at); if (r.ok) save({ ...chat, ...r.value }); return r.ok ? r.masked : null }} />
         <InterviewBox chat={chat} side={side} at={at} nowLocal={localStamp(now)} onSave={(c) => save({ ...chat, ...c })} />
       </div>
@@ -76,7 +79,7 @@ export function ChatPage() {
   )
 }
 
-function Conversation({ msgs, side, other, onSend, loading, introId }: { msgs: ChatMsg[]; side: Side; other: string; onSend: (i: { text?: string; phrase?: string }) => boolean | null; loading?: boolean; introId?: string }) {
+function Conversation({ msgs, side, other, onSend, loading, introId, closed, strikes }: { msgs: ChatMsg[]; side: Side; other: string; onSend: (i: { text?: string; phrase?: string }) => boolean | null; loading?: boolean; introId?: string; closed: Side | null; strikes: number }) {
   const { t } = useI18n()
   const N = useNames()
   const [text, setText] = useState('')
@@ -91,6 +94,7 @@ function Conversation({ msgs, side, other, onSend, loading, introId }: { msgs: C
         {msgs.length === 0 && <li className="text-sm text-muted text-center py-8">{t(loading ? 'c.loading' : 'ch.empty')}</li>}
         {msgs.map((m) => <Bubble key={m.id} m={m} mine={m.from === side} when={m.id === introId ? `${t('sh.intro')} · ${N.dayTime(Date.parse(m.at))}` : N.dayTime(Date.parse(m.at))} />)}
       </ol>
+      {closed ? <p className="border-t border-line p-3 text-sm text-danger-fg flex items-start gap-2" role="status"><Icon name="alert" size={16} className="mt-0.5 shrink-0" />{t(closed === side ? 'ch.closed.me' : 'ch.closed.other', { max: MAX_STRIKES })}</p> : (
       <div className="border-t border-line p-3 space-y-2">
         <p className="text-xs font-medium">{t('ch.phrases')}</p>
         <div className="flex flex-wrap gap-1.5">{PHRASES[side].map((k) => (
@@ -99,8 +103,8 @@ function Conversation({ msgs, side, other, onSend, loading, introId }: { msgs: C
           <input className="input flex-1" maxLength={MAX_TEXT} value={text} onChange={(e) => setText(e.target.value)} placeholder={t('ch.type')} aria-label={t('ch.type')} />
           <button type="submit" className="btn-primary" disabled={!text.trim()}><Icon name="send" size={16} />{t('ch.send')}</button>
         </form>
-        {masked && <p className="text-xs text-warn-fg" role="status">{t('ch.masked')}</p>}
-      </div>
+        {masked && <p className="text-xs text-warn-fg" role="status">{t('ch.strike', { n: strikes, max: MAX_STRIKES })}</p>}
+      </div>)}
     </section>
   )
 }

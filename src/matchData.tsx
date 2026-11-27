@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { addPin, applyTo, sampleApplicant, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, employerLevel, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, releaseHeld, removePin, renewPost, requestPersonVerify, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
+import { addPin, applyTo, sampleApplicant, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, employerLevel, endForContact, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, releaseHeld, removePin, renewPost, requestPersonVerify, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
 import { applyCaseAction, submitCase, type CaseAction } from './domain/match/cases'
 import { cleanPhone, cleanRegNo } from './domain/match/verify'
 import { reportPost, withHeld, type ReportGroup, type ReportReason } from './domain/match/reports'
@@ -90,6 +90,8 @@ interface Ctx {
   apply: (postId: string, input: ApplyInput) => Promise<Outcome<Acceptance>>
   /** the employer confirms or declines an application */
   decide: (accId: string, confirm: boolean) => Promise<boolean>
+  /** the chat's third violation ends the match (local demo; the database does it itself, SQL 0017) */
+  endForContact: (accId: string, by: 'seeker' | 'employer') => void
   /** the seeker withdraws an application or a reservation (not once its case has gone to the agency) */
   withdraw: (accId: string) => Promise<Outcome<unknown>>
   /** the employer sends a company registration number for verification */
@@ -319,6 +321,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
         }
         return (await write((sb) => sb.rpc('decide_application', { p_id: accId, p_confirm: confirm }), () => null)).ok
       },
+      endForContact: (accId, by) => { if (local) setLocal((s) => { const r = endForContact(s, accId, by, at()); return r.ok ? r.value : s }) },
       withdraw: async (accId) => {
         const r = cancel(st, accId, at()); if (!r.ok) return r // also: not once the case has gone to the agency
         if (local) { setLocal((s) => ({ ...s, acceptances: r.value, cases: s.cases.filter((c) => c.accId !== accId) })); return r }

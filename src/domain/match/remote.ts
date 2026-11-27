@@ -38,7 +38,9 @@ export interface ReportRow { id: string; post_id: string; reporter_id: string; r
 export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string; dates?: unknown; seeker_arrived_at?: string | null }
 export interface PinRow { id: string; seeker_id: string | null; country: string; province: string; industry: string; skills: string[]; created_at: string; is_sample?: boolean | null }
 export interface AcceptanceRow { id: string; post_id: string; seeker_id: string; seeker_name: string; status: string; created_at: string; forwarded_at: string | null
-  intro?: string | null; available_from?: string | null; promoted_at?: string | null; decided_at?: string | null }
+  intro?: string | null; available_from?: string | null; promoted_at?: string | null; decided_at?: string | null
+  /** 0017: why and by whose violations the match was ended (null = not ended that way) */
+  ended_for?: string | null; ended_by?: string | null }
 export interface QuotaRow { kind: string; created_at: string }
 /** anonymous counts of active pins (public.pin_stats): place, field and the hour they were made — no owner */
 export interface PinStatRow { country: string; province: string; industry: string; skills: string[]; hour: string; n: number; /** simulated among n (0008) */ sample?: number | null }
@@ -105,6 +107,7 @@ export const rowToAcceptance = (r: AcceptanceRow, uid: string): Acceptance => {
     intro: r.intro ?? '', availableFrom: r.available_from ?? null,
     ...(promoted ? { promotedAt: promoted.v } : {}), ...(decided ? { decidedAt: decided.v } : {}),
     ...(status === 'forwarded' ? { forwardedAt: iso(r.forwarded_at ?? r.created_at) } : {}),
+    ...(r.ended_for === 'contact' ? { endedFor: 'contact' as const, endedBy: r.ended_by === 'employer' ? 'employer' as const : 'seeker' as const } : {}),
   }
 }
 export const rowToCredit = (r: QuotaRow): Credit | null => (r.kind === 'post' || r.kind === 'renew' || r.kind === 'pin' ? { kind: r.kind, at: iso(r.created_at) } : null)

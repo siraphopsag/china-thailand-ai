@@ -15,6 +15,15 @@ export const PHRASES: Record<Side, readonly string[]> = {
   seeker: ['hello', 'canStart', 'askHousing', 'askHours', 'askContract', 'thanks'],
 }
 export const MAX_TEXT = 500
+/**
+ * Owner's blueprint (27 Nov 2026): typing contact details is a violation. The 1st and 2nd are hidden with a warning; the 3rd ends
+ * the match and locks the chat for both sides (messages are kept as a record, never deleted). Counted per side from the stored
+ * messages, so the website and the database (SQL 0017) agree.
+ */
+export const MAX_STRIKES = 3
+export const strikesOf = (chat: Chat, side: Side) => chat.msgs.filter((m) => m.from === side && m.masked).length
+/** the side whose violations ended the match, or null while the chat is open */
+export const closedBy = (chat: Chat): Side | null => (['seeker', 'employer'] as const).find((s) => strikesOf(chat, s) >= MAX_STRIKES) ?? null
 export const MAX_SLOTS = 3
 
 /** contact details are hidden: e-mail, links, phone numbers, and LINE / WeChat / Telegram / WhatsApp ids, in any spelling (contact.ts) */
@@ -29,8 +38,9 @@ export function earlierPieces(chat: Chat, from: Side, at: string, max = 3): stri
   }
   return out
 }
-export type ChatProblem = 'empty' | 'long' | 'phrase'
+export type ChatProblem = 'empty' | 'long' | 'phrase' | 'closed'
 export function newMessage(chat: Chat, from: Side, input: { text?: string; phrase?: string }, id: string, at: string): { ok: true; value: Chat; masked: boolean } | { ok: false; problem: ChatProblem } {
+  if (closedBy(chat)) return { ok: false, problem: 'closed' }
   if (input.phrase) {
     if (!PHRASES[from].includes(input.phrase)) return { ok: false, problem: 'phrase' }
     return { ok: true, value: { ...chat, msgs: [...chat.msgs, { id, from, at, text: '', phrase: input.phrase }] }, masked: false }
@@ -46,6 +56,7 @@ export function newMessage(chat: Chat, from: Side, input: { text?: string; phras
 export type SlotProblem = 'none' | 'many' | 'past' | 'same'
 export function offerSlots(chat: Chat, slots: string[], mode: Interview['mode'], now: string, nowLocal: string): { ok: true; value: Chat } | { ok: false; problem: SlotProblem } {
   const xs = slots.filter(Boolean)
+  if (closedBy(chat)) return { ok: false, problem: 'none' }
   if (!xs.length) return { ok: false, problem: 'none' }
   if (xs.length > MAX_SLOTS) return { ok: false, problem: 'many' }
   if (new Set(xs).size !== xs.length) return { ok: false, problem: 'same' }
@@ -54,6 +65,7 @@ export function offerSlots(chat: Chat, slots: string[], mode: Interview['mode'],
 }
 export function pickSlot(chat: Chat, slot: string, now: string): Chat | null {
   const iv = chat.interview
+  if (closedBy(chat)) return null
   if (!iv || iv.chosen || !iv.slots.includes(slot)) return null
   return { ...chat, interview: { ...iv, chosen: slot, chosenAt: now } }
 }
