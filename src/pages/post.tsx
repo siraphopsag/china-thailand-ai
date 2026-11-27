@@ -14,6 +14,7 @@ import { ReportButton, ScamNote } from './safety'
 import { AgencyLinks, DemoBadge, HeldChip, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, TranslatedNote, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 import { EmployerRating } from './aftercare'
 import { SeekerBadge } from './seeker-verify'
+import { WorkerRating } from './aftercare'
 
 /**
  * One post (owner, Oct 2026): details, the five release levels with their times, who else is looking at it right now, and —
@@ -165,7 +166,7 @@ export function PostPage() {
               {!appsOf.some((a) => a.status !== 'reserved') ? <p className="text-sm text-muted">{t('m.em.noneYet')}</p> : (
                 <ul className="space-y-2">{appsOf.filter((a) => a.status !== 'reserved').map((a) => (
                   <li key={a.id} className="card-i space-y-1.5 text-sm">
-                    <p className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex flex-wrap items-center gap-1.5"><b>{nameOf(a)}</b><SeekerBadge seekerId={a.seekerId} />{mode === 'local' && a.seekerId !== ME && <SampleBadge />}</span><span className="chip bg-surface3 border-line">{t(`m.as.${a.status}` as never)}</span></p>
+                    <p className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex flex-wrap items-center gap-1.5"><b>{nameOf(a)}</b><SeekerBadge seekerId={a.seekerId} /><WorkerRating seekerId={a.seekerId} compact />{mode === 'local' && a.seekerId !== ME && <SampleBadge />}</span><span className="chip bg-surface3 border-line">{t(`m.as.${a.status}` as never)}</span></p>
                     {a.intro && <p className="text-muted">“{a.intro}”</p>}
                     {a.availableFrom && <p className="text-xs text-muted">{t('m.ap.fromShort', { d: N.day(a.availableFrom) })}{a.promotedAt ? ` · ${t('m.n.fromQueue')}` : ''}</p>}
                     {['accepted', 'confirmed', 'forwarded'].includes(a.status) && <NavLink to={`chat?acc=${a.id}`} className="btn-soft text-sm inline-flex"><Icon name="users" size={15} />{t('ch.open')}</NavLink>}

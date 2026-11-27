@@ -9,10 +9,12 @@ import type { Case } from '../domain/match/cases'
 import type { Country } from '../domain/match/types'
 import { EVIDENCE, PROBLEMS, officeSearch, type ProblemKind } from '../domain/match/reportPack'
 import {
-  REVIEW_BAD, REVIEW_GOOD, actComplaint, canReview, checkinFlags, checkinStates, credLevel, fileComplaint, mapLinkOf, hasSecret, reviewSummary, teamAlerts,
-  type CheckDay, type CheckIn, type Complaint, type ComplaintAction, type EmployerReview,
+  REVIEW_BAD, REVIEW_GOOD, WORKER_BAD, WORKER_GOOD, canCloseJob, dueDay, jobClosed, actComplaint, canReview, checkinFlags, checkinStates, credLevel, fileComplaint, mapLinkOf, hasSecret, reviewSummary, teamAlerts,
+  type CheckDay, type CheckIn, type Complaint, type ComplaintAction, type EmployerReview, type WorkerReview,
 } from '../domain/match/aftercare'
 import { useAftercare, useReviews, type Aftercare } from '../aftercareStore'
+import { useWorkerReview, useWorkerReviews } from '../workerReviewStore'
+import { ME } from '../domain/match/types'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
 import { useNames } from './match'
@@ -43,7 +45,7 @@ export function AftercarePanel({ c, caseKey, seekerId, employerId, country, prov
         <p className="text-xs text-muted mt-1">{t(view === 'seeker' ? 'ac.sub.seeker' : 'ac.sub.employer')}</p></div>
       {problem && <Warn>{t(problem === 'dbOld' ? 'sh.dbOld' : 'sh.network')}</Warn>}
       {/* the three check-ins as a timeline (not for the employer: even a missed check-in is the worker's business) */}
-      {view === 'seeker' && <ol className="grid grid-cols-3 gap-2" aria-label={t('ac.timeline')}>{states.map((s) => (
+      {view === 'seeker' && <ol className="grid grid-cols-3 sm:grid-cols-5 gap-2" aria-label={t('ac.timeline')}>{states.map((s) => (
         <li key={s.day} className={`ac-node ac-${s.state}`}>
           <span className="ac-dot">{s.state === 'done' ? <Icon name="check" size={15} /> : s.state === 'missed' ? <Icon name="warn" size={14} /> : s.day}</span>
           <span className="block text-sm font-semibold">{t(`ac.day.${s.day}` as never)}</span>
@@ -56,12 +58,16 @@ export function AftercarePanel({ c, caseKey, seekerId, employerId, country, prov
           : states.every((s) => s.state === 'done') ? <p className="text-sm text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('ac.allDone')}</p>
           : <p className="text-sm text-muted">{t('ac.next', { d: N.day(states.find((s) => s.state === 'upcoming')?.due ?? today) })}</p>}
         <SecretWord secret={a.secret} onSet={(secret) => save({ ...a, secret })} />
+        {jobClosed(a.checkins, a.complaints) && <p className="rounded-xl border border-ok-line bg-ok-bg text-ok-fg p-3 text-sm flex items-start gap-2" role="status"><Icon name="verified" size={16} className="mt-0.5 shrink-0" /><span><b>{t('wr.closed')}</b> {t('wr.closed.d')}</span></p>}
         {canReview(a.checkins) && <ReviewBox review={a.review} employerId={employerId} atNow={atNow} onSave={(review) => save({ ...a, review })} />}
+        {canReview(a.checkins) && <div className="space-y-1"><p className="text-xs font-medium">{t('wr.received')}</p><WorkerRating seekerId={seekerId ?? ME} /></div>}
         <ComplaintBox a={a} caseKey={caseKey} country={country} province={province} atNow={atNow} onFile={(cm) => save({ ...a, complaints: [cm, ...a.complaints] })}
           onAct={act} hasCase arrived />
       </>) : (<>
         <Warn tone="info">{t('ac.employer.note')}</Warn>
         <EmployerRating employerId={employerId} />
+        {canCloseJob(arrival, today) ? <WorkerReviewBox caseKey={caseKey} seekerId={seekerId ?? ME} atNow={atNow} />
+          : <p className="text-sm text-muted">{t('wr.when', { d: N.day(dueDay(arrival, 30)) })}</p>}
       </>)}
 
       {team && <TeamBox arrival={arrival} a={a} today={today} onAct={act} />}
@@ -148,6 +154,48 @@ export function EmployerRating({ employerId, compact = false }: { employerId: st
       <span className="text-xs text-muted">{t('er.count', { n: s.n })}</span>
       {!compact && s.good.map((k) => <span key={k} className="chip bg-ok-bg text-ok-fg border-ok-line text-xs">{t(`er.p.${k}` as never)}</span>)}
       {!compact && s.bad.map((k) => <span key={k} className="chip bg-warn-bg text-warn-fg border-warn-line text-xs">{t(`er.p.${k}` as never)}</span>)}
+    </div>
+  )
+}
+
+/* ---------- the employer reviews the worker (owner's blueprint, 27 Nov 2026) ---------- */
+function WorkerReviewBox({ caseKey, seekerId, atNow }: { caseKey: string; seekerId: string; atNow: string }) {
+  const { t } = useI18n()
+  const [review, save, problem] = useWorkerReview(caseKey)
+  const [stars, setStars] = useState(0), [good, setGood] = useState<string[]>([]), [bad, setBad] = useState<string[]>([])
+  if (review) return (
+    <div className="rounded-xl border border-ok-line bg-ok-bg/50 p-3 space-y-1 text-sm">
+      <p className="font-semibold text-ok-fg flex items-center gap-1.5"><Icon name="ok" size={16} />{t('wr.done')}</p>
+      <p className="text-xs text-muted">{t('wr.anon')}</p>
+    </div>)
+  const toggle = (xs: string[], set: (v: string[]) => void, k: string) => set(xs.includes(k) ? xs.filter((x) => x !== k) : [...xs, k])
+  return (
+    <div className="rounded-xl border border-line p-3 space-y-3 text-sm">
+      <p className="font-semibold flex items-center gap-2"><Icon name="star" size={16} />{t('wr.h')}</p>
+      <p className="text-xs text-muted">{t('wr.d')}</p>
+      {problem && <Warn>{t(problem === 'dbOld' ? 'sh.dbOld' : 'sh.network')}</Warn>}
+      <div className="flex gap-1" role="radiogroup" aria-label={t('er.stars')}>{[1, 2, 3, 4, 5].map((n) => (
+        <button key={n} type="button" role="radio" aria-checked={stars === n} aria-label={t('er.starN', { n })} onClick={() => setStars(n)} className={`er-star ${n <= stars ? 'on' : ''}`}><Icon name="star" size={26} /></button>))}</div>
+      {(['good', 'bad'] as const).map((g) => (
+        <div key={g} className="space-y-1"><p className="text-xs font-medium">{t(`er.${g}` as never)}</p>
+          <div className="flex flex-wrap gap-1.5">{(g === 'good' ? WORKER_GOOD : WORKER_BAD).map((k) => { const on = (g === 'good' ? good : bad).includes(k); return (
+            <button key={k} type="button" aria-pressed={on} onClick={() => (g === 'good' ? toggle(good, setGood, k) : toggle(bad, setBad, k))}
+              className={`chip min-h-[32px] px-3 ${on ? (g === 'good' ? 'bg-ok-bg text-ok-fg border-ok-line' : 'bg-warn-bg text-warn-fg border-warn-line') : 'bg-surface border-line'}`}>{t(`wr.p.${k}` as never)}</button>) })}</div></div>))}
+      <div className="flex justify-end"><button type="button" className="btn-primary" disabled={!stars} onClick={() => save({ seekerId, at: atNow, stars, good, bad } satisfies WorkerReview)}>{t('er.send')}</button></div>
+    </div>
+  )
+}
+/** a worker's reviews from employers: an anonymous total (stars, the points most often given) */
+export function WorkerRating({ seekerId, compact = false }: { seekerId: string; compact?: boolean }) {
+  const { t } = useI18n()
+  const s = reviewSummary(useWorkerReviews(seekerId))
+  if (!s) return compact ? null : <p className="text-xs text-muted">{t('wr.none')}</p>
+  return (
+    <div className={`er-sum ${compact ? 'inline-flex' : 'flex'} flex-wrap items-center gap-1.5 text-sm`} aria-label={t('er.sum', { avg: s.avg, n: s.n })}>
+      <span className="inline-flex items-center gap-1 font-bold"><Icon name="star" size={16} className="er-gold" />{s.avg.toFixed(1)}</span>
+      <span className="text-xs text-muted">{t('er.count', { n: s.n })}</span>
+      {!compact && s.good.map((k) => <span key={k} className="chip bg-ok-bg text-ok-fg border-ok-line text-xs">{t(`wr.p.${k}` as never)}</span>)}
+      {!compact && s.bad.map((k) => <span key={k} className="chip bg-warn-bg text-warn-fg border-warn-line text-xs">{t(`wr.p.${k}` as never)}</span>)}
     </div>
   )
 }

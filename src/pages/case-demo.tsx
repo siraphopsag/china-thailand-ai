@@ -12,6 +12,7 @@ import { dueDay, type CheckDay } from '../domain/match/aftercare'
 import { ME } from '../domain/match/types'
 import { removeFile } from '../caseFiles'
 import { clearAftercare } from '../aftercareStore'
+import { clearWorkerReview } from '../workerReviewStore'
 import { clearChat } from '../chatStore'
 import { Warn } from '../components/ui'
 import { Icon } from '../components/icons'
@@ -55,7 +56,7 @@ export function CaseDemoPage() {
     if (r.ok) setC(r.value)
     return r.ok ? r : { ok: false, problem: r.problem === 'name' ? 'caseText' : r.problem === 'available' ? 'departDate' : r.problem === 'contact' ? 'contact' : 'state' }
   }
-  const restart = () => { for (const d of DOCS) removeFile('demo', d); clearAftercare('demo'); clearChat('acc-demo'); try { sessionStorage.removeItem(KEY) } catch { /* ignore */ } setC(demoCase(now)); setAs('seeker'); setJump(null) }
+  const restart = () => { for (const d of DOCS) removeFile('demo', d); clearAftercare('demo'); clearWorkerReview('demo'); clearChat('acc-demo'); try { sessionStorage.removeItem(KEY) } catch { /* ignore */ } setC(demoCase(now)); setAs('seeker'); setJump(null) }
   const pick = (k: 'seeker' | 'employer') => (
     <button key={k} type="button" role="tab" aria-selected={as === k} onClick={() => setAs(k)}
       className={`min-h-[36px] px-3 rounded-lg text-sm ${as === k ? 'seg-on' : 'hover:bg-surface3'}`}>{t(`dm.as.${k}` as never)}</button>)

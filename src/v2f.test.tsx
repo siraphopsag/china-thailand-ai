@@ -19,7 +19,8 @@ import { v2h } from './locales/v2h'
 import { seekerLevel } from './pages/seeker-verify'
 import { dbProblem } from './domain/match/remote'
 import { DATA_ROWS } from './pages/dataMap'
-import { fileComplaint, mapLinkOf } from './domain/match/aftercare'
+import { WORKER_BAD, WORKER_GOOD, canCloseJob, fileComplaint, jobClosed, mapLinkOf, workerReviewProblem } from './domain/match/aftercare'
+import { cleanWorkerReview } from './workerReviewStore'
 import { packText } from './domain/match/reportPack'
 import { contractHtml } from './pages/contract-steps'
 import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
@@ -247,6 +248,26 @@ describe('L. a report carries where it happened (owner’s blueprint)', () => {
     const txt = packText({ problem: 'unpaid', country: 'TH', province: 'TH-10', note: '', evidence: [], when: 'x', loc: { lat: 13.75, lng: 100.5, link: 'https://maps.google.com/?q=13.75,100.5' } }, (k) => k, 'Bangkok')
     expect(txt).toContain('Bangkok · 13.75, 100.5 (https://maps.google.com/?q=13.75,100.5)')
     expect(src('./pages/sos.tsx')).toContain("fileComplaint({ loc: typeof loc === 'object' ? loc : null")
+  })
+})
+
+describe('M. closing the job: both sides review (owner’s blueprint)', () => {
+  it('the job closes after the day-30 check-in with no complaint being checked; the employer reviews from day 30', () => {
+    const ci = (day: 1 | 30) => ({ day, at: '', paid: 'yes' as const, passport: 'me' as const, hours: 'ok' as const, safe: 'yes' as const, note: '' })
+    expect(jobClosed([ci(1)], [])).toBe(false); expect(jobClosed([ci(1), ci(30)], [])).toBe(true)
+    expect(jobClosed([ci(30)], [{ status: 'checking' }])).toBe(false); expect(jobClosed([ci(30)], [{ status: 'forwarded' }])).toBe(true)
+    expect([canCloseJob('2026-11-01', '2026-11-29'), canCloseJob('2026-11-01', '2026-11-30')]).toEqual([false, true])
+    expect(workerReviewProblem({ stars: 4, good: ['onTime'], bad: [] })).toBeNull(); expect(workerReviewProblem({ stars: 4, good: ['free text'], bad: [] })).toBe('points')
+    expect(cleanWorkerReview({ stars: 5, at: 'x', good: ['onTime', 'evil'], bad: 'no' })).toEqual({ seekerId: 'me', at: 'x', stars: 5, good: ['onTime'], bad: [] })
+  })
+  it('the database: written only by the employer of the case after 30 days, read by the two people and the team, anonymous for others', () => {
+    const sql = src('../supabase/migrations/0018_worker_reviews.sql')
+    expect(sql).toContain("if not found or c.employer_id is distinct from auth.uid() then raise exception 'not_allowed'")
+    expect(sql).toContain("now() < arrived + interval '29 days'")
+    expect(sql).toContain('revoke insert, update, delete on public.worker_reviews from anon, authenticated')
+    expect(sql).toMatch(/returns table \(stars int, good text\[\], bad text\[\], at timestamptz\)/)
+    for (const k of [...WORKER_GOOD, ...WORKER_BAD]) { expect(sql).toContain(`'${k}'`); expect(messages).toHaveProperty(`wr.p.${k}`) }
+    expect(src('./pages/post.tsx')).toContain('<WorkerRating seekerId={a.seekerId} compact />')
   })
 })
 

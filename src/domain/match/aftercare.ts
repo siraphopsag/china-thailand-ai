@@ -60,6 +60,20 @@ export function teamAlerts(arrival: string, done: CheckIn[], today: string): Tea
   return [...flags, ...missed]
 }
 
+/* ---------- closing the job and the worker review (owner's blueprint, 27 Nov 2026) ---------- */
+/** the employer reviews the worker once 30 days have passed since the arrival (the same day the worker's last check-in opens) */
+export const canCloseJob = (arrival: string, today: string) => today >= dueDay(arrival, 30)
+/** the worker's side is closed as a success once the day-30 check-in is in and no complaint is still being checked */
+export const jobClosed = (done: CheckIn[], complaints: Pick<Complaint, 'status'>[]) => done.some((c) => c.day === 30) && !complaints.some((c) => c.status === 'checking' || c.status === 'needMore')
+export const WORKER_GOOD = ['onTime', 'skilled', 'communicates', 'followsRules', 'teamwork'] as const
+export const WORKER_BAD = ['late', 'absent', 'poorWork', 'breaksRules', 'leftEarly'] as const
+/** what an employer says about a worker: stars and fixed points, no free text (shown to later employers as an anonymous total) */
+export interface WorkerReview { seekerId: string; at: string; stars: number; good: string[]; bad: string[] }
+export function workerReviewProblem(r: Pick<WorkerReview, 'stars' | 'good' | 'bad'>): 'stars' | 'points' | null {
+  if (!Number.isInteger(r.stars) || r.stars < 1 || r.stars > 5) return 'stars'
+  return r.good.every((x) => (WORKER_GOOD as readonly string[]).includes(x)) && r.bad.every((x) => (WORKER_BAD as readonly string[]).includes(x)) ? null : 'points'
+}
+
 /* ---------- employer review ---------- */
 export const REVIEW_GOOD = ['paidOnTime', 'fairHours', 'safeWork', 'goodHousing', 'respect'] as const
 export const REVIEW_BAD = ['latePay', 'longHours', 'unsafeWork', 'poorHousing', 'deductions'] as const
@@ -72,7 +86,7 @@ export function reviewProblem(r: Pick<EmployerReview, 'stars' | 'good' | 'bad'>)
   return ok(r.good, REVIEW_GOOD) && ok(r.bad, REVIEW_BAD) ? null : 'points'
 }
 /** the anonymous total shown on posts: count, average to one decimal, the points most often given */
-export function reviewSummary(rs: EmployerReview[]): { n: number; avg: number; good: string[]; bad: string[] } | null {
+export function reviewSummary<R extends Pick<EmployerReview, 'stars' | 'good' | 'bad'>>(rs: R[]): { n: number; avg: number; good: string[]; bad: string[] } | null {
   if (!rs.length) return null
   const top = (key: 'good' | 'bad') => {
     const count = new Map<string, number>(); rs.forEach((r) => r[key].forEach((x) => count.set(x, (count.get(x) ?? 0) + 1)))
