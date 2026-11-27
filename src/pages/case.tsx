@@ -6,7 +6,7 @@ import { localDay, type Outcome } from '../domain/match/logic'
 import { APPOINTMENTS, CASE_STEPS, DOCS, PERMITS, TESTS, currentStep, stepsDone, trainingsLeft, type Case, type CaseAction, type Training } from '../domain/match/cases'
 import { ME, MY_EMPLOYER, type Country, type VerifyKind } from '../domain/match/types'
 import { cleanPhone, cleanRegNo, isMobile, isRegNo, oneTimeCode } from '../domain/match/verify'
-import { Icon } from '../components/icons'
+import { Icon, type IconName } from '../components/icons'
 import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
 import { AgencyLinks, Empty, Page, Toast, useApplicantName, useGate, useNames } from './match'
@@ -14,6 +14,7 @@ import { ScamNote } from './safety'
 import { ArrivalBox, DocAttach } from './case-extras'
 import { AftercarePanel, arrivalDay } from './aftercare'
 import { useSeekerVerified } from './seeker-verify'
+import { caseGuide, type Guide, type GuideLink } from '../domain/match/guide'
 
 /**
  * The case after a match (owner, Oct 2026): nine steps from the employer's confirmation to the worker's arrival. The employer
@@ -70,6 +71,37 @@ export interface CaseViewProps {
   /** v2: the worker has not verified their identity yet — the team cannot accept the case */
   seekerUnverified?: boolean
 }
+/**
+ * "What to do now" (owner, 27 Nov 2026: after matching a friend did not know the next step, nor how and when to do the documents
+ * and the training): the current step in plain words, who acts, the dates the team set, where to go, and what comes after.
+ */
+export function GuideCard({ g, view, caseTo, chatTo, contractTo, bare }: { g: Guide; view: 'seeker' | 'employer'; caseTo?: string; chatTo?: string; contractTo?: string; /** inside another card */ bare?: boolean }) {
+  const { t } = useI18n()
+  const N = useNames()
+  const nextText = g.next === 'case' ? t('gd.next.case') : g.next === 'checkins' ? t('gd.next.checkins') : g.next ? t(`m.cs.s.${g.next}` as never) : null
+  const LINK: Record<GuideLink, [string, IconName]> = { chat: [chatTo ?? 'chats', 'chat'], contract: [contractTo ?? 'contract', 'documents'], docs: ['#att-h', 'documents'],
+    calendar: ['calendar', 'calendar'], verify: ['hire', 'shield'], board: ['board', 'store'], sos: ['sos', 'phone'] }
+  const dayLabel = (d: Guide['dates'][number]) => (d.kind === 'training' && d.name ? `${t('gd.d.training')}: ${d.name.startsWith('@') ? t(`m.tr.${d.name.slice(1)}` as never) : d.name}` : t(`gd.d.${d.kind}` as never))
+  const showDates = g.key === 'documents' || g.key === 'tests' || g.key === 'training' || g.key === 'departure' || g.key === 'arrived'
+  return (
+    <section className={bare ? 'space-y-2.5 border-t border-line pt-3' : 'card !p-4 space-y-2.5 guide-card'} aria-labelledby="gd-h">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="gd-h" className="h2 flex items-center gap-2"><Icon name="target" size={18} className="text-primary" />{t('gd.h')}</h2>
+        <p className="flex flex-wrap items-center gap-1 text-xs"><span className="text-muted">{t('gd.who')}:</span>{g.who.map((w) => <span key={w} className={`chip text-xs ${w === 'you' ? 'bg-primary/15 text-primary border-primary/40 font-semibold' : 'bg-surface3 border-line'}`}>{t(`gd.who.${w}` as never)}</span>)}</p>
+      </div>
+      <p className="text-[0.9375rem] leading-relaxed">{t(`gd.s.${g.key}.${view}` as never, { n: g.left ?? 0 })}</p>
+      {showDates && (g.dates.length ? <ul className="space-y-1 text-sm">{g.dates.map((d, i) => <li key={i} className="flex flex-wrap items-center gap-x-2"><Icon name="calendar" size={15} className="text-primary shrink-0" /><span className="text-muted">{dayLabel(d)}</span><span className="font-semibold">{N.day(d.day)}</span></li>)}</ul>
+        : <p className="text-xs text-muted flex items-center gap-1.5"><Icon name="calendar" size={14} className="shrink-0" />{t('gd.noDate')}</p>)}
+      {(g.links.length > 0 || caseTo) && <div className="flex flex-wrap gap-2">
+        {caseTo && <NavLink to={caseTo} className="btn-primary text-sm"><Icon name="posts" size={15} />{t('gd.l.case')}</NavLink>}
+        {g.links.map((l) => { const [to, icon] = LINK[l]; return to.startsWith('#')
+          ? <button key={l} type="button" className="btn-soft text-sm" onClick={() => document.getElementById(to.slice(1))?.scrollIntoView({ block: 'start' })}><Icon name={icon} size={15} />{t(`gd.l.${l}` as never)}</button>
+          : <NavLink key={l} to={to} className="btn-soft text-sm"><Icon name={icon} size={15} />{t(`gd.l.${l}` as never)}</NavLink> })}
+      </div>}
+      {nextText && <p className="text-xs text-muted border-t border-line pt-2 flex flex-wrap items-center gap-1.5"><Icon name="next" size={13} /><span className="font-medium">{t('gd.next')}:</span>{nextText}</p>}
+    </section>
+  )
+}
 export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, title, top, contractTo, extra, chatTo, seekerUnverified }: CaseViewProps) {
   const { t } = useI18n()
   const N = useNames()
@@ -93,6 +125,7 @@ export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, 
       {seekerUnverified && <Warn>{t(isSeeker ? 'sv.needFirst.seeker' : 'sv.needFirst.team')} {isSeeker && <NavLink to="me" className="underline underline-offset-4 font-medium">{t('sv.go')}</NavLink>}</Warn>}
       <div className={`grid gap-4 items-start fit:flex-1 fit:min-h-0 fit:items-stretch ${agency ? 'lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)]' : 'lg:grid-cols-2'}`}>
         <div className={col}>
+          {(isSeeker || isEmployer) && <GuideCard g={caseGuide(c, isSeeker ? 'seeker' : 'employer')} view={isSeeker ? 'seeker' : 'employer'} chatTo={chatTo ?? `chat?acc=${c.accId}`} contractTo={contractTo ?? `contract?case=${c.id}`} />}
           {/* ---------- where it stands: the nine steps in one card, the current one explained in place ---------- */}
           <section className="card !p-4 space-y-2.5" aria-labelledby="cs-now">
             <div className="flex items-baseline justify-between gap-2"><h2 id="cs-now" className="h2">{t('m.cs.steps')}</h2><span className="text-xs text-muted">{t('m.cs.progress', { n })}</span></div>

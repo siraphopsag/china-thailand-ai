@@ -91,7 +91,7 @@ function Conversation({ msgs, side, other, onSend, loading, introId, closed, str
   return (
     <section className="card !p-0 overflow-hidden flex flex-col" aria-labelledby="ch-h">
       <h2 id="ch-h" className="h2 px-4 pt-3 pb-2 border-b border-line flex items-center gap-2"><Icon name="users" size={18} className="text-primary" />{t('ch.with', { n: other })}</h2>
-      <ol ref={list} className="flex-1 min-h-[16rem] max-h-[26rem] overflow-y-auto px-4 py-3 space-y-2" aria-live="polite">
+      <ol ref={list} className="flex-1 min-h-[10rem] max-h-[34dvh] sm:min-h-[16rem] sm:max-h-[26rem] overflow-y-auto px-4 py-3 space-y-2" aria-live="polite">
         {msgs.length === 0 && <li className="text-sm text-muted text-center py-8">{t(loading ? 'c.loading' : 'ch.empty')}</li>}
         {msgs.map((m) => <Bubble key={m.id} m={m} mine={m.from === side} when={m.id === introId ? `${t('sh.intro')} · ${N.dayTime(Date.parse(m.at))}` : N.dayTime(Date.parse(m.at))} />)}
       </ol>

@@ -5,12 +5,12 @@ import { SponsoredStrip } from './sponsored'
 import { useMatch } from '../matchData'
 import { capacityOf, isCountry, pinQuota, postQuota } from '../domain/match/logic'
 import { reportedIds } from '../domain/match/reports'
-import { reachFor, scheduleOf, stageAt, stageOf, capStage, type Quota } from '../domain/match/release'
+import { DAY_MS, reachFor, scheduleOf, stageAt, stageOf, capStage, type Quota } from '../domain/match/release'
 import { marketOf, type Scope } from '../domain/match/market'
 import { CURRENCIES, LEVELS, ME, MY_EMPLOYER, SKILLS, type Currency, type Level, type Post, type Skill } from '../domain/match/types'
 import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
-import { Icon } from '../components/icons'
+import { Icon, type IconName } from '../components/icons'
 import { MoneyInput } from '../components/money-input'
 import { Drawer } from '../components/drawer'
 import { Pager, useFit, usePaged } from '../components/pager'
@@ -239,49 +239,50 @@ function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Po
   const { t } = useI18n()
   const N = useNames()
   const { ago } = useRel()
-  const { counts } = useMatch()
-  const c = counts[post.id] ?? { held: 0, pending: 0, reserved: 0 }, cap = capacityOf(post)
-  const pct = Math.min(100, Math.round((c.held / cap) * 100))
+  const { counts, now } = useMatch()
+  const c = counts[post.id] ?? { held: 0, pending: 0, reserved: 0 }, cap = capacityOf(post), left = Math.max(0, cap - c.held)
   const act = t(actionKey(post, viewer, applied))
   const ring = reached ? t('m.lv.reached', { l: t(`m.lv.to.${level}` as never) }) : t(`m.lv.${level}` as never)
+  // owner, 27 Nov 2026 ("every post looks the same, I can't tell what stands out"): the pay first, the benefits as icons, and a
+  // few plain highlights (new, fits your pin, places left). The ring stays one colour: a colour scale read as a quality grade.
+  const fresh = now - Date.parse(post.releasedAt) < 3 * DAY_MS
+  const fits = viewer === 'seeker' && level === 1 && !reached
   return (
-    <li data-fit-item className="bd-card relative p-3 sm:p-5 fit:p-3.5 flex flex-row sm:flex-col items-center text-left sm:text-center gap-3 sm:gap-2 fit:grid fit:grid-cols-[3rem_minmax(0,1fr)] fit:items-start fit:text-left fit:gap-x-3 fit:gap-y-1 min-w-0">
-      <div className="relative shrink-0 fit:row-span-3">
-        <span aria-hidden className={`rar-${level} rar-avatar w-11 h-11 text-base sm:w-16 sm:h-16 sm:text-xl fit:w-12 fit:h-12 fit:text-lg rounded-full grid place-items-center font-bold`}>{post.company.trim().charAt(0).toUpperCase()}</span>
-        {/* not verified: a small warning on the letter (verified: the tick after the name) */}
-        {!post.verified && <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full grid place-items-center ring-2 ring-[rgb(var(--surface))] bg-warn-bg text-warn-fg" title={t('m.vf.unverified')}>
-          <Icon name="warn" size={12} /><span className="sr-only">{t('m.vf.unverified')}</span></span>}
+    <li data-fit-item className="bd-card relative p-3.5 sm:p-4 flex flex-col gap-2 text-left min-w-0">
+      <div className="flex items-start gap-3 min-w-0">
+        <div className="relative shrink-0">
+          <span aria-hidden className={`bd-av ${avatarTone(post.company)} w-11 h-11 sm:w-12 sm:h-12 text-lg rounded-2xl grid place-items-center font-bold`}>{post.company.trim().charAt(0).toUpperCase()}</span>
+          {/* not verified: a small warning on the letter (verified: the tick after the name) */}
+          {!post.verified && <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center ring-2 ring-[rgb(var(--surface))] bg-warn-bg text-warn-fg" title={t('m.vf.unverified')}>
+            <Icon name="warn" size={12} /><span className="sr-only">{t('m.vf.unverified')}</span></span>}
+        </div>
+        <div className="min-w-0 flex-1">
+          {/* the whole card opens the details (the title button stretches over it) */}
+          <h3 className="font-semibold leading-snug text-[0.9375rem] sm:text-base"><button type="button" onClick={onOpen} className="block w-full text-left hover:underline underline-offset-4 after:absolute after:inset-0 after:content-[''] after:rounded-[inherit] focus-visible:outline-none [&:focus-visible]:after:ring-2 [&:focus-visible]:after:ring-primary"><span className="[overflow-wrap:anywhere] line-clamp-2">{post.position}</span></button></h3>
+          <p className="text-xs sm:text-sm text-muted [overflow-wrap:anywhere] line-clamp-1">{post.company}<VerifyTick post={post} size={13} /></p>
+        </div>
       </div>
-      <div className="flex-1 min-w-0 w-full flex flex-col items-start sm:items-center gap-1 sm:gap-2 fit:contents">
-      {/* phones: the whole row opens the details (the title button stretches over it) */}
-      <h3 className="font-semibold leading-snug text-sm sm:text-base sm:mt-1 fit:mt-0 w-full fit:col-start-2 text-left sm:text-center fit:text-left"><button type="button" onClick={onOpen} className="block w-full text-left sm:text-center fit:text-left hover:underline underline-offset-4 after:absolute after:inset-0 after:content-[''] sm:after:hidden"><span className="[overflow-wrap:anywhere] sm:line-clamp-2 fit:line-clamp-1">{post.position}</span></button></h3>
-      <p className="text-xs sm:text-sm text-muted -mt-0.5 sm:-mt-1 fit:mt-0 [overflow-wrap:anywhere] sm:line-clamp-1 w-full fit:col-start-2">{post.company}<VerifyTick post={post} size={13} /></p>
-      <div className="flex flex-nowrap sm:flex-wrap justify-start sm:justify-center fit:justify-start fit:flex-nowrap min-w-0 max-w-full gap-1 sm:gap-1.5 fit:col-start-2">
-        {/* the ring: in short on phones and computers, in full on tablets (the full words are in the title and for screen readers) */}
-        <span className={`chip rar rar-${level} !px-1.5 sm:!px-2 text-[0.6875rem] sm:text-xs sm:hidden fit:inline-flex min-w-0`} title={ring}><ReachRings level={level} size={11} /><span className="sr-only">{t('m.lv.ring', { n: level })} · {ring}</span><span aria-hidden className="truncate">{t(`m.lv.${level}` as never)}</span></span>
-        <span className="hidden sm:contents fit:hidden"><LevelBadge level={level} reached={reached} /></span>
-        {post.sample && <SampleBadge className="!px-1.5 sm:!px-2 text-[0.6875rem] sm:text-xs shrink-0" />}{post.demo && <DemoBadge className="!px-1.5 sm:!px-2 text-[0.6875rem] sm:text-xs shrink-0" />}
+      <p className={`bd-pay ${post.salary ? '' : 'is-none'}`}><Icon name="funding" size={16} className="shrink-0" />{post.salary ? N.money(post.salary) : t('bd.noPay')}</p>
+      {post.benefits.length > 0 && <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted" aria-label={t('m.f.benefits')}>{post.benefits.map((b) => <li key={b} className="inline-flex items-center gap-1"><Icon name={BEN_ICON[b]} size={14} className="text-ok-fg" />{N.benefit(b)}</li>)}</ul>}
+      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+        {fits && <span className="chip bg-primary/15 text-primary border-primary/40 text-[0.6875rem] sm:text-xs font-semibold"><Icon name="target" size={12} />{t('bd.fits')}</span>}
+        {fresh && <span className="chip bg-ok-bg text-ok-fg border-ok-line text-[0.6875rem] sm:text-xs font-semibold"><Icon name="star" size={12} />{t('m.pin.new')}</span>}
+        <span className={`chip text-[0.6875rem] sm:text-xs ${left === 0 ? 'bg-surface3 text-muted border-line' : left <= 1 ? 'bg-warn-bg text-warn-fg border-warn-line font-semibold' : 'bg-surface3 border-line'}`}><Icon name="users" size={12} />{left === 0 ? t('bd.full', { q: c.reserved }) : t('bd.left', { n: left })}</span>
+        <span className="chip rar rar-1 text-[0.6875rem] sm:text-xs min-w-0" title={ring}><ReachRings level={level} size={11} /><span className="sr-only">{t('m.lv.ring', { n: level })} · {ring}</span><span aria-hidden className="truncate">{t(`m.lv.${level}` as never)}</span></span>
+        {post.sample && <SampleBadge className="text-[0.6875rem] sm:text-xs shrink-0" />}{post.demo && <DemoBadge className="text-[0.6875rem] sm:text-xs shrink-0" />}
       </div>
-      <p className="text-xs text-muted bd-opt hidden sm:block fit:col-span-2 fit:mt-1">{N.place(post.country, post.province)} · {ago(post.releasedAt)}</p>
-      {/* places: on the right on phones, one line on computers, two figures on tablets */}
-      <p className="hidden fit:block text-sm text-muted fit:col-span-2"><span className="font-bold text-ink">{c.held}/{cap}</span> <span className="fit:hidden" aria-hidden>{t('m.bd.placesShort')}</span><span className="sr-only fit:not-sr-only">{t('m.bd.places')}</span><span className="hidden fit:inline"> · {t('m.bd.queue')} <span className="font-bold text-ink">{c.reserved}</span></span></p>
-      <div className="hidden sm:grid fit:hidden grid-cols-2 w-full border-t border-line pt-3 mt-1 divide-x divide-line text-center">
-        <div><p className="text-base sm:text-lg font-bold">{c.held}/{cap}</p><p className="text-xs text-muted">{t('m.bd.places')}</p></div>
-        <div><p className="text-base sm:text-lg font-bold">{c.reserved}</p><p className="text-xs text-muted">{t('m.bd.queue')}</p></div>
-      </div>
-      <div className="w-full text-left bd-opt hidden sm:block fit:hidden">
-        <p className="flex justify-between text-xs text-muted"><span>{t('m.bd.fill')}</span><span>{pct}%</span></p>
-        <div className="fill-bar mt-1" role="img" aria-label={`${t('m.bd.fill')} ${pct}%`}><span style={{ width: `${pct}%` }} /></div>
-      </div>
+      <p className="text-xs text-muted flex flex-wrap items-center gap-x-1.5"><Icon name="pin" size={13} />{N.place(post.country, post.province)}<span aria-hidden>·</span>{N.industry(post.industry)}<span aria-hidden>·</span>{ago(post.releasedAt)}</p>
       {/* QA, Oct 2026: one button per card (the title opens the details), tinted — the page's one solid button is "+ Post" */}
-      <div className="hidden sm:grid w-full mt-auto sm:pt-1 fit:pt-1.5 fit:col-span-2">
-        <NavLink to={`post?id=${post.id}`} className="btn-soft text-sm justify-center !rounded-full fit:!min-h-[36px]" aria-label={`${act}: ${post.position}`}>{act}</NavLink>
+      <div className="hidden sm:grid mt-auto pt-1">
+        <NavLink to={`post?id=${post.id}`} className="btn-soft text-sm justify-center !rounded-full relative z-[1] fit:!min-h-[36px]" aria-label={`${act}: ${post.position}`}>{act}</NavLink>
       </div>
-      </div>
-      <p className="sm:hidden shrink-0 text-right leading-tight" aria-hidden><span className="block text-base font-bold">{c.held}/{cap}</span><span className="text-[0.6875rem] text-muted inline-flex items-center">{t('m.bd.placesShort')}<Icon name="right" size={13} /></span></p>
     </li>
   )
 }
+/** the benefits as small icons on the card */
+const BEN_ICON: Record<Post['benefits'][number], IconName> = { housing: 'home', meals: 'meals', insurance: 'shield', workDocs: 'documents' }
+/** a steady colour per employer for the letter (owner, 27 Nov 2026: the cards looked alike); by name, so it never ranks anyone */
+export const avatarTone = (name: string) => `bd-av-${[...name.trim()].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % 6}`
 
 /** the details panel: everything about the post, where it is, and what to do next — without leaving the board */
 function PostPanel({ titleId, post, level, reached, applied, viewer }: { titleId: string; post: Post; level: Level; reached: boolean; applied: boolean; viewer: 'seeker' | 'employer' }) {

@@ -94,7 +94,7 @@ describe('B. the board as cards', () => {
   it('after the reference: main button by the title, pill filters with the count, centred cards with two actions and a fill bar, a card/map switch', () => {
     const h = html(<BoardPage />, seeker())
     expect(h).toMatch(/<h1 class="h1">[^<]*<\/h1>.*class="btn-primary !rounded-full"/s)
-    expect(h).toContain('bd-card relative p-3 sm:p-5 fit:p-3.5 flex flex-row sm:flex-col items-center text-left sm:text-center'); // a row on phones (option ก), centred on tablets, a compact card on computers (owner, Oct 2026) expect(h).toContain('rar-avatar'); expect(h).toContain('class="fill-bar mt-1"')
+    expect(h).toContain('bd-card relative p-3.5 sm:p-4 flex flex-col gap-2 text-left'); expect(h).toContain('class="bd-pay'); expect(h).toContain('bd-av bd-av-') // owner, 27 Nov 2026: the pay first, a steady colour per employer, plain highlights
     // QA, Oct 2026: one tinted action per card (the title opens the details); the page's one solid button is "+ Post"
     expect(h).not.toContain(`>${T('m.bd.details')}</button>`); expect(h).toContain('class="btn-soft text-sm'); expect(h).toContain(T('m.bd.apply'))
     expect(h).toContain(T('m.bd.view.cards')); expect(h).toContain(T('m.bd.view.map'))

@@ -98,6 +98,11 @@ export const v2h = {
   'tg.l.weak': ['หลักฐานยังน้อย', '证据尚少', 'Little backing yet'],
   'tg.teamOnly': ['ความเห็นจาก AI ใช้ได้เฉพาะทีม C.A.L.L. ที่ล็อกอิน', 'AI 意见仅限已登录的 C.A.L.L. 团队使用', 'The AI reading is for the signed-in C.A.L.L. team only'],
   // ---------- the key for the shaded map (board)
+  // board cards that stand apart (owner, 27 Nov 2026)
+  'bd.noPay': ['ไม่ระบุเงินเดือน', '未注明薪资', 'Pay not stated'],
+  'bd.fits': ['ตรงกับหมุดคุณ', '符合您的标记', 'Fits your pin'],
+  'bd.left': ['เหลือ {n} ที่', '剩 {n} 个名额', '{n} places left'],
+  'bd.full': ['เต็มแล้ว · จองคิวได้ ({q})', '已满 · 可排队（{q}）', 'Full · join the queue ({q})'],
   // the demo account tries everything alone (owner, 27 Nov 2026; SQL 0021)
   'dm.tools': ['เครื่องมือบัญชีทดลอง · เร่งเวลา', '体验账号工具 · 加快时间', 'Demo tools · move the clock'],
   'dm.tools.lead': ['ประกาศจะส่งถึงคนทีละวง วงละประมาณหนึ่งวัน กดเร่งเวลาเพื่อดูวงถัดไปได้ทันที เปลี่ยนแค่สิ่งที่เบราว์เซอร์นี้แสดง', '招聘信息逐圈送达，每圈约一天。按“加快时间”即可立即看到下一圈，只改变本浏览器的显示。', 'A post reaches people ring by ring, about a day each. Move the clock to see the next ring now. Only this browser’s view changes.'],

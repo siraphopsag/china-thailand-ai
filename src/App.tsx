@@ -85,7 +85,7 @@ function Shell({ route, children }: { route: string; children: ReactNode }) {
       <main id="main" tabIndex={-1} className="outline-none flex-1 max-w-6xl fit:max-w-[1400px] w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-28 md:pb-10 fit:py-4"><DemoNotice /><div className="md:hidden"><BackButton route={route} /></div><ErrorBoundary key={route} compact><Suspense fallback={<p className="py-16 text-center text-muted" role="status">{t('c.loading')}</p>}>{children}</Suspense></ErrorBoundary></main>
       </div>
       {/* the footer band runs to both screen edges; its text keeps clear of the menu capsule */}
-      <footer className={`bg-surface border-t border-line text-xs text-muted px-4 md:pl-32 py-6 mb-24 md:mb-0 ${READING.includes(route) ? '' : 'fit:hidden'}`}>
+      <footer className={`bg-surface border-t border-line text-xs text-muted px-4 md:pl-32 py-6 mb-40 md:mb-0 ${READING.includes(route) ? '' : 'fit:hidden'}`}>
         <div className="max-w-7xl mx-auto flex flex-wrap gap-x-5 gap-y-2 items-center">
           <span className="font-semibold text-ink" lang="en">{BRAND.title}</span><span>{t('foot.note')}</span>
           <NavLink to="terms" className={FOOT}>{t('m.tm.title')}</NavLink>

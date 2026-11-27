@@ -9,8 +9,9 @@ import { usePresence } from '../presence'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
-import { CaseLink } from './case'
+import { CaseLink, GuideCard } from './case'
 import { ReportButton, ScamNote } from './safety'
+import { applicationGuide, caseGuide } from '../domain/match/guide'
 import { AgencyLinks, DemoBadge, DemoTools, HeldChip, SampleBadge, SampleNote, UnverifiedChip, VerifyTick, Empty, LevelBadge, Page, PostFacts, ReachRings, Toast, TranslatedNote, useApplicantName, useFieldError, useGate, useNames, useRel } from './match'
 import { EmployerRating } from './aftercare'
 import { SeekerBadge } from './seeker-verify'
@@ -122,6 +123,8 @@ export function PostPage() {
                 <p className="font-medium flex items-center gap-2"><Icon name={myApp.status === 'rejected' ? 'info' : 'ok'} size={18} className={myApp.status === 'rejected' ? 'text-muted' : 'text-ok-fg'} />{statusLine(myApp)}</p>
                 {myApp.promotedAt && <p className="text-sm text-muted">{t('m.ap.promoted', { d: N.dayTime(Date.parse(myApp.promotedAt)) })}</p>}
                 {myCase && <CaseLink c={myCase} />}
+                {/* what happens now, in plain words (owner, 27 Nov 2026: after matching nobody knew the next step) */}
+                <GuideCard bare view="seeker" g={myCase ? caseGuide(myCase, 'seeker') : applicationGuide(myApp)} caseTo={myCase ? `case?id=${myCase.id}` : undefined} chatTo={`chat?acc=${myApp.id}`} />
                 {/* demo: the simulated employer of this post answers when asked (owner, 27 Nov 2026) */}
                 {p.simFor && myApp.status === 'accepted' && (
                   <div className="card-i space-y-2 text-sm"><p className="flex items-start gap-1.5"><Icon name="sim" size={15} className="mt-0.5 shrink-0 text-warn-fg" />{t('dm.ans.lead')}</p>

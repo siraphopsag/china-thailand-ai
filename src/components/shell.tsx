@@ -6,6 +6,7 @@ import { useMatch } from '../matchData'
 import { BRAND } from '../brand'
 import { Icon, type IconName } from './icons'
 import { LoginButton } from './sidenav'
+import { SosHeaderLink } from './sos-button'
 import { Wordmark } from './logo'
 
 function useOutside(open: boolean, close: () => void) {
@@ -112,6 +113,8 @@ function RoleChip() {
 }
 
 export function Header(_: { route?: string }) {
+  const { st } = useMatch()
+  const route = _.route
   return (
     <header className="bg-header/75 backdrop-blur-xl backdrop-saturate-150 text-onheader sticky top-0 z-40 border-b border-line shadow-[0_1px_0_rgb(255_255_255/.04),0_8px_24px_-16px_rgb(0_0_0/.25)]">
       <div className="px-3 sm:px-4 min-h-16 py-2 md:py-0 flex flex-wrap items-center gap-2 sm:gap-3">
@@ -124,7 +127,7 @@ export function Header(_: { route?: string }) {
         {_.route ? <div className="hidden md:block md:pl-3"><BackButton route={_.route} compact /></div> : null}
         <div className="hidden md:block md:pl-3 lg:pl-6 flex-1 min-w-0"><HeaderSearch /></div>
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          <RoleChip /><LanguageSwitcher /><ThemeSwitcher /><LoginButton />
+          {st.role === 'seeker' && route !== 'sos' && <SosHeaderLink />}<RoleChip /><LanguageSwitcher /><ThemeSwitcher /><LoginButton />
         </div>
       </div>
     </header>

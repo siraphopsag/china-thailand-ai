@@ -106,12 +106,12 @@ describe('board layout (owner, Oct 2026): computers 4 × 2, phones one row each 
     expect(b).toContain('const PAGE = { cols: 4, rows: 2 }')
     expect(b).toContain('const pg = usePaged(shown, fit ? PAGE.cols * PAGE.rows : Infinity)')
     expect(b).toContain('<ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4')
-    expect(b).toContain("after:absolute after:inset-0 after:content-[''] sm:after:hidden")
+    expect(b).toContain("after:absolute after:inset-0 after:content-['']") // the whole card opens the details on every screen (owner, 27 Nov 2026)
     // the title is cut inside the button (a button is one box, so cutting the heading did nothing)
     // QA, Oct 2026: phones wrap the title (large text cut it to a few letters); tablets and computers still cut it
-    expect(b).toContain('<span className="[overflow-wrap:anywhere] sm:line-clamp-2 fit:line-clamp-1">{post.position}</span></button>')
+    expect(b).toContain('<span className="[overflow-wrap:anywhere] line-clamp-2">{post.position}</span></button>') // two lines at most on every screen (owner, 27 Nov 2026)
     // phones: the places on the right, the filters stay under the header, the sheet keeps its buttons at the bottom
-    expect(b).toContain('<p className="sm:hidden shrink-0 text-right leading-tight" aria-hidden>')
+    expect(b).toContain("t('bd.left', { n: left })") // places left as a highlight on every screen (owner, 27 Nov 2026)
     expect(b).toContain('className="sticky top-16 z-20 -mx-3 px-3 py-2 space-y-2 bg-page/95 border-b border-line sm:contents sm:space-y-0"')
     expect(b).toContain('sticky bottom-0 z-10 -mx-5 px-5 py-3 bg-surface2 border-t border-line sm:static')
     expect(b).not.toMatch(/max-(sm|md|lg):/) // not available with this Tailwind setup (a screen given as an object)

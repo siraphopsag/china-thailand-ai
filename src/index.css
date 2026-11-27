@@ -612,6 +612,19 @@ a.prep-strip-warn:hover { filter: brightness(.97) }
 .bd-card { background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 1.5rem; box-shadow: var(--elev-hi), var(--elev-1); transition: transform .18s ease, box-shadow .18s ease }
 .bd-card:hover { transform: translateY(-2px); box-shadow: var(--elev-hi), var(--elev-2) }
 @media (prefers-reduced-motion: reduce) { .bd-card, .bd-card:hover { transition: none; transform: none } }
+/* board cards (owner, 27 Nov 2026: they looked alike): the pay stands out, each employer's letter has its own steady colour */
+/* "what to do now" stands out a little from the other cards (owner, 27 Nov 2026) */
+.guide-card { border-color: rgb(var(--primary) / .45); box-shadow: var(--elev-hi), 0 0 0 1px rgb(var(--primary) / .12) }
+.bd-pay { display: flex; align-items: center; gap: .4rem; font-weight: 700; font-size: 1rem; color: rgb(var(--ok-fg)) }
+.bd-pay.is-none { font-weight: 500; font-size: .875rem; color: rgb(var(--muted)) }
+.bd-av { border: 1px solid rgb(var(--av-line)); background: rgb(var(--av-bg)); color: rgb(var(--av-fg)) }
+.bd-av-0 { --av-bg: 224 231 255; --av-fg: 55 48 163; --av-line: 165 180 252 } .bd-av-1 { --av-bg: 204 251 241; --av-fg: 17 94 89; --av-line: 94 234 212 }
+.bd-av-2 { --av-bg: 255 228 230; --av-fg: 159 18 57; --av-line: 253 164 175 } .bd-av-3 { --av-bg: 254 243 199; --av-fg: 146 64 14; --av-line: 252 211 77 }
+.bd-av-4 { --av-bg: 224 242 254; --av-fg: 7 89 133; --av-line: 125 211 252 } .bd-av-5 { --av-bg: 243 232 255; --av-fg: 107 33 168; --av-line: 216 180 254 }
+:root[data-theme='dark'] .bd-av-0 { --av-bg: 49 46 129; --av-fg: 199 210 254; --av-line: 79 70 229 } :root[data-theme='dark'] .bd-av-1 { --av-bg: 19 78 74; --av-fg: 153 246 228; --av-line: 13 148 136 }
+:root[data-theme='dark'] .bd-av-2 { --av-bg: 136 19 55; --av-fg: 254 205 211; --av-line: 225 29 72 } :root[data-theme='dark'] .bd-av-3 { --av-bg: 120 53 15; --av-fg: 253 230 138; --av-line: 217 119 6 }
+:root[data-theme='dark'] .bd-av-4 { --av-bg: 12 74 110; --av-fg: 186 230 253; --av-line: 2 132 199 } :root[data-theme='dark'] .bd-av-5 { --av-bg: 88 28 135; --av-fg: 233 213 255; --av-line: 147 51 234 }
+
 /* the height an app page gets on a "fit" screen: the screen minus the header (4rem) and the page padding (2rem) */
 :root { --app-h: calc(100dvh - 6rem - 1px) }
 /* phones: the whole interface one step smaller (rem-based sizes follow) — body text 15 px, small text never under 12 px */

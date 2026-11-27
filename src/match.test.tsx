@@ -323,7 +323,7 @@ describe('the board (owner, Oct 2026)', () => {
     expect(page).toContain('ผู้ประสานงานคลังสินค้า') // level 5: over a month old, open to everyone
     expect(page).not.toContain('Front Office Manager') // Shanghai: not for me yet
     // ring 1: the centre of the rings only (the other four faint), then the ring in words for screen readers
-    expect(page).toMatch(/class="chip rar rar-1"><svg[^>]*><circle[^>]*><\/circle>(<circle[^>]*opacity="0.22"><\/circle>){4}<\/svg><span class="sr-only">/)
+    expect(page).toMatch(/class="chip rar rar-1[^"]*"[^>]*><svg[^>]*><circle[^>]*><\/circle>(<circle[^>]*opacity="0.22"><\/circle>){4}<\/svg><span class="sr-only">/)
     expect(page).not.toMatch(/fill-current/) // no stars anywhere on the board
     expect(page).toContain(T('m.sort.new'))
     // the allowance is a small chip (owner, Oct 2026) that opens my pins
@@ -337,7 +337,7 @@ describe('the board (owner, Oct 2026)', () => {
     expect(page).toContain('ผู้จัดการแผนกต้อนรับ'); expect(page).toContain('ผู้ประสานงานคลังสินค้า') // other employers' posts too (owner, Oct 2026)
     expect(page).toContain(`>${T('m.bd.manage')}</a>`); expect(page).toContain(`>${T('m.bd.view')}</a>`) // mine → manage · others' → view
     expect(page).toContain(T('m.lv.reached', { l: T('m.lv.to.2' as never) })) // "Reaches: the same field"
-    expect(page).toContain('<p class="text-base sm:text-lg font-bold">1/2</p>'); expect(page).toContain(T('m.bd.places')) // places taken on the card
+    expect(page).toContain(T('bd.left', { n: 1 })) // places left on the card (owner, 27 Nov 2026)
     expect(page).toContain(T('m.qb.chip.post', { n: 1, max: 3 }))
   })
   it('the map shows counts only, also listed in text; menu has the board; posts link to their page', () => {

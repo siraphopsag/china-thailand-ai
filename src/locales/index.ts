@@ -25,7 +25,8 @@ import { v2e } from './v2e.js'
 import { v2f } from './v2f.js'
 import { v2g } from './v2g.js'
 import { v2h } from './v2h.js'
+import { guide } from './guide.js'
 
 /** Every message is [th, zh, en]. Later spreads override earlier keys (ux.ts = simplified copy). */
-export const messages = { ...common, ...data, ...pages, ...ux, ...legal, ...journey, ...geo, ...provinces, ...brand, ...plan, ...jobboard, ...entry, ...home, ...match, ...cases, ...safety, ...design, ...market, ...ai, ...v2, ...v2b, ...v2c, ...v2d, ...v2e, ...v2f, ...v2g, ...v2h }
+export const messages = { ...common, ...data, ...pages, ...ux, ...legal, ...journey, ...geo, ...provinces, ...brand, ...plan, ...jobboard, ...entry, ...home, ...match, ...cases, ...safety, ...design, ...market, ...ai, ...v2, ...v2b, ...v2c, ...v2d, ...v2e, ...v2f, ...v2g, ...v2h, ...guide }
 export type MsgKey = keyof typeof messages
