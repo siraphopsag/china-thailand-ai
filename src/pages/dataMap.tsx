@@ -4,7 +4,7 @@ import { useI18n } from '../i18n'
 import { NavLink } from '../store'
 import { Icon } from '../components/icons'
 
-export const DATA_ROWS = ['account', 'job', 'chat', 'id', 'contract', 'care', 'review', 'ai'] as const
+export const DATA_ROWS = ['account', 'profile', 'job', 'chat', 'id', 'contract', 'care', 'review', 'ai'] as const
 const COLS = ['what', 'why', 'who', 'keep'] as const
 
 export function DataMap() {

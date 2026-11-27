@@ -23,6 +23,7 @@ import { NeedLogin } from './auth'
 import { VerifyCard } from './case'
 import { NeedVerifySeeker, SeekerVerifyCard, seekerLevel, useSeekerVerify } from './seeker-verify'
 import { VerifyOverview } from './dataMap'
+import { BusinessCard, WorkCard } from './profileExtra'
 import { currentStep, stepsDone } from '../domain/match/cases'
 import { SimTools } from './simtools'
 import { PREP, dayPick, prepSeen, setAskPrefill, type PrepKey } from '../prepare'
@@ -677,6 +678,8 @@ export function MePage() {
       <AccountSection />
       </div>
       {st.role === 'employer' && <VerifyCard />}
+      {st.role === 'employer' && <BusinessCard />}
+      {st.role === 'seeker' && <WorkCard />}
       {st.role === 'seeker' && <SeekerVerifyCard />}
       {st.role === 'seeker' && <VerifyOverview side="seek" />}
       </div>

@@ -21,6 +21,7 @@ import { dbProblem } from './domain/match/remote'
 import { DATA_ROWS } from './pages/dataMap'
 import { WORKER_BAD, WORKER_GOOD, canCloseJob, fileComplaint, jobClosed, mapLinkOf, workerReviewProblem } from './domain/match/aftercare'
 import { cleanWorkerReview } from './workerReviewStore'
+import { businessProblem, cleanBusiness, cleanWork, totalYears, workProblem } from './domain/profileExtra'
 import { packText } from './domain/match/reportPack'
 import { contractHtml } from './pages/contract-steps'
 import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
@@ -268,6 +269,23 @@ describe('M. closing the job: both sides review (owner’s blueprint)', () => {
     expect(sql).toMatch(/returns table \(stars int, good text\[\], bad text\[\], at timestamptz\)/)
     for (const k of [...WORKER_GOOD, ...WORKER_BAD]) { expect(sql).toContain(`'${k}'`); expect(messages).toHaveProperty(`wr.p.${k}`) }
     expect(src('./pages/post.tsx')).toContain('<WorkerRating seekerId={a.seekerId} compact />')
+  })
+})
+
+describe('N. the shop or company and the work history (owner’s blueprint)', () => {
+  it('only well-formed fields are kept; contact details are refused; at most 5 jobs', () => {
+    expect(cleanBusiness({ about: ' ร้านอาหารไทย ', industry: 'food_service', size: '10-49', since: 2015, evil: 1 })).toEqual({ about: 'ร้านอาหารไทย', industry: 'food_service', size: '10-49', since: 2015 })
+    expect(cleanBusiness({ industry: 'casino', size: 'huge', since: 1800 })).toEqual({ about: '', industry: '', size: '', since: null })
+    expect(businessProblem({ ...cleanBusiness({}), about: 'ติดต่อ line: shop_99' })).toBe('contact')
+    const w = cleanWork({ jobs: Array.from({ length: 7 }, (_, i) => ({ role: 'Cook ' + i, country: 'CN', years: 1.3 })), showcase: 'HSK 4' })
+    expect([w.jobs.length, w.jobs[0]]).toEqual([5, { role: 'Cook 0', country: 'CN', years: 1.5, industry: '' }])
+    expect(workProblem({ jobs: [], showcase: 'โทร 0812345678' })).toBe('contact'); expect(totalYears(w)).toBe(7.5)
+  })
+  it('the database: own rows only, size-limited, no contact details; others read through two functions', () => {
+    const sql = src('../supabase/migrations/0019_profile_extra.sql')
+    expect(sql).toContain('public.no_contact(business::text)'); expect(sql).toContain('grant update (business, work) on public.profiles to authenticated')
+    expect(sql).toContain('where a.seeker_id = p_seeker and p.employer_id = auth.uid()')
+    expect(src('./pages/post.tsx')).toContain('<ApplicantWork seekerId={a.seekerId} />'); expect(src('./pages/match.tsx')).toContain("{st.role === 'seeker' && <WorkCard />}")
   })
 })
 
