@@ -50,7 +50,9 @@
   --grad-a: 165 180 252; --grad-b: 125 211 252; --cta-a: 79 70 229; --cta-b: 37 99 235; --hero-base: 11 11 18; --paths-c: 255 255 255; --paths-sheen: 224 231 255; --paths-a: 1;
 }
 
-html { scroll-behavior: smooth }
+html { scroll-behavior: smooth; --fs: 1; font-size: calc(100% * var(--fs)) }
+/* text size from Settings (owner, 27 Nov 2026): rem-based sizes follow the root, fixed ones multiply by --fs */
+html[data-text="sm"] { --fs: .9 } html[data-text="lg"] { --fs: 1.15 } html[data-text="xl"] { --fs: 1.3 } html[data-text="xxl"] { --fs: 1.5 }
 /* grid children may shrink below their content width (prevents horizontal overflow with long Thai/CJK lines) */
 .grid > * { min-width: 0 }
 body { font-family: "Noto Sans Thai","Sarabun","Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif; line-height: 1.65; overflow-wrap: break-word;
@@ -132,7 +134,10 @@ h1[tabindex="-1"]:focus { outline: none }
 /* a chosen planned ("coming soon") country rises in grey, never in the indigo of open countries */
 .g-top-soon { fill: rgb(var(--globe-soon)); stroke: rgb(var(--globe-line) / .9); stroke-width: 1.2; vector-effect: non-scaling-stroke }
 .g-ptop { fill: rgb(var(--globe-prov)); stroke: rgb(var(--globe-line)); stroke-width: 1.4; vector-effect: non-scaling-stroke }
-.g-prov { fill: transparent; stroke: rgb(var(--globe-line) / .55); stroke-width: .6; vector-effect: non-scaling-stroke; cursor: pointer }
+.g-prov { fill: transparent; stroke: none; cursor: pointer }
+/* one line for all the borders between provinces, drawn once: no doubled or broken edges (owner, 27 Nov 2026) */
+.g-pborder { fill: none; stroke: rgb(var(--globe-line) / .5); stroke-width: .7; stroke-linejoin: round; vector-effect: non-scaling-stroke }
+.g-heat-on .g-pborder { stroke: rgb(40 8 8 / .32) }
 .g-prov:not(.g-heat):hover { fill: rgb(var(--globe-line) / .14) }
 .g-provmark { fill: rgb(var(--globe-prov)); stroke: #fff; stroke-width: 1.8 }
 .g-route { fill: none; stroke: rgb(var(--globe-route) / .5); stroke-width: 1.6; stroke-dasharray: 5 6; stroke-linecap: round }
@@ -140,8 +145,8 @@ h1[tabindex="-1"]:focus { outline: none }
 .g-capital { fill: rgb(var(--globe-capital)); stroke: #fff; stroke-width: 1.8 }
 .g-plane { fill: rgb(var(--globe-route)); stroke: rgb(var(--page)); stroke-width: 1 }
 .g-label, .g-name { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font-weight: 600 }
-.g-label { font-size: 15px }
-.g-city { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font-size: 12.5px; font-weight: 600 } .g-name { font-size: 17px; font-weight: 700; letter-spacing: .04em }
+.g-label { font-size: calc(15px * var(--fs)) }
+.g-city { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font-size: calc(12.5px * var(--fs)); font-weight: 600 } .g-name { font-size: calc(17px * var(--fs)); font-weight: 700; letter-spacing: .04em }
 svg[role=application]:focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: -3px }
 .globe-ctl { width: 40px; height: 40px; display: grid; place-items: center; border-radius: .75rem; background: rgb(var(--surface) / .9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgb(var(--control-line)); color: rgb(var(--ink)); box-shadow: var(--elev-hi), var(--elev-2) }
 .globe-ctl:hover { background: rgb(var(--surface3)) }
@@ -380,12 +385,14 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 /* pale yellow → deep red: the busiest provinces read as red (owner, 27 Nov 2026: "ที่คนเยอะอยากให้เป็นสีแดง"), the same in light and dark */
 .g-heat-0 { --heat: #fde9a9 } .g-heat-1 { --heat: #fbc265 } .g-heat-2 { --heat: #f68d45 } .g-heat-3 { --heat: #e0512f } .g-heat-4 { --heat: #b4161b }
 .g-heat { fill: var(--heat) }
+/* a shaded province is outlined in its own colour, so neighbours overlap by a hair and no gap shows between them */
+.g-prov.g-heat { stroke: var(--heat); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke }
 .g-heat-0 { --heat-side: #c4a560 } .g-heat-1 { --heat-side: #c48a3a } .g-heat-2 { --heat-side: #b35f2c } .g-heat-3 { --heat-side: #983520 } .g-heat-4 { --heat-side: #6f0c10 }
 .g-heat-side { fill: var(--heat-side); stroke: var(--heat-side); stroke-width: 1; vector-effect: non-scaling-stroke }
 .g-ptop-heat { fill: var(--heat); stroke: #fff; stroke-width: 2; vector-effect: non-scaling-stroke }
 .g-prov.g-heat:hover { filter: brightness(1.15) }
-.g-count-n { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font: 700 11.5px/1 system-ui, sans-serif }
-.map-key { padding: .4rem .55rem; border-radius: .7rem; background: rgb(var(--surface) / .9); border: 1px solid rgb(var(--line)); font-size: 11px; line-height: 1.35; color: rgb(var(--ink)); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px) }
+.g-count-n { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font: 700 calc(11.5px * var(--fs))/1 system-ui, sans-serif }
+.map-key { padding: .4rem .55rem; border-radius: .7rem; background: rgb(var(--surface) / .9); border: 1px solid rgb(var(--line)); font-size: calc(11px * var(--fs)); line-height: 1.35; color: rgb(var(--ink)); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px) }
 .map-key-h { font-weight: 700; margin-bottom: .15rem }
 .map-key-row { display: flex; align-items: center; gap: .4rem; font-variant-numeric: tabular-nums }
 .map-key-sw { width: .8rem; height: .8rem; border-radius: .2rem; border: 1px solid rgb(var(--line)) }
@@ -398,11 +405,11 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .g-pole-foot { fill: rgb(var(--globe-capital)); stroke: rgb(var(--page)); stroke-width: 1.2 }
 .map-intro { animation: map-intro-in .35s ease-out both }
 @keyframes map-intro-in { from { opacity: 0 } to { opacity: 1 } }
-.map-flag { position: absolute; display: flex; align-items: center; gap: 5px; padding: 0 7px 0 6px; border-radius: .45rem; font-size: 12px; font-weight: 600; white-space: nowrap; line-height: 1;
+.map-flag { position: absolute; display: flex; align-items: center; gap: 5px; padding: 0 7px 0 6px; border-radius: .45rem; font-size: calc(12px * var(--fs)); font-weight: 600; white-space: nowrap; line-height: 1;
   color: rgb(var(--ink)); background: rgb(var(--surface) / .92); border: 1px solid rgb(var(--line)); box-shadow: 0 2px 8px rgb(0 0 0 / .12) }
 .map-flag:hover { background: rgb(var(--surface)); border-color: rgb(var(--primary)) }
 .map-flag:focus-visible { outline: 3px solid rgb(var(--primary)); outline-offset: 2px }
-.map-flag.is-small { gap: 4px; padding: 0 5px; font-size: 11px }
+.map-flag.is-small { gap: 4px; padding: 0 5px; font-size: calc(11px * var(--fs)) }
 .map-flag.is-small .map-flag-img { width: 15px; height: 11px }
 .map-flag-img { width: 18px; height: 13px; flex-shrink: 0; border-radius: 2px; box-shadow: 0 0 0 1px rgb(0 0 0 / .15); object-fit: cover }
 .map-intro-go { position: absolute; right: .75rem; bottom: .75rem; display: inline-flex; align-items: center; gap: .4rem; min-height: 40px;
@@ -608,7 +615,7 @@ a.prep-strip-warn:hover { filter: brightness(.97) }
 /* the height an app page gets on a "fit" screen: the screen minus the header (4rem) and the page padding (2rem) */
 :root { --app-h: calc(100dvh - 6rem - 1px) }
 /* phones: the whole interface one step smaller (rem-based sizes follow) — body text 15 px, small text never under 12 px */
-@media (max-width: 639px) { html { font-size: 93.75% } .glass-card.p-5, .card-i.p-5 { padding: 1rem } }
+@media (max-width: 639px) { html { font-size: calc(93.75% * var(--fs)) } .glass-card.p-5, .card-i.p-5 { padding: 1rem } }
 /* a sideways-scrolling row without a visible bar (the pills keep their focus ring and can be reached with Tab) */
 .no-scrollbar { scrollbar-width: none } .no-scrollbar::-webkit-scrollbar { display: none }
 /* the capsule always fits between the header and the bottom of the screen (owner, Oct 2026: with many items on a short screen its
@@ -635,7 +642,7 @@ a.prep-strip-warn:hover { filter: brightness(.97) }
 .mn-item:focus-visible { outline: 2px solid rgb(var(--primary)); outline-offset: 2px }
 .mn-icon { position: relative; display: grid; place-items: center; transition: opacity .18s ease }
 .mn-h .mn-icon { margin-top: 2px }
-.mn-label { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-weight: 700; color: var(--hue-l); transition: opacity .2s ease }
+.mn-label { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: calc(11px * var(--fs)); font-weight: 700; color: var(--hue-l); transition: opacity .2s ease }
 :root[data-theme='dark'] .mn-label { color: var(--hue-d) }
 .mn-bead { position: absolute; left: 0; top: 0; width: 46px; height: 46px; border-radius: 9999px; display: grid; place-items: center; color: #111318;
   background: radial-gradient(70% 60% at 35% 25%, rgb(255 255 255 / .45), transparent 60%), var(--hue);
@@ -890,7 +897,7 @@ html[data-lite] .bg-paths.is-on .bg-flow path { animation: none !important }
 .jr-feat { color: rgb(var(--ink)); transition: background .15s ease }
 .jr-feat:hover, .jr-feat:focus-visible { background: rgb(var(--jr) / .14) }
 .jr-ic { width: 2rem; height: 2rem; flex-shrink: 0; border-radius: .7rem; display: grid; place-items: center; background: rgb(var(--jr) / .18); color: rgb(var(--jr-ink)) }
-.jr-law { display: inline-flex; align-items: center; gap: .3rem; font-size: 11px; font-weight: 600; padding: .2rem .55rem; border-radius: 9999px;
+.jr-law { display: inline-flex; align-items: center; gap: .3rem; font-size: calc(11px * var(--fs)); font-weight: 600; padding: .2rem .55rem; border-radius: 9999px;
   border: 1px solid rgb(var(--jr) / .5); color: rgb(var(--jr-ink)); background: rgb(var(--jr) / .08) }
 .jr-go { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; width: 100%; min-height: 44px; border-radius: 9999px; font-weight: 700;
   background: rgb(var(--jr)); color: #0b1020; transition: filter .15s ease } .jr-go:hover { filter: brightness(1.08) }
@@ -930,7 +937,7 @@ html[data-lite] .bg-paths.is-on .bg-flow path { animation: none !important }
 .sp-gov { --sp: 14 165 233 } .sp-company { --sp: 34 197 94 } .sp-law { --sp: 129 140 248 }
 .sp-card { border-color: rgb(var(--sp) / .55); background: linear-gradient(135deg, rgb(var(--sp) / .14), rgb(var(--surface)) 60%); color: rgb(var(--ink)) }
 .sp-card:hover { border-color: rgb(var(--sp)) }
-.sp-badge { display: inline-flex; align-items: center; gap: .25rem; font-size: 11px; font-weight: 700; padding: .1rem .5rem; border-radius: 9999px; background: rgb(var(--sp) / .2); color: rgb(var(--ink)) }
+.sp-badge { display: inline-flex; align-items: center; gap: .25rem; font-size: calc(11px * var(--fs)); font-weight: 700; padding: .1rem .5rem; border-radius: 9999px; background: rgb(var(--sp) / .2); color: rgb(var(--ink)) }
 
 /* hearing a term read aloud (speak.tsx) */
 .say-btn { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; color: inherit; border: 1px solid currentColor; opacity: .8; background: transparent; cursor: pointer }

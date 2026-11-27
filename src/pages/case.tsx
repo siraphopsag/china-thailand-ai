@@ -102,9 +102,9 @@ export function CaseView({ c, sub, isSeeker, isEmployer, withName, agency, act, 
               return (
                 <li key={s2} aria-current={current ? 'step' : undefined} className={`rounded-lg px-1.5 py-1 ${current ? 'bg-brand text-brandfg' : ''}`}>
                   <div className="flex items-center gap-2.5">
-                    <span className={`w-6 h-6 shrink-0 rounded-full grid place-items-center text-[11px] font-bold ${at ? 'bg-ok-fg text-ok-bg' : current ? 'bg-primary text-onprimary' : 'bg-surface3 text-muted'}`}>{at ? <Icon name="check" size={13} /> : i + 1}</span>
+                    <span className={`w-6 h-6 shrink-0 rounded-full grid place-items-center text-[0.6875rem] font-bold ${at ? 'bg-ok-fg text-ok-bg' : current ? 'bg-primary text-onprimary' : 'bg-surface3 text-muted'}`}>{at ? <Icon name="check" size={13} /> : i + 1}</span>
                     <span className={`text-sm flex-1 min-w-0 truncate ${current ? 'font-semibold' : at ? '' : 'text-muted'}`}>{t(`m.cs.s.${s2}` as never)}</span>
-                    {(at || current) && <span className="text-[11px] opacity-80 shrink-0">{at ? N.dayTime(Date.parse(at)) : t('m.cs.now')}</span>}
+                    {(at || current) && <span className="text-[0.6875rem] opacity-80 shrink-0">{at ? N.dayTime(Date.parse(at)) : t('m.cs.now')}</span>}
                   </div>
                   {current && <p className="text-xs mt-1 pl-[34px]">{t(`m.cs.d.${s2}` as never)}</p>}
                 </li>)

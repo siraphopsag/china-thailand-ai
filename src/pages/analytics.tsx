@@ -115,7 +115,7 @@ export function AnalyticsPage() {
                 <button type="button" className="ml-auto text-xs text-primary underline underline-offset-4 min-h-[32px]" onClick={() => setTable(true)}>{t('m.an.table')}</button></div>
               <div className="fit:flex-1 fit:min-h-0"><AreaChart fill={fit} points={points} prev={prevVals} label={t('m.an.chartLabel', { m: name(metric), n: range, total: fmtN(total(cur, metric)) })} dayLabel={dayLabel}
                 valueLabel={(n) => `${fmtN(n)} ${name(metric)}`} prevLabel={(n) => t('m.an.prevValue', { n: fmtN(n) })} /></div>
-              <p className="text-[11px] text-muted flex items-start gap-1.5 shrink-0"><Icon name="lock" size={12} className="mt-0.5" />{t('m.an.privacy')}</p>
+              <p className="text-[0.6875rem] text-muted flex items-start gap-1.5 shrink-0"><Icon name="lock" size={12} className="mt-0.5" />{t('m.an.privacy')}</p>
               <Modal open={table} onClose={() => setTable(false)} wide>{(titleId) => (<>
                 <h2 id={titleId} className="h2">{t('m.an.trend', { m: name(metric) })}</h2>
                 <div className="max-h-[60vh] overflow-auto"><table className="w-full text-left text-sm"><thead><tr className="text-muted text-xs"><th className="py-1 pr-2">{t('m.an.day')}</th><th className="py-1 pr-2">{name(metric)}</th>{prevVals && <th className="py-1">{t('m.an.prevPeriod')}</th>}</tr></thead>

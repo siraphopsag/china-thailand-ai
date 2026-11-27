@@ -115,7 +115,7 @@ export function ReviewStep({ country, review, canSend, onSend, onAdvance }: {
         </div>
         <ol className="grid grid-cols-3 gap-2" aria-label={t('rv.status')}>{steps.map((s, i) => (
           <li key={s} className={`rounded-xl border px-2 py-2 text-center text-xs sm:text-sm ${i <= at ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line text-muted'}`}>
-            <span className="block text-[11px] opacity-80">{i + 1}</span>{t(`rv.st.${s}` as never)}</li>))}</ol>
+            <span className="block text-[0.6875rem] opacity-80">{i + 1}</span>{t(`rv.st.${s}` as never)}</li>))}</ol>
         {!review && (canSend
           ? <button type="button" className="btn-primary" onClick={onSend}><Icon name="send" size={16} />{t('rv.send')}</button>
           : <Warn>{t('rv.needCheck')}</Warn>)}

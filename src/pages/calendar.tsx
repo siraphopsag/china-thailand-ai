@@ -106,8 +106,8 @@ export function CalendarPage() {
                       <span className={`text-xs font-semibold w-6 h-6 grid place-items-center rounded-full ${isToday ? 'bg-primary text-onprimary' : ''}`}>{Number(d.slice(8, 10))}</span>
                       {/* phones: dots · wider screens: labels */}
                       {evs.length > 0 && <span className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>{evs.slice(0, 4).map((e) => <span key={e.id} className={`cal-dot cal-${e.kind}`} />)}</span>}
-                      <span className="hidden sm:flex flex-col gap-0.5 min-w-0" aria-hidden>{evs.slice(0, 2).map((e) => <span key={e.id} className={`cal-ev cal-${e.kind} truncate rounded-md border px-1 text-[11px] leading-5`}>{title(e).what}</span>)}
-                        {evs.length > 2 && <span className="text-[11px] text-muted">+{evs.length - 2}</span>}</span>
+                      <span className="hidden sm:flex flex-col gap-0.5 min-w-0" aria-hidden>{evs.slice(0, 2).map((e) => <span key={e.id} className={`cal-ev cal-${e.kind} truncate rounded-md border px-1 text-[0.6875rem] leading-5`}>{title(e).what}</span>)}
+                        {evs.length > 2 && <span className="text-[0.6875rem] text-muted">+{evs.length - 2}</span>}</span>
                     </button>
                   </div>)
               })}</div>))}
@@ -126,7 +126,7 @@ export function CalendarPage() {
             <h2 id="cal-next" className="h2">{t('m.cal.upcoming')}</h2>
             {upcoming.length ? <ul className="space-y-2">{upcoming.map((e) => (
               <li key={e.id} className="flex items-start gap-3">
-                <span className="w-11 shrink-0 rounded-lg bg-brand text-brandfg text-center py-1 leading-tight"><span className="block text-[10px] uppercase">{fmt({ month: 'short' }).format(dayDate(e.day))}</span><span className="block font-bold">{Number(e.day.slice(8, 10))}</span></span>
+                <span className="w-11 shrink-0 rounded-lg bg-brand text-brandfg text-center py-1 leading-tight"><span className="block text-[0.625rem] uppercase">{fmt({ month: 'short' }).format(dayDate(e.day))}</span><span className="block font-bold">{Number(e.day.slice(8, 10))}</span></span>
                 <NavLink to={link(e)} className="min-w-0 hover:underline underline-offset-4"><span className="block text-sm font-medium">{title(e).what}</span><span className="block text-xs text-muted">{title(e).sub}</span></NavLink>
               </li>))}</ul> : <p className="text-sm text-muted">{t('m.cal.none')}</p>}
             {upcoming.length > 0 && <button type="button" className="btn-ghost text-sm w-full justify-center" onClick={download}><Icon name="plus" size={15} />{t('m.cal.ics')}</button>}

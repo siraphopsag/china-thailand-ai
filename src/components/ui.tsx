@@ -8,7 +8,7 @@ import { CountryBadge, Icon } from './icons'
 
 /* ---------- small primitives ---------- */
 export const VerifyBadge = ({ v }: { v: Verification }) => { useI18n(); return <span title={v} className={`chip font-medium ${verifyChip[v]}`}>{tk('verify', v)}</span> }
-export const SampleTag = ({ text }: { text?: string }) => { const { t } = useI18n(); return <span className="inline-block text-[11px] bg-surface3 text-muted rounded px-1.5 py-0.5">{text ?? t('c.sample')}</span> }
+export const SampleTag = ({ text }: { text?: string }) => { const { t } = useI18n(); return <span className="inline-block text-[0.6875rem] bg-surface3 text-muted rounded px-1.5 py-0.5">{text ?? t('c.sample')}</span> }
 export const Disclaimer = () => { const { t } = useI18n(); return <p className="text-xs text-muted border-t border-line pt-3 mt-6">{t('c.disclaimer')}</p> }
 export const ExtLink = ({ href, children }: { href?: string; children: ReactNode }) => (
   <a className="inline-flex items-center gap-1 min-h-[24px] text-primary underline underline-offset-2" href={href} target="_blank" rel="noopener noreferrer">{children}<Icon name="external" size={13} /></a>

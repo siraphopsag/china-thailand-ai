@@ -257,9 +257,9 @@ function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Po
       <p className="text-xs sm:text-sm text-muted -mt-0.5 sm:-mt-1 fit:mt-0 [overflow-wrap:anywhere] sm:line-clamp-1 w-full fit:col-start-2">{post.company}<VerifyTick post={post} size={13} /></p>
       <div className="flex flex-nowrap sm:flex-wrap justify-start sm:justify-center fit:justify-start fit:flex-nowrap min-w-0 max-w-full gap-1 sm:gap-1.5 fit:col-start-2">
         {/* the ring: in short on phones and computers, in full on tablets (the full words are in the title and for screen readers) */}
-        <span className={`chip rar rar-${level} !px-1.5 sm:!px-2 text-[11px] sm:text-xs sm:hidden fit:inline-flex min-w-0`} title={ring}><ReachRings level={level} size={11} /><span className="sr-only">{t('m.lv.ring', { n: level })} · {ring}</span><span aria-hidden className="truncate">{t(`m.lv.${level}` as never)}</span></span>
+        <span className={`chip rar rar-${level} !px-1.5 sm:!px-2 text-[0.6875rem] sm:text-xs sm:hidden fit:inline-flex min-w-0`} title={ring}><ReachRings level={level} size={11} /><span className="sr-only">{t('m.lv.ring', { n: level })} · {ring}</span><span aria-hidden className="truncate">{t(`m.lv.${level}` as never)}</span></span>
         <span className="hidden sm:contents fit:hidden"><LevelBadge level={level} reached={reached} /></span>
-        {post.sample && <SampleBadge className="!px-1.5 sm:!px-2 text-[11px] sm:text-xs shrink-0" />}{post.demo && <DemoBadge className="!px-1.5 sm:!px-2 text-[11px] sm:text-xs shrink-0" />}
+        {post.sample && <SampleBadge className="!px-1.5 sm:!px-2 text-[0.6875rem] sm:text-xs shrink-0" />}{post.demo && <DemoBadge className="!px-1.5 sm:!px-2 text-[0.6875rem] sm:text-xs shrink-0" />}
       </div>
       <p className="text-xs text-muted bd-opt hidden sm:block fit:col-span-2 fit:mt-1">{N.place(post.country, post.province)} · {ago(post.releasedAt)}</p>
       {/* places: on the right on phones, one line on computers, two figures on tablets */}
@@ -277,7 +277,7 @@ function BoardCard({ post, level, reached, applied, viewer, onOpen }: { post: Po
         <NavLink to={`post?id=${post.id}`} className="btn-soft text-sm justify-center !rounded-full fit:!min-h-[36px]" aria-label={`${act}: ${post.position}`}>{act}</NavLink>
       </div>
       </div>
-      <p className="sm:hidden shrink-0 text-right leading-tight" aria-hidden><span className="block text-base font-bold">{c.held}/{cap}</span><span className="text-[11px] text-muted inline-flex items-center">{t('m.bd.placesShort')}<Icon name="right" size={13} /></span></p>
+      <p className="sm:hidden shrink-0 text-right leading-tight" aria-hidden><span className="block text-base font-bold">{c.held}/{cap}</span><span className="text-[0.6875rem] text-muted inline-flex items-center">{t('m.bd.placesShort')}<Icon name="right" size={13} /></span></p>
     </li>
   )
 }

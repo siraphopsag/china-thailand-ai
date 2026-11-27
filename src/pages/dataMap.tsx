@@ -38,7 +38,7 @@ export function VerifyOverview({ side }: { side?: 'emp' | 'seek' }) {
       <div className={side ? '' : 'grid md:grid-cols-2 gap-4'}>{sides.map((s) => (
         <div key={s}><h3 className="font-semibold">{t(`vo.${s}`)}</h3>
           <ol className="mt-1.5 space-y-1.5">{([1, 2, 3, 4] as const).map((n) => (
-            <li key={n} className="flex gap-2"><span className="shrink-0 grid place-items-center w-5 h-5 rounded-full bg-surface3 text-[11px] font-bold" aria-hidden>{n}</span><span>{t(`vo.${s}.${n}`)}</span></li>))}</ol>
+            <li key={n} className="flex gap-2"><span className="shrink-0 grid place-items-center w-5 h-5 rounded-full bg-surface3 text-[0.6875rem] font-bold" aria-hidden>{n}</span><span>{t(`vo.${s}.${n}`)}</span></li>))}</ol>
         </div>))}</div>
       {side && <p><NavLink to="privacy" className="link">{t('vo.more')}</NavLink></p>}
     </section>

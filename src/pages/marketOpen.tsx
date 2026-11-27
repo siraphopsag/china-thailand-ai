@@ -123,7 +123,7 @@ export function ExternalPanel({ scope, province, onScope, onAll }: { scope: Scop
               <thead className="text-xs text-muted"><tr><th scope="col" className="text-left font-medium py-1">{t('m.mk.col.place')}</th><th scope="col" className="text-right font-medium py-1 w-24">{t('od.vac')}</th><th scope="col" className="text-right font-medium py-1 w-24">{t('od.seek')}</th></tr></thead>
               <tbody>{top.map(([p, n], i) => (
                 <tr key={p} className="border-t border-line">
-                  <td className="py-1.5"><span className="inline-grid place-items-center w-5 h-5 mr-2 rounded-full bg-surface3 text-[11px] font-bold" aria-hidden>{i + 1}</span><span className="font-medium">{N.prov(p)}</span></td>
+                  <td className="py-1.5"><span className="inline-grid place-items-center w-5 h-5 mr-2 rounded-full bg-surface3 text-[0.6875rem] font-bold" aria-hidden>{i + 1}</span><span className="font-medium">{N.prov(p)}</span></td>
                   <td className="py-1.5 text-right tabular-nums">{D.num(n)}</td><td className="py-1.5 text-right tabular-nums">{D.num(s!.now.byProvince[p] ?? 0)}</td>
                 </tr>))}</tbody>
             </table>)}

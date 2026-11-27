@@ -12,6 +12,8 @@
     // iPhones and iPads report a capped core count: not counted (src/lite.ts judges them by how smoothly the page draws)
     var apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
     if (lite === 'on' || (lite !== 'off' && ((!apple && ((n && n <= 4) || (m && m <= 4))) || localStorage.getItem('cnth-lite-auto') === 'on'))) document.documentElement.setAttribute('data-lite', '')
+    var text = localStorage.getItem('cnth-text') // text size (owner, 27 Nov 2026)
+    if (text === 'sm' || text === 'lg' || text === 'xl' || text === 'xxl') document.documentElement.setAttribute('data-text', text)
     var lang = localStorage.getItem('cnth-lang')
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang === 'en' ? 'en' : 'th'
   } catch (e) { document.documentElement.setAttribute('data-theme', 'light') }

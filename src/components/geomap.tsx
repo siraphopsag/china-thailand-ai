@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { geoCentroid, geoMercator, geoPath } from 'd3-geo'
-import { feature, merge } from 'topojson-client'
+import { feature, merge, mesh } from 'topojson-client'
 import type { Feature, FeatureCollection, Geometry } from 'geojson'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 import { useI18n } from '../i18n'
@@ -9,7 +9,7 @@ import { GEO, HOME, MAX_K, clampView, codeOfIso, lerpView, viewForBox, type GeoC
 import capitals from '../data/geo/capitals.json'
 import taiwan from '../data/geo/taiwan.json'
 import { FLAGS } from './flags'
-import { useLite } from '../theme'
+import { useLite, useTextScale } from '../theme'
 
 /**
  * Reusable map of China + ASEAN with Thai and Chinese provinces (same Natural Earth data and raised-relief style as the original
@@ -43,16 +43,24 @@ const CAPITALS = capitals as Capital[]
 const ALL: GeoCode[] = ['TH', 'CN', 'VN', 'MM', 'LA', 'SG', 'KH', 'MY', 'ID', 'PH', 'BN', 'TL']
 /** countries too small to spot when zoomed out: a ring marks them */
 const TINY: GeoCode[] = ['SG', 'BN']
-let cache: Promise<{ countries: CountryF[]; provinces: ProvinceF[] }> | null = null
+type Shaped = 'TH' | 'CN'
+/** for a country with provinces: its outline made from its own provinces (so the raised country and the shaded provinces share
+ *  one edge, with no sliver of the country's colour showing between them) and the borders between its provinces as one line */
+type GeoData = { countries: CountryF[]; provinces: ProvinceF[]; outline: Record<Shaped, Geometry>; borders: Record<Shaped, Geometry> }
+let cache: Promise<GeoData> | null = null
 function loadGeo() {
   cache ??= Promise.all([import('../data/geo/region-asean-china.json'), import('../data/geo/admin1-th-cn.json')]).then(([r, a]) => {
     const rt = ((r as { default?: unknown }).default ?? r) as unknown as Topology<{ countries: GeometryCollection<{ name?: string }> }>
     const at = ((a as { default?: unknown }).default ?? a) as unknown as Topology
     const ao = at.objects[Object.keys(at.objects)[0]] as GeometryCollection<ProvinceF['properties']>
     const provinces = (feature(at, ao) as FeatureCollection<Geometry, ProvinceF['properties']>).features.filter((f) => f.properties.iso_3166_2 && !f.properties.iso_3166_2.includes('~'))
+    const part = (a3: string) => ({ type: 'GeometryCollection', geometries: ao.geometries.filter((g) => (g.properties as { adm0_a3?: string } | undefined)?.adm0_a3 === a3) }) as GeometryCollection
+    const own = (a3: string) => merge(at, part(a3).geometries as never) as Geometry
+    const inner = (a3: string) => mesh(at, part(a3) as never, (a, b) => a !== b) as Geometry
+    const outline = { TH: own('THA'), CN: withTaiwan(own('CHN')) }, borders = { TH: inner('THA'), CN: inner('CHN') }
     const geoms = rt.objects.countries.geometries
     const china: CountryF = { type: 'Feature', id: '156', properties: { name: 'China' }, geometry: withTaiwan(merge(rt, geoms.filter((g) => CHINA_PARTS.has(String(g.id))) as never)) }
-    return { countries: [china, ...geoms.filter((g) => !CHINA_PARTS.has(String(g.id))).map((g) => feature(rt, g) as CountryF)], provinces }
+    return { countries: [china, ...geoms.filter((g) => !CHINA_PARTS.has(String(g.id))).map((g) => feature(rt, g) as CountryF)], provinces, outline, borders }
   })
   return cache
 }
@@ -171,7 +179,7 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   country: GeoCode | null; province: string | null; pins?: MapPin[]; counts?: Record<string, number>; onPickCountry: (c: GeoCode) => void; onPickProvince: (code: string | null) => void; label: string; className?: string
 }) {
   const { t } = useI18n()
-  const [data, setData] = useState<{ countries: CountryF[]; provinces: ProvinceF[] } | null>(null)
+  const [data, setData] = useState<GeoData | null>(null)
   const [failed, setFailed] = useState(false)
   useEffect(() => { let alive = true; loadGeo().then((d) => alive && setData(d)).catch(() => alive && setFailed(true)); return () => { alive = false } }, [])
   const box = useRef<HTMLDivElement>(null)
@@ -185,7 +193,9 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   const focusSet = useMemo(() => (data?.countries ?? []).filter((f) => codeOfIso(f.id)), [data])
   const proj = useMemo(() => { const p = geoMercator(); if (focusSet.length) p.fitExtent([[16, 16], [w - 16, h - 16]], { type: 'FeatureCollection', features: focusSet } as FeatureCollection); return p }, [focusSet, w, h])
   const path = useMemo(() => geoPath(proj), [proj])
-  const shapes = useMemo(() => (data?.countries ?? []).map((f) => ({ code: codeOfIso(f.id), d: path(f) ?? '', b: path.bounds(f) as [[number, number], [number, number]] })), [data, path])
+  const shapes = useMemo(() => (data?.countries ?? []).map((f) => { const code = codeOfIso(f.id), o = code === 'TH' || code === 'CN' ? data!.outline[code] : null
+    return { code, d: (o ? path(o) : path(f)) ?? '', b: path.bounds(f) as [[number, number], [number, number]] } }), [data, path])
+  const borderD = useMemo(() => (country === 'TH' || country === 'CN') && data ? path(data.borders[country]) ?? '' : '', [data, path, country])
   const provs = useMemo(() => (data?.provinces ?? []).map((f) => ({ f, code: f.properties.iso_3166_2!, country: (f.properties.adm0_a3 === 'THA' ? 'TH' : 'CN') as 'TH' | 'CN', d: path(f) ?? '', c: geoCentroid(f) as [number, number], b: path.bounds(f) as [[number, number], [number, number]] })), [data, path])
   // the shades are set by the chosen country's own provinces, so each country reads on its own scale
   const steps = useMemo(() => heatSteps(Object.entries(counts ?? {}).filter(([code]) => !!country && code.startsWith(country + '-')).map(([, n]) => n)), [counts, country])
@@ -226,11 +236,31 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
     const step = (n: number) => { const p = Math.min(1, (n - t0) / 700); setView(lerpView(from, to, p)); if (p < 1) anim.current = requestAnimationFrame(step) }
     anim.current = requestAnimationFrame(step)
   }
-  useEffect(() => { flyTo(target); return () => cancelAnimationFrame(anim.current) }, [target]) // eslint-disable-line react-hooks/exhaustive-deps -- flyTo reads refs only
+  // choosing or clearing a province inside the same country never zooms out (owner, 27 Nov 2026: zoomed in on Bangkok, a tap
+  // threw the map back out to the preset size, which made him dizzy). Zoomed in already: stay put if the province is on screen,
+  // otherwise slide over to it at the same zoom. Zoomed out further than the province's frame: zoom in as before.
+  const last = useRef({ country, province, w, h })
+  useEffect(() => {
+    const was = last.current; last.current = { country, province, w, h }
+    const sameCountry = was.country === country && was.w === w && was.h === h && !intro
+    if (sameCountry && was.province !== province) {
+      const cur = viewRef.current
+      if (!province) return // clearing the choice: the map stays where it is
+      if (cur.k >= target.k) {
+        const pv = provs.find((x) => x.code === province); if (!pv) return
+        const cx = (pv.b[0][0] + pv.b[1][0]) / 2, cy = (pv.b[0][1] + pv.b[1][1]) / 2, sx = cur.x + cur.k * cx, sy = cur.y + cur.k * cy
+        if (sx > w * 0.12 && sx < w * 0.88 && sy > h * 0.12 && sy < h * 0.88) return
+        flyTo(clampView({ k: cur.k, x: w / 2 - cur.k * cx, y: h / 2 - cur.k * cy }, w, h)); return
+      }
+    }
+    flyTo(target)
+  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps -- flyTo reads refs only
+  useEffect(() => () => cancelAnimationFrame(anim.current), [])
   const countryLift = useTween(country && !province ? 12 : 0, 420)
   const provLift = useTween(province ? 9 : 0, 380)
   // fewer effects (older phones): a flat map — the 3D lean is redrawn every frame while panning
   const lite = useLite()
+  const fs = useTextScale() // labels grow with the text size in Settings, so their boxes do too
   const tilt = useTween(lite ? 0 : (country || province ? TILT.focused : TILT.overview) * (w < 640 ? TILT.phone : 1), 520)
 
   // gestures: one finger (or the mouse) drags, two fingers pinch to zoom (owner, Oct 2026: pinching did nothing on phones),
@@ -308,18 +338,23 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
     : []
   // the numbers on the map: only on a province that is wide enough on screen (zoomed in), biggest first, never on top of
   // another number, a capital's name or the chosen province's name (the shade and the list beside the map carry the rest)
+  // the chosen province's name wins over a capital's name it would cover (owner's screenshot, 27 Nov 2026: Samut Prakan over Bangkok)
+  const selBox = (() => { if (!provShape) return null; const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); if (!p) return null
+    const half = provTitle(provShape.code).length * 5.5 * fs, up = pins.some((pn) => pn.province === provShape.code) ? 30 : 0
+    return { l: p[0] - half, t: p[1] - 16 - up - 18 * fs, r: p[0] + half, b: p[1] - 10 - up } })()
+  const capCovered = (c: Capital, p: [number, number]) => !!selBox && (CAPITAL_PROV[c.country] === provShape?.code || (p[0] - 7 < selBox.r && p[0] + 12 + capText(c).length * 7.5 * fs > selBox.l && p[1] - 10 * fs < selBox.b && p[1] + 8 > selBox.t))
   const countLabels: { code: string; x: number; y: number; text: string }[] = []
   if (data && !intro && counts && country) { // numbers and colours only once a country is chosen (owner, 27 Nov 2026: with several countries open, an all-red overview would say nothing)
     const taken: { l: number; t: number; r: number; b: number }[] = []
-    for (const c of shownCapitals) { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); if (p) taken.push({ l: p[0] - 7, t: p[1] - 10, r: p[0] + 12 + capText(c).length * 7.5, b: p[1] + 8 }) }
-    if (provShape) { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); if (p) { const half = provTitle(provShape.code).length * 5.5; taken.push({ l: p[0] - half, t: p[1] - 64, r: p[0] + half, b: p[1] - 8 }) } }
+    for (const c of shownCapitals) { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); if (p) taken.push({ l: p[0] - 7, t: p[1] - 10 * fs, r: p[0] + 12 + capText(c).length * 7.5 * fs, b: p[1] + 8 * fs }) }
+    if (provShape) { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); if (p) { const half = provTitle(provShape.code).length * 5.5 * fs; taken.push({ l: p[0] - half, t: p[1] - 46 - 18 * fs, r: p[0] + half, b: p[1] - 8 }) } }
     const cands = provs.filter((p) => (counts[p.code] ?? 0) > 0 && p.country === country).sort((a, b) => counts[b.code] - counts[a.code])
     for (const pv of cands) {
-      const text = fmt(counts[pv.code]), half = text.length * 3.6 + 4
+      const text = fmt(counts[pv.code]), half = (text.length * 3.6 + 4) * fs
       // the chosen province and a capital's province show the number in their names; elsewhere the number must fit its province
       if (pv.code === province || Object.values(CAPITAL_PROV).includes(pv.code) || (pv.b[1][0] - pv.b[0][0]) * view.k < half * 2 - 4) continue
       const p = geoPt(pv.c[0], pv.c[1], (pv.code === province ? provLift : 0) + (pv.country === country ? countryLift : 0)); if (!inView(p)) continue
-      const box = { l: p[0] - half, t: p[1] - 8, r: p[0] + half, b: p[1] + 8 }
+      const box = { l: p[0] - half, t: p[1] - 8 * fs, r: p[0] + half, b: p[1] + 8 * fs }
       if (taken.some((o) => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t)) continue
       taken.push(box); countLabels.push({ code: pv.code, x: p[0], y: p[1], text })
     }
@@ -337,7 +372,8 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
               {focusShape && <Raised d={focusShape.d} lift={countryLift} k={view.k} side={GEO[focusShape.code!].status === 'active' ? 'g-side' : 'g-side-soon'} top={GEO[focusShape.code!].status === 'active' ? 'g-top' : 'g-top-soon'} />}
               {/* the raised edge under each shaded province takes that province's colour, a shade darker (owner, 27 Nov 2026) */}
               {country && counts && countryLift >= 0.3 && <g className="pointer-events-none">{[0, 1, 2, 3, 4].map((i) => <g key={i} transform={`translate(0,${(-Lc * i) / 5})`}>{provs.filter((p) => p.country === country && (counts[p.code] ?? 0) > 0).map((p) => <path key={p.code} d={p.d} className={'g-heat-side' + heat(p.code)} />)}</g>)}</g>}
-              {country && <g transform={`translate(0,${-Lc})`}>{provs.filter((p) => p.country === country).map((p) => <path key={p.code} d={p.d} data-prov={p.code} className={'g-prov' + heat(p.code) + (p.code === province ? ' is-sel' : '')}><title>{provTitle(p.code)}</title></path>)}</g>}
+              {country && <g transform={`translate(0,${-Lc})`} className={steps.length ? 'g-heat-on' : undefined}>{provs.filter((p) => p.country === country).map((p) => <path key={p.code} d={p.d} data-prov={p.code} className={'g-prov' + heat(p.code) + (p.code === province ? ' is-sel' : '')}><title>{provTitle(p.code)}</title></path>)}
+                {borderD && <path d={borderD} className="g-pborder pointer-events-none" />}</g>}
               {provShape && <Raised d={provShape.d} lift={provLift} k={view.k} side={counts?.[provShape.code] ? 'g-heat-side' + heat(provShape.code) : 'g-pside'} top={counts?.[provShape.code] ? 'g-ptop-heat' + heat(provShape.code) : 'g-ptop'} />}
             </g>
           </svg>
@@ -355,7 +391,7 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
           {!intro && view.k < 3 && TINY.map((c) => { const cap = capitalOf(c), p = cap ? geoPt(cap.lon, cap.lat, c === country ? countryLift : 0) : null; return inView(p) ? <circle key={`ring-${c}`} cx={p[0]} cy={p[1]} r={11} className="g-tiny" /> : null })}
           {scene.map((l) => <g key={`pole-${l.c}`}><line x1={l.x} y1={l.y} x2={l.x} y2={l.y - l.pole} className="g-pole" /><circle cx={l.x} cy={l.y} r={2.6} className="g-pole-foot" /></g>)}
           {!intro && shownCapitals.map((c) => { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); return inView(p) ? (
-            <g key={c.country}><circle cx={p[0]} cy={p[1]} r={5.5} className="g-capital" /><text x={p[0] + 9} y={p[1] + 4} className="g-city">{capText(c)}</text></g>) : null })}
+            <g key={c.country}><circle cx={p[0]} cy={p[1]} r={5.5} className="g-capital" />{!capCovered(c, p) && <text x={p[0] + 9} y={p[1] + 4} className="g-city">{capText(c)}</text>}</g>) : null })}
           {provShape && (() => { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); const up = pins.some((pn) => pn.province === provShape.code) ? 30 : 0 /* a pin stands on the same spot: lift the name above it */
             return p ? <text x={p[0]} y={p[1] - 16 - up} textAnchor="middle" className="g-name">{provTitle(provShape.code)}</text> : null })()}
           {!intro && pins.map((pn, i) => {

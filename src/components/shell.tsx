@@ -97,7 +97,7 @@ function HeaderSearch() {
       <label className="relative block"><span className="sr-only">{t('m.hd.search')}</span>
         <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
         <input ref={input} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('m.hd.searchHint')} className="h-10 w-full rounded-xl border border-control bg-surface pl-9 pr-16 text-sm text-ink placeholder:text-muted shadow-[var(--elev-hi),var(--elev-1)]" />
-        <kbd className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted border border-line rounded-md px-1.5 py-0.5" aria-hidden>Ctrl K</kbd></label>
+        <kbd className="absolute right-2 top-1/2 -translate-y-1/2 text-[0.6875rem] text-muted border border-line rounded-md px-1.5 py-0.5" aria-hidden>Ctrl K</kbd></label>
     </form>
   )
 }
@@ -118,7 +118,7 @@ export function Header(_: { route?: string }) {
         {/* no menu button: the menu capsule is always visible (left on computers and tablets, bottom on phones) */}
         <div className="flex items-center gap-2 shrink-0" lang="en">
           {/* the logo (owner, Oct 2026): the name itself, its C a speech bubble */}
-          <span className="leading-tight"><Wordmark title={BRAND.name} className="h-7 w-auto block" /><span className="hidden sm:block text-[11px] opacity-70 tracking-wide mt-0.5">{BRAND.full}</span></span>
+          <span className="leading-tight"><Wordmark title={BRAND.name} className="h-7 w-auto block" /><span className="hidden sm:block text-[0.6875rem] opacity-70 tracking-wide mt-0.5">{BRAND.full}</span></span>
         </div>
         {/* computers and tablets: "Back" sits in the header, so pages keep their height for content */}
         {_.route ? <div className="hidden md:block md:pl-3"><BackButton route={_.route} compact /></div> : null}

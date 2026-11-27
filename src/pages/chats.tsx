@@ -46,7 +46,7 @@ export function ChatsPage() {
             <span aria-hidden className="h-10 w-10 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center"><Icon name={mySide === 'seeker' ? 'business' : 'user'} size={18} /></span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center justify-between gap-2"><span className={`truncate ${unread ? 'font-bold' : 'font-semibold'}`}>{mySide === 'seeker' ? p.company : nameOf(a)}</span>
-                {last && <span className="text-[11px] text-muted shrink-0">{N.dayTime(Date.parse(last.at))}</span>}</span>
+                {last && <span className="text-[0.6875rem] text-muted shrink-0">{N.dayTime(Date.parse(last.at))}</span>}</span>
               <span className="block text-xs text-muted truncate">{p.position} · {t(mySide === 'seeker' ? 'sh.list.asSeeker' : 'sh.list.asEmployer')}</span>
               <span className={`block text-sm truncate ${unread ? 'font-medium' : 'text-muted'}`}>
                 {last ? `${last.from === mySide ? `${t('sh.list.you')}: ` : ''}${last.phrase ? t(`ch.p.${last.phrase}` as never) : last.text}` : a.intro?.trim() ? `${t('sh.intro')}: ${a.intro.trim()}` : t('sh.list.noMsg')}</span>

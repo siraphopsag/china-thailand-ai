@@ -266,7 +266,7 @@ describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, st
   })
   it('phones: one step smaller (15 px body), smaller cards and buttons, board cards on their side, pills that scroll sideways', () => {
     // QA, Oct 2026: a share of the visitor's own text size (15 px at the default 16 px), so a larger setting still works
-    expect(css).toContain('@media (max-width: 639px) { html { font-size: 93.75% }')
+    expect(css).toContain('@media (max-width: 639px) { html { font-size: calc(93.75% * var(--fs)) }') // times the text size from Settings (owner, 27 Nov 2026)
     expect(css).toMatch(/\.card \{ @apply border border-line rounded-2xl p-4 sm:p-5/)
     expect(css).toMatch(/\.btn \{ @apply [^}]*min-h-\[40px\]/)
     expect(src('./pages/board.tsx')).toContain("const SEG_SCROLL = 'inline-flex flex-nowrap sm:flex-wrap") // the scope and rings share one swipeable line

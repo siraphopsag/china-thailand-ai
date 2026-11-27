@@ -27,5 +27,5 @@ export function Icon({ name, size = 18, className }: { name: IconName; size?: nu
 
 /** Country marker without emoji flags (they render as letters on Windows). */
 export function CountryBadge({ c, className }: { c: 'TH' | 'CN'; className?: string }) {
-  return <span className={`inline-flex items-center justify-center rounded border border-line bg-surface2 text-[10px] font-bold tracking-wide px-1.5 py-0.5 text-muted ${className ?? ''}`} aria-hidden="true">{c}</span>
+  return <span className={`inline-flex items-center justify-center rounded border border-line bg-surface2 text-[0.625rem] font-bold tracking-wide px-1.5 py-0.5 text-muted ${className ?? ''}`} aria-hidden="true">{c}</span>
 }

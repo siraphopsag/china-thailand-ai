@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { LANGS, tk, useI18n } from '../i18n'
-import { ACCENTS, useTheme } from '../theme'
+import { ACCENTS, TEXT_SCALE, TEXT_SIZES, useTheme } from '../theme'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
 import { useAuth , demoNumber } from '../auth'
@@ -285,7 +285,7 @@ export const IndustrySelect = ({ value, onChange, label }: { value: Industry; on
 export const Steps = ({ items, at }: { items: string[]; at: number }) => (
   <ol className="flex flex-wrap gap-2">{items.map((s, i) => (
     <li key={s} aria-current={i === at ? 'step' : undefined} className={`inline-flex items-center gap-2 rounded-full border pl-1 ${i === at ? 'pr-3' : 'pr-1'} py-1 text-xs sm:text-sm ${i === at ? 'border-primary bg-brand text-brandfg font-semibold' : i < at ? 'border-ok-line bg-ok-bg text-ok-fg' : 'border-line bg-surface text-muted'}`}>
-      <span className={`w-6 h-6 shrink-0 rounded-full grid place-items-center text-[11px] font-bold ${i === at ? 'bg-primary text-onprimary' : i < at ? 'bg-ok-fg text-ok-bg' : 'bg-surface3 text-muted'}`}>{i < at ? <Icon name="check" size={13} /> : i + 1}</span>
+      <span className={`w-6 h-6 shrink-0 rounded-full grid place-items-center text-[0.6875rem] font-bold ${i === at ? 'bg-primary text-onprimary' : i < at ? 'bg-ok-fg text-ok-bg' : 'bg-surface3 text-muted'}`}>{i < at ? <Icon name="check" size={13} /> : i + 1}</span>
       {/* only the current step shows its name, on every screen, so the row stays one line in every language
           (compared both ways on 1280 px: full names wrapped to 2 rows in English; screen readers still hear every name) */}
       <span className={i === at ? undefined : 'sr-only'}>{s}</span>
@@ -838,7 +838,7 @@ export function PreparePage() {
 }
 export function SettingsPage() {
   const { t, lang, setLang } = useI18n()
-  const { theme, toggle, accent, setAccent, liteMode, setLiteMode, lite, liteByAuto } = useTheme()
+  const { theme, toggle, accent, setAccent, textSize, setTextSize, liteMode, setLiteMode, lite, liteByAuto } = useTheme()
   const [accentMsg, setAccentMsg] = useState('')
   const { reset, mode } = useMatch()
   const [done, setDone] = useState(false)
@@ -850,6 +850,12 @@ export function SettingsPage() {
       <section className="card space-y-4" aria-label={t('m.settings.look')}>
         <fieldset><legend className="label">{t('m.settings.lang')}</legend><div className="flex flex-wrap gap-2">{LANGS.map((l) => <button key={l.id} type="button" lang={l.html} aria-pressed={lang === l.id} onClick={() => setLang(l.id)} className={`min-h-[44px] px-4 rounded-lg border ${lang === l.id ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>{l.label}</button>)}</div></fieldset>
         <fieldset><legend className="label">{t('m.settings.theme')}</legend><div className="flex gap-2">{(['light', 'dark'] as const).map((m) => <button key={m} type="button" aria-pressed={theme === m} onClick={() => theme !== m && toggle()} className={`min-h-[44px] px-4 rounded-lg border flex items-center gap-2 ${theme === m ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}><Icon name={m} size={16} />{t(m === 'light' ? 'm.settings.light' : 'm.settings.dark')}</button>)}</div></fieldset>
+        {/* text size (owner, 27 Nov 2026): the sample letter shows each size at its real scale */}
+        <fieldset aria-describedby="text-hint"><legend className="label">{t('m.settings.text')}</legend><div className="flex flex-wrap gap-2">{TEXT_SIZES.map((s) => (
+          <button key={s} type="button" aria-pressed={textSize === s} onClick={() => setTextSize(s)}
+            className={`min-h-[44px] px-3.5 rounded-lg border flex items-center gap-2 ${textSize === s ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-control hover:bg-surface3'}`}>
+            <span aria-hidden className="font-bold leading-none" style={{ fontSize: `${16 * TEXT_SCALE[s]}px` }}>ก</span>{t(`m.settings.text.${s}` as never)}</button>))}</div>
+          <p id="text-hint" className="text-xs text-muted mt-1">{t('m.settings.text.d')}</p></fieldset>
         {/* accent colour (owner, Oct 2026): the swatch is decoration; the name is the label */}
         <fieldset aria-describedby="accent-hint"><legend className="label">{t('m.settings.accent')}</legend><div className="flex flex-wrap gap-2">{ACCENTS.map((a) => (
           <button key={a} type="button" aria-pressed={accent === a} onClick={() => { setAccent(a); setAccentMsg(t('m.settings.accentDone', { c: t(`m.accent.${a}` as never) })) }}
@@ -941,7 +947,7 @@ export function BackofficePage() {
           <button key={k} id={`adm-tab-${k}`} type="button" role="tab" aria-selected={tab === k} aria-controls="adm-panel" tabIndex={tab === k ? 0 : -1} onClick={() => setTab(k)}
             className={`min-h-[40px] px-3.5 rounded-xl text-sm inline-flex items-center gap-2 ${tab === k ? 'seg-on' : 'hover:bg-surface3'}`}>
             <Icon name={icon} size={15} />{t(`m.adm.tab.${k}` as never)}
-            {count[k] > 0 && k !== 'overview' && <span className={`min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold grid place-items-center ${tab === k ? 'bg-onprimary text-primary' : (k === 'verify' || k === 'reports') ? 'bg-danger-fg text-page' : 'bg-surface3 text-muted'}`}>{count[k]}</span>}
+            {count[k] > 0 && k !== 'overview' && <span className={`min-w-[20px] h-5 px-1.5 rounded-full text-[0.6875rem] font-bold grid place-items-center ${tab === k ? 'bg-onprimary text-primary' : (k === 'verify' || k === 'reports') ? 'bg-danger-fg text-page' : 'bg-surface3 text-muted'}`}>{count[k]}</span>}
           </button>))}
       </div>
 

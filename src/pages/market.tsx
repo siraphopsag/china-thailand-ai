@@ -48,7 +48,7 @@ export function MarketPanel({ m, scope, province, onScope, onAll }: { m: Market;
               <thead className="text-xs text-muted"><tr><th scope="col" className="text-left font-medium py-1">{t('m.mk.col.place')}</th><th scope="col" className="text-right font-medium py-1 w-16">{t('m.mk.col.pins')}</th><th scope="col" className="text-right font-medium py-1 w-24">{t('m.mk.col.employers')}</th></tr></thead>
               <tbody>{m.top.map((r, i) => (
                 <tr key={`${r.country}|${r.province}`} className="border-t border-line">
-                  <td className="py-1.5"><span className="inline-grid place-items-center w-5 h-5 mr-2 rounded-full bg-surface3 text-[11px] font-bold" aria-hidden>{i + 1}</span>{N.country(r.country)} · <span className="font-medium">{N.prov(r.province)}</span></td>
+                  <td className="py-1.5"><span className="inline-grid place-items-center w-5 h-5 mr-2 rounded-full bg-surface3 text-[0.6875rem] font-bold" aria-hidden>{i + 1}</span>{N.country(r.country)} · <span className="font-medium">{N.prov(r.province)}</span></td>
                   <td className="py-1.5 text-right tabular-nums">{r.pins}</td><td className="py-1.5 text-right tabular-nums">{r.employers}</td>
                 </tr>))}</tbody>
             </table>)}

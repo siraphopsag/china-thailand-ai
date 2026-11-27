@@ -157,7 +157,7 @@ export function AskPage() {
       <div className="mo-answer" role="group" aria-label={t('ai.ask.answer')}>
         <div className="mo-a-head"><i className="mo-a-dot" aria-hidden="true" />{t('ai.ask.answer')}<span className={`mo-chip ${grounded ? 'mo-chip-ok' : 'mo-chip-warn'}`}>{t(`ai.ask.g.${a.grounding}`)}</span></div>
         <div className="mo-a-body">
-          <div className="text-[15px] leading-relaxed"><RevealText key={lang} text={shown.answer} lang={lang === 'zh' ? 'zh' : lang} /></div>
+          <div className="text-[0.9375rem] leading-relaxed"><RevealText key={lang} text={shown.answer} lang={lang === 'zh' ? 'zh' : lang} /></div>
           {a.lawIds.length > 0 && <div className="mt-4"><h3 className="mo-sub">{t('ai.ask.sources')}</h3><ul className="space-y-1">{a.lawIds.map((id) => <StageLawRef key={id} id={id} />)}</ul></div>}
           {shown.nextStep && <p className="mo-next"><Icon name="next" size={16} className="mt-0.5 shrink-0" /><span><b>{t('ai.ask.next')}:</b> {shown.nextStep}</span></p>}
           <p className="mo-fine">{t('ai.ask.note')}</p>

@@ -196,7 +196,7 @@ export function Meniscus({ slots, vertical, label, className = '', style, onSele
             const under = i === shown && (active >= 0 || sim.current.dragging)
             const inner = (<>
               <span className={`mn-icon ${under ? 'opacity-0' : ''}`}><Icon name={s.icon} size={vertical ? 22 : 21} />
-                {!!s.badge && <span className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-danger-fg text-page text-[10px] font-bold grid place-items-center" aria-hidden>{s.badge}</span>}</span>
+                {!!s.badge && <span className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-danger-fg text-page text-[0.625rem] font-bold grid place-items-center" aria-hidden>{s.badge}</span>}</span>
               {!vertical && <span className={`mn-label ${under ? 'opacity-100' : 'opacity-0'}`} style={hueVars(s.hue)} aria-hidden>{s.label}</span>}
               {vertical && <span className="nav-tip" aria-hidden>{s.label}</span>}
             </>)
@@ -212,7 +212,7 @@ export function Meniscus({ slots, vertical, label, className = '', style, onSele
         {/* the bead: the current item's colour and icon; drag it along the bar */}
         <div ref={bead} className="mn-bead" aria-hidden onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
           <Icon name={cur.icon} size={22} />
-          {!!cur.badge && <span className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-danger-fg text-page text-[10px] font-bold grid place-items-center">{cur.badge}</span>}
+          {!!cur.badge && <span className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-danger-fg text-page text-[0.625rem] font-bold grid place-items-center">{cur.badge}</span>}
         </div>
       </div>
     </nav>

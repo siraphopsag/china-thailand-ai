@@ -52,7 +52,7 @@ export function AftercarePanel({ c, caseKey, seekerId, employerId, country, prov
         <li key={s.day} className={`ac-node ac-${s.state}`}>
           <span className="ac-dot">{s.state === 'done' ? <Icon name="check" size={15} /> : s.state === 'missed' ? <Icon name="warn" size={14} /> : s.day}</span>
           <span className="block text-sm font-semibold">{t(`ac.day.${s.day}` as never)}</span>
-          <span className="block text-[11px] opacity-80">{N.day(s.due)} · {t(`ac.st.${s.state}` as never)}</span>
+          <span className="block text-[0.6875rem] opacity-80">{N.day(s.due)} · {t(`ac.st.${s.state}` as never)}</span>
         </li>))}</ol>}
 
       {view === 'seeker' ? (<>
@@ -214,11 +214,11 @@ function TriageBox({ cm }: { cm: Complaint }) {
     <div className="rounded-lg border border-line p-2.5 space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-semibold flex items-center gap-1.5"><Icon name="ai" size={13} />{t('tg.h')}</p>
         {res !== 'busy' && <button type="button" className="btn-ghost text-xs" disabled={online === false} onClick={() => void run()}>{t(res ? 'tg.again' : 'tg.run')}</button>}</div>
-      <p className="text-[11px] text-muted">{t('tg.note')}</p>
+      <p className="text-[0.6875rem] text-muted">{t('tg.note')}</p>
       {res === 'busy' && <p className="text-xs text-muted" role="status">{t('tg.busy')}</p>}
       {res && res !== 'busy' && (res.ok ? (
         <div className="text-xs space-y-1" role="status">
-          <p><span className={`chip text-[11px] ${res.result.level === 'strong' ? 'bg-ok-bg text-ok-fg border-ok-line' : res.result.level === 'weak' ? 'bg-warn-bg text-warn-fg border-warn-line' : 'bg-surface3 border-line'}`}>{t(`tg.l.${res.result.level}` as never)}</span></p>
+          <p><span className={`chip text-[0.6875rem] ${res.result.level === 'strong' ? 'bg-ok-bg text-ok-fg border-ok-line' : res.result.level === 'weak' ? 'bg-warn-bg text-warn-fg border-warn-line' : 'bg-surface3 border-line'}`}>{t(`tg.l.${res.result.level}` as never)}</span></p>
           {res.result.reasons.length > 0 && <ul className="list-disc pl-4">{res.result.reasons.map((x, i) => <li key={i}>{x}</li>)}</ul>}
           {res.result.ask.length > 0 && <><p className="font-medium">{t('tg.ask')}</p><ul className="list-disc pl-4">{res.result.ask.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
         </div>) : <p className="text-xs text-warn-fg">{t(`ai.why.${res.reason}` as never)}</p>)}
@@ -282,7 +282,7 @@ export function ComplaintCard({ cm, viewer, onAct }: { cm: Complaint; viewer: 'w
         <span className="text-xs text-muted">{N.dayTime(Date.parse(cm.at))}</span>
         {cm.urgent && <span className="chip bg-danger-bg text-danger-fg border-danger-line text-xs">{t('cr.urgent')}</span>}</div>
       <ol className="grid grid-cols-4 gap-1">{FLOW.map((s, i) => (
-        <li key={s} className={`rounded-lg px-1.5 py-1.5 text-center text-[11px] leading-tight border ${i < at || (i === at && cm.status !== 'needMore') || i === 0 ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line text-muted'} ${i === 1 && cm.status === 'needMore' ? '!border-warn-line !bg-warn-bg !text-warn-fg' : ''}`}>
+        <li key={s} className={`rounded-lg px-1.5 py-1.5 text-center text-[0.6875rem] leading-tight border ${i < at || (i === at && cm.status !== 'needMore') || i === 0 ? 'border-primary bg-brand text-brandfg font-semibold' : 'border-line text-muted'} ${i === 1 && cm.status === 'needMore' ? '!border-warn-line !bg-warn-bg !text-warn-fg' : ''}`}>
           {t(i === 1 && cm.status === 'needMore' ? 'cr.st.needMore' : `cr.st.${s}` as never)}</li>))}</ol>
       {cm.loc && <p className="text-xs flex flex-wrap items-center gap-1.5"><Icon name="target" size={13} /><span className="text-muted">{t('cr.loc')}</span><span className="tabular-nums">{cm.loc.lat}, {cm.loc.lng}</span><a className="text-primary underline" href={mapLinkOf(cm.loc, cm.country)} target="_blank" rel="noopener noreferrer">{t('hp.loc.map')}</a></p>}
       <p className="text-xs flex flex-wrap items-center gap-1.5"><span className="text-muted">{t('cr.agency')}</span><span className="font-medium">{t(`rp.ag.${cm.agency}` as never)}</span>
@@ -291,7 +291,7 @@ export function ComplaintCard({ cm, viewer, onAct }: { cm: Complaint; viewer: 'w
         <div className="space-y-1.5">
           <div className="flex items-center gap-2"><span className="text-xs text-muted">{t('cr.score')}</span>
             <span className={`cr-meter cr-${lvl}`}><span style={{ width: `${cm.score}%` }} /></span><span className="text-xs font-semibold tabular-nums">{cm.score}/100 · {t(`cr.lvl.${lvl}` as never)}</span></div>
-          <p className="flex flex-wrap gap-1">{cm.reasons.map((r) => <span key={r} className="chip bg-surface3 border-line text-[11px]">{t(`cr.why.${r}` as never)}</span>)}</p>
+          <p className="flex flex-wrap gap-1">{cm.reasons.map((r) => <span key={r} className="chip bg-surface3 border-line text-[0.6875rem]">{t(`cr.why.${r}` as never)}</span>)}</p>
           {cm.urgent && <p className="text-xs text-danger-fg">{t('cr.urgent.d')}</p>}
           <TriageBox cm={cm} />
           <div className="flex flex-wrap gap-2">

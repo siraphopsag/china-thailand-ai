@@ -150,7 +150,7 @@ export function LoginButton() {
           <button type="button" className={item} onClick={() => { setMenu(false); addAnother(SUPABASE_URL) }}><Icon name="plus" size={17} />{t('ac2.add')}</button>
           <button type="button" className={item} onClick={async () => { setMenu(false); await signOut(); go('') }}><Icon name="logout" size={17} />{t('m.logout')}</button>
           {accounts.length > 1 && <button type="button" className={item} onClick={async () => { setMenu(false); forgetAllAccounts(); await signOut(); go('') }}><Icon name="logout" size={17} />{t('ac2.logoutAll')}</button>}
-          <p className="px-3 pt-1 pb-2 text-[11px] text-muted leading-snug">{t('ac2.shared')}</p>
+          <p className="px-3 pt-1 pb-2 text-[0.6875rem] text-muted leading-snug">{t('ac2.shared')}</p>
         </div>
       </div>
     )
@@ -178,7 +178,7 @@ export function AccountList({ accounts, item, title = true }: { accounts: SavedA
           <button type="button" className={`${item} flex-1 min-w-0`} onClick={() => { if (!switchTo(a.id, SUPABASE_URL)) forgetAccount(a.id) }}>
             <span aria-hidden className="h-7 w-7 shrink-0 rounded-full bg-brand text-brandfg grid place-items-center text-xs font-semibold">{accountName(a, t).slice(0, 1).toUpperCase()}</span>
             <span className="min-w-0 flex-1"><span className="block truncate font-medium">{accountName(a, t)}</span>
-              <span className="block truncate text-[11px] text-muted">{t(a.role ? (`m.role.${a.role}` as never) : 'ac2.role.none')}{a.email ? ` · ${a.email}` : ''}</span></span>
+              <span className="block truncate text-[0.6875rem] text-muted">{t(a.role ? (`m.role.${a.role}` as never) : 'ac2.role.none')}{a.email ? ` · ${a.email}` : ''}</span></span>
           </button>
           <button type="button" className="h-9 w-9 shrink-0 grid place-items-center rounded-lg text-muted hover:bg-surface3" aria-label={t('ac2.remove', { n: accountName(a, t) })} title={t('ac2.remove', { n: accountName(a, t) })} onClick={() => forgetAccount(a.id)}><Icon name="close" size={15} /></button>
         </div>))}

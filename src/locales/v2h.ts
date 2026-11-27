@@ -98,6 +98,14 @@ export const v2h = {
   'tg.l.weak': ['หลักฐานยังน้อย', '证据尚少', 'Little backing yet'],
   'tg.teamOnly': ['ความเห็นจาก AI ใช้ได้เฉพาะทีม C.A.L.L. ที่ล็อกอิน', 'AI 意见仅限已登录的 C.A.L.L. 团队使用', 'The AI reading is for the signed-in C.A.L.L. team only'],
   // ---------- the key for the shaded map (board)
+  // text size (owner, 27 Nov 2026)
+  'm.settings.text': ['ขนาดตัวอักษร', '文字大小', 'Text size'],
+  'm.settings.text.d': ['ขยายตัวหนังสือ ปุ่ม และชื่อบนแผนที่ทั้งเว็บ จำไว้ในเครื่องนี้', '放大整个网站的文字、按钮和地图名称，保存在本设备上', 'Makes the text, buttons and map names larger across the site. Saved on this device.'],
+  'm.settings.text.sm': ['เล็ก', '小', 'Small'],
+  'm.settings.text.md': ['ปกติ', '标准', 'Normal'],
+  'm.settings.text.lg': ['ใหญ่', '大', 'Large'],
+  'm.settings.text.xl': ['ใหญ่มาก', '很大', 'Larger'],
+  'm.settings.text.xxl': ['ใหญ่ที่สุด', '最大', 'Largest'],
   'geo.key': ['จำนวนต่อจังหวัด', '各省数量', 'Per province'],
   'm.err.needVerify': ['ต้องยืนยันตัวตนก่อน จึงจะลงประกาศหรือปักหมุดได้', '需先完成身份验证，才能发布招聘信息或标记', 'Verify yourself first to post or pin'],
 } as const satisfies Record<string, Msg>

@@ -143,7 +143,7 @@ export function ContractPage() {
           <li key={s}><button type="button" aria-current={step === s ? 'step' : undefined} onClick={() => setStep(s)} className={`mid-step mid-${state[s]} ${step === s ? 'mid-on' : ''}`}>
             <span className="mid-num">{state[s] === 'done' ? <Icon name="check" size={16} /> : state[s] === 'warn' ? <Icon name="warn" size={15} /> : i + 1}</span>
             <span className="min-w-0 text-left"><span className="block text-sm font-semibold leading-tight">{t(`mid.${s}` as never)}</span>
-              <span className="block text-[11px] opacity-80">{t(`mid.st.${s === 'review' && state[s] === 'todo' ? 'optional' : state[s]}` as never)}</span></span>
+              <span className="block text-[0.6875rem] opacity-80">{t(`mid.st.${s === 'review' && state[s] === 'todo' ? 'optional' : state[s]}` as never)}</span></span>
             <Icon name={STEP_ICON[s]} size={18} className="ml-auto opacity-70 shrink-0" />
           </button></li>))}</ol>
       </nav>

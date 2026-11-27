@@ -32,8 +32,8 @@ export function SponsoredStrip() {
         <li key={s.id}><NavLink to={s.to} className={`sp-card sp-${s.kind} flex flex-col gap-1 rounded-2xl border p-3 h-full`}>
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="sp-badge"><Icon name={ICON[s.kind]} size={12} />{t(`sp.kind.${s.kind}` as never)}</span>
-            {isPaid(s.kind) && <span className="chip bg-surface3 border-line text-[11px]">{t('sp.paid')}</span>}
-            <span className="chip bg-surface3 text-muted border-line text-[11px]">{t('c.sample')}</span>
+            {isPaid(s.kind) && <span className="chip bg-surface3 border-line text-[0.6875rem]">{t('sp.paid')}</span>}
+            <span className="chip bg-surface3 text-muted border-line text-[0.6875rem]">{t('c.sample')}</span>
           </span>
           <span className="font-semibold text-sm leading-snug">{t(`sp.${s.key}.t` as never)}</span>
           <span className="text-xs text-muted">{t(`sp.${s.key}.org` as never)}</span>

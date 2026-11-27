@@ -122,8 +122,8 @@ function Bubble({ m, mine, when }: { m: ChatMsg; mine: boolean; when: string }) 
           <p lang="th">{tr(`ch.p.${m.phrase}.full` as never, undefined, 'th')}</p>
           <p lang="zh-CN" className="opacity-90">{tr(`ch.p.${m.phrase}.full` as never, undefined, 'zh')}</p>
         </>) : <p className="whitespace-pre-wrap break-words">{m.text}</p>}
-        {tx && tx !== 'busy' && tx !== 'fail' && <p className="mt-1 pt-1 border-t border-current/20 text-[13px] opacity-90">{tx[lang]}</p>}
-        <p className="text-[10px] opacity-70 mt-0.5 flex items-center gap-1.5">{when}{m.masked && <span>· {t('ch.hidden')}</span>}
+        {tx && tx !== 'busy' && tx !== 'fail' && <p className="mt-1 pt-1 border-t border-current/20 text-[0.8125rem] opacity-90">{tx[lang]}</p>}
+        <p className="text-[0.625rem] opacity-70 mt-0.5 flex items-center gap-1.5">{when}{m.masked && <span>· {t('ch.hidden')}</span>}
           {canAi && !tx && <button type="button" className="underline" onClick={() => void translate()}>{t('ch.translate')}</button>}
           {tx === 'busy' && <span>{t('ch.translating')}</span>}{tx === 'fail' && <span>{t('ch.translateFail')}</span>}</p>
       </div>
