@@ -25,7 +25,7 @@ export const trainingName = (x: Training, t: (k: never) => string) => (x.name.st
 
 export function CasePage() {
   const { t } = useI18n()
-  const { st, agency, caseAct, now, mode } = useMatch()
+  const { st, agency, caseAct, now, mode, demo } = useMatch()
   const nameOf = useApplicantName()
   const id = useSearchParam('id')
   const caseSeeker = st.cases.find((x) => x.id === id)?.seekerId ?? ME
@@ -39,12 +39,14 @@ export function CasePage() {
   const isEmployer = p.employerId === MY_EMPLOYER
   const acc = st.acceptances.find((a) => a.id === c.accId)
   const isSeeker = c.seekerId === ME
+  // a demo account also plays the C.A.L.L. team on its own case, so it can walk the case to the end alone (owner, 27 Nov 2026; SQL 0022)
+  const team = agency || (demo && (isSeeker || isEmployer))
   const after = (isSeeker || isEmployer || agency) && arrivalDay(c)
     ? <AftercarePanel c={c} caseKey={c.id} employerId={p.employerId} country={p.country} province={p.province} today={localDay(new Date(now).toISOString())}
         seekerId={c.seekerId} view={isSeeker ? 'seeker' : 'employer'} team={agency} atNow={new Date(now).toISOString()} />
     : null
   return <CaseView key={c.id} c={c} sub={`${p.position} · ${p.company}`} isSeeker={isSeeker} isEmployer={isEmployer}
-    withName={isEmployer && acc ? nameOf(acc) : null} agency={agency} act={(a) => caseAct(c.id, a)} extra={after}
+    withName={isEmployer && acc ? nameOf(acc) : null} agency={team} act={(a) => caseAct(c.id, a)} extra={after}
     seekerUnverified={(c.seekerId === ME || mode === 'remote') && !c.steps.accepted && !seekerVerified} />
 }
 

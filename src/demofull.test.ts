@@ -38,4 +38,13 @@ describe('the demo account alone', () => {
     expect(sql).toContain('(demo_for is null or demo_for = auth.uid() or public.is_admin()) and (')
     expect(sql).toContain('demo_for uuid references auth.users (id) on delete cascade')
   })
+  it("SQL 0022: a demo account takes the team's steps on its own case only; the rest of case_action is as in 0006", () => {
+    const norm = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
+    const sql = norm('supabase/migrations/0022_demo_case.sql'), old = norm('supabase/migrations/0006_calendar_analytics.sql')
+    expect(sql).toContain('own := public.is_demo_user() and (c.seeker_id = auth.uid() or c.employer_id = auth.uid());')
+    expect(sql).toContain('elsif not public.is_admin() and not own then')
+    const tail = (s: string) => { const a = s.indexOf('function public.case_action'); return s.slice(s.indexOf('  for i in 1..9 loop', a), s.indexOf('$$;', a)) }
+    expect(tail(sql).length).toBeGreaterThan(1000); expect(tail(sql)).toBe(tail(old))
+    expect(sql).toContain("update public.cases set steps = steps || jsonb_build_object('submitted', now())")
+  })
 })
