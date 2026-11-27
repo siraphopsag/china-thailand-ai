@@ -118,3 +118,12 @@ signed-in person's question allowance.
 - Retention: `purge_expired()` deletes a post 182 days after release once its worker has arrived, and the case, contract, chat and complaints go with it. Whether complaints and contracts should be kept longer is an open question.
 - Job-seeker verification is written by the person's own account (column grants in 0014); the team does not confirm it as it does for employers.
 - 李明's demo job was changed to Chinese-speaking guest relations (24 Nov). The closed-jobs patterns do not match it, but the patterns only look for words (they miss "tour coordinator" too), so the 2020 notification itself should be checked.
+
+## Group B and the code review (27 Nov 2026) — for the advisor
+
+- **Business profile / work history (SQL 0019):** short fixed fields and short text, no contact details. Business details are readable by anyone signed in; work history only by employers the person applied to, the person and the team.
+- **Map near an incident:** an OpenStreetMap view loads only when the person asks, because OpenStreetMap receives the coordinates. "Find near here" opens Google Maps (Thailand) or AMap (China) in the person's own browser.
+- **Document photos:** checked for size, brightness and sharpness on the device only; the picture is not sent to any AI or server (the blueprint said "AI"; changed because passports and permits are sensitive and the free Gemini tier may be read by people).
+- **AI triage of complaints:** team only; the AI gets fixed fields (problem type, evidence held, case/arrival, rule score), never the worker's words, and never decides.
+- **Chat strikes (SQL 0017/0020):** the database decides whether a message had contact details; three in one conversation end the match. Phone numbers are recognised by their Thai/Chinese shape, so salary ranges, dates and times are not counted. Known limit: a number sent one digit per message is not caught.
+- **Still open:** job-seeker verification is written by the person's own account; the sign-up flow does not collect separate consent under PIPL art. 39.
