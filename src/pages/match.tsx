@@ -21,7 +21,7 @@ import { Drawer } from '../components/drawer'
 import { motionOff, setMotionOff } from '../components/ui/background-paths'
 import { NeedLogin } from './auth'
 import { VerifyCard } from './case'
-import { SeekerVerifyCard } from './seeker-verify'
+import { NeedVerifySeeker, SeekerVerifyCard, seekerLevel, useSeekerVerify } from './seeker-verify'
 import { VerifyOverview } from './dataMap'
 import { currentStep, stepsDone } from '../domain/match/cases'
 import { SimTools } from './simtools'
@@ -325,6 +325,9 @@ export function SeekPage() {
   const [seekTab, setSeekTab] = useState<'new' | 'mine'>(tabAsked === 'mine' ? 'mine' : 'new')
   const N = useNames()
   const { st, limitNow, setOrigin, pin, unpin } = useMatch()
+  // owner's blueprint (24 Nov 2026): nothing verified yet → no pins (the database checks it too, SQL 0016); administrators add sample data
+  const seekLv = seekerLevel(useSeekerVerify()), { isAdmin: seekAdmin } = useAuth()
+  const mustVerify = seekLv === 'none' && !seekAdmin
   const [editOrigin, setEditOrigin] = useState(false)
   const [oc, setOc] = useState<GeoCode | null>(st.me.origin?.country ?? null), [op, setOp] = useState<string | null>(st.me.origin?.province ?? null)
   const [dc, setDc] = useState<GeoCode | null>(null), [dp, setDp] = useState<string | null>(null)
@@ -374,7 +377,8 @@ export function SeekPage() {
         <p className="text-xs text-muted">{t('m.mapHint')}</p></>}>
       <PanelTabs label={t('m.seek.title')} value={seekTab} onChange={setSeekTab} tabs={[{ k: 'new', text: t('m.pin.tab.new') }, { k: 'mine', text: t('m.pins'), n: activePins(st.me, limitNow).length }]} />
       <Toast msg={msg} />
-      {seekTab === 'new' && (<>
+      {seekTab === 'new' && mustVerify && <NeedVerifySeeker />}
+      {seekTab === 'new' && !mustVerify && (<>
       <Steps items={[t('m.seek.s1'), t('m.seek.s2'), t('m.seek.s3')]} at={originStep ? 0 : dp ? 2 : 1} />
       {originStep ? (
         <section className="card space-y-3" aria-labelledby="s1h">

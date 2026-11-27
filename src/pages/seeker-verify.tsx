@@ -26,6 +26,8 @@ export function loadSeekerVerify(): SeekerVerify | null {
 function saveSeekerVerify(v: SeekerVerify | null) {
   try { if (v) localStorage.setItem(KEY, JSON.stringify(v)); else localStorage.removeItem(KEY); window.dispatchEvent(new Event(EVT)) } catch { /* storage blocked */ }
 }
+/** job seeker: phone and a valid passport = full; the phone only = partial (owner's blueprint, 24 Nov 2026) */
+export const seekerLevel = (v: SeekerVerify | null): 'full' | 'partial' | 'none' => (isVerifiedSeeker(v) ? 'full' : v ? 'partial' : 'none')
 export const isVerifiedSeeker = (v: SeekerVerify | null) => !!v?.passport && (!v.passport.expiry || v.passport.expiry >= new Date().toISOString().slice(0, 10))
 function useLocalSeekerVerify(): SeekerVerify | null {
   const [v, setV] = useState(loadSeekerVerify)
@@ -64,6 +66,18 @@ export function useSeekerVerified(seekerId: string): boolean {
 }
 /** sample job seekers of the local demo: about two in three are shown as verified (fixed by their id, labelled as sample data) */
 export const sampleVerified = (id: string) => [...id].reduce((s, c) => s + c.charCodeAt(0), 0) % 3 !== 0
+
+/** the level as a chip (owner's blueprint: full / partial / none) */
+export function LevelChip({ level }: { level: 'full' | 'partial' | 'none' }) {
+  const { t } = useI18n()
+  const tone = level === 'full' ? 'bg-ok-bg text-ok-fg border-ok-line' : level === 'partial' ? 'bg-warn-bg text-warn-fg border-warn-line' : 'bg-danger-bg text-danger-fg border-danger-line'
+  return <span className={`chip ${tone}`}><Icon name={level === 'none' ? 'warn' : 'personCheck'} size={12} />{t('vl.h')}: {t(`vl.${level}`)}</span>
+}
+/** before the first pin: what is missing, and the verification right here */
+export function NeedVerifySeeker() {
+  const { t } = useI18n()
+  return <div className="space-y-3"><Warn tone="info">{t('vl.need.seek')}</Warn><SeekerVerifyCard /></div>
+}
 
 /** the badge employers see next to an applicant */
 export function SeekerBadge({ seekerId }: { seekerId: string }) {
@@ -105,7 +119,7 @@ export function SeekerVerifyCard() {
   const set = (p: Partial<IdRecord>) => setRec((r) => ({ ...r, ...p }))
   return (
     <section id="seeker-verify" className="card space-y-3" aria-labelledby="sv-h">
-      <h2 id="sv-h" className="h2 flex items-center gap-2"><Icon name="personCheck" size={18} className="text-primary" />{t('sv.h')}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="sv-h" className="h2 flex items-center gap-2"><Icon name="personCheck" size={18} className="text-primary" />{t('sv.h')}</h2><LevelChip level={seekerLevel(v)} /></div>
       <p className="text-sm text-muted">{t('sv.lead')}</p>
       <ol className="grid sm:grid-cols-2 gap-2">
         <li className={`rounded-xl border p-2.5 text-sm ${v ? 'border-ok-line bg-ok-bg text-ok-fg' : 'border-line'}`}><b>1 · {t('sv.s1')}</b><br />{v ? t('sv.s1.done', { d: v.phone4 }) : t('mid.st.todo')}</li>

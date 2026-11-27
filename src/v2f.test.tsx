@@ -6,13 +6,16 @@ import { CONTACT_RULES, hasContact, maskAfter, maskContact } from './domain/cont
 import { newMessage } from './domain/match/chat'
 import { holdByRules, precheck } from './domain/match/precheck'
 import { spamCheck } from './domain/match/spam'
-import { textProblem } from './domain/match/logic'
+import { employerLevel, textProblem } from './domain/match/logic'
 import { terms } from './data/culture'
 import { pickVoice } from './components/speak'
 import { AGENCY_BOARDS, DOE_PROVINCE, ISIC, SOURCES, change, cleanExternal, csvLine, newestCsv, parseDoeIndustries, parseDoeProvinces, parseWorldBank } from './domain/openData'
 import snapshot from './data/marketSnapshot.json'
 import { v2f } from './locales/v2f'
 import { v2g } from './locales/v2g'
+import { v2h } from './locales/v2h'
+import { seekerLevel } from './pages/seeker-verify'
+import { dbProblem } from './domain/match/remote'
 import { DATA_ROWS } from './pages/dataMap'
 import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
 import { messages } from './locales/index'
@@ -168,6 +171,25 @@ describe('G. the lure of fake jobs in either word order', () => {
     const lure = (details: string) => spamCheck({ company: 'A co', position: 'x', details } as never, '2026-11-24T00:00:00Z', [], []).lure
     for (const d of ['งานบริการลูกค้า เงินเดือนสูง ไม่ต้องมีประสบการณ์ ทำงานแถบชายแดน', '客服工作，高薪，无需经验，边境地区', 'Customer service, high salary, no experience needed']) expect(lure(d), d).toBe(true)
     for (const d of ['เงินเดือนสูงตามประสบการณ์', '有经验者薪资高', 'No experience needed, training given']) expect(lure(d), d).toBe(false)
+  })
+})
+
+describe('I. verify before posting or pinning (owner’s blueprint)', () => {
+  it('levels: approved = full, waiting = partial, nothing or rejected = none; seekers: phone = partial, phone and passport = full', () => {
+    const ev = (status: 'pending' | 'verified' | 'rejected') => ({ kind: 'company' as const, country: 'TH' as const, regNo: 'x', status, at: '' })
+    expect([employerLevel(ev('verified')), employerLevel(ev('pending')), employerLevel(ev('rejected')), employerLevel(null)]).toEqual(['full', 'partial', 'none', 'none'])
+    const phone = { country: 'TH' as const, phone4: '1234', phoneAt: '' }
+    expect([seekerLevel(null), seekerLevel(phone), seekerLevel({ ...phone, passport: { last4: '4567', nationality: 'CHN', expiry: '2099-01-01', at: '' } })]).toEqual(['none', 'partial', 'full'])
+  })
+  it('the forms are replaced by the verification until something is verified; the database refuses too; administrators are not checked', () => {
+    expect(src('./pages/hire.tsx')).toContain("empLv === 'none' && !isAdmin && <div className=\"space-y-3\"><Warn tone=\"info\">{t('vl.need.emp')}</Warn><VerifyCard /></div>")
+    expect(src('./pages/match.tsx')).toContain("{seekTab === 'new' && mustVerify && <NeedVerifySeeker />}")
+    expect(src('./matchData.tsx')).toContain("if (local && employerLevel(st.employerVerify) === 'none') return { ok: false, problem: 'needVerify' }")
+    const sql = src('../supabase/migrations/0016_verify_first.sql')
+    expect(sql).toContain("if auth.uid() is null or public.is_admin() then return new; end if;")
+    expect(sql).toContain("create trigger posts_need_verify before insert on public.posts"); expect(sql).toContain("create trigger pins_need_verify before insert on public.pins")
+    expect(dbProblem({ message: 'need_verify' })).toBe('needVerify')
+    for (const [k, [th, zh, en]] of Object.entries(v2h)) { expect(th, k).toMatch(/[฀-๿]/); expect(zh, k).toMatch(/[一-鿿]/); expect(en, k).not.toMatch(/[฀-๿一-鿿]/); expect(messages[k as keyof typeof messages]).toEqual([th, zh, en]) }
   })
 })
 

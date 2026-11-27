@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { NavLink, go, useSearchParam } from '../store'
 import { useMatch } from '../matchData'
-import { canPost, caseBlocksDelete, isCountry, localDay, memberActive, mustStayDomestic, postIssues, postQuota, type PostField, type PostInput, type Problem } from '../domain/match/logic'
+import { canPost, caseBlocksDelete, employerLevel, isCountry, localDay, memberActive, mustStayDomestic, postIssues, postQuota, type PostField, type PostInput, type Problem } from '../domain/match/logic'
 import { guessLang } from '../domain/match/postText'
 import { scheduleOf, stageAt, capStage } from '../domain/match/release'
 import { holdByRules, precheck, type LawRule, type Precheck } from '../domain/match/precheck'
@@ -24,6 +24,7 @@ import { Warn } from '../components/ui'
 import { Empty, IndustrySelect, MAP_SIZE, MapLayout, NeedRole, Page, PanelTabs, PlaceFields, PostCard, QuotaBar, Req, SkillPicker, Steps, Toast, useFieldError, useGate, useNames, useRel } from './match'
 import { VerifyOverview } from './dataMap'
 import { VerifyCard } from './case'
+import { LevelChip } from './seeker-verify'
 import { useFit } from '../components/pager'
 import { postToInput } from '../domain/match/remote'
 import { PlanGrid } from './member'
@@ -59,6 +60,9 @@ export function HirePage() {
   const { status, online } = useAuth()
   const N = useNames()
   const { st, now, limitNow, pool, post, editPost, deletePost, renew } = useMatch()
+  const { isAdmin } = useAuth()
+  // owner's blueprint (24 Nov 2026): nothing verified yet → no posts (the database checks it too, SQL 0016); administrators add sample data
+  const empLv = employerLevel(st.employerVerify)
   const [joinedUntil, setJoinedUntil] = useState<string | null>(null)
   const { until } = useRel()
   const editId = useSearchParam('edit')
@@ -218,7 +222,8 @@ export function HirePage() {
       {st.suspended && <Warn tone="danger">{t('m.rpt.suspended')}</Warn>}
       <PanelTabs label={t('m.emp.title')} value={side} onChange={setSide} tabs={[{ k: 'new', text: t(editing ? 'm.edit.title' : 'm.emp.tab.new') }, { k: 'mine', text: t('m.posts'), n: mine.length }, { k: 'verify', text: t('m.vf.title') }]} />
       <Toast msg={msg} />
-      {side === 'new' && (<>
+      {side === 'new' && !editing && empLv === 'none' && !isAdmin && <div className="space-y-3"><Warn tone="info">{t('vl.need.emp')}</Warn><VerifyCard /></div>}
+      {side === 'new' && (editing || empLv !== 'none' || isAdmin) && (<>
       <Steps items={[t('m.emp.s1'), t('m.emp.s2')]} at={form ? 1 : 0} />
       {!form ? (
         <section className="card space-y-3" aria-labelledby="e1h">
@@ -302,7 +307,7 @@ export function HirePage() {
         </form>
       )}
       </>)}
-      {side === 'verify' && <><VerifyCard /><VerifyOverview side="emp" /></>}
+      {side === 'verify' && <><div><LevelChip level={empLv} /></div><VerifyCard /><VerifyOverview side="emp" /></>}
       {side === 'mine' && (
       <section className="space-y-2" aria-labelledby="myposts-h">
         <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="myposts-h" className="h2">{t('m.posts')}</h2><NavLink to="board" className="text-sm font-medium text-primary inline-flex items-center gap-1 min-h-[24px]">{t('m.board')}<Icon name="next" size={14} /></NavLink></div>

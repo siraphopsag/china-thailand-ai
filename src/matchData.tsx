@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { addPin, applyTo, sampleApplicant, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, releaseHeld, removePin, renewPost, requestPersonVerify, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
+import { addPin, applyTo, sampleApplicant, caseBlocksDelete, canPost, cancel, clampFuture, decide, employerVerified, employerLevel, holding, localDay, makePost, openCaseFor, parseState, planUntil, poolOf, promote, releaseHeld, removePin, renewPost, requestPersonVerify, requestVerify, withoutExpired, type ApplyInput, type Outcome, type PostInput, type Problem } from './domain/match/logic'
 import { applyCaseAction, submitCase, type CaseAction } from './domain/match/cases'
 import { cleanPhone, cleanRegNo } from './domain/match/verify'
 import { reportPost, withHeld, type ReportGroup, type ReportReason } from './domain/match/reports'
@@ -255,6 +255,7 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
       },
       unpin: async (id) => { if (local) setLocal((s) => ({ ...s, me: removePin(s.me, id) })); else await write((sb) => sb.from('pins').delete().eq('id', id), () => null) },
       post: async (input) => {
+        if (local && employerLevel(st.employerVerify) === 'none') return { ok: false, problem: 'needVerify' } as const // verify first (the database checks it too, SQL 0016)
         if (!canPost(st, limitNow)) return { ok: false, problem: 'quota' } as const // weekly allowance used up
         const when = at()
         const made = makePost(input, uid('post'), MY_EMPLOYER, when); if (!made.ok) return made

@@ -39,7 +39,7 @@ const isId = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9:_-]
 
 export type Problem = 'place' | 'industry' | 'skills' | 'limit' | 'duplicate' | 'company' | 'position' | 'details' | 'years' | 'contact' | 'notOpen' | 'already' | 'unknown'
   | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits' | 'quota' | 'network' | 'intro' | 'available' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'caseText' | 'departDate' | 'reported' | 'reportLimit' | 'reportNote' | 'suspended' | 'phone' | 'code'
-  | 'dupPost' | 'dailyLimit' | 'scamWords'
+  | 'dupPost' | 'dailyLimit' | 'scamWords' | 'needVerify'
 const oneOf = <T extends string>(all: readonly T[], v: unknown): v is T => typeof v === 'string' && (all as readonly string[]).includes(v)
 const VERIFY_KINDS: readonly VerifyKind[] = ['company', 'person']
 const intIn = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max
@@ -158,6 +158,14 @@ export const withoutExpired = (st: MatchState, now: number): MatchState => {
 }
 /** a post whose case the agency has taken (and that has not finished) cannot be deleted by its employer */
 export const caseBlocksDelete = (st: MatchState, postId: string) => st.cases.some((c) => c.postId === postId && !!c.steps.accepted && !c.steps.arrived)
+/**
+ * How far a person is verified (owner's blueprint, 24 Nov 2026): 'full' = checked, 'partial' = started but not complete, 'none' =
+ * nothing yet. With 'none' an employer cannot post and a job seeker cannot pin; 'partial' and 'full' can (the release levels
+ * still depend on the employer's verification, as before).
+ */
+export type VerifyLevel = 'full' | 'partial' | 'none'
+/** employer: approved by the team = full; a registration number or a confirmed mobile waiting for the team = partial */
+export const employerLevel = (ev: MatchState['employerVerify']): VerifyLevel => (ev?.status === 'verified' ? 'full' : ev?.status === 'pending' ? 'partial' : 'none')
 /** my posts carry my verification (local demo); in the database it is kept on each post */
 export const employerVerified = (st: MatchState) => st.employerVerify?.status === 'verified'
 /** the employer confirms: a case opens and goes to the agency at once if the employer is verified (then the application reads "forwarded") */

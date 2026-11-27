@@ -172,12 +172,13 @@ export function verifyOf(p: ProfileRow | null): EmployerVerify | null {
 }
 
 /** database error → one of the prototype's problems (the message text is never shown as is) */
-export function dbProblem(e: { message?: string; code?: string } | null | undefined): 'quota' | 'limit' | 'duplicate' | 'already' | 'contact' | 'notOpen' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'reportLimit' | 'suspended' | 'phone' | 'network' {
+export function dbProblem(e: { message?: string; code?: string } | null | undefined): 'quota' | 'needVerify' | 'limit' | 'duplicate' | 'already' | 'contact' | 'notOpen' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'reportLimit' | 'suspended' | 'phone' | 'network' {
   const m = e?.message ?? ''
   // a function, table or column this website needs is missing: the database has not been updated (0003_board.sql)
   if (['PGRST202', 'PGRST204', 'PGRST205', '42883', '42P01', '42703'].includes(e?.code ?? '') || /schema cache|does not exist/i.test(m)) return 'dbOld'
   if (m.includes('quota')) return 'quota'
   if (m.includes('below_held')) return 'belowHeld'
+  if (m.includes('need_verify')) return 'needVerify'
   if (m.includes('bad_reg_no')) return 'regNo'
   if (m.includes('bad_phone')) return 'phone'
   if (m.includes('case_started')) return 'caseStarted'

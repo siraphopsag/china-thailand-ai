@@ -30,11 +30,13 @@ const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
 const T = (k: MsgKey, v?: Record<string, string | number>) => esc(tr(k, v, 'th'))
 function html(node: ReactNode, st?: MatchState): string {
-  const g = globalThis as { document?: unknown }
-  const had = 'document' in g, prev = g.document
+  const g = globalThis as { document?: unknown; localStorage?: unknown }
+  const had = 'document' in g, prev = g.document, hadLs = 'localStorage' in g, prevLs = g.localStorage
+  // the job seeker has confirmed a mobile number (since the blueprint, 27 Nov 2026, the pin form needs it)
+  g.localStorage = { getItem: (k: string) => (k === 'call.seekerVerify.v1' ? JSON.stringify({ country: 'TH', phone4: '1234', phoneAt: '' }) : null), setItem: () => {}, removeItem: () => {} }
   g.document = { documentElement: { getAttribute: () => null, setAttribute: () => {}, lang: 'th' } }
   try { return renderToStaticMarkup(<ThemeProvider><LanguageProvider><AuthProvider enabled={false}><MatchProvider initial={st ?? seedState(NOW)}>{node}</MatchProvider></AuthProvider></LanguageProvider></ThemeProvider>) }
-  finally { if (had) g.document = prev; else delete g.document }
+  finally { if (had) g.document = prev; else delete g.document; if (hadLs) g.localStorage = prevLs; else delete g.localStorage }
 }
 const NOW = Date.parse('2026-10-03T08:00:00.000Z')
 const at = (days: number) => new Date(NOW + days * DAY_MS).toISOString()
