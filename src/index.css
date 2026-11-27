@@ -216,7 +216,7 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 @keyframes ai-scan { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
 /* the map uses the same surface language: a faint static grid under the ocean */
 /* the map plane is seen at a slight angle (the controls and the frame stay flat) */
-.map-ocean { background-color: rgb(var(--globe-ocean)); box-shadow: var(--elev-hi), var(--elev-2) }
+.map-ocean { background-color: rgb(var(--globe-ocean)); box-shadow: var(--elev-hi), var(--elev-2); overflow: clip } /* clip, not hidden: focusing a button can no longer scroll the map sideways */
 /* oblique camera: the map plane leans back so the region reads as a 3-D table, with haze towards the horizon */
 .map-tilt { position: absolute; inset: 0; transform-origin: 50% 62% } /* the lean itself is set by geomap.tsx (TILT), which also places the upright labels */
 .map-stage { background-color: rgb(var(--globe-ocean)); background-image: linear-gradient(to right, rgb(var(--grid-line) / calc(var(--grid-a) * .55)) 1px, transparent 0), linear-gradient(to bottom, rgb(var(--grid-line) / calc(var(--grid-a) * .55)) 1px, transparent 0); background-size: 56px 56px }
@@ -380,6 +380,9 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 /* pale yellow → deep red: the busiest provinces read as red (owner, 27 Nov 2026: "ที่คนเยอะอยากให้เป็นสีแดง"), the same in light and dark */
 .g-heat-0 { --heat: #fde9a9 } .g-heat-1 { --heat: #fbc265 } .g-heat-2 { --heat: #f68d45 } .g-heat-3 { --heat: #e0512f } .g-heat-4 { --heat: #b4161b }
 .g-heat { fill: var(--heat) }
+.g-heat-0 { --heat-side: #c4a560 } .g-heat-1 { --heat-side: #c48a3a } .g-heat-2 { --heat-side: #b35f2c } .g-heat-3 { --heat-side: #983520 } .g-heat-4 { --heat-side: #6f0c10 }
+.g-heat-side { fill: var(--heat-side); stroke: var(--heat-side); stroke-width: 1; vector-effect: non-scaling-stroke }
+.g-ptop-heat { fill: var(--heat); stroke: #fff; stroke-width: 2; vector-effect: non-scaling-stroke }
 .g-prov.g-heat:hover { filter: brightness(1.15) }
 .g-count-n { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font: 700 11.5px/1 system-ui, sans-serif }
 .map-key { padding: .4rem .55rem; border-radius: .7rem; background: rgb(var(--surface) / .9); border: 1px solid rgb(var(--line)); font-size: 11px; line-height: 1.35; color: rgb(var(--ink)); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px) }

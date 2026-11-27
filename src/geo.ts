@@ -18,7 +18,8 @@ export const codeOfIso = (iso: string | number | undefined): GeoCode | undefined
 /** 2D map view: zoom k and translation (x, y) applied on top of the fitted regional projection. */
 export interface View { k: number; x: number; y: number }
 export const HOME: View = { k: 1, x: 0, y: 0 }
-export const MAX_K = 12
+/** deepest zoom: 40× (owner, 27 Nov 2026: the small provinces round Bangkok still could not be read at 12×) */
+export const MAX_K = 40
 /** Keep the region on screen: never smaller than the fitted view, never panned away from it. */
 export function clampView(v: View, w: number, h: number): View {
   const k = Math.max(1, Math.min(MAX_K, v.k))
