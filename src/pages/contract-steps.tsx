@@ -154,7 +154,7 @@ export function SignStep({ sign, hash, block, sides, docs, companyName, workerNa
   const status = signStatus(sign, hash)
   const mode = sign?.mode ?? 'online'
   const [side, setSide] = useState<Side>(sides[0] ?? 'worker')
-  const printIt = () => printContract(docs, hash, companyName, workerName)
+  const printIt = () => printContract(docs, hash, companyName, workerName, sign)
   return (
     <div className="space-y-4">
       {block && <Warn tone="danger">{t(`sg.block.${block}` as never)}</Warn>}
@@ -175,6 +175,12 @@ export function SignStep({ sign, hash, block, sides, docs, companyName, workerNa
               </div>) })}
           </div>
           {status === 'signed' && <p className="text-sm font-semibold text-ok-fg flex items-center gap-1.5" role="status"><Icon name="verified" size={16} />{t('sg.done')}</p>}
+          {/* owner's blueprint: the contract as a file */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className="btn-soft text-sm" disabled={!!block} onClick={printIt}><Icon name="download" size={16} />{t('sg.pdf')}</button>
+            <button type="button" className="btn-ghost text-sm" disabled={!!block} onClick={() => downloadContractDoc(docs, hash, companyName, workerName, sign)}><Icon name="documents" size={16} />{t('sg.doc')}</button>
+            <span className="text-xs text-muted">{t('sg.pdf.hint')}</span>
+          </div>
           {status === 'paperSigned' && sign?.paper && <p className="text-sm font-semibold text-ok-fg flex items-center gap-1.5" role="status"><Icon name="verified" size={16} />{t('sg.paperDone', { f: sign.paper.name })}</p>}
         </section>
         <section className="card space-y-3" aria-labelledby="sg-how">
@@ -239,21 +245,38 @@ function SignaturePad({ defaultName, disabled, onDone }: { defaultName: string; 
   )
 }
 
-/** the contract as a printable page in both languages with signature lines and the fingerprint (opened in a new window) */
-export function printContract(docs: Record<'th' | 'zh', string[]>, hash: string, company: string, worker: string) {
-  const w = window.open('', '_blank'); if (!w) return
+type Signed = SignState | null
+/**
+ * The contract as one HTML page in both languages, with signature lines (or the signatures given on screen) and the fingerprint.
+ * Owner's blueprint (27 Nov 2026): it can be saved as a PDF (the print window's "Save as PDF") or downloaded as a Word file (.doc —
+ * Word opens this page as a document). Made in the browser: free, nothing is uploaded.
+ */
+export function contractHtml(docs: Record<'th' | 'zh', string[]>, hash: string, company: string, worker: string, sign: Signed = null): string {
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c)
   const col = (lg: Lang) => `<div lang="${lg === 'zh' ? 'zh-CN' : 'th'}"><h2>${esc(tr('sg.print.h' as never, undefined, lg))}</h2><ol>${docs[lg as 'th' | 'zh'].map((x) => `<li>${esc(x)}</li>`).join('')}</ol></div>`
-  const line = (label: string, who: string) => `<div class="sig"><div class="ln"></div><p>${esc(label)}</p><p>${esc(who)}</p><p>${esc(tr('sg.print.date' as never, undefined, 'th'))} ____ / ____ / ______</p></div>`
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(tr('sg.print.h' as never, undefined, 'th'))}</title><style>
+  const given = (s: 'worker' | 'employer') => (sign && sign.hash === hash ? sign[s] : undefined)
+  const line = (s: 'worker' | 'employer', who: string) => { const g = given(s), label = `${tr(`sg.side.${s}` as never, undefined, 'th')} · ${tr(`sg.side.${s}` as never, undefined, 'zh')}`
+    return `<div class="sig">${g && /^data:image\/(png|jpeg);base64,/.test(g.img) ? `<img src="${g.img}" alt="" style="height:48px">` : '<div class="ln"></div>'}<p>${esc(label)}</p><p>${esc(g?.name ?? who)}</p><p>${g ? esc(new Date(g.at).toISOString().slice(0, 10)) : `${esc(tr('sg.print.date' as never, undefined, 'th'))} ____ / ____ / ______`}</p></div>` }
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(tr('sg.print.title' as never, undefined, 'th'))}</title><style>
     body{font-family:'Noto Sans Thai','Sarabun','Microsoft YaHei',sans-serif;margin:24px;color:#111;font-size:13px;line-height:1.6}
     h1{font-size:18px;margin:0 0 4px} h2{font-size:15px;margin:12px 0 6px} .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
     ol{padding-left:18px} li{margin-bottom:6px} .sigs{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}
     .ln{border-bottom:1px solid #111;height:48px} .sig p{margin:4px 0} .fp{margin-top:24px;font-size:11px;color:#444;word-break:break-all}
   </style></head><body><h1>${esc(tr('sg.print.title' as never, undefined, 'th'))} · ${esc(tr('sg.print.title' as never, undefined, 'zh'))}</h1>
   <div class="cols">${col('th')}${col('zh')}</div>
-  <div class="sigs">${line(`${tr('sg.side.worker' as never, undefined, 'th')} · ${tr('sg.side.worker' as never, undefined, 'zh')}`, worker)}${line(`${tr('sg.side.employer' as never, undefined, 'th')} · ${tr('sg.side.employer' as never, undefined, 'zh')}`, company)}</div>
-  <p class="fp">${esc(tr('sg.print.fp' as never, undefined, 'th'))} SHA-256: ${esc(hash)}</p></body></html>`)
+  <div class="sigs">${line('worker', worker)}${line('employer', company)}</div>
+  <p class="fp">${esc(tr('sg.print.fp' as never, undefined, 'th'))} SHA-256: ${esc(hash)}</p></body></html>`
+}
+/** opens the contract in a new window and the print dialog (print on paper, or "Save as PDF") */
+export function printContract(docs: Record<'th' | 'zh', string[]>, hash: string, company: string, worker: string, sign: Signed = null) {
+  const w = window.open('', '_blank'); if (!w) return
+  w.document.write(contractHtml(docs, hash, company, worker, sign))
   w.document.close(); w.focus(); setTimeout(() => w.print(), 300)
+}
+/** downloads the contract as a Word file (.doc) */
+export function downloadContractDoc(docs: Record<'th' | 'zh', string[]>, hash: string, company: string, worker: string, sign: Signed = null) {
+  const blob = new Blob(['﻿', contractHtml(docs, hash, company, worker, sign)], { type: 'application/msword' })
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `contract-${hash.slice(0, 8)}.doc`
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000)
 }
 export { addSignature }

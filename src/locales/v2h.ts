@@ -13,5 +13,9 @@ export const v2h = {
   'ch.strike': ['ซ่อนช่องทางติดต่อแล้ว · เตือนครั้งที่ {n} จาก {max} ถ้าครบ {max} ครั้ง การจับคู่นี้จะถูกยกเลิก', '已隐藏联系方式 · 第 {n} 次警告（共 {max} 次），满 {max} 次将取消本次匹配', 'Contact details hidden · warning {n} of {max}; at {max} this match ends'],
   'ch.closed.me': ['การจับคู่นี้ถูกยกเลิกและแชตถูกล็อก เพราะคุณส่งช่องทางติดต่อครบ {max} ครั้ง ข้อความทั้งหมดยังเก็บไว้เป็นหลักฐาน', '由于您 {max} 次发送联系方式，本次匹配已取消，聊天已锁定。所有消息均保留作为记录', 'This match has ended and the chat is locked because you sent contact details {max} times. All messages are kept as a record.'],
   'ch.closed.other': ['การจับคู่นี้ถูกยกเลิกและแชตถูกล็อก เพราะอีกฝ่ายส่งช่องทางติดต่อครบ {max} ครั้ง ข้อความทั้งหมดยังเก็บไว้เป็นหลักฐาน และคุณรายงานได้ที่หน้าขอความช่วยเหลือ', '由于对方 {max} 次发送联系方式，本次匹配已取消，聊天已锁定。所有消息均保留作为记录，您可在求助页面举报', 'This match has ended and the chat is locked because the other side sent contact details {max} times. All messages are kept as a record; you can report it on the help page.'],
+  // ---------- the contract as a file
+  'sg.pdf': ['บันทึกเป็น PDF', '保存为 PDF', 'Save as PDF'],
+  'sg.doc': ['ดาวน์โหลดไฟล์ Word (.doc)', '下载 Word 文件（.doc）', 'Download a Word file (.doc)'],
+  'sg.pdf.hint': ['ในหน้าต่างพิมพ์ เลือกเครื่องพิมพ์เป็น "บันทึกเป็น PDF"', '在打印窗口中选择“另存为 PDF”', 'In the print window, choose "Save as PDF" as the printer'],
   'm.err.needVerify': ['ต้องยืนยันตัวตนก่อน จึงจะลงประกาศหรือปักหมุดได้', '需先完成身份验证，才能发布招聘信息或标记', 'Verify yourself first to post or pin'],
 } as const satisfies Record<string, Msg>

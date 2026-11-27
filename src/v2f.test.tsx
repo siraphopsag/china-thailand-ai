@@ -19,6 +19,7 @@ import { v2h } from './locales/v2h'
 import { seekerLevel } from './pages/seeker-verify'
 import { dbProblem } from './domain/match/remote'
 import { DATA_ROWS } from './pages/dataMap'
+import { contractHtml } from './pages/contract-steps'
 import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
 import { messages } from './locales/index'
 import { provinces } from './locales/provinces'
@@ -218,6 +219,20 @@ describe('J. contact details in the chat: two warnings, then the match ends (own
     expect(sql).toContain("not public.chat_locked(acceptance_id)"); expect(sql).toContain("if n <> 3 then return null; end if;")
     expect(sql).not.toMatch(/delete from public.chat_messages/)
     expect(src('./pages/chat.tsx')).toContain("t('ch.strike', { n: strikes, max: MAX_STRIKES })")
+  })
+})
+
+describe('K. the contract as a file (owner’s blueprint)', () => {
+  it('one page in both languages with the fingerprint; signatures given on screen are shown; it saves as a PDF or a Word file', () => {
+    const docs = { th: ['ข้อ 1 <ทดสอบ>'], zh: ['第一条'] }
+    const h = contractHtml(docs, 'abc123', 'โรงแรมตัวอย่าง', 'LI MING')
+    expect(h).toContain('ข้อ 1 &lt;ทดสอบ&gt;'); expect(h).toContain('第一条'); expect(h).toContain('SHA-256: abc123'); expect(h.match(/class="ln"/g)?.length).toBe(2)
+    const sign = { hash: 'abc123', mode: 'online', worker: { name: 'LI MING', img: 'data:image/png;base64,AAAA', at: '2026-11-27T01:00:00Z' } } as never
+    const s = contractHtml(docs, 'abc123', 'x', 'LI MING', sign)
+    expect(s).toContain('<img src="data:image/png;base64,AAAA"'); expect(s.match(/class="ln"/g)?.length).toBe(1)
+    expect(contractHtml(docs, 'abc123', 'x', 'y', { ...(sign as object), worker: { name: 'y', img: 'javascript:alert(1)', at: '2026-11-27T01:00:00Z' } } as never)).not.toContain('javascript:')
+    const page = src('./pages/contract-steps.tsx')
+    expect(page).toContain("{t('sg.pdf')}"); expect(page).toContain("type: 'application/msword'")
   })
 })
 
