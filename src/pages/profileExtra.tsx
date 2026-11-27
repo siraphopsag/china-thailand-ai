@@ -69,11 +69,11 @@ export function WorkCard() {
       <p className="text-xs text-muted">{t('pe.w.d')}</p>
       {sync && <Warn>{t(sync === 'dbOld' ? 'sh.dbOld' : 'sh.network')}</Warn>}
       <ul className="space-y-2">{cur.jobs.map((j, i) => (
-        <li key={i} className="grid sm:grid-cols-[1fr_7rem_6rem_auto] gap-2 items-end text-sm">
+        <li key={i} className="grid sm:grid-cols-[1fr_7rem_6rem_auto] gap-2 items-end text-sm rounded-xl border border-line p-2.5 sm:border-0 sm:p-0">
           <label className="space-y-1"><span className="font-medium">{t('pe.w.role')}</span><input className="input w-full" maxLength={MAX_ROLE} value={j.role} onChange={(e) => setJob(i, { role: e.target.value })} /></label>
           <label className="space-y-1"><span className="font-medium">{t('pe.w.country')}</span><select className="input w-full" value={j.country} onChange={(e) => setJob(i, { country: e.target.value === 'CN' ? 'CN' : 'TH' })}>{(['TH', 'CN'] as const).map((c) => <option key={c} value={c}>{N.country(c)}</option>)}</select></label>
           <label className="space-y-1"><span className="font-medium">{t('pe.w.years')}</span><input className="input w-full" type="number" min={0} max={50} step={0.5} value={j.years} onChange={(e) => setJob(i, { years: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })} /></label>
-          <button type="button" className="btn-ghost text-sm" aria-label={t('pe.w.remove', { n: j.role || i + 1 })} onClick={() => { setW({ ...cur, jobs: cur.jobs.filter((_, k) => k !== i) }); setDone(false) }}><Icon name="close" size={15} /></button>
+          <button type="button" className="btn-ghost text-sm justify-self-end w-auto min-h-[40px]" aria-label={t('pe.w.remove', { n: j.role || i + 1 })} onClick={() => { setW({ ...cur, jobs: cur.jobs.filter((_, k) => k !== i) }); setDone(false) }}><Icon name="close" size={15} /></button>
         </li>))}</ul>
       {cur.jobs.length < MAX_JOBS && <button type="button" className="btn-soft text-sm" onClick={() => { setW({ ...cur, jobs: [...cur.jobs, { role: '', country: 'TH', years: 1, industry: '' }] }); setDone(false) }}><Icon name="plus" size={15} />{t('pe.w.add')}</button>}
       <label className="block space-y-1 text-sm"><span className="font-medium">{t('pe.w.showcase')}</span>

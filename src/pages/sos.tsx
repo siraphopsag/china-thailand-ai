@@ -119,7 +119,7 @@ export function SosPage() {
               {loc && typeof loc === 'object' ? (showMap ? (
                 <figure className="space-y-1"><iframe title={t('hp.near.map')} src={osmEmbed(loc)} className="w-full h-56 rounded-xl border border-line" loading="lazy" referrerPolicy="no-referrer" />
                   <figcaption className="text-xs text-muted">{t('hp.near.cap')}</figcaption></figure>
-              ) : <div className="space-y-1"><button type="button" className="btn-soft text-sm" onClick={() => setShowMap(true)}><Icon name="globe" size={15} />{t('hp.near.show')}</button><p className="text-xs text-muted">{t('hp.near.privacy')}</p></div>) : <p className="text-xs text-muted flex items-center gap-1.5"><Icon name="target" size={13} />{t('hp.near.need')}</p>}
+              ) : <div className="space-y-1"><button type="button" className="btn-soft text-sm" onClick={() => setShowMap(true)}><Icon name="globe" size={15} />{t('hp.near.show')}</button><p className="text-xs text-muted">{t('hp.near.privacy')}</p></div>) : <p className="text-xs text-muted flex items-center gap-1.5"><Icon name="target" size={13} />{t('hp.near.need', { b: t('hp.loc.get') })}</p>}
               <label className="block space-y-1 text-sm"><span className="font-medium">{t('rp.province')}</span>
                 <select className="input w-full" value={province} onChange={(e) => setProvince(e.target.value)}>{N.provList(country).map((p) => <option key={p} value={p}>{N.prov(p)}</option>)}</select></label>
               <ul className="space-y-2">{AGENCIES[problem][country].map((a) => (

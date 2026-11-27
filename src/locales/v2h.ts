@@ -68,7 +68,7 @@ export const v2h = {
   // ---------- agencies near the incident, and how to keep evidence
   'hp.near.map': ['แผนที่รอบตำแหน่งของคุณ', '您位置周边地图', 'Map around your location'],
   'hp.near.cap': ['แผนที่ OpenStreetMap รอบจุดที่คุณแชร์ กด "หาใกล้จุดนี้" ที่หน่วยงานแต่ละแห่งเพื่อดูสำนักงานที่ใกล้ที่สุด', '您分享位置周边的 OpenStreetMap 地图。点击各机构的“在附近查找”查看最近的办公室', 'OpenStreetMap around the point you shared. Tap "Find near here" on an agency to see its nearest office.'],
-  'hp.near.need': ['กด "ขอพิกัดของฉัน" ด้านบน เพื่อดูแผนที่และหน่วยงานใกล้จุดที่คุณอยู่', '点击上方“获取我的位置”，即可查看附近的地图和机构', 'Tap the location button above to see a map and the agencies near you'],
+  'hp.near.need': ['กดปุ่ม “{b}” ด้านบน เพื่อดูแผนที่และหน่วยงานใกล้จุดที่คุณอยู่', '点击上方“{b}”，即可查看附近的地图和机构', 'Tap “{b}” above to see a map and the agencies near you'],
   'hp.near.show': ['แสดงแผนที่รอบตำแหน่งนี้', '显示此位置周边地图', 'Show a map around this point'],
   'hp.near.privacy': ['แผนที่โหลดจาก OpenStreetMap ซึ่งจะได้รับพิกัดนี้เพื่อแสดงแผนที่ ระบบจึงไม่โหลดจนกว่าคุณจะกด', '地图从 OpenStreetMap 加载，对方会收到此位置以显示地图，因此在您点击前不会加载', 'The map loads from OpenStreetMap, which receives this point to draw it, so it only loads when you ask.'],
   'hp.near.find': ['หาใกล้จุดนี้', '在附近查找', 'Find near here'],
