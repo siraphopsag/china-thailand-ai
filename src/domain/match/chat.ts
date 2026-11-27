@@ -5,7 +5,9 @@
 import { maskAfter, maskContact } from '../contact'
 
 export type Side = 'employer' | 'seeker'
-export interface ChatMsg { id: string; from: Side; at: string; text: string; /** a ready-made phrase (locale ch.p.*) instead of text */ phrase?: string; masked?: boolean }
+export interface ChatMsg { id: string; from: Side; at: string; text: string; /** a ready-made phrase (locale ch.p.*) instead of text */ phrase?: string; masked?: boolean
+  /** what was typed, sent to the database once (it hides contact details itself, 0020); never kept on the device */
+  typed?: string }
 export interface Interview { slots: string[]; mode: 'video' | 'onsite'; offeredAt: string; chosen?: string; chosenAt?: string }
 export interface Chat { msgs: ChatMsg[]; interview?: Interview }
 
@@ -33,7 +35,8 @@ export function earlierPieces(chat: Chat, from: Side, at: string, max = 3): stri
   const out: string[] = []
   for (let i = chat.msgs.length - 1; i >= 0 && out.length < max; i--) {
     const m = chat.msgs[i]
-    if (m.from !== from || m.phrase || Date.parse(at) - Date.parse(m.at) > 30 * 60_000) break
+    if (m.from !== from || Date.parse(at) - Date.parse(m.at) > 30 * 60_000) break
+    if (m.phrase) continue // as in the database (0015): phrases are skipped
     out.unshift(m.text)
   }
   return out
@@ -49,7 +52,7 @@ export function newMessage(chat: Chat, from: Side, input: { text?: string; phras
   if (!raw) return { ok: false, problem: 'empty' }
   if (raw.length > MAX_TEXT) return { ok: false, problem: 'long' }
   const m = maskAfter(earlierPieces(chat, from, at), raw)
-  return { ok: true, value: { ...chat, msgs: [...chat.msgs, { id, from, at, text: m.text, ...(m.masked ? { masked: true } : {}) }] }, masked: m.masked }
+  return { ok: true, value: { ...chat, msgs: [...chat.msgs, { id, from, at, text: m.text, typed: raw, ...(m.masked ? { masked: true } : {}) }] }, masked: m.masked }
 }
 
 /** times are "YYYY-MM-DDTHH:mm" in the viewer's own time; offers are 1–3 different times, all later than now */

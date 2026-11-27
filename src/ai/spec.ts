@@ -30,7 +30,8 @@ export function pickGeminiModels(listed: Array<{ name?: string; supportedGenerat
   const pref = preferred.filter(Boolean)
   const known = offered ? pref.filter((m) => offered.includes(m)) : pref
   const extra = offered ? offered.filter((m) => textFlash(m) && !known.includes(m)).sort((a, b) => version(b) - version(a) || a.length - b.length) : []
-  return [...new Set([...known, ...extra])].slice(0, max)
+  const out = [...new Set([...known, ...extra])].slice(0, max)
+  return out.length ? out : pref.slice(0, max) // nothing recognised in Google’s list: try the preferred ones anyway (review, 27 Nov 2026)
 }
 /** uses a day per person and kind (admins: no limit) and for the whole site — enforced in the database (SQL 0009) */
 export const PER_USER_DAY = 20

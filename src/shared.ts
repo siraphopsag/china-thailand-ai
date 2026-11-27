@@ -85,7 +85,7 @@ export function useRemoteChat(accId: string | null): [Chat, (next: Chat) => void
       try {
         const sb = await getClient()
         for (const x of fresh) {
-          const { error } = await sb.from('chat_messages').insert({ id: x.id, acceptance_id: accId, body: x.phrase ? '' : x.text, phrase: x.phrase ?? null, masked: !!x.masked })
+          const { error } = await sb.from('chat_messages').insert({ id: x.id, acceptance_id: accId, body: x.phrase ? '' : x.typed ?? x.text, phrase: x.phrase ?? null })
           if (error) throw error
         }
         const a = before.interview, b = next.interview

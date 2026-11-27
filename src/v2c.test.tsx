@@ -41,9 +41,13 @@ describe('A. check-ins', () => {
     expect(CHECKIN_GRACE).toBe(2)
     expect(CHECKIN_DAYS).toEqual([1, 3, 7, 15, 30]) // owner’s blueprint, 27 Nov 2026: 24 h, 3, 7, 15, 30 days
     expect([dueDay(arr, 3), dueDay(arr, 15)]).toEqual(['2026-11-24', '2026-12-06'])
-    expect(checkinStates(arr, [], arr).map((s) => s.state)).toEqual(['open', 'upcoming', 'upcoming', 'upcoming', 'upcoming'])
-    expect(checkinStates(arr, [ci(1)], '2026-12-01').map((s) => s.state)).toEqual(['done', 'missed', 'missed', 'upcoming', 'upcoming'])
-    expect(checkinStates(arr, [ci(1)], '2026-11-30').map((s) => s.state)).toEqual(['done', 'missed', 'open', 'upcoming', 'upcoming'])
+    // review, 27 Nov 2026: a worker who arrived before the five check-ins began keeps the three (no false "missed" alerts)
+    expect(checkinStates(arr, [], arr).map((s) => s.state)).toEqual(['open', 'upcoming', 'upcoming'])
+    expect(checkinStates(arr, [ci(1)], '2026-12-01').map((s) => s.state)).toEqual(['done', 'missed', 'upcoming'])
+    const arr2 = '2026-11-28'
+    expect(checkinStates(arr2, [], arr2).map((s) => s.state)).toEqual(['open', 'upcoming', 'upcoming', 'upcoming', 'upcoming'])
+    expect(checkinStates(arr2, [ci(1)], '2026-12-07').map((s) => s.state)).toEqual(['done', 'missed', 'missed', 'upcoming', 'upcoming'])
+    expect(checkinStates(arr2, [ci(1)], '2026-12-06').map((s) => s.state)).toEqual(['done', 'missed', 'open', 'upcoming', 'upcoming'])
   })
   it('answers that need the team: unpaid (not yet is fine on day 1), passport, hours, unsafe and the secret word', () => {
     expect(checkinFlags(ci(1, { paid: 'notYet' }))).toEqual([])
@@ -54,7 +58,9 @@ describe('A. check-ins', () => {
   })
   it('team alerts put the secret word and "unsafe" first, then missed check-ins', () => {
     const a = teamAlerts(arr, [ci(1, { paid: 'no' }), ci(30, { safe: 'no', silent: true })], '2026-12-21')
-    expect(a.map((x) => (x.kind === 'flag' ? x.flag : `missed-${x.day}`))).toEqual(['silent', 'unsafe', 'unpaid', 'missed-3', 'missed-7', 'missed-15'])
+    expect(a.map((x) => (x.kind === 'flag' ? x.flag : `missed-${x.day}`))).toEqual(['silent', 'unsafe', 'unpaid', 'missed-7'])
+    const b = teamAlerts('2026-11-28', [ci(1, { paid: 'no' }), ci(30, { safe: 'no', silent: true })], '2026-12-27')
+    expect(b.map((x) => (x.kind === 'flag' ? x.flag : `missed-${x.day}`))).toEqual(['silent', 'unsafe', 'unpaid', 'missed-3', 'missed-7', 'missed-15'])
   })
 })
 

@@ -10,6 +10,9 @@ import type { Country } from './types'
 /* ---------- check-ins ---------- */
 /** the first 24 hours (arrival day), then days 3, 7, 15 and 30 (owner's blueprint, 27 Nov 2026; before: 1, 7, 30) */
 export const CHECKIN_DAYS = [1, 3, 7, 15, 30] as const
+/** workers who arrived before the five check-ins began keep the three they were told about (review, 27 Nov 2026) */
+export const FIVE_CHECKINS_FROM = '2026-11-27'
+export const checkinDaysFor = (arrival: string): readonly CheckDay[] => (arrival < FIVE_CHECKINS_FROM ? [1, 7, 30] : CHECKIN_DAYS)
 export type CheckDay = (typeof CHECKIN_DAYS)[number]
 /** days after the due day before a check-in counts as missed */
 export const CHECKIN_GRACE = 2
@@ -31,7 +34,7 @@ export const dueDay = (arrival: string, d: CheckDay) => addDays(arrival, d - 1)
 
 /** where each check-in stands on `today` (YYYY-MM-DD) for a worker who arrived on `arrival` */
 export function checkinStates(arrival: string, done: CheckIn[], today: string): { day: CheckDay; due: string; state: CheckState }[] {
-  return CHECKIN_DAYS.map((day) => {
+  return checkinDaysFor(arrival).map((day) => {
     const due = dueDay(arrival, day)
     const state: CheckState = done.some((c) => c.day === day) ? 'done' : today < due ? 'upcoming' : today > addDays(due, CHECKIN_GRACE) ? 'missed' : 'open'
     return { day, due, state }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPo
 import { tr, type Lang } from '../i18n/core'
 import { useI18n } from '../i18n'
 import { identityCheck, makeMrz, parseMrz, type IdFinding, type IdRecord, type MrzProblem } from '../domain/match/mrz'
-import { addSignature, shortHash, signBlock, signStatus, type Review, type ReviewNote, type Side, type SignState } from '../domain/match/sign'
+import { addSignature, cleanSignature, shortHash, signBlock, signStatus, type Review, type ReviewNote, type Side, type SignState } from '../domain/match/sign'
 import type { Country } from '../domain/match/types'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
@@ -254,9 +254,9 @@ type Signed = SignState | null
 export function contractHtml(docs: Record<'th' | 'zh', string[]>, hash: string, company: string, worker: string, sign: Signed = null): string {
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c)
   const col = (lg: Lang) => `<div lang="${lg === 'zh' ? 'zh-CN' : 'th'}"><h2>${esc(tr('sg.print.h' as never, undefined, lg))}</h2><ol>${docs[lg as 'th' | 'zh'].map((x) => `<li>${esc(x)}</li>`).join('')}</ol></div>`
-  const given = (s: 'worker' | 'employer') => (sign && sign.hash === hash ? sign[s] : undefined)
+  const given = (s: 'worker' | 'employer') => (sign && sign.hash === hash ? cleanSignature(sign[s]) ?? undefined : undefined)
   const line = (s: 'worker' | 'employer', who: string) => { const g = given(s), label = `${tr(`sg.side.${s}` as never, undefined, 'th')} · ${tr(`sg.side.${s}` as never, undefined, 'zh')}`
-    return `<div class="sig">${g && /^data:image\/(png|jpeg);base64,/.test(g.img) ? `<img src="${g.img}" alt="" style="height:48px">` : '<div class="ln"></div>'}<p>${esc(label)}</p><p>${esc(g?.name ?? who)}</p><p>${g ? esc(new Date(g.at).toISOString().slice(0, 10)) : `${esc(tr('sg.print.date' as never, undefined, 'th'))} ____ / ____ / ______`}</p></div>` }
+    return `<div class="sig">${g ? `<img src="${g.img}" alt="" style="height:48px">` : '<div class="ln"></div>'}<p>${esc(label)}</p><p>${esc(g?.name ?? who)}</p><p>${g ? esc(new Date(g.at).toISOString().slice(0, 10)) : `${esc(tr('sg.print.date' as never, undefined, 'th'))} ____ / ____ / ______`}</p></div>` }
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(tr('sg.print.title' as never, undefined, 'th'))}</title><style>
     body{font-family:'Noto Sans Thai','Sarabun','Microsoft YaHei',sans-serif;margin:24px;color:#111;font-size:13px;line-height:1.6}
     h1{font-size:18px;margin:0 0 4px} h2{font-size:15px;margin:12px 0 6px} .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}

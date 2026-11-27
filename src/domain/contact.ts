@@ -8,30 +8,44 @@
 // test checks the two match — so it only uses regular-expression syntax JavaScript and PostgreSQL share: no \b or \w (they mean
 // other things in PostgreSQL), letters in lower case (both sides match case-insensitively). Pure: no React, no storage.
 
-const D = '[0-9๐-๙０-９]' // Arabic, Thai and full-width digits
-const NUM = `(?:${D}|ศูนย์|หนึ่ง|สอง|สาม|สี่|ห้า|หก|เจ็ด|แปด|เก้า|[零〇一二三四五六七八九幺]|(?<![a-z])(?:zero|one|two|three|four|five|six|seven|eight|nine)(?![a-z]))`
-const SEP = '[\\s.()_–—-]*'
+// Review, 27 Nov 2026 (now that the 3rd hidden message ends a match): phone numbers are recognised by their shape — a Thai number
+// starts with 0 (or +66), a Chinese mobile with 13–19 (or +86) — so salary ranges, dates and times are left alone; digits written
+// another way (Thai or full-width digits, words) are caught as before; commas and brackets no longer split a number.
+const OBF = '(?:[๐-๙０-９]|ศูนย์|หนึ่ง|สอง|สาม|สี่|ห้า|หก|เจ็ด|แปด|เก้า|[零〇一二三四五六七八九幺]|(?<![a-z])(?:zero|one|two|three|four|five|six|seven|eight|nine)(?![a-z]))'
+const ANY = `(?:[0-9]|${OBF})`
+const SEP = '[\\s.()_–—,-]*'
+const PSEP = '[\\s,()-]*'
 const AT = '(?:[@＠]|\\(at\\)|\\[at\\]|(?<![a-z])at(?![a-z])|แอท|แอ็ท|艾特)'
 const DOT = '(?:[.．]|\\s*(?:\\(dot\\)|\\[dot\\]|(?<![a-z])dot(?![a-z])|ดอท|ด็อท|จุด|点|點)\\s*)'
+const PROV_A = '(?:gmail|googlemail|hotmail|outlook|yahoo|icloud|qq|foxmail|sina|sohu|proton(?:mail)?|จีเมล|ฮอตเมล|ยาฮู|เอาท์ลุค)'
 const PROV = '(?:gmail|googlemail|hotmail|outlook|yahoo|icloud|qq|foxmail|163|126|sina|sohu|proton(?:mail)?|จีเมล|ฮอตเมล|ยาฮู|เอาท์ลุค)'
 const LABEL = '(?:[a-z0-9-]+|จีเมล|ฮอตเมล|ยาฮู|เอาท์ลุค)'
 const TLD = '(?:com|net|org|co|th|cn|io|me|info|biz|edu|ac|go|hk|tw|sg|jp|kr|us|uk|คอม|康)(?![a-z])'
-const APP = '(?:we\\s*chat|weixin|telegram|whats\\s*app|instagram|facebook|kakao(?:talk)?|zalo|viber|tiktok|douyin|weibo|skype|discord|ไอดีไลน์|ไลน์|ไอจี|เฟส(?:บุ๊[คก])?|เฟซ(?:บุ๊[คก])?|วีแชท|วีแชต|เทเลแกรม|วอทส์แอป|ติ๊กต็อก|微信|威信|薇信|加微|v信|扣扣|企鹅号|电报|抖音|微博|脸书)'
+/** chat and social apps written in Latin letters: an id only after a separator, the word "id", or when it looks like an id (has a digit, _ or .) */
+const APP_LAT = '(?:we\\s*chat|weixin|telegram|whats\\s*app|instagram|facebook|kakao(?:talk)?|zalo|viber|tiktok|douyin|weibo|skype|discord|ไอจี|เฟส(?:บุ๊[คก])?|เฟซ(?:บุ๊[คก])?|ติ๊กต็อก|抖音|微博|脸书)'
+/** messaging apps written in Thai or Chinese: whatever Latin word follows is taken as the id */
+const APP_MSG = '(?:ไอดีไลน์|ไลน์|วีแชท|วีแชต|เทเลแกรม|วอทส์แอป|微信|威信|薇信|加微|v信|扣扣|企鹅号|电报)'
 const SHORT = '(?<![a-z])(?:line|vx|wx|tg|ig|fb|wa|qq)' // short or everyday words: only with "id", ":", "@" … after them
 const ID = '@?[a-z0-9._-]{3,}'
+const SEPW = '(?:[:：=]|คือ|是|号|號)'
 
 /** the rules, in the order the database applies them (each one is a PostgreSQL and JavaScript regular expression) */
 export const CONTACT_RULES: readonly string[] = [
   '[^\\s@]+@[^\\s@]+\\.[^\\s@]+', // e-mail as usually written
   `[a-z0-9._%+-]+\\s*[@＠]\\s*[a-z0-9-]+(?:\\s*[.．。]\\s*[a-z0-9-]+)+`, // e-mail with spaces: name @ gmail . com
   `[a-z0-9._%+-]+\\s*${AT}\\s*${LABEL}(?:${DOT}${LABEL})*${DOT}${TLD}`, // name at gmail dot com, ชื่อ แอท จีเมล ดอท คอม
-  `[a-z0-9._%+-]{2,}\\s*${AT}\\s*${PROV}(?![a-z])`, // name at gmail
+  `[a-z0-9._%+-]{2,}\\s*${AT}\\s*${PROV_A}(?![a-z0-9])`, // name at gmail (not "at 163 Moo 5")
   `(?<![a-z0-9])${PROV}(?:${DOT}|\\s+)${TLD}`, // gmail.com on its own (the rest of the address sent in another message)
   '(https?://|www\\.)\\S+', // links
-  '(?<![a-z0-9@.])[a-z0-9-]+(?:\\.[a-z0-9-]+)*\\.(?:com|net|org|me|ly|ee|io|co|th|cn|link|app|page|xyz|info|gl|to)(?![a-z0-9-])(?:/\\S*)?', // bit.ly/…, line.me/…, t.me/…
-  `\\+?\\(?${NUM}(?:${SEP}${NUM}){8,}`, // 9+ digits, also Thai or full-width digits, in words (ศูนย์แปดหนึ่ง…, 零八一…), with dots and brackets
-  '\\+?\\d[\\d\\s-]{6,}\\d', // shorter phone or id numbers (after the rule above, so the database hides "(081) 234 5678" whole)
-  `(?<![a-z])${APP}\\s*(?:id|ไอดี)?\\s*(?:(?:[:：=]|คือ|是|号|號)\\s*){0,2}${ID}`, // WeChat abc123, ไลน์คือ shop99, 微信号：abc
+  '(?<![a-z0-9@.])(?:[a-z0-9-]+\\.)+(?:com|th|cn|ly|ee|me|gl|link|page|to)(?![a-z0-9-])(?:/\\S*)?', // bit.ly/…, line.me/…, t.me/… (not ASP.NET, Socket.io)
+  `(?:[0-9]${SEP}){0,4}${OBF}(?:${SEP}${ANY}){6,}`, // 8+ digits written another way: ๐๘๑…, ０８１…, ศูนย์แปดหนึ่ง…, 零八一…
+  `(?<![0-9])\\(?(?:\\+?66${PSEP}[1-9]|0[0-9])(?:${PSEP}[0-9]){7,8}(?![0-9])`, // Thai phone: 0X…, +66 …
+  `(?<![0-9])\\(?(?:\\+?86${PSEP})?1[3-9][0-9](?:${PSEP}[0-9]){8}(?![0-9])`, // Chinese mobile: 13x–19x, +86 …
+  '(?<![0-9.])(?:0[0-9]{1,2}\\.[0-9]{3,4}|1[3-9][0-9]\\.[0-9]{4})\\.[0-9]{3,4}(?![0-9])', // dotted: 081.234.5678, 138.1234.5678 (not times like 08.00)
+  `(?<![a-z])${APP_LAT}\\s*(?:(?:id|ไอดี)\\s*)?(?:${SEPW}\\s*){1,2}${ID}`, // WeChat: abc, IG คือ name, 微博号：abc
+  `(?<![a-z])${APP_LAT}\\s*(?:id|ไอดี)\\s+${ID}`, // WeChat id abc
+  `(?<![a-z])${APP_LAT}\\s+@?(?=[a-z._-]*[0-9_.])[a-z0-9._-]{3,}`, // wechat sira99 (not "Facebook page")
+  `${APP_MSG}\\s*(?:id|ไอดี)?\\s*(?:${SEPW}\\s*){0,2}${ID}`, // ไลน์ siraooja, ไลน์คือ shop99, 微信号：abc
   `${SHORT}\\s*(?:(?:id|ไอดี)\\s*[:：=]?|@|คือ|是|号|號)\\s*${ID}`, // line id shop99, line@shop, qq号 …
   '(?<![a-z])(?:vx|wx|tg|ig|fb|wa)\\s*[:：=]\\s*@?[a-z0-9._-]{3,}', // ig: name, wx: name
   '(?<![a-z])line\\s*[:：=]\\s*@?(?=[a-z._-]*[0-9._])[a-z0-9._-]{3,}', // line: shop_99 (not "production line: operators")

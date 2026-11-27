@@ -28,6 +28,7 @@ export const v2h = {
   'wr.done': ['ส่งรีวิวลูกจ้างแล้ว', '已提交员工评价', 'Worker review sent'],
   'wr.anon': ['แสดงต่อนายจ้างคนอื่นเป็นคะแนนรวมเท่านั้น', '仅以汇总形式向其他雇主显示', 'Other employers see it only as part of a total'],
   'wr.when': ['รีวิวลูกจ้างได้ตั้งแต่ {d} (ครบ 30 วันหลังมาถึง)', '自 {d} 起可评价员工（到达满 30 天）', 'You can review the worker from {d} (30 days after arrival)'],
+  'wr.notYet': ['ยังรีวิวไม่ได้ ต้องครบ 30 วันหลังลูกจ้างมาถึงก่อน', '尚不能评价：需在员工到达满 30 天后', 'Not yet: reviews open 30 days after the worker arrived'],
   'wr.received': ['รีวิวที่คุณได้รับจากนายจ้าง', '雇主给您的评价', 'Reviews you received from employers'],
   'wr.none': ['ยังไม่มีรีวิวจากนายจ้าง', '尚无雇主评价', 'No reviews from employers yet'],
   'wr.p.onTime': ['ตรงต่อเวลา', '守时', 'On time'],

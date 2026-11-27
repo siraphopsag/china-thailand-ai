@@ -4,7 +4,7 @@
 // page keeps the same record in the database for both sides of the case (shared.ts, SQL 0014).
 import type { ContractTerms } from './domain/match/contract'
 import type { IdRecord } from './domain/match/mrz'
-import type { Review, SignState } from './domain/match/sign'
+import { cleanSignature, type Review, type SignState } from './domain/match/sign'
 
 export interface ContractSave {
   terms?: ContractTerms
@@ -30,7 +30,11 @@ export function cleanContract(v: unknown): ContractSave {
   if (isObj(v.record) && typeof v.record.surname === 'string') out.record = v.record as unknown as IdRecord
   if (typeof v.mrz === 'string' && v.mrz.length <= 120) out.mrz = v.mrz
   if (isObj(v.review) && typeof v.review.status === 'string' && Array.isArray(v.review.notes)) out.review = v.review as unknown as Review
-  if (isObj(v.sign) && typeof v.sign.hash === 'string') out.sign = v.sign as unknown as SignState
+  if (isObj(v.sign) && typeof v.sign.hash === 'string' && (v.sign.mode === 'online' || v.sign.mode === 'paper')) {
+    const w = cleanSignature(v.sign.worker), e = cleanSignature(v.sign.employer), p = v.sign.paper as SignState['paper']
+    out.sign = { hash: v.sign.hash, mode: v.sign.mode, ...(w ? { worker: w } : {}), ...(e ? { employer: e } : {}),
+      ...(isObj(p) && typeof p.name === 'string' && typeof p.at === 'string' ? { paper: { name: p.name.slice(0, 120), size: Number(p.size) || 0, at: p.at } } : {}) } as SignState
+  }
   return out
 }
 export function saveContract(id: string, patch: Partial<ContractSave>): void {

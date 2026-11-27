@@ -54,7 +54,7 @@ export function useWorkerReview(caseKey: string): [WorkerReview | undefined, (r:
         const { error } = await sb.rpc('worker_review_save', { p_case: caseKey, p_stars: r.stars, p_good: r.good, p_bad: r.bad })
         if (error) throw error
         await load()
-      } catch (e) { setProblem(/PGRST20[245]|42P01|42883|does not exist|schema cache/i.test(String((e as Error)?.message ?? '')) ? 'dbOld' : 'network') }
+      } catch (e) { if (/bad_state/.test(String((e as Error)?.message ?? ''))) { setProblem('notYet' as SyncProblem); return } setProblem(/PGRST20[245]|42P01|42883|does not exist|schema cache/i.test(String((e as Error)?.message ?? '')) ? 'dbOld' : 'network') }
     })()
   }, [remote, caseKey, load])
   void tick

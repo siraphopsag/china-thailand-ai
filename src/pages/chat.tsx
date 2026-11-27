@@ -45,7 +45,8 @@ export function ChatPage() {
   const [localChat, saveLocal] = useChat(accId, demo ? 'post-demo' : p?.id ?? '')
   const [remoteChat, saveRemote, problem, loaded] = useRemoteChat(remote ? accId : null)
   const chat: Chat = remote ? remoteChat : localChat
-  const save = (c: Chat) => (remote ? saveRemote(c) : saveLocal({ ...localChat, ...c }))
+  // what was typed is only sent to the database; the device keeps the hidden version
+  const save = (c: Chat) => (remote ? saveRemote(c) : saveLocal({ ...localChat, ...c, msgs: c.msgs.map(({ typed: _t, ...m }) => m) }))
   // opening the conversation marks what the other side wrote as read (the unread counts in the menu and the chat list)
   const lastAt = chat.msgs.length ? chat.msgs[chat.msgs.length - 1].at : ''
   useEffect(() => { if (remote && user && lastAt) markRead(user.id, accId, lastAt) }, [remote, user, accId, lastAt])
@@ -53,7 +54,7 @@ export function ChatPage() {
   const closed = closedBy(chat)
   useEffect(() => { if (closed && !remote && !demo && accId && a && !a.endedFor) endForContact(accId, closed) }, [closed, remote, demo, accId, a, endForContact])
   if (!demo && (!a || !p || !sides.length)) return <Page title={t('ch.title')}><Empty icon="bell" text={t('ch.none')} to="notifications" action={t('m.notif.title')} /></Page>
-  if (!demo && !OPEN.includes(a!.status)) return <Page title={t('ch.title')}><Empty icon="bell" text={t('ch.notYet')} to={`post?id=${p!.id}`} action={t('m.bd.openFull')} /></Page>
+  if (!demo && !OPEN.includes(a!.status) && a!.endedFor !== 'contact') return <Page title={t('ch.title')}><Empty icon="bell" text={t('ch.notYet')} to={`post?id=${p!.id}`} action={t('m.bd.openFull')} /></Page>
   const position = demo ? t('c2.sample.position') : p!.position, company = demo ? t('c2.sample.company') : p!.company
   const worker = demo ? '李明 (LI MING)' : nameOf(a!)
   const at = new Date(now).toISOString()

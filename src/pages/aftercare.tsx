@@ -173,7 +173,7 @@ function WorkerReviewBox({ caseKey, seekerId, atNow }: { caseKey: string; seeker
     <div className="rounded-xl border border-line p-3 space-y-3 text-sm">
       <p className="font-semibold flex items-center gap-2"><Icon name="star" size={16} />{t('wr.h')}</p>
       <p className="text-xs text-muted">{t('wr.d')}</p>
-      {problem && <Warn>{t(problem === 'dbOld' ? 'sh.dbOld' : 'sh.network')}</Warn>}
+      {problem && <Warn>{t(problem === 'dbOld' ? 'sh.dbOld' : (problem as string) === 'notYet' ? 'wr.notYet' : 'sh.network')}</Warn>}
       <div className="flex gap-1" role="radiogroup" aria-label={t('er.stars')}>{[1, 2, 3, 4, 5].map((n) => (
         <button key={n} type="button" role="radio" aria-checked={stars === n} aria-label={t('er.starN', { n })} onClick={() => setStars(n)} className={`er-star ${n <= stars ? 'on' : ''}`}><Icon name="star" size={26} /></button>))}</div>
       {(['good', 'bad'] as const).map((g) => (

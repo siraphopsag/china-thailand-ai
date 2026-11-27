@@ -9,6 +9,14 @@ import type { Country } from './types'
 
 export type Side = 'worker' | 'employer'
 export interface Signature { at: string; name: string; /** the drawn signature as a PNG data URL */ img: string }
+/** only a real PNG/JPEG data URL (base64 characters only) is a signature picture: anything else could carry code (review, 27 Nov 2026) */
+export const isSigImg = (v: unknown): v is string => typeof v === 'string' && v.length <= 400_000 && /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(v)
+/** a signature as stored, or null when any part is not what it should be */
+export function cleanSignature(v: unknown): Signature | null {
+  const r = v as Partial<Signature> | null
+  if (!r || typeof r !== 'object' || !isSigImg(r.img) || typeof r.name !== 'string' || typeof r.at !== 'string' || Number.isNaN(Date.parse(r.at))) return null
+  return { img: r.img, name: r.name.slice(0, 120), at: r.at }
+}
 export interface SignState {
   mode: 'online' | 'paper'
   /** fingerprint of the contract text the signatures belong to */

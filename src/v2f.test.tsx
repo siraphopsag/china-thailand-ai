@@ -25,6 +25,8 @@ import { businessProblem, cleanBusiness, cleanWork, totalYears, workProblem } fr
 import { officeNear, osmEmbed, packText } from './domain/match/reportPack'
 import { photoQuality } from './domain/photoCheck'
 import { contractHtml } from './pages/contract-steps'
+import { cleanContract } from './contractStore'
+import { isSigImg } from './domain/match/sign'
 import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
 import { messages } from './locales/index'
 import { provinces } from './locales/provinces'
@@ -63,10 +65,17 @@ describe('A. contact details in any spelling', () => {
     expect(textProblem('ไลน์ shop99', 0, 300)).toBe('contact')
     expect(textProblem('ทำงานโรงงาน กะละ 8 ชั่วโมง', 0, 300)).toBeNull()
     expect(hasContact('ศูนย์แปดหนึ่ง สองสามสี่ ห้าหกเจ็ดแปด')).toBe(true)
-    const sql = src('../supabase/migrations/0015_contact_rules.sql')
+    const sql = src('../supabase/migrations/0020_review_fixes.sql') // the latest copy of the rules (0015, replaced by 0020)
     for (const r of CONTACT_RULES) expect(sql, r).toContain(`b := regexp_replace(b, '${r}', '[•••]', 'gi');`)
-    expect(sql).toContain('create or replace function public.no_contact(t text)')
+    expect(src('../supabase/migrations/0015_contact_rules.sql')).toContain('create or replace function public.no_contact(t text)') // uses mask_contact, so 0020 updates it too
     expect(sql).toContain("if n_all > n_prev + n_new then b := '[•••]'; end if;")
+    expect(sql).toContain('new.masked := b <> btrim(new.body); -- decided here, never by the sender')
+    expect(sql).toContain("if tg_op = 'INSERT' then\n    new.ended_for := null; new.ended_by := null;")
+    // review, 27 Nov 2026: ordinary job text is not contact details (it now counts towards ending a match)
+    for (const x of ['แอดมิน TikTok Shop', 'Facebook page', 'Instagram Reels', 'interview by Skype tomorrow', 'Salary starts at 12600', 'Located at 163 Moo 5', 'ASP.NET Core', 'Socket.io', 'เงินเดือน 15000-20000', '工资8000-9000', '2026-12-01', '08.00-12.00 13.00-17.00'])
+      expect(maskContact(x), x).toEqual({ text: x, masked: false })
+    for (const x of ['081,234,5678', '138-1234-5678', '+86 138 1234 5678', '+66 81 234 5678', 'wechat id sira']) expect(maskContact(x).text, x).toBe('[•••]')
+    expect(maskAfter(['15000'], '18000').masked).toBe(false)
     for (const r of CONTACT_RULES) { expect(r).not.toMatch(/\\[bBwW]/); expect(r).not.toContain("'") } // syntax both sides share
   })
 })
@@ -314,6 +323,24 @@ describe('P. a first check of document photos, on the device (owner’s blueprin
   it('nothing is sent: the check runs in the browser and only the result is kept', () => {
     const code = src('./domain/photoCheck.ts'); expect(code).not.toMatch(/fetch\(|api\/ai|XMLHttpRequest/)
     expect(src('./pages/case-extras.tsx')).toContain("t('pc.note')")
+  })
+})
+
+describe('Q. review fixes (27 Nov 2026)', () => {
+  it('a signature picture that is not a plain PNG/JPEG data URL never reaches the printed contract', () => {
+    const docs = { th: ['ข้อ 1'], zh: ['第一条'] }
+    const bad = { hash: 'h', mode: 'online', employer: { name: 'x', img: 'data:image/png;base64,x" onerror="alert(1)', at: '2026-11-27T01:00:00Z' } } as never
+    const h = contractHtml(docs, 'h', 'c', 'w', bad)
+    expect(h).not.toContain('onerror'); expect(h.match(/class="ln"/g)?.length).toBe(2)
+    expect(cleanContract({ sign: { hash: 'h', mode: 'online', employer: { name: 'x', img: 'javascript:alert(1)', at: '2026-11-27T01:00:00Z' } } }).sign).toEqual({ hash: 'h', mode: 'online' })
+    expect(isSigImg('data:image/png;base64,iVBORw0KGgo=')).toBe(true); expect(isSigImg('data:image/svg+xml;base64,AAAA')).toBe(false)
+  })
+  it('the chat sends what was typed and keeps only the hidden version on the device; an ended match still shows its chat', () => {
+    const r = newMessage({ msgs: [] }, 'seeker', { text: 'line: sira_99' }, 'm1', '2026-11-27T01:00:00Z')
+    expect(r.ok && r.value.msgs[0]).toMatchObject({ text: '[•••]', typed: 'line: sira_99', masked: true })
+    const page = src('./pages/chat.tsx')
+    expect(page).toContain('msgs: c.msgs.map(({ typed: _t, ...m }) => m)'); expect(page).toContain("a!.endedFor !== 'contact'")
+    expect(src('./shared.ts')).toContain("body: x.phrase ? '' : x.typed ?? x.text, phrase: x.phrase ?? null })")
   })
 })
 
