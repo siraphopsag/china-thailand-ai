@@ -97,5 +97,7 @@ export const v2h = {
   'tg.l.mixed': ['สนับสนุนบางส่วน', '部分支持', 'Partly backed'],
   'tg.l.weak': ['หลักฐานยังน้อย', '证据尚少', 'Little backing yet'],
   'tg.teamOnly': ['ความเห็นจาก AI ใช้ได้เฉพาะทีม C.A.L.L. ที่ล็อกอิน', 'AI 意见仅限已登录的 C.A.L.L. 团队使用', 'The AI reading is for the signed-in C.A.L.L. team only'],
+  // ---------- the key for the shaded map (board)
+  'geo.key': ['จำนวนต่อจังหวัด', '各省数量', 'Per province'],
   'm.err.needVerify': ['ต้องยืนยันตัวตนก่อน จึงจะลงประกาศหรือปักหมุดได้', '需先完成身份验证，才能发布招聘信息或标记', 'Verify yourself first to post or pin'],
 } as const satisfies Record<string, Msg>

@@ -133,7 +133,7 @@ h1[tabindex="-1"]:focus { outline: none }
 .g-top-soon { fill: rgb(var(--globe-soon)); stroke: rgb(var(--globe-line) / .9); stroke-width: 1.2; vector-effect: non-scaling-stroke }
 .g-ptop { fill: rgb(var(--globe-prov)); stroke: rgb(var(--globe-line)); stroke-width: 1.4; vector-effect: non-scaling-stroke }
 .g-prov { fill: transparent; stroke: rgb(var(--globe-line) / .55); stroke-width: .6; vector-effect: non-scaling-stroke; cursor: pointer }
-.g-prov:hover { fill: rgb(var(--globe-line) / .14) }
+.g-prov:not(.g-heat):hover { fill: rgb(var(--globe-line) / .14) }
 .g-provmark { fill: rgb(var(--globe-prov)); stroke: #fff; stroke-width: 1.8 }
 .g-route { fill: none; stroke: rgb(var(--globe-route) / .5); stroke-width: 1.6; stroke-dasharray: 5 6; stroke-linecap: round }
 .g-route-done { fill: none; stroke: rgb(var(--globe-route)); stroke-width: 2.2; stroke-dasharray: 5 6; stroke-linecap: round }
@@ -376,8 +376,18 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .rar-tab:hover { background: rgb(var(--rar-bg)) }
 .rar-tab.is-on { background: rgb(var(--rar-bg)); color: rgb(var(--rar-fg)); box-shadow: inset 0 0 0 1px rgb(var(--rar-line)) }
 /* board map: how many posts / pins per province */
-.g-count { fill: rgb(var(--primary) / .9); stroke: rgb(var(--page)); stroke-width: 2 }
-.g-count-n { fill: rgb(var(--onprimary)); font: 700 11px/1 system-ui, sans-serif }
+/* provinces shaded by a number (the board's map): pale → dark, the same five shades in the key */
+.g-heat-0 { --heat: color-mix(in srgb, rgb(var(--primary)) 14%, rgb(var(--surface))) } .g-heat-1 { --heat: color-mix(in srgb, rgb(var(--primary)) 34%, rgb(var(--surface))) }
+.g-heat-2 { --heat: color-mix(in srgb, rgb(var(--primary)) 55%, rgb(var(--surface))) } .g-heat-3 { --heat: color-mix(in srgb, rgb(var(--primary)) 76%, rgb(var(--surface))) }
+.g-heat-4 { --heat: rgb(var(--primary)) }
+.g-heat { fill: var(--heat) }
+.g-prov.g-heat:hover { filter: brightness(1.15) }
+.g-count-n { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font: 700 11.5px/1 system-ui, sans-serif }
+.map-key { padding: .4rem .55rem; border-radius: .7rem; background: rgb(var(--surface) / .9); border: 1px solid rgb(var(--line)); font-size: 11px; line-height: 1.35; color: rgb(var(--ink)); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px) }
+.map-key-h { font-weight: 700; margin-bottom: .15rem }
+.map-key-row { display: flex; align-items: center; gap: .4rem; font-variant-numeric: tabular-nums }
+.map-key-sw { width: .8rem; height: .8rem; border-radius: .2rem; border: 1px solid rgb(var(--line)) }
+.map-key-sw { background: var(--heat) }
 
 /* map: country borders strong enough to tell neighbours apart (owner, Oct 2026), rings for tiny countries, the opening scene */
 .g-tiny { fill: none; stroke: rgb(var(--globe-active)); stroke-width: 2; stroke-dasharray: 3 2.5 }

@@ -145,8 +145,26 @@ export function leanPoint(x: number, y: number, w: number, h: number, deg: numbe
   return [ox + X * f, oy + Y * Math.cos(a) * f]
 }
 
+/* ---------- shading provinces by a number (owner, 27 Nov 2026: 77 bubbles piled up and hid Bangkok; option "ระบายสีจังหวัด") ----------
+ * Steps by rank (quintiles), so one very large province does not leave all the others the same pale colour. */
+/** upper bound of each step, ascending (at most `steps`; fewer when the values repeat) */
+export function heatSteps(values: number[], steps = 5): number[] {
+  const v = values.filter((n) => n > 0).sort((a, b) => a - b); if (!v.length) return []
+  const out: number[] = []
+  for (let i = 1; i <= steps; i++) { const x = v[Math.min(v.length - 1, Math.ceil((i / steps) * v.length) - 1)]; if (!out.length || x > out[out.length - 1]) out.push(x) }
+  return out
+}
+/** the shade 0 (pale) … 4 (dark) of a number, spread over all five shades even when there are fewer steps */
+export function heatShade(n: number, steps: number[]): number {
+  if (!steps.length) return 0
+  const i = steps.findIndex((s) => n <= s), k = i < 0 ? steps.length - 1 : i
+  return steps.length === 1 ? 4 : Math.round((k * 4) / (steps.length - 1))
+}
+const fmt = (n: number) => n.toLocaleString('en-US')
+
 export interface MapPin { country: 'TH' | 'CN'; province: string; label: string; tone?: 'mine' | 'post' }
-/** `counts` (the board): a number per province drawn as a bubble at its centre — the same numbers are listed in text next to the map */
+/** `counts` (the board): a number per province shown as its shade, with a key; the number itself appears on a province once it is
+ * large enough on screen (zoomed in) and in the name of a chosen province — the same numbers are listed in text next to the map */
 export function GeoMap({ country, province, pins = [], counts, onPickCountry, onPickProvince, label, className = 'h-[46vh] min-h-[280px] max-h-[520px]' }: {
   country: GeoCode | null; province: string | null; pins?: MapPin[]; counts?: Record<string, number>; onPickCountry: (c: GeoCode) => void; onPickProvince: (code: string | null) => void; label: string; className?: string
 }) {
@@ -166,7 +184,10 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   const proj = useMemo(() => { const p = geoMercator(); if (focusSet.length) p.fitExtent([[16, 16], [w - 16, h - 16]], { type: 'FeatureCollection', features: focusSet } as FeatureCollection); return p }, [focusSet, w, h])
   const path = useMemo(() => geoPath(proj), [proj])
   const shapes = useMemo(() => (data?.countries ?? []).map((f) => ({ code: codeOfIso(f.id), d: path(f) ?? '', b: path.bounds(f) as [[number, number], [number, number]] })), [data, path])
-  const provs = useMemo(() => (data?.provinces ?? []).map((f) => ({ f, code: f.properties.iso_3166_2!, country: (f.properties.adm0_a3 === 'THA' ? 'TH' : 'CN') as 'TH' | 'CN', d: path(f) ?? '', c: geoCentroid(f) as [number, number] })), [data, path])
+  const provs = useMemo(() => (data?.provinces ?? []).map((f) => ({ f, code: f.properties.iso_3166_2!, country: (f.properties.adm0_a3 === 'THA' ? 'TH' : 'CN') as 'TH' | 'CN', d: path(f) ?? '', c: geoCentroid(f) as [number, number], b: path.bounds(f) as [[number, number], [number, number]] })), [data, path])
+  const steps = useMemo(() => heatSteps(Object.values(counts ?? {})), [counts])
+  const heat = (code: string) => { const n = counts?.[code] ?? 0; return n > 0 ? ` g-heat g-heat-${heatShade(n, steps)}` : '' }
+  const provTitle = (code: string) => { const n = counts?.[code]; return t(`prov.${code}` as never) + (n ? ` · ${fmt(n)}` : '') }
   const capitalOf = (c: GeoCode) => CAPITALS.find((x) => x.country === c)
   // the opening scene: only when the map opens with nothing chosen; anything chosen (here or in the lists) ends it
   const [intro, setIntro] = useState(() => !country && !province)
@@ -281,6 +302,22 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   const scene = intro && data
     ? layoutFlags(ALL.flatMap((c) => { const cap = capitalOf(c), p = cap ? geoPt(cap.lon, cap.lat) : null; return p ? [{ c, x: p[0], y: p[1], width: flagWidth(name(c), smallFlags) }] : [] }), w, h, smallFlags ? 20 : FLAG_H, [{ l: w - 150, t: h - 60, r: w, b: h }]) // keep clear of "Show the map" (bottom right)
     : []
+  // the numbers on the map: only on a province that is wide enough on screen (zoomed in), biggest first, never on top of
+  // another number, a capital's name or the chosen province's name (the shade and the list beside the map carry the rest)
+  const countLabels: { code: string; x: number; y: number; text: string }[] = []
+  if (data && !intro && counts) {
+    const taken: { l: number; t: number; r: number; b: number }[] = []
+    for (const c of shownCapitals) { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); if (p) taken.push({ l: p[0] - 7, t: p[1] - 10, r: p[0] + 12 + cityName(c).length * 7.5, b: p[1] + 8 }) }
+    if (provShape) { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); if (p) { const half = provTitle(provShape.code).length * 5.5; taken.push({ l: p[0] - half, t: p[1] - 64, r: p[0] + half, b: p[1] - 8 }) } }
+    const cands = provs.filter((p) => (counts[p.code] ?? 0) > 0 && (!country || p.country === country)).sort((a, b) => counts[b.code] - counts[a.code])
+    for (const pv of cands) {
+      if (pv.code === province || (pv.b[1][0] - pv.b[0][0]) * view.k < 46) continue // the chosen province shows its number in its name
+      const p = geoPt(pv.c[0], pv.c[1], (pv.code === province ? provLift : 0) + (pv.country === country ? countryLift : 0)); if (!inView(p)) continue
+      const text = fmt(counts[pv.code]), half = text.length * 3.6 + 4, box = { l: p[0] - half, t: p[1] - 8, r: p[0] + half, b: p[1] + 8 }
+      if (taken.some((o) => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t)) continue
+      taken.push(box); countLabels.push({ code: pv.code, x: p[0], y: p[1], text })
+    }
+  }
   return (
     <div ref={box} className={`relative rounded-2xl overflow-hidden border border-line map-ocean ${className}`}>
       {failed && <p className="absolute inset-0 grid place-items-center p-6 text-center" role="alert">{t('geo.error')}</p>}
@@ -292,7 +329,9 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
             <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
               {shapes.map((s, i) => <path key={i} d={s.d} data-code={s.code} className={'g-c ' + paint(s.code)}>{s.code && <title>{name(s.code)}</title>}</path>)}
               {focusShape && <Raised d={focusShape.d} lift={countryLift} k={view.k} side={GEO[focusShape.code!].status === 'active' ? 'g-side' : 'g-side-soon'} top={GEO[focusShape.code!].status === 'active' ? 'g-top' : 'g-top-soon'} />}
-              {country && <g transform={`translate(0,${-Lc})`}>{provs.filter((p) => p.country === country).map((p) => <path key={p.code} d={p.d} data-prov={p.code} className={'g-prov' + (p.code === province ? ' is-sel' : '')}><title>{t(`prov.${p.code}` as never)}</title></path>)}</g>}
+              {/* nothing chosen: the shaded provinces of both countries; a tap goes through to the country underneath */}
+              {!country && !intro && counts && <g style={{ pointerEvents: 'none' }}>{provs.filter((p) => (counts[p.code] ?? 0) > 0).map((p) => <path key={p.code} d={p.d} className={'g-prov' + heat(p.code)} />)}</g>}
+              {country && <g transform={`translate(0,${-Lc})`}>{provs.filter((p) => p.country === country).map((p) => <path key={p.code} d={p.d} data-prov={p.code} className={'g-prov' + heat(p.code) + (p.code === province ? ' is-sel' : '')}><title>{provTitle(p.code)}</title></path>)}</g>}
               {provShape && <Raised d={provShape.d} lift={provLift} k={view.k} side="g-pside" top="g-ptop" />}
             </g>
           </svg>
@@ -312,7 +351,7 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
           {!intro && shownCapitals.map((c) => { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); return inView(p) ? (
             <g key={c.country}><circle cx={p[0]} cy={p[1]} r={5.5} className="g-capital" /><text x={p[0] + 9} y={p[1] + 4} className="g-city">{cityName(c)}</text></g>) : null })}
           {provShape && (() => { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); const up = pins.some((pn) => pn.province === provShape.code) ? 30 : 0 /* a pin stands on the same spot: lift the name above it */
-            return p ? <text x={p[0]} y={p[1] - 16 - up} textAnchor="middle" className="g-name">{t(`prov.${provShape.code}` as never)}</text> : null })()}
+            return p ? <text x={p[0]} y={p[1] - 16 - up} textAnchor="middle" className="g-name">{provTitle(provShape.code)}</text> : null })()}
           {!intro && pins.map((pn, i) => {
             const pv = provs.find((x) => x.code === pn.province); if (!pv) return null
             const p = geoPt(pv.c[0], pv.c[1], (pn.province === province ? provLift : 0) + (pn.country === country ? countryLift : 0)); if (!inView(p)) return null
@@ -320,13 +359,15 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
               <ellipse cx={0} cy={0} rx={6} ry={2.2} className="g-shadow" />
               <path d="M0 0 C-7 -9 -9 -13 -9 -17 A9 9 0 1 1 9 -17 C9 -13 7 -9 0 0 Z" className={pn.tone === 'post' ? 'g-pin-post' : 'g-pin'} /><circle cx={0} cy={-17} r={3.2} className="g-pin-dot" /></g>
           })}
-          {!intro && counts && Object.entries(counts).filter(([, n]) => n > 0).map(([code, n]) => {
-            const pv = provs.find((x) => x.code === code); if (!pv) return null
-            const p = geoPt(pv.c[0], pv.c[1], (code === province ? provLift : 0) + (pv.country === country ? countryLift : 0)); if (!inView(p)) return null
-            const r = 10 + Math.min(12, Math.sqrt(n) * 3)
-            return <g key={`n-${code}`} transform={`translate(${p[0]},${p[1]})`}><circle r={r} className="g-count" /><text y={4} textAnchor="middle" className="g-count-n">{n}</text></g>
-          })}
+          {countLabels.map((l) => <text key={`n-${l.code}`} x={l.x} y={l.y + 4} textAnchor="middle" className="g-count-n">{l.text}</text>)}
         </svg>)}
+      {/* the key for the shades (bottom left; the zoom buttons are top right) */}
+      {data && !intro && steps.length > 0 && (
+        <div className="map-key absolute left-2 bottom-2 pointer-events-none" aria-hidden>
+          <p className="map-key-h">{t('geo.key')}</p>
+          {steps.map((s, i) => { const lo = i === 0 ? Math.min(...Object.values(counts ?? {}).filter((n) => n > 0)) : steps[i - 1] + 1
+            return <p key={i} className="map-key-row"><span className={`map-key-sw g-heat-${heatShade(s, steps)}`} />{lo >= s ? fmt(s) : `${fmt(lo)}–${fmt(s)}`}</p> })}
+        </div>)}
       {scene.length > 0 && (
         <div className="map-intro absolute inset-0 pointer-events-none">
           {scene.map((l) => (

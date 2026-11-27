@@ -341,7 +341,7 @@ describe('the board (owner, Oct 2026)', () => {
     expect(page).toContain(T('m.qb.chip.post', { n: 1, max: 3 }))
   })
   it('the map shows counts only, also listed in text; menu has the board; posts link to their page', () => {
-    expect(src('./components/geomap.tsx')).toContain('className="g-count"')
+    expect(src('./components/geomap.tsx')).toContain('g-heat g-heat-'); expect(src('./components/geomap.tsx')).not.toContain('className="g-count"') // shaded provinces, not bubbles (owner, 27 Nov 2026)
     expect(src('./pages/market.tsx')).toContain(`<h3 className="text-sm font-semibold mb-1.5">{t('m.mk.top')}</h3>`) // the busiest places, also in a table
     expect(ROUTES.has('board')).toBe(true)
   })
