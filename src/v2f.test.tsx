@@ -22,7 +22,7 @@ import { DATA_ROWS } from './pages/dataMap'
 import { WORKER_BAD, WORKER_GOOD, canCloseJob, fileComplaint, jobClosed, mapLinkOf, workerReviewProblem } from './domain/match/aftercare'
 import { cleanWorkerReview } from './workerReviewStore'
 import { businessProblem, cleanBusiness, cleanWork, totalYears, workProblem } from './domain/profileExtra'
-import { packText } from './domain/match/reportPack'
+import { officeNear, osmEmbed, packText } from './domain/match/reportPack'
 import { contractHtml } from './pages/contract-steps'
 import { GEMINI_MODELS, pickGeminiModels } from './ai/spec'
 import { messages } from './locales/index'
@@ -286,6 +286,17 @@ describe('N. the shop or company and the work history (owner’s blueprint)', ()
     expect(sql).toContain('public.no_contact(business::text)'); expect(sql).toContain('grant update (business, work) on public.profiles to authenticated')
     expect(sql).toContain('where a.seeker_id = p_seeker and p.employer_id = auth.uid()')
     expect(src('./pages/post.tsx')).toContain('<ApplicantWork seekerId={a.seekerId} />'); expect(src('./pages/match.tsx')).toContain("{st.role === 'seeker' && <WorkCard />}")
+  })
+})
+
+describe('O. agencies near where it happened (owner’s blueprint)', () => {
+  it('a search around the point, a map only when asked, and tips for evidence', () => {
+    expect(officeNear('TH', 'สำนักงานสวัสดิการ', { lat: 13.75, lng: 100.5 })).toBe('https://www.google.com/maps/search/' + encodeURIComponent('สำนักงานสวัสดิการ') + '/@13.75,100.5,14z')
+    expect(officeNear('CN', '劳动监察', { lat: 22.5, lng: 114 })).toContain('center=114,22.5')
+    expect(osmEmbed({ lat: 13.75, lng: 100.5 })).toMatch(/^https://www.openstreetmap.org/export/embed.html?bbox=100.48d+%2C13.73d+%2C100.51d+%2C13.76d+&layer=mapnik&marker=13.75000%2C100.50000$/)
+    const page = src('./pages/sos.tsx')
+    expect(page).toContain('showMap ? ('); expect(page).toContain("t('hp.near.privacy')")
+    expect(src('../vercel.json')).toContain('frame-src https://accounts.google.com/gsi/ https://www.openstreetmap.org;')
   })
 })
 

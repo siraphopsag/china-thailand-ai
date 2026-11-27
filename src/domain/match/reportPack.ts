@@ -27,6 +27,19 @@ export const AGENCIES: Record<ProblemKind, Record<Country, string[]>> = {
 /** the problems where life or freedom may be at risk: the page puts the emergency numbers first */
 export const URGENT: readonly ProblemKind[] = ['forced', 'violence']
 
+/** the agency searched around a point (owner's blueprint, 27 Nov 2026: "agencies near where it happened"): AMap in China, Google
+ *  Maps elsewhere. Opened by the person; the app sends nothing. */
+export function officeNear(country: Country, agencyName: string, at: { lat: number; lng: number }) {
+  return country === 'CN'
+    ? `https://uri.amap.com/search?keyword=${encodeURIComponent(agencyName)}&center=${at.lng},${at.lat}`
+    : `https://www.google.com/maps/search/${encodeURIComponent(agencyName)}/@${at.lat},${at.lng},14z`
+}
+/** an OpenStreetMap view of about 2 km around a point with a marker (free, no key; shown in a frame) */
+export function osmEmbed(at: { lat: number; lng: number }, km = 2) {
+  const dLat = km / 111, dLng = km / (111 * Math.max(0.2, Math.cos((at.lat * Math.PI) / 180)))
+  const f = (n: number) => n.toFixed(5)
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${f(at.lng - dLng)}%2C${f(at.lat - dLat)}%2C${f(at.lng + dLng)}%2C${f(at.lat + dLat)}&layer=mapnik&marker=${f(at.lat)}%2C${f(at.lng)}`
+}
 /** the office search for a province: the agency's office in that province, opened in a map search (Amap in China) */
 export function officeSearch(country: Country, provinceName: string, agencyName: string) {
   const q = `${agencyName} ${provinceName}`

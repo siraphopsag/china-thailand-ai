@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useMatch } from '../matchData'
 import { HELPLINES, type HelpCountry } from '../data/helplines'
-import { AGENCIES, EVIDENCE, PROBLEMS, URGENT, officeSearch, packText, type ProblemKind } from '../domain/match/reportPack'
+import { AGENCIES, EVIDENCE, PROBLEMS, URGENT, officeNear, officeSearch, osmEmbed, packText, type ProblemKind } from '../domain/match/reportPack'
 import { ME } from '../domain/match/types'
 import { Icon } from '../components/icons'
 import { Warn } from '../components/ui'
@@ -30,6 +30,7 @@ export function SosPage() {
   const [have, setHave] = useState<string[]>([])
   const [note, setNote] = useState('')
   const [loc, setLoc] = useState<{ lat: number; lng: number } | 'busy' | 'denied' | null>(null)
+  const [showMap, setShowMap] = useState(false) // the map is loaded from OpenStreetMap only when asked (it receives the point)
   const lines = HELPLINES[country]
   const switchCountry = (c: HelpCountry) => { setCountry(c); setProvince(c === 'CN' ? 'CN-GD' : 'TH-10') }
   const share = () => {
@@ -111,14 +112,21 @@ export function SosPage() {
               <label className="block space-y-1 text-sm"><span className="font-medium">{t('rp.pack.note')}</span>
                 <textarea className="input w-full min-h-[90px]" maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} aria-describedby="rp-note-h" /></label>
               <p id="rp-note-h" className="text-xs text-muted">{t('rp.note.hint')}</p>
+              <details className="text-sm rounded-xl border border-line p-3"><summary className="cursor-pointer font-medium">{t('hp.tips.h')}</summary>
+                <ul className="mt-2 space-y-1 list-disc pl-5 text-muted">{(['photo', 'chat', 'money', 'people', 'copy', 'safe'] as const).map((k) => <li key={k}>{t(`hp.tips.${k}`)}</li>)}</ul></details>
             </div>
             <div className="space-y-2"><h3 className="font-semibold text-sm">{t('rp.pack.agency')}</h3>
+              {loc && typeof loc === 'object' ? (showMap ? (
+                <figure className="space-y-1"><iframe title={t('hp.near.map')} src={osmEmbed(loc)} className="w-full h-56 rounded-xl border border-line" loading="lazy" referrerPolicy="no-referrer" />
+                  <figcaption className="text-xs text-muted">{t('hp.near.cap')}</figcaption></figure>
+              ) : <div className="space-y-1"><button type="button" className="btn-soft text-sm" onClick={() => setShowMap(true)}><Icon name="globe" size={15} />{t('hp.near.show')}</button><p className="text-xs text-muted">{t('hp.near.privacy')}</p></div>) : <p className="text-xs text-muted flex items-center gap-1.5"><Icon name="target" size={13} />{t('hp.near.need')}</p>}
               <label className="block space-y-1 text-sm"><span className="font-medium">{t('rp.province')}</span>
                 <select className="input w-full" value={province} onChange={(e) => setProvince(e.target.value)}>{N.provList(country).map((p) => <option key={p} value={p}>{N.prov(p)}</option>)}</select></label>
               <ul className="space-y-2">{AGENCIES[problem][country].map((a) => (
                 <li key={a} className="rounded-lg border border-line p-3 text-sm space-y-1">
                   <p className="font-medium">{t(`rp.ag.${a}` as never)}</p>
                   <p className="text-xs text-muted">{t(`rp.agd.${a}` as never)}</p>
+                  {loc && typeof loc === 'object' && <a className="text-primary underline inline-flex items-center gap-1 min-h-[24px] mr-3" href={officeNear(country, t(`rp.ag.${a}` as never), loc)} target="_blank" rel="noopener noreferrer"><Icon name="target" size={13} />{t('hp.near.find')}</a>}
                   <a className="text-primary underline inline-flex items-center gap-1 min-h-[24px]" href={officeSearch(country, provName, t(`rp.ag.${a}` as never))} target="_blank" rel="noopener noreferrer"><Icon name="pin" size={14} />{t('rp.office', { p: provName })}</a>
                 </li>))}</ul>
             </div>
