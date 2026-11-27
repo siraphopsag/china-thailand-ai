@@ -377,9 +377,8 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .rar-tab.is-on { background: rgb(var(--rar-bg)); color: rgb(var(--rar-fg)); box-shadow: inset 0 0 0 1px rgb(var(--rar-line)) }
 /* board map: how many posts / pins per province */
 /* provinces shaded by a number (the board's map): pale → dark, the same five shades in the key */
-.g-heat-0 { --heat: color-mix(in srgb, rgb(var(--primary)) 14%, rgb(var(--surface))) } .g-heat-1 { --heat: color-mix(in srgb, rgb(var(--primary)) 34%, rgb(var(--surface))) }
-.g-heat-2 { --heat: color-mix(in srgb, rgb(var(--primary)) 55%, rgb(var(--surface))) } .g-heat-3 { --heat: color-mix(in srgb, rgb(var(--primary)) 76%, rgb(var(--surface))) }
-.g-heat-4 { --heat: rgb(var(--primary)) }
+/* pale yellow → deep red: the busiest provinces read as red (owner, 27 Nov 2026: "ที่คนเยอะอยากให้เป็นสีแดง"), the same in light and dark */
+.g-heat-0 { --heat: #fde9a9 } .g-heat-1 { --heat: #fbc265 } .g-heat-2 { --heat: #f68d45 } .g-heat-3 { --heat: #e0512f } .g-heat-4 { --heat: #b4161b }
 .g-heat { fill: var(--heat) }
 .g-prov.g-heat:hover { filter: brightness(1.15) }
 .g-count-n { fill: rgb(var(--ink)); paint-order: stroke; stroke: rgb(var(--page) / .9); stroke-width: 3px; stroke-linejoin: round; font: 700 11.5px/1 system-ui, sans-serif }

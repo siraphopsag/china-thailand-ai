@@ -161,6 +161,8 @@ export function heatShade(n: number, steps: number[]): number {
   return steps.length === 1 ? 4 : Math.round((k * 4) / (steps.length - 1))
 }
 const fmt = (n: number) => n.toLocaleString('en-US')
+/** the province a capital stands in: its number goes next to the capital's name (Bangkok's own label sat on top of it) */
+const CAPITAL_PROV: Partial<Record<GeoCode, string>> = { TH: 'TH-10', CN: 'CN-BJ' }
 
 export interface MapPin { country: 'TH' | 'CN'; province: string; label: string; tone?: 'mine' | 'post' }
 /** `counts` (the board): a number per province shown as its shade, with a key; the number itself appears on a province once it is
@@ -295,6 +297,7 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   const geoPt = (lon: number, lat: number, lift = 0): [number, number] | null => { const p = proj([lon, lat]); return p ? flat(p[0], p[1], lift) : null }
   const name = (c: string) => t(`geo.c.${c}` as never)
   const cityName = (c: Capital) => t(`geo.city.${c.name.replace(/\s/g, '')}` as never)
+  const capText = (c: Capital) => { const pv = CAPITAL_PROV[c.country as GeoCode], n = pv ? counts?.[pv] : 0; return cityName(c) + (n ? ` · ${fmt(n)}` : '') }
   // capitals: Bangkok and Beijing on the overview, otherwise the chosen country's capital
   const shownCapitals = (country ? [capitalOf(country)] : [capitalOf('TH'), capitalOf('CN')]).filter((c): c is Capital => !!c)
   const inView = (p: [number, number] | null): p is [number, number] => !!p && p[0] > -40 && p[0] < w + 40 && p[1] > -40 && p[1] < h + 40
@@ -307,13 +310,15 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
   const countLabels: { code: string; x: number; y: number; text: string }[] = []
   if (data && !intro && counts) {
     const taken: { l: number; t: number; r: number; b: number }[] = []
-    for (const c of shownCapitals) { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); if (p) taken.push({ l: p[0] - 7, t: p[1] - 10, r: p[0] + 12 + cityName(c).length * 7.5, b: p[1] + 8 }) }
+    for (const c of shownCapitals) { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); if (p) taken.push({ l: p[0] - 7, t: p[1] - 10, r: p[0] + 12 + capText(c).length * 7.5, b: p[1] + 8 }) }
     if (provShape) { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); if (p) { const half = provTitle(provShape.code).length * 5.5; taken.push({ l: p[0] - half, t: p[1] - 64, r: p[0] + half, b: p[1] - 8 }) } }
     const cands = provs.filter((p) => (counts[p.code] ?? 0) > 0 && (!country || p.country === country)).sort((a, b) => counts[b.code] - counts[a.code])
     for (const pv of cands) {
-      if (pv.code === province || (pv.b[1][0] - pv.b[0][0]) * view.k < 46) continue // the chosen province shows its number in its name
+      const text = fmt(counts[pv.code]), half = text.length * 3.6 + 4
+      // the chosen province and a capital's province show the number in their names; elsewhere the number must fit its province
+      if (pv.code === province || Object.values(CAPITAL_PROV).includes(pv.code) || (pv.b[1][0] - pv.b[0][0]) * view.k < half * 2 - 4) continue
       const p = geoPt(pv.c[0], pv.c[1], (pv.code === province ? provLift : 0) + (pv.country === country ? countryLift : 0)); if (!inView(p)) continue
-      const text = fmt(counts[pv.code]), half = text.length * 3.6 + 4, box = { l: p[0] - half, t: p[1] - 8, r: p[0] + half, b: p[1] + 8 }
+      const box = { l: p[0] - half, t: p[1] - 8, r: p[0] + half, b: p[1] + 8 }
       if (taken.some((o) => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t)) continue
       taken.push(box); countLabels.push({ code: pv.code, x: p[0], y: p[1], text })
     }
@@ -349,7 +354,7 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
           {!intro && view.k < 3 && TINY.map((c) => { const cap = capitalOf(c), p = cap ? geoPt(cap.lon, cap.lat, c === country ? countryLift : 0) : null; return inView(p) ? <circle key={`ring-${c}`} cx={p[0]} cy={p[1]} r={11} className="g-tiny" /> : null })}
           {scene.map((l) => <g key={`pole-${l.c}`}><line x1={l.x} y1={l.y} x2={l.x} y2={l.y - l.pole} className="g-pole" /><circle cx={l.x} cy={l.y} r={2.6} className="g-pole-foot" /></g>)}
           {!intro && shownCapitals.map((c) => { const p = geoPt(c.lon, c.lat, c.country === country ? countryLift : 0); return inView(p) ? (
-            <g key={c.country}><circle cx={p[0]} cy={p[1]} r={5.5} className="g-capital" /><text x={p[0] + 9} y={p[1] + 4} className="g-city">{cityName(c)}</text></g>) : null })}
+            <g key={c.country}><circle cx={p[0]} cy={p[1]} r={5.5} className="g-capital" /><text x={p[0] + 9} y={p[1] + 4} className="g-city">{capText(c)}</text></g>) : null })}
           {provShape && (() => { const p = geoPt(provShape.c[0], provShape.c[1], provLift + countryLift); const up = pins.some((pn) => pn.province === provShape.code) ? 30 : 0 /* a pin stands on the same spot: lift the name above it */
             return p ? <text x={p[0]} y={p[1] - 16 - up} textAnchor="middle" className="g-name">{provTitle(provShape.code)}</text> : null })()}
           {!intro && pins.map((pn, i) => {
