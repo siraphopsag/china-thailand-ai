@@ -159,7 +159,7 @@ describe('C. the calendar', () => {
     expect(ics).toContain('SUMMARY:Start\\, day\\; one'); expect(ics.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true); expect(ics.endsWith('END:VCALENDAR\r\n')).toBe(true)
   })
   it('the calendar page and the case page show the appointments; the agency can set them on the case', () => {
-    const st = seedState(NOW); st.role = 'seeker'
+    const st = seedState(Date.now()); st.role = 'seeker' // the page counts from today, so the sample is made relative to today (the test was date-bound)
     const cal = html(<CalendarPage />, st)
     expect(cal).toContain('role="grid"'); expect(cal).toContain(T('m.cal.upcoming')); expect(cal).toContain('cal-training'); expect(cal).toContain(T('m.cal.ics'))
     const cs = html(<CasePage />, st, '?id=case-s1')
