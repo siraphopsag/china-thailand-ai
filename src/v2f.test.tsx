@@ -293,7 +293,7 @@ describe('O. agencies near where it happened (owner’s blueprint)', () => {
   it('a search around the point, a map only when asked, and tips for evidence', () => {
     expect(officeNear('TH', 'สำนักงานสวัสดิการ', { lat: 13.75, lng: 100.5 })).toBe('https://www.google.com/maps/search/' + encodeURIComponent('สำนักงานสวัสดิการ') + '/@13.75,100.5,14z')
     expect(officeNear('CN', '劳动监察', { lat: 22.5, lng: 114 })).toContain('center=114,22.5')
-    expect(osmEmbed({ lat: 13.75, lng: 100.5 })).toMatch(/^https://www.openstreetmap.org/export/embed.html?bbox=100.48d+%2C13.73d+%2C100.51d+%2C13.76d+&layer=mapnik&marker=13.75000%2C100.50000$/)
+    expect(osmEmbed({ lat: 13.75, lng: 100.5 })).toMatch(/^https:\/\/www\.openstreetmap\.org\/export\/embed\.html\?bbox=100\.48\d+%2C13\.73\d+%2C100\.51\d+%2C13\.76\d+&layer=mapnik&marker=13\.75000%2C100\.50000$/)
     const page = src('./pages/sos.tsx')
     expect(page).toContain('showMap ? ('); expect(page).toContain("t('hp.near.privacy')")
     expect(src('../vercel.json')).toContain('frame-src https://accounts.google.com/gsi/ https://www.openstreetmap.org;')
