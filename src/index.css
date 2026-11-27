@@ -642,7 +642,8 @@ a.prep-strip-warn:hover { filter: brightness(.97) }
 .mn-item:focus-visible { outline: 2px solid rgb(var(--primary)); outline-offset: 2px }
 .mn-icon { position: relative; display: grid; place-items: center; transition: opacity .18s ease }
 .mn-h .mn-icon { margin-top: 2px }
-.mn-label { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: calc(11px * var(--fs)); font-weight: 700; color: var(--hue-l); transition: opacity .2s ease }
+.mn-label { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: calc(11px * min(var(--fs), 1.15)); font-weight: 700; color: var(--hue-l); transition: opacity .2s ease }
+/* the phone bar keeps its height, so its label grows only one step: larger ones ran into the next icon (owner, 27 Nov 2026) */
 :root[data-theme='dark'] .mn-label { color: var(--hue-d) }
 .mn-bead { position: absolute; left: 0; top: 0; width: 46px; height: 46px; border-radius: 9999px; display: grid; place-items: center; color: #111318;
   background: radial-gradient(70% 60% at 35% 25%, rgb(255 255 255 / .45), transparent 60%), var(--hue);
