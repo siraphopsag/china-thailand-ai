@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { heatShade, heatSteps } from './components/geomap'
+import { heatShade, heatSteps, leanPoint, unleanPoint } from './components/geomap'
 
 // the board's map shades provinces by a number (owner, 27 Nov 2026: the bubbles piled up and hid Bangkok)
 describe('province shades', () => {
@@ -15,5 +15,15 @@ describe('province shades', () => {
     const one = heatSteps([3, 3, 3]); expect(one).toEqual([3]); expect(heatShade(3, one)).toBe(4)
     const two = heatSteps([1, 1, 1, 2]); expect(two).toEqual([1, 2]); expect(heatShade(1, two)).toBe(0); expect(heatShade(2, two)).toBe(4)
     expect(heatShade(7, [])).toBe(0)
+  })
+})
+
+// tapping a province brings it to the middle of the map (owner, 27 Nov 2026)
+describe('the leaning map', () => {
+  it('unleanPoint undoes leanPoint, so a chosen spot lands where it is meant to', () => {
+    for (const deg of [0, 24, 40]) for (const [x, y] of [[400, 260], [120, 40], [700, 450]]) {
+      const [sx, sy] = leanPoint(x, y, 800, 520, deg), [bx, by] = unleanPoint(sx, sy, 800, 520, deg)
+      expect(bx).toBeCloseTo(x, 6); expect(by).toBeCloseTo(y, 6)
+    }
   })
 })

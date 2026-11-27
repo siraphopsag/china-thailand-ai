@@ -146,6 +146,15 @@ export const TILT = { overview: 28, focused: 14, phone: 0.85 }
 const perspectiveFor = (w: number) => (w < 640 ? 900 : 1100)
 const scaleFor = (deg: number) => 1 + deg * 0.0053
 /** where a point of the flat map plane appears on screen once the plane leans back (same maths as the CSS transform) */
+/** each tap on a province brings the map this much closer; the province's centre lands a little below the middle, leaving
+ *  room for its name above it */
+const PICK_ZOOM = 1.3, PICK_Y = 0.56, PROV_LIFT = 9
+/** the inverse of leanPoint: which flat-plane point shows at this spot on the screen */
+export function unleanPoint(sx: number, sy: number, w: number, h: number, deg: number): [number, number] {
+  const ox = w / 2, oy = h * 0.62, P = perspectiveFor(w), s = scaleFor(deg), a = (deg * Math.PI) / 180
+  const Yt = sy - oy, Y = (Yt * P) / (P * Math.cos(a) + Yt * Math.sin(a)), f = P / (P - Y * Math.sin(a))
+  return [ox + (sx - ox) / f / s, oy + Y / s]
+}
 export function leanPoint(x: number, y: number, w: number, h: number, deg: number): [number, number] {
   const ox = w / 2, oy = h * 0.62, P = perspectiveFor(w), s = scaleFor(deg), a = (deg * Math.PI) / 180
   const X = (x - ox) * s, Y = (y - oy) * s
@@ -236,28 +245,25 @@ export function GeoMap({ country, province, pins = [], counts, onPickCountry, on
     const step = (n: number) => { const p = Math.min(1, (n - t0) / 700); setView(lerpView(from, to, p)); if (p < 1) anim.current = requestAnimationFrame(step) }
     anim.current = requestAnimationFrame(step)
   }
-  // choosing or clearing a province inside the same country never zooms out (owner, 27 Nov 2026: zoomed in on Bangkok, a tap
-  // threw the map back out to the preset size, which made him dizzy). Zoomed in already: stay put if the province is on screen,
-  // otherwise slide over to it at the same zoom. Zoomed out further than the province's frame: zoom in as before.
+  // choosing a province inside the same country: it slides to the middle of the map and comes a little closer each time
+  // (owner, 27 Nov 2026), never further out (a tap that threw the map back out to the preset size made him dizzy). Clearing
+  // the choice leaves the map where it is.
   const last = useRef({ country, province, w, h })
   useEffect(() => {
     const was = last.current; last.current = { country, province, w, h }
     const sameCountry = was.country === country && was.w === w && was.h === h && !intro
     if (sameCountry && was.province !== province) {
-      const cur = viewRef.current
-      if (!province) return // clearing the choice: the map stays where it is
-      if (cur.k >= target.k) {
-        const pv = provs.find((x) => x.code === province); if (!pv) return
-        const cx = (pv.b[0][0] + pv.b[1][0]) / 2, cy = (pv.b[0][1] + pv.b[1][1]) / 2, sx = cur.x + cur.k * cx, sy = cur.y + cur.k * cy
-        if (sx > w * 0.12 && sx < w * 0.88 && sy > h * 0.12 && sy < h * 0.88) return
-        flyTo(clampView({ k: cur.k, x: w / 2 - cur.k * cx, y: h / 2 - cur.k * cy }, w, h)); return
-      }
+      if (!province) return
+      const pv = provs.find((x) => x.code === province), at = pv && proj(pv.c); if (!at) return
+      const cur = viewRef.current, k = Math.min(MAX_K, Math.max(target.k, cur.k * PICK_ZOOM))
+      const [fx, fy] = unleanPoint(w / 2, h * PICK_Y, w, h, tilt) // the spot on the leaning plane that shows in the middle
+      flyTo(clampView({ k, x: fx - k * at[0], y: fy + PROV_LIFT - k * at[1] }, w, h)); return
     }
     flyTo(target)
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps -- flyTo reads refs only
   useEffect(() => () => cancelAnimationFrame(anim.current), [])
   const countryLift = useTween(country && !province ? 12 : 0, 420)
-  const provLift = useTween(province ? 9 : 0, 380)
+  const provLift = useTween(province ? PROV_LIFT : 0, 380)
   // fewer effects (older phones): a flat map — the 3D lean is redrawn every frame while panning
   const lite = useLite()
   const fs = useTextScale() // labels grow with the text size in Settings, so their boxes do too
