@@ -48,3 +48,11 @@ describe('the demo account alone', () => {
     expect(sql).toContain("update public.cases set steps = steps || jsonb_build_object('submitted', now())")
   })
 })
+
+describe('SQL 0023', () => {
+  it('a demo account reviews its worker without the 30-day wait; everyone else still waits, and the worker must have arrived', () => {
+    const sql = readFileSync('supabase/migrations/0023_demo_review.sql', 'utf8')
+    expect(sql).toContain("if arrived is null or (not public.is_demo_user() and (now() at time zone 'Asia/Bangkok')::date < (arrived at time zone 'Asia/Bangkok')::date + 29) then")
+    expect(sql).toContain('c.employer_id is distinct from auth.uid()')
+  })
+})

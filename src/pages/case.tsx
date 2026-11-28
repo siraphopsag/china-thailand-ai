@@ -9,7 +9,7 @@ import { cleanPhone, cleanRegNo, isMobile, isRegNo, oneTimeCode } from '../domai
 import { Icon, type IconName } from '../components/icons'
 import { Warn } from '../components/ui'
 import { useConfirm } from '../components/confirm'
-import { AgencyLinks, Empty, Page, Toast, useApplicantName, useGate, useNames } from './match'
+import { AgencyLinks, DemoTools, Empty, Page, Toast, useApplicantName, useGate, useNames } from './match'
 import { ScamNote } from './safety'
 import { ArrivalBox, DocAttach } from './case-extras'
 import { AftercarePanel, arrivalDay } from './aftercare'
@@ -46,7 +46,8 @@ export function CasePage() {
     ? <AftercarePanel c={c} caseKey={c.id} employerId={p.employerId} country={p.country} province={p.province} today={localDay(new Date(now).toISOString())}
         seekerId={c.seekerId} view={isSeeker ? 'seeker' : 'employer'} team={agency} atNow={new Date(now).toISOString()} />
     : null
-  return <CaseView key={c.id} c={c} sub={`${p.position} · ${p.company}`} isSeeker={isSeeker} isEmployer={isEmployer}
+  // demo: the clock, to see the check-ins and the review after day 30 without waiting (owner, 27 Nov 2026)
+  return <CaseView key={c.id} c={c} sub={`${p.position} · ${p.company}`} isSeeker={isSeeker} isEmployer={isEmployer} top={<DemoTools />}
     withName={isEmployer && acc ? nameOf(acc) : null} agency={team} act={(a) => caseAct(c.id, a)} extra={after}
     seekerUnverified={(c.seekerId === ME || mode === 'remote') && !c.steps.accepted && !seekerVerified} />
 }
@@ -188,7 +189,7 @@ function CaseInfo({ c }: { c: Case }) {
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             <Ticks title={t('m.cs.docs')} items={DOCS.map((k) => ({ k, label: t(`m.cs.doc.${k}` as never), on: !!c.docs[k] }))} />
             <Ticks title={t('m.cs.tests')} items={TESTS.map((k) => ({ k, label: t(`m.cs.test.${k}` as never), on: !!c.tests[k] }))} />
-            <Ticks title={`${t('m.cs.trainings')} · ${trainingsLeft(c)}/${c.trainings.length}`} items={c.trainings.map((x) => ({ k: x.id, label: trainingName(x, t as never), on: x.done }))} />
+            <Ticks title={`${t('m.cs.trainings')} · ${c.trainings.length - trainingsLeft(c)}/${c.trainings.length}`} items={c.trainings.map((x) => ({ k: x.id, label: trainingName(x, t as never), on: x.done }))} />
             <Ticks title={t('m.cs.permit')} items={PERMITS.map((k) => ({ k, label: t(`m.cs.permit.${k}` as never), on: !!c.permit[k] }))} />
           </div>
           {c.note && <div className="card-i !p-2.5 text-sm"><p className="font-medium text-xs">{t('m.cs.note')}</p><p className="text-muted whitespace-pre-line">{c.note}</p></div>}
