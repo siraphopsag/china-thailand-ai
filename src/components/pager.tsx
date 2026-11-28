@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
 import { useI18n } from '../i18n'
 import { Icon } from './icons'
 
@@ -55,6 +55,37 @@ export function usePaged<T>(items: T[], size: number) {
   const pages = Math.max(1, Math.ceil(items.length / per))
   const p = Math.min(page, pages - 1)
   return { items: items.slice(p * per, p * per + per), page: p, pages, setPage }
+}
+
+/**
+ * Endless scrolling (owner, 28 Nov 2026: "no page buttons, keep scrolling down like on a phone"): the first `step` items, then
+ * `step` more each time the end comes near. `root` is the box that scrolls (null = the page); `reset` starts again from the
+ * top when what is shown changes (a filter, a tab, the order). The end also has a button for keyboards and screen readers.
+ */
+export function useEndless<T>(items: T[], step: number, root: RefObject<HTMLElement | null> | null, reset: string) {
+  const [n, setN] = useState(step)
+  const end = useRef<HTMLDivElement>(null)
+  const more = () => setN((x) => Math.min(items.length, x + step))
+  useEffect(() => { setN(step); if (root?.current) root.current.scrollTop = 0 }, [reset, step, root])
+  useEffect(() => {
+    const el = end.current; if (!el || n >= items.length || typeof IntersectionObserver === 'undefined') return
+    // a new observer each time more show: it reports at once, so a short list keeps filling until the box can scroll
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) setN((x) => Math.min(items.length, x + step)) }, { root: root?.current ?? null, rootMargin: '0px 0px 600px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [n, items.length, step, root])
+  return { items: items.slice(0, n), shown: Math.min(n, items.length), total: items.length, more: n < items.length ? more : null, end }
+}
+
+/** the end of an endless list: how many show, and a button for the next ones */
+export function EndlessEnd({ e, className = '' }: { e: { shown: number; total: number; more: (() => void) | null; end: RefObject<HTMLDivElement | null> }; className?: string }) {
+  const { t } = useI18n()
+  return (
+    <div ref={e.end} className={`flex flex-col items-center gap-2 py-3 ${className}`}>
+      <p className="text-sm text-muted tabular-nums" aria-live="polite">{t('m.pg.shown', { n: e.shown, all: e.total })}</p>
+      {e.more && <button type="button" className="btn-ghost text-sm !rounded-full" onClick={e.more}><Icon name="down" size={15} />{t('m.pg.more')}</button>}
+    </div>
+  )
 }
 
 /**

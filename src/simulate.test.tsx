@@ -101,10 +101,11 @@ describe('the yellow label', () => {
 })
 
 describe('board layout (owner, Oct 2026): computers 4 × 2, phones one row each (option ก)', () => {
-  it('computers: pages of 8 cards in 4 columns; phones: one row per post that scrolls on; the whole row opens the details', () => {
+  it('computers: 4 columns that keep scrolling (no page buttons, 28 Nov 2026); phones: one row per post; the whole row opens the details', () => {
     const b = src('./pages/board.tsx')
-    expect(b).toContain('const PAGE = { cols: 4, rows: 2 }')
-    expect(b).toContain('const pg = usePaged(shown, fit ? PAGE.cols * PAGE.rows : Infinity)')
+    expect(b).toContain('const PAGE = { cols: 4, step: 24 }')
+    expect(b).toContain('const e = useEndless(shown, PAGE.step, fit ? gridRef : null, reset)')
+    expect(b).not.toContain('<Pager')
     expect(b).toContain('<ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4')
     expect(b).toContain("after:absolute after:inset-0 after:content-['']") // the whole card opens the details on every screen (owner, 27 Nov 2026)
     // the title is cut inside the button (a button is one box, so cutting the heading did nothing)

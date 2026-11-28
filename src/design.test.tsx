@@ -40,7 +40,7 @@ import { CasePage } from './pages/case'
 import { AnalyticsPage, sampleDaily } from './pages/analytics'
 import { Header } from './components/shell'
 import { SideNav } from './components/sidenav'
-import { PagedList } from './components/pager'
+import { EndlessEnd, PagedList, useEndless } from './components/pager'
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
 const css = src('./index.css')
@@ -279,6 +279,11 @@ describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, st
     // where a part cannot fit it scrolls inside instead of being cut off
     expect(src('./pages/match.tsx')).toContain("body ?? 'space-y-4 fit:space-y-3 fit:overflow-y-auto'")
     expect(src('./components/pager.tsx')).toContain('fit:flex-1 fit:min-h-0 fit:overflow-y-auto')
+  })
+  it('the board keeps scrolling: 24 cards first, then a count and a "show more" for keyboards (owner, 28 Nov 2026)', () => {
+    const L = () => { const e = useEndless(Array.from({ length: 30 }, (_, i) => i), 24, null, ''); return <>{e.items.map((n) => <span key={n}>{`card ${n};`}</span>)}<EndlessEnd e={e} /></> }
+    const h = html(<L />, seedState(NOW))
+    expect(h.match(/card \d+;/g)?.length).toBe(24); expect(h).toContain(T('m.pg.more')); expect(h).not.toContain(T('m.pg.next'))
   })
   it('a paged list shows everything when the screen does not fit (phones, tests)', () => {
     const h = html(<PagedList items={[1, 2, 3]} rowH={60} keyOf={(n) => String(n)} render={(n) => <span>item {n}</span>} />, seedState(NOW))

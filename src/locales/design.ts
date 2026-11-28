@@ -161,6 +161,8 @@ export const design = {
   'm.pg.prev': ['หน้าก่อน', '上一页', 'Previous page'],
   'm.pg.next': ['หน้าถัดไป', '下一页', 'Next page'],
   'm.pg.of': ['หน้า {p} / {n}', '第 {p} / {n} 页', 'Page {p} of {n}'],
+  'm.pg.shown': ['แสดง {n} จาก {all} รายการ', '已显示 {n} / {all} 条', 'Showing {n} of {all}'],
+  'm.pg.more': ['แสดงเพิ่ม', '显示更多', 'Show more'],
   'm.auth.why': ['บัญชีนี้ใช้ทำอะไร', '账号用途', 'What the account is for'],
   'm.auth.why1': ['หางานหรือหาคนข้ามไทย–จีน ข้ามภาษา', '跨越泰中两国和语言障碍，找工作或招人', 'Find work or people across Thailand and China, across languages'],
   'm.auth.why2': ['ผู้หางานใช้ฟรีทุกขั้นตอน', '求职者全程免费', 'Free for job seekers at every step'],

@@ -13,7 +13,7 @@ import { GeoMap } from '../components/geomap'
 import { Icon, type IconName } from '../components/icons'
 import { MoneyInput } from '../components/money-input'
 import { Drawer } from '../components/drawer'
-import { Pager, useFit, usePaged } from '../components/pager'
+import { EndlessEnd, useEndless, useFit } from '../components/pager'
 import { DemoBadge, DemoTools, Empty, LevelBadge, MAP_SIZE, ReachRings, MapLayout, Page, PinList, PostFacts, SampleBadge, SampleNote, SortToggle, TranslatedNote, UnverifiedChip, VerifyTick, useGate, useNames, useRel } from './match'
 import { ReportButton } from './safety'
 import { MarketPanel } from './market'
@@ -158,7 +158,7 @@ export function BoardPage() {
         <SponsoredStrip />
         {!shown.length ? <Empty icon={seeker ? 'pin' : 'posts'} text={t(items.length ? 'm.board.noneFound' : seeker ? 'm.board.noneSeeker' : 'm.board.noneEmployer')} to={items.length ? undefined : seeker ? 'seek' : 'hire'}
             action={items.length ? t('m.board.clearAll') : t(seeker ? 'm.pin.go' : 'm.emp.post')} onAction={() => { setF(NO_FILTER); setTab('all'); setScope('all') }} /> : (
-          <CardGrid shown={shown} fit={fit} gridRef={gridRef} label={t(seeker ? 'm.board.shop' : 'm.bd.listEmployer')}
+          <CardGrid shown={shown} fit={fit} gridRef={gridRef} reset={`${scope}|${tab}|${order}|${JSON.stringify(f)}`} label={t(seeker ? 'm.board.shop' : 'm.bd.listEmployer')}
             card={({ post, level }) => <BoardCard key={post.id} post={post} level={level} reached={!seeker} applied={mineApplied.has(post.id)} viewer={st.role!} onOpen={() => setOpen(post.id)} />} />)}
       </>)}
 
@@ -205,21 +205,21 @@ function QuotaChip({ q, kind, open, onToggle }: { q: Quota; kind: 'pin' | 'post'
 }
 
 /**
- * The cards (owner, Oct 2026): computers 4 × 2 a page (rows of 4, then the next page); phones one row each, scrolling on;
- * tablets in between 2–4 a row.
+ * The cards (owner, Oct 2026): computers 4 a row; phones one row each; tablets in between 2–4 a row. No page buttons
+ * (owner, 28 Nov 2026: "keep scrolling down like on a phone"): 24 cards, then 24 more as the end comes near.
  */
-const PAGE = { cols: 4, rows: 2 }
-function CardGrid({ shown, fit, gridRef, label, card }: { shown: { post: Post; level: Level }[]; fit: boolean; gridRef: React.RefObject<HTMLDivElement | null>; label: string; card: (x: { post: Post; level: Level }) => React.ReactNode }) {
-  const pg = usePaged(shown, fit ? PAGE.cols * PAGE.rows : Infinity)
+const PAGE = { cols: 4, step: 24 }
+function CardGrid({ shown, fit, gridRef, label, card, reset }: { shown: { post: Post; level: Level }[]; fit: boolean; gridRef: React.RefObject<HTMLDivElement | null>; label: string; card: (x: { post: Post; level: Level }) => React.ReactNode; reset: string }) {
+  const e = useEndless(shown, PAGE.step, fit ? gridRef : null, reset)
   return (
     <div className="fit:flex-1 fit:min-h-0 fit:flex fit:flex-col gap-2">
       <h2 id="bd-list" className="sr-only">{label}</h2>
       <div ref={gridRef} className="fit:flex-1 fit:min-h-0 fit:overflow-y-auto">
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 fit:gap-3 fit:items-start" style={fit ? { gridTemplateColumns: `repeat(${PAGE.cols}, minmax(0, 1fr))` } : undefined} aria-labelledby="bd-list">
-          {pg.items.map(card)}
+          {e.items.map(card)}
         </ul>
+        <EndlessEnd e={e} />
       </div>
-      <Pager page={pg.page} pages={pg.pages} onPage={pg.setPage} className="shrink-0" />
     </div>
   )
 }
