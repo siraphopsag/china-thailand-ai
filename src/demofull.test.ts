@@ -56,3 +56,16 @@ describe('SQL 0023', () => {
     expect(sql).toContain('c.employer_id is distinct from auth.uid()')
   })
 })
+
+describe('two demo accounts', () => {
+  it('a job seeker can apply to a post open to every level even without a matching pin (28 Nov: it said "not open")', async () => {
+    const { applyTo } = await import('./domain/match/logic')
+    const { seedState } = await import('./domain/match/seed')
+    const r = makePost(input, 'p-demo', 'employer:other', at); if (!r.ok) throw new Error('post')
+    const base = { ...seedState(), role: 'seeker' as const, posts: [{ ...r.value, verified: false, demo: true }], acceptances: [], cases: [] }
+    const apply = (open: boolean) => applyTo({ ...base, posts: base.posts.map((p) => ({ ...p, ...(open ? { openAll: true } : {}) })) }, [], 'p-demo', 'me', { intro: '', availableFrom: '2026-12-10' }, 'a1', at)
+    expect(apply(false)).toMatchObject({ ok: false, problem: 'notOpen' })
+    expect(apply(true).ok).toBe(true)
+    expect(readFileSync('src/matchData.tsx', 'utf8')).toContain("return demo ? { ...s, posts: s.posts.map((p) => (p.demo && p.employerId !== MY_EMPLOYER ? { ...p, openAll: true } : p)) } : s")
+  })
+})

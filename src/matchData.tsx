@@ -222,12 +222,13 @@ export function MatchProvider({ children, initial }: { children: ReactNode; init
   const raw = mode === 'local' ? localSt : mode === 'remote' ? { ...remoteSt, clockHours: clock } : emptyState(clock)
   const now = nowWith(raw.clockHours)
   // posts past their 6 months are gone (the database removes them too)
-  const st = useMemo(() => withoutExpired(raw, now), [raw, now])
+  // a demo account sees other demo accounts' posts at once, at every level, and can apply to them (owner, 27 Nov 2026: two demo
+  // accounts match each other) — on the state every rule reads, not only on what the pages show (28 Nov: applying said "not open")
+  const demo = mode === 'local' || (mode === 'remote' && demoUser)
+  const st = useMemo(() => { const s = withoutExpired(raw, now); return demo ? { ...s, posts: s.posts.map((p) => (p.demo && p.employerId !== MY_EMPLOYER ? { ...p, openAll: true } : p)) } : s }, [raw, now, demo])
   // what the pages show: posts written in another language appear in the AI's translation (the employer's words stay in orig)
   const { lang } = useI18n()
-  // a demo account sees other demo accounts' posts at once, at every level (owner, 27 Nov 2026: two demo accounts match each other)
-  const demo = mode === 'local' || (mode === 'remote' && demoUser)
-  const stView = useMemo(() => ({ ...st, posts: st.posts.map((p) => localizePost(demo && p.demo && p.employerId !== MY_EMPLOYER ? { ...p, openAll: true } : p, lang)) }), [st, lang, demo])
+  const stView = useMemo(() => ({ ...st, posts: st.posts.map((p) => localizePost(p, lang)) }), [st, lang])
   const pool = useMemo<PinLike[]>(() => (mode === 'remote' ? [...st.me.pins, ...statsToPool(remotePool)] : poolOf(st)), [mode, st, remotePool])
   const pinsByProvince = useMemo(() => {
     if (mode === 'remote') return statsByProvince(remotePool.filter((r) => Date.parse(r.hour) > now - 30 * 24 * HOUR_MS))
