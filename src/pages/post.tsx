@@ -88,7 +88,9 @@ export function PostPage() {
     else if (r.problem === 'quota') showNoPosts()
     else setMsg({ tone: 'danger', text: problemText(r.problem) })
   }
-  const statusLine = (a: Acceptance) => a.status === 'reserved' ? t('m.ap.inQueue', { n: c.reserved }) : t(`m.as.${a.status}` as never)
+  // a match ended by the chat's contact rule says so (28 Nov 2026: it read "declined" as if the employer had chosen)
+  const ended = (a: Acceptance, mine: 'seeker' | 'employer') => (a.endedFor === 'contact' ? t(a.endedBy === mine ? 'gd.st.endedMe' : 'gd.st.endedThem') : null)
+  const statusLine = (a: Acceptance) => ended(a, 'seeker') ?? (a.status === 'reserved' ? t('m.ap.inQueue', { n: c.reserved }) : t(`m.as.${a.status}` as never))
 
   return (
     <Page title={p.position} sub={<>{p.company}<VerifyTick post={p} /> <EmployerRating employerId={p.employerId} compact /> · {N.place(p.country, p.province)} · {N.industry(p.industry)}</>} fit body="flex flex-col gap-3">
@@ -177,7 +179,7 @@ export function PostPage() {
               {!appsOf.some((a) => a.status !== 'reserved') ? <p className="text-sm text-muted">{t('m.em.noneYet')}</p> : (
                 <ul className="space-y-2">{appsOf.filter((a) => a.status !== 'reserved').map((a) => (
                   <li key={a.id} className="card-i space-y-1.5 text-sm">
-                    <p className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex flex-wrap items-center gap-1.5"><b>{nameOf(a)}</b><SeekerBadge seekerId={a.seekerId} /><WorkerRating seekerId={a.seekerId} compact /><ApplicantWork seekerId={a.seekerId} />{mode === 'local' && a.seekerId !== ME && <SampleBadge />}</span><span className="chip bg-surface3 border-line">{t(`m.as.${a.status}` as never)}</span></p>
+                    <p className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex flex-wrap items-center gap-1.5"><b>{nameOf(a)}</b><SeekerBadge seekerId={a.seekerId} /><WorkerRating seekerId={a.seekerId} compact /><ApplicantWork seekerId={a.seekerId} />{mode === 'local' && a.seekerId !== ME && <SampleBadge />}</span><span className="chip bg-surface3 border-line">{ended(a, 'employer') ?? t(`m.as.${a.status}` as never)}</span></p>
                     {a.intro && <p className="text-muted">“{a.intro}”</p>}
                     {a.availableFrom && <p className="text-xs text-muted">{t('m.ap.fromShort', { d: N.day(a.availableFrom) })}{a.promotedAt ? ` · ${t('m.n.fromQueue')}` : ''}</p>}
                     {['accepted', 'confirmed', 'forwarded'].includes(a.status) && <NavLink to={`chat?acc=${a.id}`} className="btn-soft text-sm inline-flex"><Icon name="users" size={15} />{t('ch.open')}</NavLink>}

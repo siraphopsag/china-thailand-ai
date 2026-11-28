@@ -27,6 +27,11 @@ export const guide = {
   'gd.l.sos': ['ขอช่วยด่วน', '紧急求助', 'Get help now'],
   'gd.l.case': ['เปิดเคส', '打开个案', 'Open the case'],
   // the application, before a case
+  'gd.st.endedMe': ['ยกเลิกแล้ว · ส่งช่องทางติดต่อในแชตครบ 3 ครั้ง', '已取消 · 在聊天中发送联系方式满 3 次', 'Ended · contact details sent in the chat 3 times'],
+  'gd.st.endedThem': ['ยกเลิกแล้ว · อีกฝ่ายส่งช่องทางติดต่อในแชตครบ 3 ครั้ง', '已取消 · 对方在聊天中发送联系方式满 3 次', 'Ended · the other side sent contact details 3 times'],
+  'gd.s.endedMe.seeker': ['การจับคู่นี้ถูกยกเลิกตามกฎความปลอดภัย เพราะมีการส่งเบอร์โทร ไลน์ หรือช่องทางติดต่ออื่นในแชตครบ 3 ครั้ง สมัครงานอื่นได้ตามปกติ และคุยกันผ่านแชตของระบบเท่านั้น', '根据安全规则，此次匹配已取消：在聊天中发送电话、LINE 或其他联系方式满 3 次。您仍可正常申请其他工作，请只通过系统聊天沟通。', 'This match was ended by the safety rule: phone numbers, LINE or other contact details were sent in the chat 3 times. You can still apply to other jobs; talk only through the site’s chat.'],
+  'gd.s.endedThem.seeker': ['การจับคู่นี้ถูกยกเลิก เพราะนายจ้างส่งช่องทางติดต่อในแชตครบ 3 ครั้ง ทีม C.A.L.L. ได้รับแจ้งแล้ว ลองดูงานอื่นในบอร์ดได้เลย', '此次匹配已取消，因为雇主在聊天中发送联系方式满 3 次，C.A.L.L. 团队已收到通知。可以看看其他职位。', 'This match was ended because the employer sent contact details in the chat 3 times; the C.A.L.L. team has been told. Have a look at other jobs.'],
+  // the application, before a case
   'gd.s.applied.seeker': ['คุณได้ที่แล้ว รอนายจ้างกดยืนยัน ระหว่างนี้แชตถามรายละเอียดงานหรือนัดสัมภาษณ์ได้ อย่าจ่ายเงินให้ใครเพื่อให้ได้งาน', '您已获得名额，等待雇主确认。期间可聊天询问工作细节或预约面试。不要为获得工作向任何人付钱。', 'You have a place; the employer still has to confirm. Meanwhile you can chat about the job or set up an interview. Never pay anyone to get a job.'],
   'gd.s.queue.seeker': ['คุณอยู่ในคิวจอง ถ้ามีที่ว่าง ระบบจะเลื่อนคุณขึ้นเอง และแจ้งเตือนทันที ไม่ต้องทำอะไรเพิ่ม', '您在候补队列中。一有空位，系统会自动递补并立即通知您，无需其他操作。', 'You are in the queue. If a place frees up, you move up by yourself and get a notification. Nothing else to do.'],
   'gd.s.declined.seeker': ['นายจ้างไม่ได้เลือกครั้งนี้ ลองดูงานอื่นในบอร์ด หรือปักหมุดเพิ่มเพื่อให้เจองานที่ตรงกว่า', '雇主这次没有选择您。可以看看其他职位，或增加标记以找到更合适的工作。', 'The employer did not pick you this time. Look at other jobs, or add a pin to find closer matches.'],

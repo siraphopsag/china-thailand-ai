@@ -8,7 +8,7 @@ export type Who = 'you' | 'team' | 'employer' | 'worker'
 export type GuideLink = 'chat' | 'contract' | 'docs' | 'calendar' | 'verify' | 'board' | 'sos'
 export interface Guide {
   /** the step this is about ('apply…' before a case exists, 'done' after arrival) */
-  key: CaseStep | 'applied' | 'queue' | 'declined' | 'done'
+  key: CaseStep | 'applied' | 'queue' | 'declined' | 'endedMe' | 'endedThem' | 'done'
   who: Who[]
   /** where the person can act now */
   links: GuideLink[]
@@ -23,6 +23,8 @@ const NEXT: Partial<Record<CaseStep, CaseStep | 'checkins'>> = { submitted: 'acc
 
 /** before a case: the application itself */
 export function applicationGuide(a: Acceptance): Guide {
+  // ended by the chat's contact rule (SQL 0017), not the employer's choice (28 Nov 2026: it read "the employer did not pick you")
+  if (a.endedFor === 'contact') return { key: a.endedBy === 'seeker' ? 'endedMe' : 'endedThem', who: ['you'], links: ['board'], next: null, dates: [] }
   if (a.status === 'reserved') return { key: 'queue', who: ['employer'], links: ['board'], next: 'case', dates: [] }
   if (a.status === 'rejected') return { key: 'declined', who: ['you'], links: ['board'], next: null, dates: [] }
   return { key: 'applied', who: ['employer'], links: ['chat'], next: 'case', dates: [] }
