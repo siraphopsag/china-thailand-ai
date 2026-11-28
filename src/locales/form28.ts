@@ -1,0 +1,65 @@
+// Folding post form, more job details, full-screen phone chat and the new profiles (owner, 28 Nov 2026). Every message is [th, zh, en].
+import type { Msg } from './common.js'
+
+export const form28 = {
+  'sk.chosen': ['เลือกแล้ว {n}', '已选 {n}', '{n} chosen'],
+  // the groups of the post form
+  'pf.g.job': ['บริษัทและตำแหน่ง', '公司与职位', 'Company and position'],
+  'pf.g.skills': ['ทักษะที่ต้องการ', '所需技能', 'Skills needed'],
+  'pf.g.pay': ['ค่าจ้างและสวัสดิการ', '薪酬与福利', 'Pay and benefits'],
+  'pf.g.hours': ['เวลางานและวันหยุด', '工作时间与休息日', 'Hours and days off'],
+  'pf.g.live': ['ที่พักและอาหาร', '住宿与餐食', 'Housing and meals'],
+  'pf.g.contract': ['สัญญาและวันเริ่มงาน', '合同与入职日期', 'Contract and start date'],
+  'pf.g.place': ['สถานที่และการเดินทาง', '地点与交通', 'Place and getting there'],
+  'pf.g.lang': ['ภาษาและการศึกษา', '语言与学历', 'Languages and education'],
+  'pf.g.more': ['รายละเอียดเพิ่มเติม', '更多说明', 'More details'],
+  'pf.empty': ['ยังไม่ได้กรอก · กดเพื่อเปิด', '尚未填写 · 点击展开', 'Not filled in yet · tap to open'],
+  'pf.optional': ['ไม่บังคับ แต่ช่วยให้ผู้หางานตัดสินใจง่ายขึ้น', '选填，但能帮助求职者更快决定', 'Optional, but it helps job seekers decide'],
+  'pf.people': ['{n} คน', '{n} 人', '{n} people'],
+  'pf.skills.n': ['เลือกแล้ว {n} ทักษะ', '已选 {n} 项技能', '{n} skills chosen'],
+  'pf.langs.n': ['{n} ภาษา', '{n} 种语言', '{n} languages'],
+  // hours
+  'pf.h.from': ['เวลาเข้างาน', '上班时间', 'Starts at'],
+  'pf.h.to': ['เวลาเลิกงาน', '下班时间', 'Ends at'],
+  'pf.h.perDay': ['{h} ชั่วโมงต่อวัน', '每天 {h} 小时', '{h} hours a day'],
+  'pf.h.long': ['เกิน 8 ชั่วโมงต่อวัน ส่วนที่เกินต้องจ่ายเป็นค่าล่วงเวลาตามกฎหมาย', '每天超过 8 小时，超出部分须依法支付加班费', 'More than 8 hours a day: the extra hours must be paid as overtime by law'],
+  'pf.days': ['ทำงานกี่วันต่อสัปดาห์', '每周工作天数', 'Working days a week'],
+  'pf.days.n': ['{n} วันต่อสัปดาห์', '每周 {n} 天', '{n} days a week'],
+  'pf.days.seven': ['7 วันต่อสัปดาห์ไม่มีวันหยุด ขัดกับกฎหมายแรงงานของไทยและจีน ต้องมีวันหยุดอย่างน้อย 1 วัน', '每周 7 天无休违反泰中两国劳动法，每周至少休息 1 天', 'Seven days a week with no day off breaks Thai and Chinese labour law: at least one day off a week'],
+  'pf.ot': ['ค่าล่วงเวลา (โอที)', '加班', 'Overtime'],
+  'pf.ot.none': ['ไม่มีโอที', '没有加班', 'No overtime'],
+  'pf.ot.paid': ['มีโอที จ่ายตามกฎหมาย', '有加班，依法支付', 'Overtime, paid by law'],
+  // housing and meals
+  'pf.housing': ['มีที่พักให้', '提供住宿', 'Housing provided'],
+  'pf.housing.free': ['ฟรี', '免费', 'Free'],
+  'pf.housing.paid': ['หักจากค่าจ้าง', '从工资扣除', 'Deducted from pay'],
+  'pf.room': ['พักห้องละกี่คน', '每间房住几人', 'People per room'],
+  'pf.meals': ['มีอาหารให้', '提供餐食', 'Meals provided'],
+  'pf.meals.n': ['{n} มื้อต่อวันทำงาน', '每个工作日 {n} 餐', '{n} meals a working day'],
+  // contract
+  'pf.contract': ['ระยะสัญญา', '合同期限', 'Contract length'],
+  'pf.contract.open': ['ไม่กำหนดระยะเวลา', '无固定期限', 'No fixed end'],
+  'pf.contract.m': ['{n} เดือน', '{n} 个月', '{n} months'],
+  'pf.probation': ['ทดลองงาน', '试用期', 'Probation'],
+  'pf.probation.none': ['ไม่มีทดลองงาน', '无试用期', 'No probation'],
+  'pf.pay': ['รับเงินเดือน', '发薪方式', 'Paid'],
+  'pf.pay.monthly': ['เดือนละครั้ง', '每月一次', 'Monthly'],
+  'pf.pay.twice': ['เดือนละ 2 ครั้ง', '每月两次', 'Twice a month'],
+  'pf.pay.weekly': ['ทุกสัปดาห์', '每周', 'Weekly'],
+  'pf.pay.daily': ['รายวัน', '每天', 'Daily'],
+  'pf.notSaid': ['ไม่ระบุ', '不填写', 'Not stated'],
+  // place
+  'pf.area': ['ย่าน อำเภอ หรือนิคมอุตสาหกรรม', '区域、县或工业园区', 'District, town or industrial estate'],
+  'pf.area.hint': ['ไม่ต้องใส่บ้านเลขที่หรือช่องทางติดต่อ', '无需填写门牌号或联系方式', 'No house number or contact details'],
+  'pf.shuttle': ['มีรถรับส่ง', '有班车接送', 'Shuttle to work'],
+  'pf.transit': ['ใกล้สถานีรถไฟฟ้า รถไฟ หรือรถเมล์', '靠近地铁、火车站或公交站', 'Near a metro, train or bus station'],
+  // the last step: who can apply
+  'pf.final.h': ['ขั้นสุดท้าย: ใครสมัครได้', '最后一步：谁可以申请', 'Last step: who can apply'],
+  'pf.final.wait': ['กรอกข้อที่จำเป็นให้ครบก่อน แล้วตัวเลือกสุดท้ายจะขึ้นที่นี่', '请先填完必填项，最后的选项会显示在这里', 'Fill in the required parts first; the last choice appears here'],
+  'pf.final.lead': ['อ่านก่อนโพสต์ ตัวเลือกนี้มีผลกับว่าประกาศจะไปถึงใครบ้าง', '发布前请阅读：此选项决定招聘信息会送达哪些人', 'Read before posting: this decides who the post reaches'],
+  'pf.final.none': ['เปิดรับทุกคน (ค่าเริ่มต้น)', '面向所有人（默认）', 'Open to everyone (default)'],
+  // the post page
+  'm.err.area': ['ย่านหรือนิคมยาวเกินไป (ไม่เกิน 80 ตัวอักษร)', '区域名称过长（不超过 80 个字符）', 'The district is too long (80 characters at most)'],
+  'pf.view.h': ['รายละเอียดงาน', '工作详情', 'About the job'],
+  'pf.h.range': ['{a}–{b} น.', '{a}–{b}', '{a}–{b}'],
+} as const satisfies Record<string, Msg>

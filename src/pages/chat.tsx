@@ -4,7 +4,7 @@
 // Signed in, the conversation is shared through the database (shared.ts, SQL 0014) and new messages appear at once; the local demo
 // and the offline kit keep it on this device (chatStore.ts), where either side can be tried with the side switch. The job seeker's
 // introduction from the application is shown as the first message.
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { tr } from '../i18n/core'
 import { useI18n } from '../i18n'
 import { NavLink, useSearchParam } from '../store'
@@ -23,6 +23,7 @@ import { Empty, Page, useApplicantName, useNames } from './match'
 /** the demo match of the sample case (case-demo.tsx) */
 export const DEMO_ACC = 'acc-demo'
 const OPEN = ['accepted', 'confirmed', 'forwarded']
+const PHONE = '(max-width: 767px)'
 const pad = (n: number) => String(n).padStart(2, '0')
 const localStamp = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}` }
 
@@ -38,6 +39,7 @@ export function ChatPage() {
   const sides: Side[] = demo || mode === 'local' ? ['seeker', 'employer']
     : [...(a?.seekerId === ME ? ['seeker' as const] : []), ...(p?.employerId === MY_EMPLOYER ? ['employer' as const] : [])]
   const [picked, setSide] = useState<Side | null>(null)
+  const [full, setFull] = useState(true) // phones: the conversation fills the screen, like a messaging app
   // the side I am in this match (the data may arrive after the first render, e.g. when the chat link is opened directly)
   const preferred: Side = p?.employerId === MY_EMPLOYER && a?.seekerId !== ME ? 'employer' : 'seeker'
   const side: Side = picked && sides.includes(picked) ? picked : sides.includes(preferred) ? preferred : sides[0] ?? 'seeker'
@@ -62,17 +64,21 @@ export function ChatPage() {
   // the introduction the job seeker wrote when applying opens the conversation
   const intro = !demo && a?.intro?.trim() ? { id: 'intro', from: 'seeker' as const, at: a.at, text: a.intro.trim() } : null
   const msgs = intro ? [intro, ...chat.msgs] : chat.msgs
+  const switcher = sides.length > 1 ? (
+    <div role="tablist" aria-label={t('ch.as')} className="flex gap-1 rounded-xl border border-line bg-surface p-1">{sides.map((s) => (
+      <button key={s} type="button" role="tab" aria-selected={side === s} onClick={() => setSide(s)} className={`min-h-[36px] px-3 rounded-lg text-sm ${side === s ? 'seg-on' : 'hover:bg-surface3'}`}>{t(`ch.side.${s}` as never)}</button>))}</div>) : null
   return (
     <Page title={t('ch.title')} sub={`${position} · ${company}`}>
+      {/* phones: the chat is on top of everything (owner, 28 Nov 2026); "interview" in its bar shows this page again */}
+      {!full && <button type="button" className="btn-primary w-full justify-center md:hidden" onClick={() => setFull(true)}><Icon name="chat" size={16} />{t('ch.backToChat')}</button>}
       <Warn tone="info">{t('ch.safe')}</Warn>
       {remote && problem && <Warn>{t(problem === 'dbOld' ? 'sh.dbOld' : 'sh.network')}</Warn>}
       {sides.length > 1 && (
         <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">{t('ch.as')}</span>
-          <div role="tablist" aria-label={t('ch.as')} className="flex gap-1 rounded-xl border border-line bg-surface p-1">{sides.map((s) => (
-            <button key={s} type="button" role="tab" aria-selected={side === s} onClick={() => setSide(s)} className={`min-h-[36px] px-3 rounded-lg text-sm ${side === s ? 'seg-on' : 'hover:bg-surface3'}`}>{t(`ch.side.${s}` as never)}</button>))}</div>
+          {switcher}
           <span className="text-xs text-muted">{t('ch.asNote')}</span></div>)}
       <div className="grid lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-4 items-start">
-        <Conversation key={side} msgs={msgs} side={side} other={other} loading={remote && !loaded} introId={intro?.id} closed={closed} strikes={strikesOf(chat, side)}
+        <Conversation key={side} full={full} onInterview={() => setFull(false)} sub={`${position} · ${company}`} switcher={switcher} msgs={msgs} side={side} other={other} loading={remote && !loaded} introId={intro?.id} closed={closed} strikes={strikesOf(chat, side)}
           onSend={(input) => { const r = newMessage(chat, side, input, newId(), at); if (r.ok) save({ ...chat, ...r.value }); return r.ok ? r.masked : null }} />
         <InterviewBox chat={chat} side={side} at={at} nowLocal={localStamp(now)} onSave={(c) => save({ ...chat, ...c })} />
       </div>
@@ -80,26 +86,47 @@ export function ChatPage() {
   )
 }
 
-function Conversation({ msgs, side, other, onSend, loading, introId, closed, strikes }: { msgs: ChatMsg[]; side: Side; other: string; onSend: (i: { text?: string; phrase?: string }) => boolean | null; loading?: boolean; introId?: string; closed: Side | null; strikes: number }) {
+/**
+ * Phones (owner, 28 Nov 2026: the box was tiny, and scrolling back through the history moved the whole page): the conversation
+ * covers the screen like a messaging app — a bar with back, the other side and "interview"; the messages scroll on their own
+ * (the page behind does not move); the phrases on one swipeable line; the box to type at the bottom. Larger screens: a card.
+ */
+function Conversation({ full, onInterview, sub, switcher, msgs, side, other, onSend, loading, introId, closed, strikes }: { full: boolean; onInterview: () => void; sub: string; switcher: ReactNode; msgs: ChatMsg[]; side: Side; other: string; onSend: (i: { text?: string; phrase?: string }) => boolean | null; loading?: boolean; introId?: string; closed: Side | null; strikes: number }) {
   const { t } = useI18n()
   const N = useNames()
   const [text, setText] = useState('')
   const [masked, setMasked] = useState(false)
   const list = useRef<HTMLOListElement>(null)
-  useEffect(() => { const el = list.current; if (el) el.scrollTop = el.scrollHeight }, [msgs.length]) // newest at the bottom, in view
+  useEffect(() => { const el = list.current; if (el) el.scrollTop = el.scrollHeight }, [msgs.length, full]) // newest at the bottom, in view
+  // while it covers a phone screen the page behind stays still
+  useEffect(() => {
+    if (!full || !window.matchMedia(PHONE).matches) return
+    const h = document.documentElement, before = h.style.overflow
+    h.style.overflow = 'hidden'
+    return () => { h.style.overflow = before }
+  }, [full])
   const send = (e: FormEvent) => { e.preventDefault(); const r = onSend({ text }); if (r !== null) { setText(''); setMasked(r) } }
   return (
-    <section className="card !p-0 overflow-hidden flex flex-col" aria-labelledby="ch-h">
-      <h2 id="ch-h" className="h2 px-4 pt-3 pb-2 border-b border-line flex items-center gap-2"><Icon name="users" size={18} className="text-primary" />{t('ch.with', { n: other })}</h2>
-      <ol ref={list} className="flex-1 min-h-[10rem] max-h-[34dvh] sm:min-h-[16rem] sm:max-h-[26rem] overflow-y-auto px-4 py-3 space-y-2" aria-live="polite">
+    <section className={`card !p-0 overflow-hidden flex flex-col ${full ? 'max-md:fixed max-md:inset-0 max-md:z-[60] max-md:!rounded-none max-md:!border-0 max-md:!bg-page' : 'max-md:hidden'}`} aria-labelledby="ch-h">
+      <div className="shrink-0 border-b border-line flex items-center gap-2 px-2 md:px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 md:pt-3 max-md:bg-surface">
+        <NavLink to="chats" className="md:hidden w-10 h-10 grid place-items-center rounded-full hover:bg-surface3 shrink-0" aria-label={t('ch.allChats')}><Icon name="left" size={20} /></NavLink>
+        <div className="min-w-0 flex-1">
+          <h2 id="ch-h" className="h2 flex items-center gap-2 min-w-0"><Icon name="users" size={18} className="text-primary shrink-0 max-md:hidden" /><span className="truncate">{t('ch.with', { n: other })}</span></h2>
+          <p className="md:hidden text-xs text-muted truncate">{sub}</p>
+        </div>
+        <button type="button" className="md:hidden btn-ghost text-sm !min-h-[40px] !px-3 shrink-0" onClick={onInterview}><Icon name="calendar" size={16} />{t('ch.interviewBtn')}</button>
+      </div>
+      {switcher && <div className="md:hidden shrink-0 px-3 py-2 border-b border-line flex items-center gap-2 max-md:bg-surface"><span className="text-xs font-medium">{t('ch.as')}</span>{switcher}</div>}
+      <ol ref={list} className="flex-1 min-h-0 max-md:overscroll-contain md:min-h-[16rem] md:max-h-[26rem] overflow-y-auto px-4 py-3 space-y-2" aria-live="polite">
+        <li className="md:hidden text-xs text-muted text-center px-2 pb-1 flex items-start justify-center gap-1.5"><Icon name="info" size={13} className="mt-0.5 shrink-0" />{t('ch.safe')}</li>
         {msgs.length === 0 && <li className="text-sm text-muted text-center py-8">{t(loading ? 'c.loading' : 'ch.empty')}</li>}
         {msgs.map((m) => <Bubble key={m.id} m={m} mine={m.from === side} when={m.id === introId ? `${t('sh.intro')} · ${N.dayTime(Date.parse(m.at))}` : N.dayTime(Date.parse(m.at))} />)}
       </ol>
       {closed ? <p className="border-t border-line p-3 text-sm text-danger-fg flex items-start gap-2" role="status"><Icon name="alert" size={16} className="mt-0.5 shrink-0" />{t(closed === side ? 'ch.closed.me' : 'ch.closed.other', { max: MAX_STRIKES })}</p> : (
-      <div className="border-t border-line p-3 space-y-2">
-        <p className="text-xs font-medium">{t('ch.phrases')}</p>
-        <div className="flex flex-wrap gap-1.5">{PHRASES[side].map((k) => (
-          <button key={k} type="button" className="chip bg-surface border-line min-h-[32px] px-3 hover:bg-surface3" onClick={() => { onSend({ phrase: k }); setMasked(false) }}>{t(`ch.p.${k}` as never)}</button>))}</div>
+      <div className="shrink-0 border-t border-line p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] space-y-2 max-md:bg-surface">
+        <p className="text-xs font-medium max-md:sr-only">{t('ch.phrases')}</p>
+        <div className="flex flex-nowrap md:flex-wrap gap-1.5 overflow-x-auto md:overflow-visible no-scrollbar -mx-3 px-3 md:mx-0 md:px-0">{PHRASES[side].map((k) => (
+          <button key={k} type="button" className="chip bg-surface border-line min-h-[32px] px-3 hover:bg-surface3 shrink-0 whitespace-nowrap" onClick={() => { onSend({ phrase: k }); setMasked(false) }}>{t(`ch.p.${k}` as never)}</button>))}</div>
         <form className="flex gap-2" onSubmit={send}>
           <input className="input flex-1" maxLength={MAX_TEXT} value={text} onChange={(e) => setText(e.target.value)} placeholder={t('ch.type')} aria-label={t('ch.type')} />
           <button type="submit" className="btn-primary" disabled={!text.trim()}><Icon name="send" size={16} />{t('ch.send')}</button>

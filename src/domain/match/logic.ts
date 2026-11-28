@@ -11,6 +11,7 @@ import { parseReports, reportedIds } from './reports'
 import { isMobile, isRegNo, phoneLast4 } from './verify'
 import { cleanTranslations, closedToForeigners, hasTranslations, type PostTranslations } from './postText'
 import { hasContact } from '../contact'
+import { areaProblem, cleanExtras, hasExtras, type PostExtras } from './postExtras'
 
 export { DAY_MS, HOUR_MS }
 /**
@@ -37,7 +38,7 @@ const isSkills = (v: unknown): v is Skill[] => Array.isArray(v) && v.length > 0 
 const isIso = (v: unknown): v is string => typeof v === 'string' && !Number.isNaN(Date.parse(v))
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9:_-]{1,40}$/.test(v)
 
-export type Problem = 'place' | 'industry' | 'skills' | 'limit' | 'duplicate' | 'company' | 'position' | 'details' | 'years' | 'contact' | 'notOpen' | 'already' | 'unknown'
+export type Problem = 'place' | 'industry' | 'skills' | 'limit' | 'duplicate' | 'company' | 'position' | 'details' | 'years' | 'contact' | 'area' | 'notOpen' | 'already' | 'unknown'
   | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits' | 'quota' | 'network' | 'intro' | 'available' | 'state' | 'belowHeld' | 'dbOld' | 'regNo' | 'caseStarted' | 'caseText' | 'departDate' | 'reported' | 'reportLimit' | 'reportNote' | 'suspended' | 'phone' | 'code'
   | 'dupPost' | 'dailyLimit' | 'scamWords' | 'needVerify'
 const oneOf = <T extends string>(all: readonly T[], v: unknown): v is T => typeof v === 'string' && (all as readonly string[]).includes(v)
@@ -97,10 +98,12 @@ export interface PostInput {
   translations?: PostTranslations
   /** owner, Oct 2026: the AI rated it high risk — saved, but held (hidden) until an administrator releases it */
   held?: boolean
+  /** more about the job (owner, 28 Nov 2026); null = an edit that removed them all */
+  extras?: PostExtras | null
 }
 /** a post for an occupation closed to foreigners in Thailand (e.g. tour guiding) always stays in Thailand */
 export const mustStayDomestic = (i: Pick<PostInput, 'place' | 'position' | 'details'>) => i.place.country === 'TH' && closedToForeigners(i.position) // the title: details may mention such work in passing
-export type PostField = 'place' | 'company' | 'position' | 'details' | 'industry' | 'skills' | 'minYears' | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits'
+export type PostField = 'place' | 'company' | 'position' | 'details' | 'industry' | 'skills' | 'minYears' | 'headcount' | 'employment' | 'salary' | 'startDate' | 'languages' | 'education' | 'benefits' | 'area'
 /** every problem of a post at once, field by field, in form order (QA, Oct 2026: the form showed them one at a time) */
 export function postIssues(input: PostInput, at: string): { field: PostField; problem: Problem }[] {
   const out: { field: PostField; problem: Problem }[] = []
@@ -118,6 +121,7 @@ export function postIssues(input: PostInput, at: string): { field: PostField; pr
   add('languages', (!isLangs(input.languages) || input.languages.length === 0) && 'languages')
   add('education', !oneOf(EDU, input.education) && 'education')
   add('benefits', !isBenefits(input.benefits) && 'benefits')
+  const ap = areaProblem(input.extras?.area); add('area', ap !== null && (ap === 'contact' ? 'contact' : 'area'))
   return out
 }
 export function makePost(input: PostInput, id: string, employerId: string, at: string): Outcome<Post> {
@@ -129,7 +133,7 @@ export function makePost(input: PostInput, id: string, employerId: string, at: s
     languages: input.languages.map((l) => ({ ...l })), education: input.education, benefits: [...input.benefits],
     country: input.place.country, province: input.place.province, createdAt: at, releasedAt: at, verified: false,
     ...(input.domesticOnly || mustStayDomestic(input) ? { domesticOnly: true } : {}), ...(input.workRight ? { workRight: true } : {}), ...(input.held ? { held: true, hidden: true } : {}),
-    ...(hasTranslations(cleanTranslations(input.translations)) ? { translations: cleanTranslations(input.translations) } : {}), synthetic: true } }
+    ...(hasTranslations(cleanTranslations(input.translations)) ? { translations: cleanTranslations(input.translations) } : {}), ...(hasExtras(cleanExtras(input.extras)) ? { extras: cleanExtras(input.extras) } : {}), synthetic: true } }
 }
 /** renewing uses one post from the weekly allowance and starts the release again at level 1, with a fresh 6 months */
 export function renewPost(st: MatchState, postId: string, at: string): Outcome<Post> {

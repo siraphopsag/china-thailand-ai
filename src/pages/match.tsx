@@ -9,6 +9,8 @@ import { provinces } from '../locales/provinces'
 import { activePins, capacityOf, inbox, isCountry, memberActive, pinQuota, type Problem } from '../domain/match/logic'
 import { DAY_MS, reachFor, scheduleOf, stageAt, type Quota, capStage } from '../domain/match/release'
 import { INDUSTRIES, MAX_SKILLS, MY_EMPLOYER, PIN_LIFE_DAYS, SKILLS, SKILL_GROUPS, type Acceptance, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type Level, type Post, type Salary, type Skill } from '../domain/match/types'
+import { hoursADay } from '../domain/match/postExtras'
+import { Fold } from '../components/fold'
 import { ACTIVE, GEO, SOON, type GeoCode } from '../geo'
 import capitalsData from '../data/geo/capitals.json'
 import { GeoMap, type MapPin } from '../components/geomap'
@@ -91,6 +93,16 @@ export function PostFacts({ post, compact }: { post: Post; compact?: boolean }) 
     ['culture', t('m.f.education'), N.edu(post.education)],
     ['ok', t('m.f.benefits'), post.benefits.length ? post.benefits.map(N.benefit).join(' · ') : ns],
   ]
+  // more about the job (owner, 28 Nov 2026): only what the employer filled in
+  const x = post.extras ?? {}
+  const hours = [x.hours ? `${x.hours.from}–${x.hours.to} (${t('pf.h.perDay', { h: hoursADay(x.hours) })})` : '', x.days ? t('pf.days.n', { n: x.days }) : '', x.ot ? t(`pf.ot.${x.ot}` as never) : ''].filter(Boolean).join(' · ')
+  if (hours) rows.push(['clock', t('pf.g.hours'), hours])
+  const live = [post.benefits.includes('housing') && x.housing ? `${t('pf.housing')}: ${t(`pf.housing.${x.housing}` as never)}${x.room ? ` · ${t('pf.room')} ${x.room}` : ''}` : '', post.benefits.includes('meals') && x.meals ? t('pf.meals.n', { n: x.meals }) : ''].filter(Boolean).join(' · ')
+  if (live) rows.push(['home', t('pf.g.live'), live])
+  const terms = [x.contract !== undefined ? `${t('pf.contract')}: ${x.contract === 0 ? t('pf.contract.open') : t('pf.contract.m', { n: x.contract })}` : '', x.probation !== undefined ? (x.probation === 0 ? t('pf.probation.none') : `${t('pf.probation')}: ${t('pf.contract.m', { n: x.probation })}`) : '', x.pay ? `${t('pf.pay')}: ${t(`pf.pay.${x.pay}` as never)}` : ''].filter(Boolean).join(' · ')
+  if (terms) rows.push(['documents', t('pf.g.contract'), terms])
+  const place = [x.area ?? '', x.shuttle ? t('pf.shuttle') : '', x.transit ? t('pf.transit') : ''].filter(Boolean).join(' · ')
+  if (place) rows.push(['pin', t('pf.g.place'), place])
   // who can apply: shown only when the employer set a limit
   const who = [post.domesticOnly && t('m.badge.domestic'), post.workRight && t('m.badge.workRight')].filter(Boolean).join(' · ')
   if (who) rows.push(['globe', t('m.f.who'), who])
@@ -260,21 +272,38 @@ export function SoonNote({ country }: { country: GeoCode }) {
 }
 export function SkillPicker({ skills, onChange, idp, fe }: { skills: Skill[]; onChange: (s: Skill[]) => void; idp: string; fe: FieldError }) {
   const { t } = useI18n()
-  const N = useNames()
+  const groups = Object.keys(SKILL_GROUPS) as (keyof typeof SKILL_GROUPS)[]
   return (
-    <fieldset aria-describedby={fe.describe(idp)}><legend className="label">{t('m.skills')} <span className="font-normal text-muted text-xs">· {t('jb.skills.max', { n: MAX_SKILLS })}</span></legend>
-      {/* grouped (owner, Oct 2026: more varied skills, legal and specialist ones too) */}
-      <div className="space-y-3">{(Object.keys(SKILL_GROUPS) as (keyof typeof SKILL_GROUPS)[]).map((g) => (
-        <div key={g}><p className="text-xs text-muted mb-1.5">{t(`jb.skg.${g}` as never)}</p>
-          <div className="grid grid-cols-2 auto-rows-fr gap-2">{SKILL_GROUPS[g].map((s) => {
-            const on = skills.includes(s)
-            return (
-            <label key={s} className="chip-check">
-              <input id={s === SKILLS[0] ? `${idp}-0` : undefined} type="checkbox" className="sr-only" aria-invalid={fe.invalid(idp)} aria-describedby={s === SKILLS[0] ? fe.describe(idp) : undefined} checked={on} disabled={!on && skills.length >= MAX_SKILLS} onChange={() => onChange(on ? skills.filter((x) => x !== s) : [...skills, s])} />
-              <span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.skill(s)}
-            </label>) })}</div></div>))}</div>
+    <fieldset aria-describedby={fe.describe(idp)}><legend className="label">{t('m.skills')} <span className="font-normal text-muted text-xs">· {t('jb.skills.max', { n: MAX_SKILLS })} · {t('sk.chosen', { n: skills.length })}</span></legend>
+      {/* grouped (owner, Oct 2026: more varied skills, legal and specialist ones too); each group opens when tapped (owner,
+          28 Nov 2026: so many boxes at once that nobody knew what to tick) — a group with a chosen skill starts open */}
+      <div className="space-y-2">{groups.map((g, gi) => <SkillGroup key={g} g={g} skills={skills} onChange={onChange} idp={idp} fe={fe} force={gi === 0 && !!fe.invalid(idp)} />)}</div>
       {fe.msg(idp)}
     </fieldset>
+  )
+}
+function SkillGroup({ g, skills, onChange, idp, fe, force }: { g: keyof typeof SKILL_GROUPS; skills: Skill[]; onChange: (s: Skill[]) => void; idp: string; fe: FieldError; force: boolean }) {
+  const { t } = useI18n()
+  const N = useNames()
+  const list = SKILL_GROUPS[g] as readonly Skill[]
+  const n = list.filter((s) => skills.includes(s)).length
+  const [open, setOpen] = useState(n > 0)
+  const shown = open || force
+  const id = `${idp}-g-${g}`
+  return (
+    <div className="sk-group" data-open={shown || undefined}>
+      <button type="button" className="sk-bar" aria-expanded={shown} aria-controls={id} onClick={() => setOpen(!shown)}>
+        <span>{t(`jb.skg.${g}` as never)}{n > 0 && <span className="ml-2 chip bg-brand text-brandfg border-primary text-[0.6875rem]">{t('sk.chosen', { n })}</span>}</span>
+        <Icon name="down" size={16} className="fold-chev shrink-0" />
+      </button>
+      <div id={id} hidden={!shown} className="grid grid-cols-2 auto-rows-fr gap-2 px-2 pb-2">{list.map((s) => {
+        const on = skills.includes(s)
+        return (
+        <label key={s} className="chip-check">
+          <input id={s === SKILLS[0] ? `${idp}-0` : undefined} type="checkbox" className="sr-only" aria-invalid={fe.invalid(idp)} aria-describedby={s === SKILLS[0] ? fe.describe(idp) : undefined} checked={on} disabled={!on && skills.length >= MAX_SKILLS} onChange={() => onChange(on ? skills.filter((x) => x !== s) : [...skills, s])} />
+          <span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.skill(s)}
+        </label>) })}</div>
+    </div>
   )
 }
 export const IndustrySelect = ({ value, onChange, label }: { value: Industry; onChange: (i: Industry) => void; label: string }) => {
@@ -394,13 +423,15 @@ export function SeekPage() {
             <h2 id="s2h" tabIndex={-1} className="h2 outline-none">{t('m.seek.s2')}</h2>
             <p className="text-sm text-muted">{t('m.seek.from', { p: N.place(st.me.origin!.country, st.me.origin!.province) })} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => { setOc(st.me.origin?.country ?? null); setOp(st.me.origin?.province ?? null); setEditOrigin(true); requestAnimationFrame(() => document.getElementById('origin-prov')?.focus()) }}>{t('m.edit')}</button></p>
           </div>
-          <PlaceFields idp="dest-prov" fe={fe} country={dc} province={dp} onCountry={(c) => { setDc(c); setDp(null); fe.clear() }} onProvince={(p) => { setDp(p); fe.clear() }} />
-          <p className="text-xs text-muted">{t('m.seek.same')}</p>
-          <div className="border-t border-line pt-3 space-y-3">
-            <h3 className="font-semibold">{t('m.seek.s3')}</h3>
+          {/* the same folding groups as the post form (owner, 28 Nov 2026) */}
+          <Fold icon="pin" title={t('m.seek.s2')} req open summary={isCountry(dc) && dp ? N.place(dc, dp) : t('pf.empty')} force={!!fe.invalid('dest-prov')}>
+            <PlaceFields idp="dest-prov" fe={fe} country={dc} province={dp} onCountry={(c) => { setDc(c); setDp(null); fe.clear() }} onProvince={(p) => { setDp(p); fe.clear() }} />
+            <p className="text-xs text-muted">{t('m.seek.same')}</p>
+          </Fold>
+          <Fold icon="employment" title={t('m.seek.s3')} req open summary={`${N.industry(industry)} · ${t('pf.skills.n', { n: skills.length })}`} force={!!fe.invalid('seek-skills')}>
             <IndustrySelect value={industry} onChange={setIndustry} label={t('m.industry')} />
             <SkillPicker idp="seek-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); fe.clear() }} />
-          </div>
+          </Fold>
           {/* QA, Oct 2026: with no pins left the button used to turn off without a word — say why, when they come back, and where to get more */}
           {pq.left <= 0 && <div id="pin-limit"><Warn>{t('m.err.limit')}{pq.resetAt ? ` · ${t('m.qb.reset', { d: N.dayTime(pq.resetAt) })}` : ''}{' '}
             <NavLink to="member" className="font-semibold underline underline-offset-2">{t('m.plan.see')}</NavLink></Warn></div>}

@@ -1,6 +1,7 @@
 // Mapping between the database rows (supabase/migrations/0002_matching.sql, 0003_board.sql) and the matching prototype's own types, so the pages
 // and rules in logic.ts work the same with the database as with the local demo data. Pure: no network, no React.
 import { isObj } from '../../profileSchema'
+import { cleanExtras, hasExtras } from './postExtras'
 import { clampFuture, type PostInput } from './logic'
 import { cleanTranslations, hasTranslations } from './postText'
 import type { PinLike } from './release'
@@ -35,6 +36,8 @@ export interface PostRow {
   held?: boolean | null
   /** 0021: a simulated employer's post made for this demo account only */
   demo_for?: string | null
+  /** 0024: more about the job (hours, housing, contract, travel) */
+  extras?: unknown
 }
 export interface ReportRow { id: string; post_id: string; reporter_id: string; reason: string; note: string | null; status: string; created_at: string }
 export interface CaseRow { id: string; acceptance_id: string; post_id: string; seeker_id: string; steps: unknown; docs: unknown; tests: unknown; permit: unknown; trainings: unknown; departure_date: string | null; note: string | null; created_at: string; dates?: unknown; seeker_arrived_at?: string | null }
@@ -70,7 +73,7 @@ export const rowToPost = (r: PostRow, uid: string): Post => ({
   startDate: r.start_date, languages: toLanguages(r.languages), education: one(EDU, r.education) ?? 'none', benefits: many(BENEFITS, r.benefits),
   country: country(r.country) ?? 'TH', province: r.province, createdAt: iso(r.created_at), releasedAt: iso(r.released_at ?? r.created_at), verified: r.verified ?? r.is_sample, ...((r.verified ?? r.is_sample) ? { verifiedAs: r.verify_kind === 'person' ? 'person' as const : 'company' as const } : {}), ...(r.hidden ? { hidden: true } : {}), ...(r.held ? { held: true } : {}), ...(r.is_sample ? { sample: true } : {}),
   ...(r.is_demo ? { demo: true } : {}), ...(r.demo_for && r.demo_for === uid ? { simFor: true, openAll: true } : {}), ...(r.domestic_only ? { domesticOnly: true } : {}), ...(r.work_right ? { workRight: true } : {}),
-  ...(hasTranslations(cleanTranslations(r.translations)) ? { translations: cleanTranslations(r.translations) } : {}), synthetic: true,
+  ...(hasTranslations(cleanTranslations(r.translations)) ? { translations: cleanTranslations(r.translations) } : {}), ...(hasExtras(cleanExtras(r.extras)) ? { extras: cleanExtras(r.extras) } : {}), synthetic: true,
 })
 export function toLanguages(v: unknown): LanguageSkill[] {
   if (!Array.isArray(v)) return []
@@ -87,6 +90,9 @@ export const postToRow = (i: PostInput) => ({
   domestic_only: !!i.domesticOnly, work_right: !!i.workRight, translations: cleanTranslations(i.translations),
   // 0012 — sent only to hold a post (the database never lets the website release one); a post that is not held works without 0012
   ...(i.held ? { held: true } : {}),
+  // 0024 — written only when there is something, so a post without the new details still saves before 0024 is run; null = an
+  // edit that emptied them, so the old ones go
+  ...(i.extras === null ? { extras: {} } : hasExtras(cleanExtras(i.extras)) ? { extras: cleanExtras(i.extras) } : {}),
 })
 /** a post back into the form's input (for editing) */
 export const postToInput = (p: Post): PostInput => ({
@@ -95,7 +101,7 @@ export const postToInput = (p: Post): PostInput => ({
   startDate: p.startDate ?? '', languages: p.languages.map((l) => ({ ...l })), education: p.education as Edu, benefits: [...p.benefits] as Benefit[],
   // a translated view shows the employer's own words in orig: edit those
   ...(p.orig ? { position: p.orig.position, details: p.orig.details } : {}),
-  domesticOnly: !!p.domesticOnly, workRight: !!p.workRight,
+  domesticOnly: !!p.domesticOnly, workRight: !!p.workRight, extras: { ...(p.extras ?? {}) },
 })
 
 export const rowToPin = (r: PinRow): Pin => ({ id: r.id, country: country(r.country) ?? 'TH', province: r.province, industry: (one(INDUSTRIES, r.industry) ?? 'manufacturing') as Industry, skills: many(SKILLS, r.skills) as Skill[], at: iso(r.created_at), ...(r.is_sample ? { sample: true } : {}) })

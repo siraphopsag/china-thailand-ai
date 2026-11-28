@@ -13,7 +13,7 @@ import type { AiCheck, AiResponse } from '../ai/spec'
 import { AiCheckResult } from './ask'
 import { ThinkingOrb } from '../components/morph-orb'
 import { useLite } from '../theme'
-import { BENEFITS, CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MY_EMPLOYER, type Benefit, type Currency, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Skill } from '../domain/match/types'
+import { CURRENCIES, EDU, EMPLOYMENT, LANGS, LANG_LEVELS, MY_EMPLOYER, type Benefit, type Currency, type Edu, type Employment, type Industry, type LanguageSkill, type Post, type Skill } from '../domain/match/types'
 import type { GeoCode } from '../geo'
 import { GeoMap } from '../components/geomap'
 import { Modal } from '../components/modal'
@@ -28,6 +28,8 @@ import { LevelChip } from './seeker-verify'
 import { useFit } from '../components/pager'
 import { postToInput } from '../domain/match/remote'
 import { PlanGrid } from './member'
+import { Fold } from '../components/fold'
+import { AREA_MAX, HOUSING, PAY_CYCLES, cleanExtras, hasExtras, hoursADay, type PostExtras } from '../domain/match/postExtras'
 
 /**
  * Employer flow (owner, Oct 2026): place on the map → company and needs (4 groups) → "Check and post" → pre-check (the real AI when
@@ -40,6 +42,7 @@ import { PlanGrid } from './member'
  * post only when fake-job wording and unusually high pay come together (owner, 24 Nov 2026), even when the AI sees no problem.
  */
 type Stage = null | 'check' | 'confirm' | 'done' | 'package' | 'joined'
+const NO_EXTRAS: PostExtras = {}
 const today = (now: number) => localDay(new Date(now).toISOString())
 const plusDays = (now: number, d: number) => localDay(new Date(now + d * 86_400_000).toISOString())
 /** which field each problem belongs to: [error group, control to focus] */
@@ -53,6 +56,7 @@ const FIELD: Partial<Record<Problem, [string, string]>> = {
 const AT: Record<PostField, [string, string] | undefined> = {
   place: undefined, company: FIELD.company, position: FIELD.position, details: FIELD.details, industry: undefined, skills: FIELD.skills, minYears: FIELD.years,
   headcount: FIELD.headcount, employment: FIELD.employment, salary: FIELD.salary, startDate: FIELD.startDate, languages: FIELD.languages, education: FIELD.education, benefits: undefined,
+  area: ['emp-area', 'emp-area'],
 }
 
 export function HirePage() {
@@ -81,6 +85,9 @@ export function HirePage() {
   const [start, setStart] = useState(''), [langs, setLangs] = useState<LanguageSkill[]>([]), [edu, setEdu] = useState<Edu>('none'), [benefits, setBenefits] = useState<Benefit[]>([])
   // owner, Oct 2026: keep the post in this country · only people who already have the right to work here
   const [domestic, setDomestic] = useState(false), [workRight, setWorkRight] = useState(false)
+  // more about the job (owner, 28 Nov 2026): hours, housing and meals, contract, place and travel
+  const [ex, setEx] = useState<PostExtras>({}), [hFrom, setHFrom] = useState(''), [hTo, setHTo] = useState('')
+  const ux = (patch: Partial<PostExtras>) => setEx((x) => ({ ...x, ...patch }))
   const deletedAsked = useSearchParam('deleted') === '1' // the post page deleted a post and came back here
   const [msg, setMsg] = useState<{ tone: 'info' | 'danger'; text: string } | null>(() => (deletedAsked ? { tone: 'info', text: t('m.post.deleted') } : null))
   useEffect(() => { if (deletedAsked) go('hire?tab=mine', { replace: true }) }, [deletedAsked])
@@ -103,7 +110,7 @@ export function HirePage() {
     setEditing(x); setC(i.place.country); setP(i.place.province); setCompany(i.company); setPosition(i.position); setIndustry(i.industry); setSkills(i.skills)
     setYears(String(i.minYears)); setDetails(i.details); setHeadcount(String(i.headcount)); setEmployment(i.employment)
     setSalMin(i.salary ? String(i.salary.min) : ''); setSalMax(i.salary ? String(i.salary.max) : ''); setCurrency(i.salary?.currency ?? 'THB')
-    setStart(i.startDate); setLangs(i.languages); setEdu(i.education); setBenefits(i.benefits); setDomestic(!!i.domesticOnly); setWorkRight(!!i.workRight); setForm(true); setMsg(null); fe.clear()
+    setStart(i.startDate); setLangs(i.languages); setEdu(i.education); setBenefits(i.benefits); setDomestic(!!i.domesticOnly); setWorkRight(!!i.workRight); setEx(i.extras ?? {}); setHFrom(i.extras?.hours?.from ?? ''); setHTo(i.extras?.hours?.to ?? ''); setForm(true); setMsg(null); fe.clear()
     window.scrollTo(0, 0); focusHead.current = true
   }
   // move focus to the form heading after the edit form has rendered
@@ -125,11 +132,14 @@ export function HirePage() {
   const clear = (k: string) => fe.clearOne(k)
   const showProblem = (pr: Problem) => { const f = FIELD[pr]; if (f) fe.set(f[0], f[1], N.problem(pr)); else setMsg({ tone: 'danger', text: N.problem(pr) }) }
 
+  // nothing new → not sent (works before SQL 0024); an edited post that had details and now has none clears them
+  const extrasOrClear = (e: PostExtras) => (hasExtras(e) ? e : hasExtras(editing?.extras) ? null : undefined)
   const input = (): PostInput | null => {
     if (!isCountry(c) || !p) return null
     const hasSalary = salMin.trim() !== '' || salMax.trim() !== ''
     return { place: { country: c, province: p }, company: company.trim(), position: position.trim(), industry, skills, minYears: Number(years), details: details.trim(),
-      headcount: Number(headcount), employment, salary: hasSalary ? { min: Number(salMin), max: Number(salMax), currency } : null, startDate: start, languages: langs, education: edu, benefits, domesticOnly: domestic, workRight }
+      headcount: Number(headcount), employment, salary: hasSalary ? { min: Number(salMin), max: Number(salMax), currency } : null, startDate: start, languages: langs, education: edu, benefits, domesticOnly: domestic, workRight,
+      extras: extrasOrClear(cleanExtras({ ...ex, ...(hFrom && hTo ? { hours: { from: hFrom, to: hTo } } : { hours: undefined }), ...(benefits.includes('housing') ? {} : { housing: undefined, room: undefined }), ...(benefits.includes('meals') ? {} : { meals: undefined }) })) }
   }
   const submit = async (e: FormEvent) => {
     e.preventDefault(); setMsg(null); fe.clear()
@@ -186,7 +196,7 @@ export function HirePage() {
   }
   const another = () => {
     setStage(null); setPosted(null); setPending(null); setCheck(null); setAiRes(null); setEditing(null)
-    setPosition(''); setSkills([]); setDetails(''); setYears('0'); setHeadcount('1'); setEmployment('permanent'); setSalMin(''); setSalMax(''); setStart(''); setLangs([]); setEdu('none'); setBenefits([]); setDomestic(false); setWorkRight(false)
+    setPosition(''); setSkills([]); setDetails(''); setYears('0'); setHeadcount('1'); setEmployment('permanent'); setSalMin(''); setSalMax(''); setStart(''); setLangs([]); setEdu('none'); setBenefits([]); setDomestic(false); setWorkRight(false); setEx(NO_EXTRAS); setHFrom(''); setHTo('')
     setForm(false); setC(null); setP(null)
     if (editId) go('hire', { replace: true })
     // the form unmounts, so keyboard focus would fall back to the page: put it on the country field to start the next post
@@ -212,6 +222,11 @@ export function HirePage() {
   }
   const toggleLang = (l: LanguageSkill['lang']) => { setLangs((xs) => (xs.some((x) => x.lang === l) ? xs.filter((x) => x.lang !== l) : [...xs, { lang: l, level: 'conversational' }])); clear('emp-langs') }
   const setLevel = (l: LanguageSkill['lang'], level: LanguageSkill['level']) => setLangs((xs) => xs.map((x) => (x.lang === l ? { ...x, level } : x)))
+  const toggleBenefit = (b: Benefit) => setBenefits((xs) => (xs.includes(b) ? xs.filter((x) => x !== b) : [...xs, b]))
+  const perDay = hFrom && hTo && hFrom !== hTo ? hoursADay({ from: hFrom, to: hTo }) : null
+  // the last choice shows once the required parts are filled in (owner, 28 Nov 2026: otherwise it is skimmed past)
+  const ready = company.trim().length >= 2 && position.trim().length >= 2 && skills.length > 0 && !!start && langs.length > 0
+  const lockedHome = isCountry(c) && mustStayDomestic({ place: { country: c, province: p ?? '' }, position, details })
 
   return (
     <Page title={t('m.emp.title')} fit>
@@ -236,31 +251,30 @@ export function HirePage() {
           {/* owner, 19 Oct 2026: autoComplete off — no list of what was typed in earlier posts under the fields (form history) */}
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="e2h" tabIndex={-1} className="h2 outline-none">{t(editing ? 'm.edit.title' : 'm.emp.s2')}</h2><p className="text-sm text-muted">{c && p && N.place(c, p)} <button type="button" className="underline text-primary min-h-[24px]" onClick={() => { setForm(false); requestAnimationFrame(() => document.getElementById('emp-prov')?.focus()) }}>{t('m.edit')}</button></p></div>
 
-          <div className="space-y-5 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-5 lg:items-start">
-          <div className="space-y-5">
-          <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="business" size={16} />{t('m.emp.sec.company')}</legend>
+          {/* owner, 28 Nov 2026: one folding group per topic, each saying what is in it; the required groups say so; a group with an
+              error opens by itself. "Who can apply" comes last, once the required parts are filled in, so it is read, not skipped. */}
+          <div className="space-y-3 max-w-3xl">
+          <Fold icon="business" title={t('pf.g.job')} req open summary={company || position ? `${position || '—'} · ${company || '—'} · ${t('pf.people', { n: headcount || '1' })}` : t('pf.empty')}
+            force={['emp-company', 'emp-position', 'emp-headcount', 'emp-employment', 'emp-years'].some((k) => fe.invalid(k))}>
             <div className="grid sm:grid-cols-2 gap-3">
               <div><label className="block"><span className="label">{t('m.emp.company')}<Req /></span><input id="emp-company" className="input" maxLength={80} aria-required="true" aria-invalid={fe.invalid('emp-company')} aria-describedby={fe.describe('emp-company', 'emp-company-hint')} value={company} onChange={(e) => { setCompany(e.target.value); clear('emp-company') }} /></label>
                 <span id="emp-company-hint" className="block text-xs text-muted mt-1">{t('m.hint.company')}</span>{fe.msg('emp-company')}</div>
               <IndustrySelect value={industry} onChange={setIndustry} label={t('jb.field.industry')} />
-            </div>
-          </fieldset>
-
-          <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="employment" size={16} />{t('m.emp.sec.role')}</legend>
-            <div className="grid sm:grid-cols-2 gap-3">
               <div><label className="block"><span className="label">{t('m.emp.position')}<Req /></span><input id="emp-position" className="input" maxLength={80} aria-required="true" aria-invalid={fe.invalid('emp-position')} aria-describedby={fe.describe('emp-position', 'emp-position-hint')} value={position} onChange={(e) => { setPosition(e.target.value); clear('emp-position') }} /></label>
                 <span id="emp-position-hint" className="block text-xs text-muted mt-1">{t('m.hint.position')}</span>{fe.msg('emp-position')}</div>
               <div><label className="block"><span className="label">{t('m.f.headcount')}<Req /></span><input id="emp-headcount" className="input" type="number" min={1} max={99} step={1} aria-required="true" aria-invalid={fe.invalid('emp-headcount')} aria-describedby={fe.describe('emp-headcount')} value={headcount} onChange={(e) => { setHeadcount(e.target.value); clear('emp-headcount') }} /></label>{fe.msg('emp-headcount')}</div>
               <div><label className="block"><span className="label">{t('m.f.employment')}<Req /></span><select id="emp-employment" className="input" value={employment} onChange={(e) => setEmployment(e.target.value as Employment)}>{EMPLOYMENT.map((x) => <option key={x} value={x}>{N.employment(x)}</option>)}</select></label>{fe.msg('emp-employment')}</div>
               <div><label className="block"><span className="label">{t('m.emp.years')}</span><input id="emp-years" className="input" type="number" min={0} max={40} step={1} aria-invalid={fe.invalid('emp-years')} aria-describedby={fe.describe('emp-years')} value={years} onChange={(e) => { setYears(e.target.value); clear('emp-years') }} /></label>{fe.msg('emp-years')}</div>
             </div>
-            <SkillPicker idp="emp-skills" fe={fe} skills={skills} onChange={(s) => { setSkills(s); clear('emp-skills') }} />
-          </fieldset>
+          </Fold>
 
-          </div>
-          <div className="space-y-5">
-          <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="documents" size={16} />{t('m.emp.sec.terms')}</legend>
-            <fieldset aria-describedby={fe.describe('emp-salary', 'emp-salary-hint')}><legend className="label">{t('m.f.salary')} <span className="font-normal text-muted">({t('m.opt')})</span></legend>
+          <Fold icon="employment" title={t('pf.g.skills')} req summary={skills.length ? t('pf.skills.n', { n: skills.length }) : t('pf.empty')} force={!!fe.invalid('emp-skills')}>
+            <SkillPicker idp="emp-skills" fe={fe} skills={skills} onChange={(x) => { setSkills(x); clear('emp-skills') }} />
+          </Fold>
+
+          <Fold icon="funding" title={t('pf.g.pay')} summary={[salMin || salMax ? `${salMin || '…'}–${salMax || '…'} ${t(`m.cur.${currency}` as never)}` : '', ex.pay ? t(`pf.pay.${ex.pay}` as never) : '', ...benefits.filter((x) => x === 'insurance' || x === 'workDocs').map((x) => N.benefit(x))].filter(Boolean).join(' · ') || t('pf.empty')} force={!!fe.invalid('emp-salary')}>
+            <p className="text-xs text-muted">{t('pf.optional')}</p>
+            <fieldset aria-describedby={fe.describe('emp-salary', 'emp-salary-hint')}><legend className="label">{t('m.f.salary')}</legend>
               <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
                 <MoneyInput id="emp-salary-min" className="input" aria-label={t('m.f.salaryMin')} placeholder={t('m.f.salaryMin')} aria-invalid={fe.invalid('emp-salary')} aria-describedby={fe.describe('emp-salary', 'emp-salary-hint')} value={salMin} onValue={(v) => { setSalMin(v); clear('emp-salary') }} />
                 <MoneyInput className="input" aria-label={t('m.f.salaryMax')} placeholder={t('m.f.salaryMax')} aria-invalid={fe.invalid('emp-salary')} aria-describedby={fe.describe('emp-salary', 'emp-salary-hint')} value={salMax} onValue={(v) => { setSalMax(v); clear('emp-salary') }} />
@@ -268,10 +282,59 @@ export function HirePage() {
               </div>
               <span id="emp-salary-hint" className="block text-xs text-muted mt-1">{t('m.f.salaryHint')}</span>{fe.msg('emp-salary')}
             </fieldset>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div><label className="block"><span className="label">{t('m.f.start')}<Req /></span><input id="emp-start" className="input" type="date" min={editing?.startDate && editing.startDate < today(now) ? editing.startDate : today(now)} max={plusDays(now, 730)} aria-required="true" aria-invalid={fe.invalid('emp-start')} aria-describedby={fe.describe('emp-start')} value={start} onChange={(e) => { setStart(e.target.value); clear('emp-start') }} /></label>{fe.msg('emp-start')}</div>
-              <div><label className="block"><span className="label">{t('m.f.education')} <span className="font-normal text-muted">({t('m.opt')})</span></span><select id="emp-edu" className="input" value={edu} onChange={(e) => setEdu(e.target.value as Edu)}>{EDU.map((x) => <option key={x} value={x}>{N.edu(x)}</option>)}</select></label></div>
+            <label className="block"><span className="label">{t('pf.pay')}</span><select className="input" value={ex.pay ?? ''} onChange={(e) => ux({ pay: (e.target.value || undefined) as PostExtras['pay'] })}><option value="">{t('pf.notSaid')}</option>{PAY_CYCLES.map((x) => <option key={x} value={x}>{t(`pf.pay.${x}` as never)}</option>)}</select></label>
+            <fieldset><legend className="label">{t('m.f.benefits')}</legend>
+              <div className="grid grid-cols-2 auto-rows-fr gap-2">{(['insurance', 'workDocs'] as const).map((b) => (
+                <label key={b} className="chip-check"><input type="checkbox" className="sr-only" checked={benefits.includes(b)} onChange={() => toggleBenefit(b)} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.benefit(b)}</label>))}</div>
+            </fieldset>
+          </Fold>
+
+          <Fold icon="clock" title={t('pf.g.hours')} summary={[hFrom && hTo ? `${hFrom}–${hTo}` : '', ex.days ? t('pf.days.n', { n: ex.days }) : '', ex.ot ? t(`pf.ot.${ex.ot}` as never) : ''].filter(Boolean).join(' · ') || t('pf.empty')}>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block"><span className="label">{t('pf.h.from')}</span><input type="time" className="input" value={hFrom} onChange={(e) => setHFrom(e.target.value)} /></label>
+              <label className="block"><span className="label">{t('pf.h.to')}</span><input type="time" className="input" value={hTo} onChange={(e) => setHTo(e.target.value)} /></label>
             </div>
+            {perDay !== null && <p className="text-sm text-muted">{t('pf.h.perDay', { h: perDay })}</p>}
+            {perDay !== null && perDay > 9 && <Warn tone="info">{t('pf.h.long')}</Warn>}
+            <div className="grid sm:grid-cols-2 gap-3">
+              <label className="block"><span className="label">{t('pf.days')}</span><select className="input" value={ex.days ?? ''} onChange={(e) => ux({ days: e.target.value ? Number(e.target.value) : undefined })}><option value="">{t('pf.notSaid')}</option>{[5, 6, 7, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{t('pf.days.n', { n })}</option>)}</select></label>
+              <label className="block"><span className="label">{t('pf.ot')}</span><select className="input" value={ex.ot ?? ''} onChange={(e) => ux({ ot: (e.target.value || undefined) as PostExtras['ot'] })}><option value="">{t('pf.notSaid')}</option><option value="paid">{t('pf.ot.paid')}</option><option value="none">{t('pf.ot.none')}</option></select></label>
+            </div>
+            {ex.days === 7 && <Warn>{t('pf.days.seven')}</Warn>}
+          </Fold>
+
+          <Fold icon="home" title={t('pf.g.live')} summary={[benefits.includes('housing') ? `${t('pf.housing')}${ex.housing ? ` (${t(`pf.housing.${ex.housing}` as never)})` : ''}` : '', benefits.includes('meals') ? (ex.meals ? t('pf.meals.n', { n: ex.meals }) : t('pf.meals')) : ''].filter(Boolean).join(' · ') || t('pf.empty')}>
+            <label className="chip-check chip-auto"><input type="checkbox" className="sr-only" checked={benefits.includes('housing')} onChange={() => toggleBenefit('housing')} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{t('pf.housing')}</label>
+            {benefits.includes('housing') && (
+              <div className="grid sm:grid-cols-2 gap-3 pl-2 border-l-2 border-primary/40">
+                <label className="block"><span className="label">{t('pf.housing')}</span><select className="input" value={ex.housing ?? ''} onChange={(e) => ux({ housing: (e.target.value || undefined) as PostExtras['housing'] })}><option value="">{t('pf.notSaid')}</option>{HOUSING.map((x) => <option key={x} value={x}>{t(`pf.housing.${x}` as never)}</option>)}</select></label>
+                <label className="block"><span className="label">{t('pf.room')}</span><select className="input" value={ex.room ?? ''} onChange={(e) => ux({ room: e.target.value ? Number(e.target.value) : undefined })}><option value="">{t('pf.notSaid')}</option>{[1, 2, 3, 4, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{t('pf.people', { n })}</option>)}</select></label>
+              </div>)}
+            <label className="chip-check chip-auto"><input type="checkbox" className="sr-only" checked={benefits.includes('meals')} onChange={() => toggleBenefit('meals')} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{t('pf.meals')}</label>
+            {benefits.includes('meals') && (
+              <div className="pl-2 border-l-2 border-primary/40">
+                <label className="block"><span className="label">{t('pf.meals')}</span><select className="input" value={ex.meals ?? ''} onChange={(e) => ux({ meals: e.target.value ? Number(e.target.value) : undefined })}><option value="">{t('pf.notSaid')}</option>{[1, 2, 3].map((n) => <option key={n} value={n}>{t('pf.meals.n', { n })}</option>)}</select></label>
+              </div>)}
+          </Fold>
+
+          <Fold icon="calendar" title={t('pf.g.contract')} req summary={[start ? N.day(start) : '', ex.contract !== undefined ? (ex.contract === 0 ? t('pf.contract.open') : t('pf.contract.m', { n: ex.contract })) : ''].filter(Boolean).join(' · ') || t('pf.empty')} force={!!fe.invalid('emp-start')}>
+            <div><label className="block"><span className="label">{t('m.f.start')}<Req /></span><input id="emp-start" className="input" type="date" min={editing?.startDate && editing.startDate < today(now) ? editing.startDate : today(now)} max={plusDays(now, 730)} aria-required="true" aria-invalid={fe.invalid('emp-start')} aria-describedby={fe.describe('emp-start')} value={start} onChange={(e) => { setStart(e.target.value); clear('emp-start') }} /></label>{fe.msg('emp-start')}</div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <label className="block"><span className="label">{t('pf.contract')}</span><select className="input" value={ex.contract ?? ''} onChange={(e) => ux({ contract: e.target.value === '' ? undefined : Number(e.target.value) })}><option value="">{t('pf.notSaid')}</option><option value="0">{t('pf.contract.open')}</option>{[3, 6, 12, 24, 36].map((n) => <option key={n} value={n}>{t('pf.contract.m', { n })}</option>)}</select></label>
+              <label className="block"><span className="label">{t('pf.probation')}</span><select className="input" value={ex.probation ?? ''} onChange={(e) => ux({ probation: e.target.value === '' ? undefined : Number(e.target.value) })}><option value="">{t('pf.notSaid')}</option><option value="0">{t('pf.probation.none')}</option>{[1, 2, 3, 4, 6].map((n) => <option key={n} value={n}>{t('pf.contract.m', { n })}</option>)}</select></label>
+            </div>
+          </Fold>
+
+          <Fold icon="pin" title={t('pf.g.place')} summary={[c && p ? N.place(c, p) : '', ex.area ?? '', ex.shuttle ? t('pf.shuttle') : '', ex.transit ? t('pf.transit') : ''].filter(Boolean).join(' · ')} force={!!fe.invalid('emp-area')}>
+            <div><label className="block"><span className="label">{t('pf.area')}</span><input id="emp-area" className="input" maxLength={AREA_MAX} aria-invalid={fe.invalid('emp-area')} aria-describedby={fe.describe('emp-area', 'emp-area-hint')} value={ex.area ?? ''} onChange={(e) => { ux({ area: e.target.value || undefined }); clear('emp-area') }} /></label>
+              <span id="emp-area-hint" className="block text-xs text-muted mt-1">{t('pf.area.hint')}</span>{fe.msg('emp-area')}</div>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <label className="chip-check"><input type="checkbox" className="sr-only" checked={!!ex.shuttle} onChange={(e) => ux({ shuttle: e.target.checked || undefined })} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{t('pf.shuttle')}</label>
+              <label className="chip-check"><input type="checkbox" className="sr-only" checked={!!ex.transit} onChange={(e) => ux({ transit: e.target.checked || undefined })} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{t('pf.transit')}</label>
+            </div>
+          </Fold>
+
+          <Fold icon="language" title={t('pf.g.lang')} req summary={langs.length ? langs.map((l) => N.lang(l.lang)).join(' · ') : t('pf.empty')} force={!!fe.invalid('emp-langs') || !!fe.invalid('emp-edu')}>
             <fieldset aria-describedby={fe.describe('emp-langs', 'emp-langs-hint')}><legend className="label">{t('m.f.languages')}<Req /></legend>
               <div className="grid sm:grid-cols-3 gap-2 items-start">{LANGS.map((l) => { const on = langs.find((x) => x.lang === l); return (
                 <div key={l} className="space-y-1.5">
@@ -280,27 +343,25 @@ export function HirePage() {
                 </div>) })}</div>
               <span id="emp-langs-hint" className="block text-xs text-muted mt-1">{t('m.f.languagesHint')}</span>{fe.msg('emp-langs')}
             </fieldset>
-            <fieldset><legend className="label">{t('m.f.benefits')} <span className="font-normal text-muted">({t('m.opt')})</span></legend>
-              <div className="grid grid-cols-2 auto-rows-fr gap-2">{BENEFITS.map((b) => (
-                <label key={b} className="chip-check"><input type="checkbox" className="sr-only" checked={benefits.includes(b)} onChange={() => setBenefits((xs) => (xs.includes(b) ? xs.filter((x) => x !== b) : [...xs, b]))} /><span className="chip-box" aria-hidden><Icon name="check" size={14} /></span>{N.benefit(b)}</label>))}</div>
-            </fieldset>
-            <fieldset className="space-y-2"><legend className="label">{t('m.f.who')} <span className="font-normal text-muted">({t('m.opt')})</span></legend>
-              {(() => { const locked = isCountry(c) && mustStayDomestic({ place: { country: c, province: p ?? '' }, position, details }); return (
-                <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-1" checked={domestic || locked} disabled={locked} onChange={(e) => setDomestic(e.target.checked)} />
-                  <span><span className="font-medium">{t('m.f.domestic')}</span><span className="block text-xs text-muted">{t(locked ? 'm.f.domestic.locked' : 'm.f.domestic.d')}</span></span></label>) })()}
-              <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-1" checked={workRight} onChange={(e) => setWorkRight(e.target.checked)} />
-                <span><span className="font-medium">{t('m.f.workRight')}</span><span className="block text-xs text-muted">{t('m.f.workRight.d')}</span></span></label>
-            </fieldset>
-          </fieldset>
+            <label className="block"><span className="label">{t('m.f.education')} <span className="font-normal text-muted">({t('m.opt')})</span></span><select id="emp-edu" className="input" value={edu} onChange={(e) => setEdu(e.target.value as Edu)}>{EDU.map((x) => <option key={x} value={x}>{N.edu(x)}</option>)}</select></label>
+          </Fold>
 
-          <fieldset className="form-sec"><legend className="form-sec-h"><Icon name="info" size={16} />{t('m.emp.sec.more')}</legend>
+          <Fold icon="info" title={t('pf.g.more')} summary={details.trim() ? details.trim().slice(0, 60) : t('pf.empty')} force={!!fe.invalid('emp-details')}>
             <div><label className="block"><span className="label">{t('m.emp.details')}</span><textarea id="emp-details" className="input min-h-[96px]" maxLength={600} aria-invalid={fe.invalid('emp-details')} aria-describedby={fe.describe('emp-details', 'det-hint')} value={details} onChange={(e) => { setDetails(e.target.value); clear('emp-details') }} /></label>
               <span id="det-hint" className="block text-xs text-muted mt-1">{t('m.emp.detailsHint')}</span>{fe.msg('emp-details')}</div>
-          </fieldset>
+          </Fold>
 
+          {ready ? (
+            <Fold icon="globe" tone="final" open title={t('pf.final.h')} summary={[domestic || lockedHome ? t('m.badge.domestic') : '', workRight ? t('m.badge.workRight') : ''].filter(Boolean).join(' · ') || t('pf.final.none')}>
+              <p className="text-sm font-medium">{t('pf.final.lead')}</p>
+              <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-1 w-5 h-5 shrink-0" checked={domestic || lockedHome} disabled={lockedHome} onChange={(e) => setDomestic(e.target.checked)} />
+                <span><span className="font-medium">{t('m.f.domestic')}</span><span className="block text-xs text-muted">{t(lockedHome ? 'm.f.domestic.locked' : 'm.f.domestic.d')}</span></span></label>
+              <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-1 w-5 h-5 shrink-0" checked={workRight} onChange={(e) => setWorkRight(e.target.checked)} />
+                <span><span className="font-medium">{t('m.f.workRight')}</span><span className="block text-xs text-muted">{t('m.f.workRight.d')}</span></span></label>
+            </Fold>
+          ) : <p className="rounded-2xl border border-dashed border-line p-4 text-sm text-muted flex items-start gap-2"><Icon name="globe" size={16} className="mt-0.5 shrink-0" />{t('pf.final.wait')}</p>}
           </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 max-w-3xl">
             <button type="submit" className="btn-primary"><Icon name="ai" size={16} />{t(editing ? 'm.edit.save' : 'm.emp.post')}</button>
             {editing ? <button type="button" className="btn-ghost" onClick={another}>{t('m.edit.cancel')}</button> : <QuotaNote used={used} limit={limit} member={memberActive(st, limitNow)} />}
           </div>

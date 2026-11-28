@@ -1,3 +1,4 @@
+import type { PostExtras } from './postExtras'
 /**
  * C.A.L.L. matching prototype (owner's model, Oct 2026): job seekers pin provinces with their skills (5 per weekly cycle, each pin
  * lasts a month); employers post what they need for a province (3 per weekly cycle, a post lasts 6 months); a post reaches seekers in
@@ -130,6 +131,8 @@ export interface Post extends Place {
   workRight?: boolean
   /** the title and details translated by the AI when the post was checked (0010) */
   translations?: PostTranslations
+  /** more about the job (owner, 28 Nov 2026; SQL 0024): hours, housing and meals, contract, place and travel — see postExtras.ts */
+  extras?: PostExtras
   /** set by localizePost when a translation is shown: the employer's own words and the language they were written in */
   orig?: PostText
   translatedFrom?: UiLang
