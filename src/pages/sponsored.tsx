@@ -29,7 +29,7 @@ export function SponsoredStrip() {
       <div className="flex items-center justify-between gap-2"><h2 id="sp-h" className="text-sm font-semibold flex items-center gap-1.5"><Icon name="star" size={15} className="er-gold" />{t('sp.h')}</h2>
         <button type="button" className="text-xs text-muted underline underline-offset-4 min-h-[24px]" onClick={() => setHide(true)}>{t('sp.hide')}</button></div>
       {/* phones: one row that scrolls sideways (owner, 27 Nov 2026: three tall cards pushed the jobs off the first screen) */}
-      <ul className="flex sm:grid sm:grid-cols-3 gap-2 overflow-x-auto sm:overflow-visible snap-x no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">{SPONSORED.slice(0, MAX_SPONSORED).map((s) => (
+      <ul className="flex sm:grid sm:grid-cols-3 gap-2 overflow-x-auto sm:overflow-visible snap-x scroll-px-3 no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 sm:scroll-px-0">{SPONSORED.slice(0, MAX_SPONSORED).map((s) => (
         <li key={s.id} className="shrink-0 w-[82%] sm:w-auto snap-start"><NavLink to={s.to} className={`sp-card sp-${s.kind} flex flex-col gap-1 rounded-2xl border p-3 h-full`}>
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="sp-badge"><Icon name={ICON[s.kind]} size={12} />{t(`sp.kind.${s.kind}` as never)}</span>

@@ -249,7 +249,7 @@ describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, st
     expect(css).toContain(':root { --app-h: calc(100dvh - 6rem - 1px) }')
     const m = src('./pages/match.tsx')
     expect(m).toContain('fit:flex fit:flex-col fit:gap-3 fit:h-[var(--app-h)]')
-    for (const [file, mark] of [['./pages/board.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/calendar.tsx', ' fit>'], ['./pages/case.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/analytics.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/hire.tsx', ' fit>'], ['./pages/post.tsx', 'fit body="flex flex-col gap-3"']] as const)
+    for (const [file, mark] of [['./pages/board.tsx', 'fit={!cards} body="flex flex-col gap-3"'], ['./pages/calendar.tsx', ' fit>'], ['./pages/case.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/analytics.tsx', 'fit body="flex flex-col gap-3"'], ['./pages/hire.tsx', ' fit>'], ['./pages/post.tsx', 'fit body="flex flex-col gap-3"']] as const)
       expect(src(file), file).toContain(mark)
     expect(m).toContain('fit body="flex flex-col gap-3"') // the back office
     // owner, 19 Oct 2026: the month stops growing on tall screens (rows about 100 px at 1920×1080, as on a laptop)
@@ -269,7 +269,7 @@ describe('round 3 (owner, Oct 2026): fit the computer screen, compact phones, st
     expect(css).toContain('@media (max-width: 639px) { html { font-size: calc(93.75% * var(--fs)) }') // times the text size from Settings (owner, 27 Nov 2026)
     expect(css).toMatch(/\.card \{ @apply border border-line rounded-2xl p-4 sm:p-5/)
     expect(css).toMatch(/\.btn \{ @apply [^}]*min-h-\[40px\]/)
-    expect(src('./pages/board.tsx')).toContain("const SEG_SCROLL = 'inline-flex flex-nowrap sm:flex-wrap") // the scope and rings share one swipeable line
+    expect(src('./pages/board.tsx')).toContain("const SEG_WRAP = 'flex flex-wrap items-center gap-1.5") // phones: the rings wrap, nothing cut off (28 Nov 2026)
   })
   it('nothing runs off a short screen: the capsule sits under the header and shrinks, dialogs scroll inside, board cards drop secondary lines', () => {
     expect(css).toContain('.nav-rail { max-height: calc(100dvh - 5.5rem) }')

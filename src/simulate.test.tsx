@@ -104,7 +104,7 @@ describe('board layout (owner, Oct 2026): computers 4 × 2, phones one row each 
   it('computers: 4 columns that keep scrolling (no page buttons, 28 Nov 2026); phones: one row per post; the whole row opens the details', () => {
     const b = src('./pages/board.tsx')
     expect(b).toContain('const PAGE = { cols: 4, step: 24 }')
-    expect(b).toContain('const e = useEndless(shown, PAGE.step, fit ? gridRef : null, reset)')
+    expect(b).toContain('const e = useEndless(shown, PAGE.step, null, reset)')
     expect(b).not.toContain('<Pager')
     expect(b).toContain('<ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4')
     expect(b).toContain("after:absolute after:inset-0 after:content-['']") // the whole card opens the details on every screen (owner, 27 Nov 2026)
@@ -113,7 +113,8 @@ describe('board layout (owner, Oct 2026): computers 4 × 2, phones one row each 
     expect(b).toContain('<span className="[overflow-wrap:anywhere] line-clamp-2">{post.position}</span></button>') // two lines at most on every screen (owner, 27 Nov 2026)
     // phones: the places on the right, the filters stay under the header, the sheet keeps its buttons at the bottom
     expect(b).toContain("t('bd.left', { n: left })") // places left as a highlight on every screen (owner, 27 Nov 2026)
-    expect(b).toContain('className="sticky top-16 z-20 -mx-3 px-3 py-2 space-y-2 bg-page/95 border-b border-line sm:contents sm:space-y-0"')
+    // the filters scroll away with the cards on every screen (owner, 28 Nov 2026), and the card view is not squeezed into the screen
+    expect(b).not.toContain('sticky top-16'); expect(b).toContain('fit={!cards}')
     expect(b).toContain('sticky bottom-0 z-10 -mx-5 px-5 py-3 bg-surface2 border-t border-line sm:static')
     expect(b).not.toMatch(/max-(sm|md|lg):/) // not available with this Tailwind setup (a screen given as an object)
   })

@@ -31,8 +31,11 @@ interface Filter { q: string; country: '' | 'TH' | 'CN'; province: string; skill
 const NO_FILTER: Filter = { q: '', country: '', province: '', skill: '', salary: '', currency: 'THB' }
 const pill = (on: boolean) => `min-h-[34px] px-3 sm:px-3.5 rounded-full text-sm inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors ${on ? 'seg-on' : 'text-ink hover:bg-surface3'}`
 const SEG = 'inline-flex flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1'
-// phones: the scope and the rings share one swipeable line (the line scrolls, not each group)
-const SEG_SCROLL = 'inline-flex flex-nowrap sm:flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1 shrink-0 sm:shrink'
+// phones (owner, 28 Nov 2026: the swiped line was cut off and looked unfinished): the rings wrap as separate pills, nothing hidden;
+// the scope is a full-width switch of two halves. Larger screens: one bordered group each, as before.
+const SEG_WRAP = 'flex flex-wrap items-center gap-1.5 sm:inline-flex sm:gap-1 sm:rounded-full sm:border sm:border-line sm:bg-surface sm:p-1'
+const SEG_HALVES = 'grid grid-cols-2 gap-1 rounded-full border border-line bg-surface p-1 sm:inline-flex sm:flex-wrap sm:items-center'
+const ring = (on: boolean) => `${pill(on)} ${on ? '' : 'border border-line bg-surface sm:border-0 sm:bg-transparent'}`
 
 export function BoardPage() {
   const { t } = useI18n()
@@ -103,7 +106,7 @@ export function BoardPage() {
   const cards = view === 'cards'
 
   return (
-    <Page title={t('m.board.title')} sub={t(seeker ? 'm.board.subSeeker' : 'm.board.subEmployer2')} fit body="flex flex-col gap-3"
+    <Page title={t('m.board.title')} sub={t(seeker ? 'm.board.subSeeker' : 'm.board.subEmployer2')} fit={!cards} body="flex flex-col gap-3"
       actions={<>
         {/* owner, Oct 2026: the allowance as a small chip (the long bar took the map's room); the card/map switch right before the main button */}
         <QuotaChip q={q} kind={seeker ? 'pin' : 'post'} open={pinsOpen} onToggle={seeker ? () => setPinsOpen((x) => !x) : undefined} />
@@ -117,18 +120,19 @@ export function BoardPage() {
       {seeker && pinsOpen && <section id="bd-pins" className="shrink-0 fit:max-h-[40%] fit:overflow-y-auto" aria-label={t('m.board.myPins')}><PinList /></section>}
 
       {cards && (<>
-        {/* phones: the rings and the search stay under the header while the list scrolls (owner, Oct 2026, option ก) */}
-        <div className="sticky top-16 z-20 -mx-3 px-3 py-2 space-y-2 bg-page/95 border-b border-line sm:contents sm:space-y-0">
+        {/* the filters and the special posts scroll away with the cards, on every screen (owner, 28 Nov 2026: what stayed on top
+            left the posts very little room, and on phones the list slid under it) */}
+        <div className="space-y-3">
         {/* one row of pill filters with the count (owner's reference) */}
         <div className="shrink-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 min-w-0 max-w-full overflow-x-auto sm:overflow-visible no-scrollbar">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 min-w-0 w-full sm:w-auto">
             {!seeker && (
-              <div className={`${SEG} shrink-0`} role="group" aria-label={t('m.bd.scope')}>
-                {(['all', 'mine'] as const).map((s) => <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)} className={pill(scope === s)}>{t(s === 'all' ? 'm.bd.scope.all' : 'm.bd.scope.mine')}</button>)}
+              <div className={SEG_HALVES} role="group" aria-label={t('m.bd.scope')}>
+                {(['all', 'mine'] as const).map((s) => <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)} className={`${pill(scope === s)} justify-center`}>{t(s === 'all' ? 'm.bd.scope.all' : 'm.bd.scope.mine')}</button>)}
               </div>)}
-            <div className={SEG_SCROLL} role="group" aria-label={t('m.board.levels')}>
-              <button type="button" aria-pressed={tab === 'all'} onClick={() => setTab('all')} className={pill(tab === 'all')}>{t('m.bd.all')}</button>
-              {LEVELS.map((l) => <button key={l} type="button" aria-pressed={tab === l} onClick={() => setTab(l)} className={pill(tab === l)} title={t('m.lv.ring', { n: l })}><ReachRings level={l} />{t(`m.lv.${l}` as never)}<span className="text-xs opacity-75">{perLevel(l)}</span></button>)}
+            <div className={SEG_WRAP} role="group" aria-label={t('m.board.levels')}>
+              <button type="button" aria-pressed={tab === 'all'} onClick={() => setTab('all')} className={ring(tab === 'all')}>{t('m.bd.all')}</button>
+              {LEVELS.map((l) => <button key={l} type="button" aria-pressed={tab === l} onClick={() => setTab(l)} className={ring(tab === l)} title={t('m.lv.ring', { n: l })}><ReachRings level={l} />{t(`m.lv.${l}` as never)}<span className="text-xs opacity-75">{perLevel(l)}</span></button>)}
             </div>
           </div>
           <p className="text-sm text-muted sr-only sm:not-sr-only" role="status">{t('m.board.count', { n: shown.length })}</p>
@@ -210,11 +214,12 @@ function QuotaChip({ q, kind, open, onToggle }: { q: Quota; kind: 'pin' | 'post'
  */
 const PAGE = { cols: 4, step: 24 }
 function CardGrid({ shown, fit, gridRef, label, card, reset }: { shown: { post: Post; level: Level }[]; fit: boolean; gridRef: React.RefObject<HTMLDivElement | null>; label: string; card: (x: { post: Post; level: Level }) => React.ReactNode; reset: string }) {
-  const e = useEndless(shown, PAGE.step, fit ? gridRef : null, reset)
+  // the whole page scrolls (owner, 28 Nov 2026), so the end is watched against the window
+  const e = useEndless(shown, PAGE.step, null, reset)
   return (
-    <div className="fit:flex-1 fit:min-h-0 fit:flex fit:flex-col gap-2">
+    <div>
       <h2 id="bd-list" className="sr-only">{label}</h2>
-      <div ref={gridRef} className="fit:flex-1 fit:min-h-0 fit:overflow-y-auto">
+      <div ref={gridRef}>
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 fit:gap-3 fit:items-start" style={fit ? { gridTemplateColumns: `repeat(${PAGE.cols}, minmax(0, 1fr))` } : undefined} aria-labelledby="bd-list">
           {e.items.map(card)}
         </ul>
