@@ -318,6 +318,8 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .fold-open .fold-chev { transform: rotate(180deg) }
 .fold-req { font-size: .6875rem; font-weight: 600; padding: .05rem .45rem; border-radius: 9999px; border: 1px solid rgb(var(--line)); color: rgb(var(--muted)) }
 .fold-body { padding: .25rem .9rem 1rem; display: grid; gap: .9rem; min-width: 0 }
+/* a closed group stays hidden even though its layout class shows it as a grid */
+.fold-body[hidden], .sk-group > [hidden] { display: none !important }
 .fold-final { border-width: 2px; border-color: rgb(var(--warn-line, var(--primary))) }
 .fold-final .fold-ic { background: rgb(var(--warn-bg, var(--brand))); color: rgb(var(--warn-fg, var(--brandfg))) }
 /* a skill group inside the picker: a row that opens its chips */
@@ -327,6 +329,33 @@ html:lang(en) .hero-title { font-size: clamp(1.6rem, .9rem + 2.6vw, 2.75rem) } /
 .sk-bar:focus-visible { outline: 2px solid rgb(var(--primary)); outline-offset: 2px }
 .sk-group[data-open] .fold-chev { transform: rotate(180deg) }
 @media (prefers-reduced-motion: reduce) { .fold-chev, .fold { transition: none } }
+
+/* the chat on phones (owner, 28 Nov 2026): over the whole screen like a messaging app; only the messages scroll. Plain CSS:
+   this project's custom "fit" screen turns Tailwind's max-* variants off */
+@media (max-width: 767.98px) {
+  .ch-full { position: fixed; inset: 0; z-index: 60; border-radius: 0 !important; border: 0 !important; background: rgb(var(--page)) !important; height: 100dvh }
+  .ch-away { display: none !important }
+  .ch-bar { background: rgb(var(--surface)) }
+  .ch-list { overscroll-behavior: contain }
+}
+/* profiles (owner, 28 Nov 2026): a cover, a round picture over its edge, camera buttons, a work-history line */
+.pv-cover { position: relative; height: 9rem; overflow: hidden }
+@media (min-width: 640px) { .pv-cover { height: 12rem } }
+.pv-tone-0 { background: linear-gradient(135deg, #6366f1, #22d3ee) } .pv-tone-1 { background: linear-gradient(135deg, #f97316, #facc15) }
+.pv-tone-2 { background: linear-gradient(135deg, #10b981, #3b82f6) } .pv-tone-3 { background: linear-gradient(135deg, #ec4899, #8b5cf6) }
+.pv-tone-4 { background: linear-gradient(135deg, #0ea5e9, #14b8a6) } .pv-tone-5 { background: linear-gradient(135deg, #a855f7, #f43f5e) }
+.pv-avatar { position: relative; width: 6.5rem; height: 6.5rem; margin-top: -3.25rem; flex-shrink: 0; border-radius: 9999px; overflow: hidden; display: grid; place-items: center;
+  color: #fff; font-size: 2.5rem; font-weight: 800; border: 4px solid rgb(var(--surface)); box-shadow: 0 10px 24px -12px rgb(0 0 0 / .5) }
+@media (min-width: 640px) { .pv-avatar { width: 8rem; height: 8rem; margin-top: -4rem } }
+.pv-cam { display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: .35rem .7rem; border-radius: 9999px; cursor: pointer; font-size: .8125rem; font-weight: 600;
+  color: #fff; background: rgb(0 0 0 / .6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px) }
+.pv-cam:hover { background: rgb(0 0 0 / .75) }
+.pv-cam:focus-within, .pv-cam:focus-visible { outline: 2px solid rgb(var(--primary)); outline-offset: 2px }
+.pv-cam-av { position: absolute; right: .25rem; bottom: .25rem; width: 36px; height: 36px; padding: 0; justify-content: center }
+.pv-timeline { position: relative; display: grid; gap: .9rem; padding-left: 1.25rem }
+.pv-timeline::before { content: ''; position: absolute; left: .3rem; top: .35rem; bottom: .35rem; width: 2px; background: rgb(var(--line)) }
+.pv-timeline > li { position: relative }
+.pv-timeline > li::before { content: ''; position: absolute; left: -1.2rem; top: .35rem; width: .75rem; height: .75rem; border-radius: 9999px; background: rgb(var(--primary)); box-shadow: 0 0 0 3px rgb(var(--surface)) }
 
 /* modal windows (check before posting, confirm, posted, membership package): solid, raised, easy to read */
 .modal-panel { background: linear-gradient(180deg, rgb(var(--surface)), rgb(var(--surface2))); box-shadow: var(--elev-hi), 0 30px 80px -20px rgb(0 0 0 / .6) }

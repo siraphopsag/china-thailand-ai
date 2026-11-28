@@ -238,6 +238,6 @@ describe('keep-alive and security header', () => {
   it('the browser may talk to Supabase, show Google profile pictures and use Google\'s sign-in button — nothing else is added', () => {
     const v = JSON.parse(src('../vercel.json')) as { headers: { headers: { key: string; value: string }[] }[] }
     const csp = v.headers.flatMap((h) => h.headers).find((h) => h.key === 'Content-Security-Policy')!.value
-    expect(csp).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com/gsi/;") // wss: who else is viewing a post (realtime); expect(csp).toContain("img-src 'self' data: https://*.googleusercontent.com;"); expect(csp).toContain("script-src 'self' https://accounts.google.com/gsi/client;"); expect(csp).toContain('frame-src https://accounts.google.com/gsi/;')
+    expect(csp).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com/gsi/;") // wss: who else is viewing a post (realtime); expect(csp).toContain("img-src 'self' data: https://*.googleusercontent.com https://*.supabase.co;"); expect(csp).toContain("script-src 'self' https://accounts.google.com/gsi/client;"); expect(csp).toContain('frame-src https://accounts.google.com/gsi/;')
   })
 })

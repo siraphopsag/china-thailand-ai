@@ -25,7 +25,7 @@ export function sideItems(role: 'seeker' | 'employer' | null, admin: boolean): I
   items.push({ to: 'board', key: 'm.board', icon: 'store', match: ['board', 'post'] }, { to: 'notifications', key: 'm.notif', icon: 'bell', match: ['notifications'] }, { to: 'chats', key: 'm.nav.chats', icon: 'chat', match: ['chats', 'chat'] }, { to: 'calendar', key: 'm.cal', icon: 'calendar', match: ['calendar'] }, { to: 'contract', key: 'm.nav.contract', icon: 'documents', match: ['contract'] }, { to: 'sos', key: 'm.nav.sos', icon: 'phone', match: ['sos'] },{ to: 'prepare', key: 'm.prepare', icon: 'culture', match: ['prepare', 'language', 'sources', 'ask'] }, { to: 'settings', key: 'm.settings', icon: 'settings', match: ['settings'] }, { to: 'help', key: 'm.help', icon: 'help', match: ['help'] })
   items.push({ to: 'member', key: 'm.member', icon: 'crown', match: ['member'] })
   if (admin) items.push({ to: 'backoffice', key: 'm.admin', icon: 'shield', match: ['backoffice'] }, { to: 'analytics', key: 'm.an.nav', icon: 'chart', match: ['analytics'] })
-  items.push({ to: 'me', key: 'm.profile', icon: 'profile', match: ['me'] })
+  items.push({ to: 'me', key: 'm.profile', icon: 'profile', match: ['me', 'profile'] })
   return items
 }
 /** on phones the bottom bar keeps 5 main places; these go under "More" so the bar does not cover the screen */

@@ -13,6 +13,7 @@ import { useAuth } from '../auth'
 import { MAX_SLOTS, MAX_STRIKES, MAX_TEXT, PHRASES, closedBy, strikesOf, newMessage, offerSlots, pickSlot, type Chat, type ChatMsg, type Side } from '../domain/match/chat'
 import { ME, MY_EMPLOYER } from '../domain/match/types'
 import { useChat } from '../chatStore'
+import { CONTACT_MAX, contactOk, useContactShare } from '../contactShare'
 import { isUuid, markRead, newId, useRemoteChat } from '../shared'
 import { aiTranslate } from '../ai/client'
 import type { AiTranslation } from '../ai/spec'
@@ -44,6 +45,8 @@ export function ChatPage() {
   const preferred: Side = p?.employerId === MY_EMPLOYER && a?.seekerId !== ME ? 'employer' : 'seeker'
   const side: Side = picked && sides.includes(picked) ? picked : sides.includes(preferred) ? preferred : sides[0] ?? 'seeker'
   const remote = mode === 'remote' && !demo && isUuid(accId)
+  // contact details can be exchanged once the case's documents step is done (owner, 28 Nov 2026; SQL 0026 decides when signed in)
+  const unlockedHere = demo || !!st.cases.find((c) => c.accId === accId)?.steps.documents
   const [localChat, saveLocal] = useChat(accId, demo ? 'post-demo' : p?.id ?? '')
   const [remoteChat, saveRemote, problem, loaded] = useRemoteChat(remote ? accId : null)
   const chat: Chat = remote ? remoteChat : localChat
@@ -78,9 +81,12 @@ export function ChatPage() {
           {switcher}
           <span className="text-xs text-muted">{t('ch.asNote')}</span></div>)}
       <div className="grid lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-4 items-start">
-        <Conversation key={side} full={full} onInterview={() => setFull(false)} sub={`${position} · ${company}`} switcher={switcher} msgs={msgs} side={side} other={other} loading={remote && !loaded} introId={intro?.id} closed={closed} strikes={strikesOf(chat, side)}
+        <Conversation key={side} full={full} onInterview={() => setFull(false)} onShare={() => { setFull(false); setTimeout(() => document.getElementById('ch-share')?.scrollIntoView({ block: 'start' }), 60) }} sub={`${position} · ${company}`} switcher={switcher} msgs={msgs} side={side} other={other} loading={remote && !loaded} introId={intro?.id} closed={closed} strikes={strikesOf(chat, side)}
           onSend={(input) => { const r = newMessage(chat, side, input, newId(), at); if (r.ok) save({ ...chat, ...r.value }); return r.ok ? r.masked : null }} />
-        <InterviewBox chat={chat} side={side} at={at} nowLocal={localStamp(now)} onSave={(c) => save({ ...chat, ...c })} />
+        <div className="space-y-4 min-w-0">
+          <InterviewBox chat={chat} side={side} at={at} nowLocal={localStamp(now)} onSave={(c) => save({ ...chat, ...c })} />
+          <ContactShareCard key={side} acc={accId!} side={side} remote={remote} unlockedHere={unlockedHere} at={at} />
+        </div>
       </div>
     </Page>
   )
@@ -91,7 +97,7 @@ export function ChatPage() {
  * covers the screen like a messaging app — a bar with back, the other side and "interview"; the messages scroll on their own
  * (the page behind does not move); the phrases on one swipeable line; the box to type at the bottom. Larger screens: a card.
  */
-function Conversation({ full, onInterview, sub, switcher, msgs, side, other, onSend, loading, introId, closed, strikes }: { full: boolean; onInterview: () => void; sub: string; switcher: ReactNode; msgs: ChatMsg[]; side: Side; other: string; onSend: (i: { text?: string; phrase?: string }) => boolean | null; loading?: boolean; introId?: string; closed: Side | null; strikes: number }) {
+function Conversation({ full, onInterview, onShare, sub, switcher, msgs, side, other, onSend, loading, introId, closed, strikes }: { full: boolean; onInterview: () => void; onShare: () => void; sub: string; switcher: ReactNode; msgs: ChatMsg[]; side: Side; other: string; onSend: (i: { text?: string; phrase?: string }) => boolean | null; loading?: boolean; introId?: string; closed: Side | null; strikes: number }) {
   const { t } = useI18n()
   const N = useNames()
   const [text, setText] = useState('')
@@ -107,24 +113,25 @@ function Conversation({ full, onInterview, sub, switcher, msgs, side, other, onS
   }, [full])
   const send = (e: FormEvent) => { e.preventDefault(); const r = onSend({ text }); if (r !== null) { setText(''); setMasked(r) } }
   return (
-    <section className={`card !p-0 overflow-hidden flex flex-col ${full ? 'max-md:fixed max-md:inset-0 max-md:z-[60] max-md:!rounded-none max-md:!border-0 max-md:!bg-page' : 'max-md:hidden'}`} aria-labelledby="ch-h">
-      <div className="shrink-0 border-b border-line flex items-center gap-2 px-2 md:px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 md:pt-3 max-md:bg-surface">
+    <section className={`card !p-0 overflow-hidden flex flex-col ${full ? 'ch-full' : 'ch-away'}`} aria-labelledby="ch-h">
+      <div className="shrink-0 border-b border-line flex items-center gap-2 px-2 md:px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 md:pt-3 ch-bar">
         <NavLink to="chats" className="md:hidden w-10 h-10 grid place-items-center rounded-full hover:bg-surface3 shrink-0" aria-label={t('ch.allChats')}><Icon name="left" size={20} /></NavLink>
         <div className="min-w-0 flex-1">
-          <h2 id="ch-h" className="h2 flex items-center gap-2 min-w-0"><Icon name="users" size={18} className="text-primary shrink-0 max-md:hidden" /><span className="truncate">{t('ch.with', { n: other })}</span></h2>
+          <h2 id="ch-h" className="h2 flex items-center gap-2 min-w-0"><Icon name="users" size={18} className="text-primary shrink-0 hidden md:block" /><span className="truncate">{t('ch.with', { n: other })}</span></h2>
           <p className="md:hidden text-xs text-muted truncate">{sub}</p>
         </div>
         <button type="button" className="md:hidden btn-ghost text-sm !min-h-[40px] !px-3 shrink-0" onClick={onInterview}><Icon name="calendar" size={16} />{t('ch.interviewBtn')}</button>
       </div>
-      {switcher && <div className="md:hidden shrink-0 px-3 py-2 border-b border-line flex items-center gap-2 max-md:bg-surface"><span className="text-xs font-medium">{t('ch.as')}</span>{switcher}</div>}
-      <ol ref={list} className="flex-1 min-h-0 max-md:overscroll-contain md:min-h-[16rem] md:max-h-[26rem] overflow-y-auto px-4 py-3 space-y-2" aria-live="polite">
+      {switcher && <div className="md:hidden shrink-0 px-3 py-2 border-b border-line flex items-center gap-2 ch-bar"><span className="text-xs font-medium">{t('ch.as')}</span>{switcher}</div>}
+      <ol ref={list} className="ch-list flex-1 min-h-0 md:min-h-[16rem] md:max-h-[26rem] overflow-y-auto px-4 py-3 space-y-2" aria-live="polite">
         <li className="md:hidden text-xs text-muted text-center px-2 pb-1 flex items-start justify-center gap-1.5"><Icon name="info" size={13} className="mt-0.5 shrink-0" />{t('ch.safe')}</li>
+        <li className="md:hidden flex justify-center"><button type="button" className="chip bg-surface border-line min-h-[32px] px-3" onClick={onShare}><Icon name="phone" size={13} />{t('cx.open')}</button></li>
         {msgs.length === 0 && <li className="text-sm text-muted text-center py-8">{t(loading ? 'c.loading' : 'ch.empty')}</li>}
         {msgs.map((m) => <Bubble key={m.id} m={m} mine={m.from === side} when={m.id === introId ? `${t('sh.intro')} · ${N.dayTime(Date.parse(m.at))}` : N.dayTime(Date.parse(m.at))} />)}
       </ol>
       {closed ? <p className="border-t border-line p-3 text-sm text-danger-fg flex items-start gap-2" role="status"><Icon name="alert" size={16} className="mt-0.5 shrink-0" />{t(closed === side ? 'ch.closed.me' : 'ch.closed.other', { max: MAX_STRIKES })}</p> : (
-      <div className="shrink-0 border-t border-line p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] space-y-2 max-md:bg-surface">
-        <p className="text-xs font-medium max-md:sr-only">{t('ch.phrases')}</p>
+      <div className="shrink-0 border-t border-line p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] space-y-2 ch-bar">
+        <p className="text-xs font-medium sr-only md:not-sr-only">{t('ch.phrases')}</p>
         <div className="flex flex-nowrap md:flex-wrap gap-1.5 overflow-x-auto md:overflow-visible no-scrollbar -mx-3 px-3 md:mx-0 md:px-0">{PHRASES[side].map((k) => (
           <button key={k} type="button" className="chip bg-surface border-line min-h-[32px] px-3 hover:bg-surface3 shrink-0 whitespace-nowrap" onClick={() => { onSend({ phrase: k }); setMasked(false) }}>{t(`ch.p.${k}` as never)}</button>))}</div>
         <form className="flex gap-2" onSubmit={send}>
@@ -155,6 +162,52 @@ function Bubble({ m, mine, when }: { m: ChatMsg; mine: boolean; when: string }) 
           {tx === 'busy' && <span>{t('ch.translating')}</span>}{tx === 'fail' && <span>{t('ch.translateFail')}</span>}</p>
       </div>
     </li>
+  )
+}
+
+/**
+ * Exchanging contact details (owner, 28 Nov 2026): locked until the C.A.L.L. team has checked the contract and the documents (the
+ * case's documents step); then each side gives a phone number, LINE or WeChat and agrees — each sees the other's only when both
+ * have agreed, and either can take theirs back. The chat stays the official channel and keeps hiding contact details.
+ */
+function ContactShareCard({ acc, side, remote, unlockedHere, at }: { acc: string; side: Side; remote: boolean; unlockedHere: boolean; at: string }) {
+  const { t } = useI18n()
+  const { state, problem, agree, withdraw, simAgree } = useContactShare(acc, side, remote, unlockedHere, () => at)
+  const [v, setV] = useState(''), [ok, setOk] = useState(false), [busy, setBusy] = useState(false)
+  const s = state
+  const run = async (f: () => Promise<boolean>) => { setBusy(true); await f(); setBusy(false) }
+  return (
+    <section id="ch-share" className="card space-y-3 scroll-mt-24" aria-labelledby="cx-h">
+      <h2 id="cx-h" className="h2 flex items-center gap-2"><Icon name={s?.theirs ? 'ok' : s?.unlocked ? 'phone' : 'lock'} size={18} className="text-primary" />{t('cx.h')}</h2>
+      {problem && <Warn>{t(problem === 'dbOld' ? 'cx.dbOld' : problem === 'locked' ? 'cx.locked' : 'sh.network')}</Warn>}
+      {!s ? <p className="text-sm text-muted">{t('c.loading')}</p> : !s.unlocked ? (
+        <><p className="text-sm">{t('cx.locked')}</p><p className="text-xs text-muted">{t('cx.why')}</p></>
+      ) : s.theirs ? (
+        <div className="space-y-2">
+          <p className="text-sm text-muted">{t('cx.theirs')}</p>
+          <p className="text-lg font-bold break-words select-all rounded-xl border border-ok-line bg-ok-bg/40 px-3 py-2">{s.theirs}</p>
+          <p className="text-xs text-muted">{t('cx.mineWas', { c: s.mine ?? '' })}</p>
+          <Warn tone="info">{t('cx.after')} <NavLink to="sos" className="underline font-semibold">{t('cx.sos')}</NavLink></Warn>
+          <button type="button" className="btn-ghost text-sm" disabled={busy} onClick={() => void run(withdraw)}>{t('cx.withdraw')}</button>
+        </div>
+      ) : s.meAt ? (
+        <div className="space-y-2">
+          <p className="text-sm flex items-center gap-2"><Icon name="hourglass" size={15} className="text-primary" />{t('cx.waiting')}</p>
+          <p className="text-xs text-muted">{t('cx.mineWas', { c: s.mine ?? '' })}</p>
+          <div className="flex flex-wrap gap-2">
+            {s.sim && <button type="button" className="btn-soft text-sm" disabled={busy} onClick={() => void run(simAgree)}><Icon name="sim" size={15} />{t('cx.sim')}</button>}
+            <button type="button" className="btn-ghost text-sm" disabled={busy} onClick={() => void run(withdraw)}>{t('cx.withdraw')}</button>
+          </div>
+        </div>
+      ) : (
+        <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); if (ok && contactOk(v)) void run(() => agree(v)) }}>
+          <p className="text-sm">{t(s.themAt ? 'cx.themReady' : 'cx.open.d')}</p>
+          <label className="block"><span className="label">{t('cx.mine')}</span><input className="input" maxLength={CONTACT_MAX} value={v} onChange={(e) => setV(e.target.value)} placeholder={t('cx.mine.ph')} autoComplete="off" /></label>
+          <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-1 w-5 h-5 shrink-0" checked={ok} onChange={(e) => setOk(e.target.checked)} /><span>{t('cx.consent')}</span></label>
+          <button type="submit" className="btn-primary" disabled={busy || !ok || !contactOk(v)}><Icon name="phone" size={16} />{t('cx.agree')}</button>
+        </form>
+      )}
+    </section>
   )
 }
 

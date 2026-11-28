@@ -44,6 +44,7 @@ const ContractPage = lazy(() => import('./pages/contract').then((m) => ({ defaul
 const SosPage = lazy(() => import('./pages/sos').then((m) => ({ default: m.SosPage })))
 const ChatPage = lazy(() => import('./pages/chat').then((m) => ({ default: m.ChatPage })))
 const ChatsPage = lazy(() => import('./pages/chats').then((m) => ({ default: m.ChatsPage })))
+const ProfilePage = lazy(() => import('./pages/profileView').then((m) => ({ default: m.ProfilePage })))
 const CaseDemoPage = lazy(() => import('./pages/case-demo').then((m) => ({ default: m.CaseDemoPage })))
 const AskPage = lazy(() => import('./pages/ask').then((m) => ({ default: m.AskPage })))
 const ChooseRolePage = lazy(() => import('./pages/choose').then((m) => ({ default: m.ChooseRolePage })))
@@ -118,7 +119,7 @@ function Router() {
     '': <Landing />, language: <LanguagePage />, sources: <SourcesPage />, privacy: <PrivacyPage />, 'open-data': <OpenDataPage />,
     login: <LoginPage />, register: <RegisterPage />, forgot: <ForgotPage />, 'reset-password': <ResetPasswordPage />,
     'choose-role': <ChooseRolePage />,
-    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, case: <CasePage />, terms: <TermsPage />, safety: <SafetyPage />, calendar: <CalendarPage />, analytics: <AnalyticsPage />, ask: <AskPage />, contract: <ContractPage />, sos: <SosPage />, 'case-demo': <CaseDemoPage />, chat: <ChatPage />, chats: <ChatsPage />, // matching prototype
+    seek: <SeekPage />, hire: <HirePage />, post: <PostPage />, board: <BoardPage />, member: <MemberPage />, notifications: <NotificationsPage />, me: <MePage />, prepare: <PreparePage />, settings: <SettingsPage />, help: <HelpPage />, backoffice: <BackofficePage />, case: <CasePage />, terms: <TermsPage />, safety: <SafetyPage />, calendar: <CalendarPage />, analytics: <AnalyticsPage />, ask: <AskPage />, contract: <ContractPage />, sos: <SosPage />, 'case-demo': <CaseDemoPage />, chat: <ChatPage />, chats: <ChatsPage />, profile: <ProfilePage />, // matching prototype
   }
   return <Shell route={r}>{r in pages ? pages[r] : <div className="card text-center"><h1 className="h1">{t('err.notFound')}</h1><button className="btn-primary mt-4" onClick={() => go('')}>{t('err.home')}</button></div>}</Shell>
 }

@@ -41,6 +41,6 @@ describe('more about the job', () => {
   })
   it('the chat covers a phone screen and the page behind does not scroll', () => {
     const c = src('./pages/chat.tsx')
-    expect(c).toContain('max-md:fixed max-md:inset-0'); expect(c).toContain('max-md:overscroll-contain'); expect(c).toContain("h.style.overflow = 'hidden'")
+    expect(c).toContain("${full ? 'ch-full' : 'ch-away'}"); expect(src('./index.css')).toContain('.ch-list { overscroll-behavior: contain }'); expect(c).toContain("h.style.overflow = 'hidden'")
   })
 })

@@ -93,7 +93,7 @@ export function PostPage() {
   const statusLine = (a: Acceptance) => ended(a, 'seeker') ?? (a.status === 'reserved' ? t('m.ap.inQueue', { n: c.reserved }) : t(`m.as.${a.status}` as never))
 
   return (
-    <Page title={p.position} sub={<>{p.company}<VerifyTick post={p} /> <EmployerRating employerId={p.employerId} compact /> · {N.place(p.country, p.province)} · {N.industry(p.industry)}</>} fit body="flex flex-col gap-3">
+    <Page title={p.position} sub={<>{mine ? p.company : <NavLink to={`profile?id=${encodeURIComponent(p.employerId)}&k=e`} className="underline underline-offset-4 decoration-dotted hover:text-primary">{p.company}</NavLink>}<VerifyTick post={p} /> <EmployerRating employerId={p.employerId} compact /> · {N.place(p.country, p.province)} · {N.industry(p.industry)}</>} fit body="flex flex-col gap-3">
       <DemoTools />
       <div className="shrink-0 flex flex-wrap items-center gap-2">
         {stage !== 'expired' && <LevelBadge level={mine || !reach ? stage : reach.level} reached={mine || !reach} />}
@@ -179,7 +179,7 @@ export function PostPage() {
               {!appsOf.some((a) => a.status !== 'reserved') ? <p className="text-sm text-muted">{t('m.em.noneYet')}</p> : (
                 <ul className="space-y-2">{appsOf.filter((a) => a.status !== 'reserved').map((a) => (
                   <li key={a.id} className="card-i space-y-1.5 text-sm">
-                    <p className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex flex-wrap items-center gap-1.5"><b>{nameOf(a)}</b><SeekerBadge seekerId={a.seekerId} /><WorkerRating seekerId={a.seekerId} compact /><ApplicantWork seekerId={a.seekerId} />{mode === 'local' && a.seekerId !== ME && <SampleBadge />}</span><span className="chip bg-surface3 border-line">{ended(a, 'employer') ?? t(`m.as.${a.status}` as never)}</span></p>
+                    <p className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex flex-wrap items-center gap-1.5"><NavLink to={`profile?id=${encodeURIComponent(a.seekerId)}&k=s`} className="font-bold underline underline-offset-4 decoration-dotted hover:text-primary">{nameOf(a)}</NavLink><SeekerBadge seekerId={a.seekerId} /><WorkerRating seekerId={a.seekerId} compact /><ApplicantWork seekerId={a.seekerId} />{mode === 'local' && a.seekerId !== ME && <SampleBadge />}</span><span className="chip bg-surface3 border-line">{ended(a, 'employer') ?? t(`m.as.${a.status}` as never)}</span></p>
                     {a.intro && <p className="text-muted">“{a.intro}”</p>}
                     {a.availableFrom && <p className="text-xs text-muted">{t('m.ap.fromShort', { d: N.day(a.availableFrom) })}{a.promotedAt ? ` · ${t('m.n.fromQueue')}` : ''}</p>}
                     {['accepted', 'confirmed', 'forwarded'].includes(a.status) && <NavLink to={`chat?acc=${a.id}`} className="btn-soft text-sm inline-flex"><Icon name="users" size={15} />{t('ch.open')}</NavLink>}

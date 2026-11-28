@@ -11,6 +11,7 @@ import { DAY_MS, reachFor, scheduleOf, stageAt, type Quota, capStage } from '../
 import { INDUSTRIES, MAX_SKILLS, MY_EMPLOYER, PIN_LIFE_DAYS, SKILLS, SKILL_GROUPS, type Acceptance, type Benefit, type Country, type Edu, type Employment, type Industry, type LanguageSkill, type Level, type Post, type Salary, type Skill } from '../domain/match/types'
 import { hoursADay } from '../domain/match/postExtras'
 import { Fold } from '../components/fold'
+import { MyProfile } from './profileView'
 import { ACTIVE, GEO, SOON, type GeoCode } from '../geo'
 import capitalsData from '../data/geo/capitals.json'
 import { GeoMap, type MapPin } from '../components/geomap'
@@ -97,7 +98,7 @@ export function PostFacts({ post, compact }: { post: Post; compact?: boolean }) 
   const x = post.extras ?? {}
   const hours = [x.hours ? `${x.hours.from}–${x.hours.to} (${t('pf.h.perDay', { h: hoursADay(x.hours) })})` : '', x.days ? t('pf.days.n', { n: x.days }) : '', x.ot ? t(`pf.ot.${x.ot}` as never) : ''].filter(Boolean).join(' · ')
   if (hours) rows.push(['clock', t('pf.g.hours'), hours])
-  const live = [post.benefits.includes('housing') && x.housing ? `${t('pf.housing')}: ${t(`pf.housing.${x.housing}` as never)}${x.room ? ` · ${t('pf.room')} ${x.room}` : ''}` : '', post.benefits.includes('meals') && x.meals ? t('pf.meals.n', { n: x.meals }) : ''].filter(Boolean).join(' · ')
+  const live = [post.benefits.includes('housing') && x.housing ? `${t('pf.housing')}: ${t(`pf.housing.${x.housing}` as never)}${x.room ? ` · ${t('pf.room.n', { n: x.room })}` : ''}` : '', post.benefits.includes('meals') && x.meals ? t('pf.meals.n', { n: x.meals }) : ''].filter(Boolean).join(' · ')
   if (live) rows.push(['home', t('pf.g.live'), live])
   const terms = [x.contract !== undefined ? `${t('pf.contract')}: ${x.contract === 0 ? t('pf.contract.open') : t('pf.contract.m', { n: x.contract })}` : '', x.probation !== undefined ? (x.probation === 0 ? t('pf.probation.none') : `${t('pf.probation')}: ${t('pf.contract.m', { n: x.probation })}`) : '', x.pay ? `${t('pf.pay')}: ${t(`pf.pay.${x.pay}` as never)}` : ''].filter(Boolean).join(' · ')
   if (terms) rows.push(['documents', t('pf.g.contract'), terms])
@@ -715,7 +716,9 @@ export function MePage() {
   const gate = useGate('me')
   if (gate) return <Page title={t('m.profile.title')}>{gate}</Page>
   return (
-    <Page title={t('m.profile.title')} fit>
+    <Page title={t('m.profile.title')}>
+      {/* how others see me, with the photo buttons (owner, 28 Nov 2026) — the details are edited in the cards below */}
+      <MyProfile />
       <div className="grid lg:grid-cols-2 gap-4 items-start">
       <div className="space-y-4">
       <section className="glass-card p-5 space-y-2">
